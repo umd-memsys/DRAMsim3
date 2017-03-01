@@ -19,7 +19,9 @@ BankState::BankState(int rank, int bankgroup, int bank) :
     timing_[CommandType::PRECHARGE] = 0;
     timing_[CommandType::REFRESH] = 0;
     timing_[CommandType::SELF_REFRESH_ENTER] = 0;
-    timing_[CommandType::SELF_REFRESH_EXIT] = 0; 
+    timing_[CommandType::SELF_REFRESH_EXIT] = 0;
+
+    printf("Bankstate object created with rank = %d, bankgroup = %d, bank = %d\n", rank_, bankgroup_, bank_);
 }
 
 CommandType BankState::GetRequiredCommand(const Request& req) {
@@ -142,8 +144,8 @@ void BankState::UpdateState(const Command& cmd) {
     return;
 }
 
-void BankState::UpdateTiming(const Command& cmd, long time) {
-    timing_[cmd.cmd_type_] = max(timing_[cmd.cmd_type_], time);
+void BankState::UpdateTiming(CommandType cmd_type, long time) {
+    timing_[cmd_type] = max(timing_[cmd_type], time);
     return;
 }
 

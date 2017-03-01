@@ -50,7 +50,7 @@ class BankState {
         BankState(int rank, int bankgroup, int bank);
         CommandType GetRequiredCommand(const Request& req);
         void UpdateState(const Command& cmd);
-        void UpdateTiming(const Command& cmd, long time);
+        void UpdateTiming(const CommandType cmd_type, long time);
         bool IsReady(const Command& cmd, long time);
     private:
         // Current state of the Bank
