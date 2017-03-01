@@ -27,3 +27,7 @@
 *.exe
 *.out
 *.app
+
+# User defined
+obj
+dramcore
