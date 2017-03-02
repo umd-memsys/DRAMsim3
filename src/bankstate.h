@@ -9,6 +9,7 @@ enum class State {
     OPEN,
     CLOSED,
     SELF_REFRESH,
+    SIZE
 };
 
 enum class CommandType {
@@ -21,6 +22,7 @@ enum class CommandType {
     REFRESH,
     SELF_REFRESH_ENTER,
     SELF_REFRESH_EXIT,
+    SIZE
 };
 
 enum class RequestType {
@@ -31,6 +33,7 @@ enum class RequestType {
     REFRESH,
     SELF_REFRESH_ENTER,
     SEFL_REFRESH_EXIT,
+    SIZE
 };
 
 class Command { 

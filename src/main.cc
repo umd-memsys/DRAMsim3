@@ -1,5 +1,6 @@
 #include <iostream>
 #include "controller.h"
+#include "timing.h"
 
 using namespace std;
 
@@ -9,7 +10,8 @@ int main(int argc, char **argv)
     int bank_groups = 2;
     int banks_per_group = 2;
 
-    Controller ctrl(ranks, bank_groups, banks_per_group);
+    Timing timing;
+    Controller ctrl(ranks, bank_groups, banks_per_group, timing);
 
     return 0;
 }
