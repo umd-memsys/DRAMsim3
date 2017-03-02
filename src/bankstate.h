@@ -2,6 +2,8 @@
 #define __BANKSTATE_H
 
 #include <map>
+#include <list>
+#include <utility>
 
 enum class State {
     OPEN,
