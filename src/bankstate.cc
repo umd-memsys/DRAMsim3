@@ -6,20 +6,21 @@ using namespace std;
 
 BankState::BankState(int rank, int bankgroup, int bank) :
     state_(State::CLOSED),
+    timing_(int(CommandType::SIZE)),
     open_row_(-1),
     rank_(rank),
     bankgroup_(bankgroup),
     bank_(bank)
 {
-    timing_[CommandType::READ] = 0;
-    timing_[CommandType::READ_PRECHARGE] = 0;
-    timing_[CommandType::WRITE] = 0;
-    timing_[CommandType::WRITE_PRECHARGE] = 0;
-    timing_[CommandType::ACTIVATE] = 0;
-    timing_[CommandType::PRECHARGE] = 0;
-    timing_[CommandType::REFRESH] = 0;
-    timing_[CommandType::SELF_REFRESH_ENTER] = 0;
-    timing_[CommandType::SELF_REFRESH_EXIT] = 0;
+    timing_[int(CommandType::READ)] = 0;
+    timing_[int(CommandType::READ_PRECHARGE)] = 0;
+    timing_[int(CommandType::WRITE)] = 0;
+    timing_[int(CommandType::WRITE_PRECHARGE)] = 0;
+    timing_[int(CommandType::ACTIVATE)] = 0;
+    timing_[int(CommandType::PRECHARGE)] = 0;
+    timing_[int(CommandType::REFRESH)] = 0;
+    timing_[int(CommandType::SELF_REFRESH_ENTER)] = 0;
+    timing_[int(CommandType::SELF_REFRESH_EXIT)] = 0;
 
     printf("Bankstate object created with rank = %d, bankgroup = %d, bank = %d\n", rank_, bankgroup_, bank_);
 }
@@ -159,10 +160,10 @@ void BankState::UpdateState(const Command& cmd) {
 }
 
 void BankState::UpdateTiming(CommandType cmd_type, long time) {
-    timing_[cmd_type] = max(timing_[cmd_type], time);
+    timing_[int(cmd_type)] = max(timing_[int(cmd_type)], time);
     return;
 }
 
 bool BankState::IsReady(const Command& cmd, long time) {
-    return time >= timing_[cmd.cmd_type_];
+    return time >= timing_[int(cmd.cmd_type_)];
 }

@@ -1,7 +1,7 @@
 #ifndef __BANKSTATE_H
 #define __BANKSTATE_H
 
-#include <map>
+#include <vector>
 #include <list>
 #include <utility>
 
@@ -63,7 +63,7 @@ class BankState {
         State state_;
 
         // Earliest time when the particular Command can be executed in this bank
-        std::map<CommandType, long> timing_;
+        std::vector<long> timing_;
 
         //Currently open row
         //Applicable only if the bank is in OPEN state
