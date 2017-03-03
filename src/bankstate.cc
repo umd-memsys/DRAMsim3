@@ -92,6 +92,15 @@ CommandType BankState::GetRequiredCommand(const Request& req) {
                 default:
                     exit(-1);
             }
+        case RequestType::SELF_REFRESH_EXIT:
+            switch(state_) {
+                case State::SELF_REFRESH:
+                    return CommandType::SELF_REFRESH_EXIT;
+                case State::CLOSED:
+                case State::OPEN:
+                default:
+                    exit(-1);
+            }
         default:
             exit(-1);
     }

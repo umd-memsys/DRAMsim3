@@ -32,7 +32,7 @@ enum class RequestType {
     WRITE_PRECHARGE,
     REFRESH,
     SELF_REFRESH_ENTER,
-    SEFL_REFRESH_EXIT,
+    SELF_REFRESH_EXIT,
     SIZE
 };
 
