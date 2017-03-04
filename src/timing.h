@@ -4,7 +4,7 @@
 #include <vector>
 #include <list>
 #include <utility>
-#include "bankstate.h"
+#include "common.h"
 
 class Timing {
     public:
@@ -13,6 +13,7 @@ class Timing {
         std::vector< std::list< std::pair<CommandType, int> > > other_banks_same_bankgroup;
         std::vector< std::list< std::pair<CommandType, int> > > other_bankgroups_same_rank;
         std::vector< std::list< std::pair<CommandType, int> > > other_ranks;
+        std::vector< std::list< std::pair<CommandType, int> > > same_rank;
 
         int tBurst = 4;
         int tCCDL = 6;
@@ -31,6 +32,8 @@ class Timing {
         int tRC = tRAS + tRP;
         int tCKESR = 50;
         int tXS = 10;
+        int tRFCb = 20;
+        int tRREFD = 5;
 
         int read_to_read_l = std::max(tBurst, tCCDL);
         int read_to_read_s = std::max(tBurst, tCCDS);
@@ -54,9 +57,19 @@ class Timing {
         int activate_to_activate_o = tRRD;
         int activate_to_precharge = tRAS;
         int activate_to_read_write = tRCD;
-        int refresh_cyle = tRFC;
+        int activate_to_refresh = tRRD;
+        int refresh_to_refresh = tRREFD;
+        int refresh_to_activate = refresh_to_refresh;
+
+        int refresh_cycle = tRFC;
+
+        int refresh_cycle_bank = tRFCb;
+
         int self_refresh_entry_to_exit = tCKESR;
         int self_refresh_exit = tXS;
+
+
+
 };
 
 #endif

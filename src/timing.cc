@@ -6,7 +6,8 @@ Timing::Timing() :
     same_bank(int(CommandType::SIZE)),
     other_banks_same_bankgroup(int(CommandType::SIZE)),
     other_bankgroups_same_rank(int(CommandType::SIZE)),
-    other_ranks(int(CommandType::SIZE))
+    other_ranks(int(CommandType::SIZE)),
+    same_rank(int(CommandType::SIZE))
 {
     // command READ
     same_bank[int(CommandType::READ)] = list< pair<CommandType, int> >
@@ -75,6 +76,7 @@ Timing::Timing() :
     {
         { CommandType::ACTIVATE, read_to_activate },
         { CommandType::REFRESH, read_to_activate },
+        { CommandType::REFRESH_BANK, read_to_activate },
         { CommandType::SELF_REFRESH_ENTER, read_to_activate }
     };
     other_banks_same_bankgroup[int(CommandType::READ_PRECHARGE)] = list< pair<CommandType, int> >
@@ -104,6 +106,7 @@ Timing::Timing() :
     {
         { CommandType::ACTIVATE, write_to_activate },
         { CommandType::REFRESH, write_to_activate },
+        { CommandType::REFRESH_BANK, write_to_activate },
         { CommandType::SELF_REFRESH_ENTER, write_to_activate }
     };
     other_banks_same_bankgroup[int(CommandType::WRITE_PRECHARGE)] = list< pair<CommandType, int> >
@@ -136,17 +139,19 @@ Timing::Timing() :
         { CommandType::READ_PRECHARGE, activate_to_read_write },
         { CommandType::WRITE_PRECHARGE, activate_to_read_write },
         { CommandType::PRECHARGE, activate_to_precharge },
-        { CommandType::ACTIVATE, activate_to_activate }
+        //{ CommandType::ACTIVATE, activate_to_activate }
     };
 
     other_banks_same_bankgroup[int(CommandType::WRITE_PRECHARGE)] = list< pair<CommandType, int> >
     {
-        { CommandType::ACTIVATE, activate_to_activate_o }
+        { CommandType::ACTIVATE, activate_to_activate_o },
+        { CommandType::REFRESH_BANK, activate_to_refresh }
     };
 
     other_bankgroups_same_rank[int(CommandType::WRITE_PRECHARGE)] = list< pair<CommandType, int> >
     {
-        { CommandType::ACTIVATE, activate_to_activate_o }
+        { CommandType::ACTIVATE, activate_to_activate_o },
+        { CommandType::REFRESH_BANK, activate_to_refresh }
     };
 
     //command PRECHARGE
@@ -154,25 +159,47 @@ Timing::Timing() :
     {
         { CommandType::ACTIVATE, precharge_to_activate },
         { CommandType::REFRESH, precharge_to_activate },
+        { CommandType::REFRESH_BANK, precharge_to_activate },
         { CommandType::SELF_REFRESH_ENTER, precharge_to_activate }
     };
 
     //command REFRESH
-    same_bank[int(CommandType::REFRESH)] = list< pair<CommandType, int> >
+    same_rank[int(CommandType::REFRESH)] = list< pair<CommandType, int> >
     {
-        { CommandType::ACTIVATE, refresh_cyle },
-        { CommandType::REFRESH,  refresh_cyle },
-        { CommandType::SELF_REFRESH_ENTER, refresh_cyle }
+        { CommandType::ACTIVATE, refresh_cycle },
+        { CommandType::REFRESH,  refresh_cycle },
+        { CommandType::SELF_REFRESH_ENTER, refresh_cycle }
+    };
+
+    //command REFRESH_BANK
+    same_rank[int(CommandType::REFRESH_BANK)] = list< pair<CommandType, int> >
+    {
+        { CommandType::ACTIVATE, refresh_cycle_bank },
+        { CommandType::REFRESH,  refresh_cycle_bank },
+        { CommandType::REFRESH_BANK, refresh_cycle_bank },
+        { CommandType::SELF_REFRESH_ENTER, refresh_cycle_bank }
+    };
+
+    other_banks_same_bankgroup[int(CommandType::REFRESH_BANK)] = list< pair<CommandType, int> >
+    {
+        { CommandType::ACTIVATE, refresh_to_activate },
+        { CommandType::REFRESH_BANK, refresh_to_refresh },
+    };
+
+    other_bankgroups_same_rank[int(CommandType::REFRESH_BANK)] = list< pair<CommandType, int> >
+    {
+        { CommandType::ACTIVATE, refresh_to_activate },
+        { CommandType::REFRESH_BANK, refresh_to_refresh },
     };
 
     //command SELF_REFRESH_ENTER
-    same_bank[int(CommandType::SELF_REFRESH_ENTER)] = list< pair<CommandType, int> >
+    same_rank[int(CommandType::SELF_REFRESH_ENTER)] = list< pair<CommandType, int> >
     {
         { CommandType::SELF_REFRESH_EXIT,  self_refresh_entry_to_exit}
     };
 
     //command SELF_REFRESH_EXIT 
-    same_bank[int(CommandType::SELF_REFRESH_EXIT)] = list< pair<CommandType, int> >
+    same_rank[int(CommandType::SELF_REFRESH_EXIT)] = list< pair<CommandType, int> >
     {
         { CommandType::ACTIVATE, self_refresh_exit },
         { CommandType::REFRESH, self_refresh_exit },

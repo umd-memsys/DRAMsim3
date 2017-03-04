@@ -13,5 +13,7 @@ int main(int argc, char **argv)
     Timing timing;
     Controller ctrl(ranks, bank_groups, banks_per_group, timing);
 
+    
+
     return 0;
 }
