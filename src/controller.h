@@ -9,6 +9,7 @@
 class Controller {
     public:
         Controller(int ranks, int bankgroups, int banks_per_group, const Timing& timing);
+        void UpdateState(const Command& cmd);
         void UpdateTiming(const Command& cmd);
     private:
         long clk;
@@ -30,6 +31,8 @@ class Controller {
 
         void UpdateSameRank(int rank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
 
+        void UpdateBankState(const Command& cmd);
+        void UpdateRankState(const Command& cmd);
 };
 
 #endif

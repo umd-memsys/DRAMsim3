@@ -19,6 +19,33 @@ Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Tim
     }
 }
 
+
+Command Controller::GetRequiredCommand() {
+    
+}
+
+
+void Controller::UpdateState(const Command& cmd) {
+    switch(cmd.cmd_type_) {
+        case CommandType::READ:
+        case CommandType::READ_PRECHARGE:
+        case CommandType::WRITE:
+        case CommandType::WRITE_PRECHARGE:
+        case CommandType::ACTIVATE:
+        case CommandType::PRECHARGE:
+        case CommandType::REFRESH_BANK:
+            UpdateBankState(cmd);
+            break;
+        case CommandType::REFRESH:
+        case CommandType::SELF_REFRESH_ENTER:
+        case CommandType::SELF_REFRESH_EXIT:
+            UpdateRankState(cmd);
+            break;
+        default:
+            exit(-1);
+    }
+}
+
 void Controller::UpdateTiming(const Command& cmd) {
     switch(cmd.cmd_type_) {
         case CommandType::READ:
@@ -105,4 +132,20 @@ void Controller::UpdateSameRank(int rank, const list< pair<CommandType, int> >& 
             }
         }
     }
+    return;
+}
+
+
+inline void Controller::UpdateBankState(const Command& cmd) {
+    bank_states_[cmd.rank_][cmd.bankgroup_][cmd.bank_]->UpdateState(cmd);
+    return;
+}
+
+inline void Controller::UpdateRankState(const Command& cmd) {
+    for(auto j = 0; j < bankgroups_; j++) {
+        for(auto k = 0; k < banks_per_group_; k++) {
+            bank_states_[cmd.rank_][j][k]->UpdateState(cmd);
+        }
+    }
+    return;
 }

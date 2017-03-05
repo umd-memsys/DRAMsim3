@@ -37,7 +37,8 @@ enum class RequestType {
 
 class Command { 
     public:
-        Command() {}
+        Command(CommandType cmd_type, int channel, int rank, int bankgroup, int bank, int row, int column) :
+            cmd_type_(cmd_type), channel_(channel), rank_(rank), bankgroup_(bankgroup), bank_(bank), row_(row), column_(column) {}
         CommandType cmd_type_;
         int channel_, rank_, bankgroup_, bank_, row_, column_;
 };
