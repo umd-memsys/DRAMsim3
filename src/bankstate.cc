@@ -25,64 +25,53 @@ BankState::BankState(int rank, int bankgroup, int bank) :
     printf("Bankstate object created with rank = %d, bankgroup = %d, bank = %d\n", rank_, bankgroup_, bank_);
 }
 
-CommandType BankState::GetRequiredCommand(const Request& req) {
-    switch(req.request_type_) {
-        case RequestType::READ:
+CommandType BankState::GetRequiredCommand(const Command& cmd) {
+    switch(cmd.cmd_type_) {
+        case CommandType::READ:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
                 case State::OPEN:
-                    return req.row_ == open_row_ ? CommandType::READ : CommandType::PRECHARGE;
+                    return cmd.row_ == open_row_ ? CommandType::READ : CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
                     exit(-1);
             }
-            case RequestType::READ_PRECHARGE:
+            case CommandType::READ_PRECHARGE:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
                 case State::OPEN:
-                    return req.row_ == open_row_ ? CommandType::READ_PRECHARGE : CommandType::PRECHARGE;
+                    return cmd.row_ == open_row_ ? CommandType::READ_PRECHARGE : CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
                     exit(-1);
             }
-        case RequestType::WRITE:
+        case CommandType::WRITE:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
                 case State::OPEN:
-                    return req.row_ == open_row_ ? CommandType::WRITE : CommandType::PRECHARGE;
+                    return cmd.row_ == open_row_ ? CommandType::WRITE : CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
                     exit(-1);
             }
-            case RequestType::WRITE_PRECHARGE:
+            case CommandType::WRITE_PRECHARGE:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
                 case State::OPEN:
-                    return req.row_ == open_row_ ? CommandType::WRITE_PRECHARGE : CommandType::PRECHARGE;
+                    return cmd.row_ == open_row_ ? CommandType::WRITE_PRECHARGE : CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
                     exit(-1);
             }
-        case RequestType::REFRESH:
-            switch(state_) {
-                case State::CLOSED:
-                    return CommandType::REFRESH;
-                case State::OPEN:
-                    return CommandType::PRECHARGE;
-                case State::SELF_REFRESH:
-                    return CommandType::SELF_REFRESH_EXIT;
-                default:
-                    exit(-1);
-            }
-            case RequestType::REFRESH_BANK:
+            case CommandType::REFRESH_BANK:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::REFRESH_BANK;
@@ -93,7 +82,18 @@ CommandType BankState::GetRequiredCommand(const Request& req) {
                 default:
                     exit(-1);
             }
-        case RequestType::SELF_REFRESH_ENTER:
+        case CommandType::REFRESH:
+            switch(state_) {
+                case State::CLOSED:
+                    return CommandType::REFRESH;
+                case State::OPEN:
+                    return CommandType::PRECHARGE;
+                case State::SELF_REFRESH:
+                    return CommandType::SELF_REFRESH_EXIT;
+                default:
+                    exit(-1);
+            }
+        case CommandType::SELF_REFRESH_ENTER:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::SELF_REFRESH_ENTER;
@@ -103,7 +103,7 @@ CommandType BankState::GetRequiredCommand(const Request& req) {
                 default:
                     exit(-1);
             }
-        case RequestType::SELF_REFRESH_EXIT:
+        case CommandType::SELF_REFRESH_EXIT:
             switch(state_) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
@@ -112,6 +112,10 @@ CommandType BankState::GetRequiredCommand(const Request& req) {
                 default:
                     exit(-1);
             }
+        // ACTIVATE and PRECHARGE are on demand commands
+        // They will not be scheduled on their own.
+        case CommandType::ACTIVATE:
+        case CommandType::PRECHARGE:
         default:
             exit(-1);
     }

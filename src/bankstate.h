@@ -9,9 +9,17 @@
 class BankState {
     public:
         BankState(int rank, int bankgroup, int bank);
-        CommandType GetRequiredCommand(const Request& req);
+
+        //Get the command that needs to executed first to execute the comand of interest given the state of the bank
+        CommandType GetRequiredCommand(const Command& cmd);
+
+        //Update the state of the bank resulting after the execution of the command
         void UpdateState(const Command& cmd);
+
+        //Update the existing timing constraints for the command
         void UpdateTiming(const CommandType cmd_type, long time);
+
+        //Check the timing constraints to see if the command can executed at the given time
         bool IsReady(const Command& cmd, long time);
     private:
         // Current state of the Bank

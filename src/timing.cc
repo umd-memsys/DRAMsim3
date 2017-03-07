@@ -163,14 +163,6 @@ Timing::Timing() :
         { CommandType::SELF_REFRESH_ENTER, precharge_to_activate }
     };
 
-    //command REFRESH
-    same_rank[int(CommandType::REFRESH)] = list< pair<CommandType, int> >
-    {
-        { CommandType::ACTIVATE, refresh_cycle },
-        { CommandType::REFRESH,  refresh_cycle },
-        { CommandType::SELF_REFRESH_ENTER, refresh_cycle }
-    };
-
     //command REFRESH_BANK
     same_rank[int(CommandType::REFRESH_BANK)] = list< pair<CommandType, int> >
     {
@@ -190,6 +182,15 @@ Timing::Timing() :
     {
         { CommandType::ACTIVATE, refresh_to_activate },
         { CommandType::REFRESH_BANK, refresh_to_refresh },
+    };
+
+    //REFRESH, SELF_REFRESH_ENTER and SELF_REFRESH_EXIT are isued to the entire rank
+    //command REFRESH
+    same_rank[int(CommandType::REFRESH)] = list< pair<CommandType, int> >
+    {
+        { CommandType::ACTIVATE, refresh_cycle },
+        { CommandType::REFRESH,  refresh_cycle },
+        { CommandType::SELF_REFRESH_ENTER, refresh_cycle }
     };
 
     //command SELF_REFRESH_ENTER
