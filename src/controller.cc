@@ -4,10 +4,11 @@
 using namespace std;
 
 Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Timing& timing) :
-    timing_(timing),
     ranks_(ranks),
     bankgroups_(bankgroups),
     banks_per_group_(banks_per_group),
+    clk(0),
+    timing_(timing),
     bank_states_(ranks_, vector< vector<BankState*> >(bankgroups_, vector<BankState*>(banks_per_group_, NULL) ) )
 {
     for(auto i = 0; i < ranks_; i++) {
@@ -19,7 +20,23 @@ Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Tim
     }
 }
 
-Command Controller::GetRequiredCommand(const Command& cmd) {
+void Controller::ClockTick() {
+    Command cmd = scheduler_->GetCommandToIssue();
+    if(cmd.cmd_type_ != CommandType::SIZE) {
+        IssueCommand(cmd);
+    }
+    else {
+        //Look for closing open banks if any. (Aggressive precharing)
+    }
+    clk++;
+}
+
+void Controller::IssueCommand(const Command& cmd) {
+    UpdateState(cmd);
+    UpdateTiming(cmd);
+}
+
+Command Controller::GetRequiredCommand(const Command& cmd) const {
     switch(cmd.cmd_type_) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
@@ -46,10 +63,9 @@ Command Controller::GetRequiredCommand(const Command& cmd) {
         default:
             exit(-1);
     }
-    return Command();
 }
 
-bool Controller::IsReady(const Command& cmd) {
+bool Controller::IsReady(const Command& cmd) const {
     switch(cmd.cmd_type_) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
@@ -75,8 +91,7 @@ bool Controller::IsReady(const Command& cmd) {
         }
         default:
             exit(-1);
-    }   
-    return true;
+    }
 }
 
 

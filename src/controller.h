@@ -6,17 +6,23 @@
 #include "bankstate.h"
 #include "timing.h"
 
+class Scheduler;
+
 class Controller {
     public:
         Controller(int ranks, int bankgroups, int banks_per_group, const Timing& timing);
-        Command GetRequiredCommand(const Command& cmd);
-        bool IsReady(const Command& cmd);
+        void ClockTick();
+        void IssueCommand(const Command& cmd);
+        Command GetRequiredCommand(const Command& cmd) const;
+        bool IsReady(const Command& cmd) const;
         void UpdateState(const Command& cmd);
         void UpdateTiming(const Command& cmd);
+        
+        int ranks_, bankgroups_, banks_per_group_;
+        Scheduler* scheduler_;
     private:
         long clk;
         const Timing& timing_;
-        int ranks_, bankgroups_, banks_per_group_;
         std::vector< std::vector< std::vector<BankState*> > > bank_states_;
 
         //Update timing of the bank the command corresponds to
