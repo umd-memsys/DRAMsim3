@@ -164,6 +164,7 @@ void BankState::UpdateState(const Command& cmd) {
                 default:
                     exit(-1);
             }
+            break;
         case State::SELF_REFRESH:
             switch(cmd.cmd_type_) {
                 case CommandType::SELF_REFRESH_EXIT:
