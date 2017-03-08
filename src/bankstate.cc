@@ -25,7 +25,7 @@ BankState::BankState(int rank, int bankgroup, int bank) :
     printf("Bankstate object created with rank = %d, bankgroup = %d, bank = %d\n", rank_, bankgroup_, bank_);
 }
 
-CommandType BankState::GetRequiredCommand(const Command& cmd) {
+CommandType BankState::GetRequiredCommandType(const Command& cmd) {
     switch(cmd.cmd_type_) {
         case CommandType::READ:
             switch(state_) {
@@ -191,6 +191,6 @@ void BankState::UpdateTiming(CommandType cmd_type, long time) {
     return;
 }
 
-bool BankState::IsReady(const Command& cmd, long time) {
-    return time >= timing_[int(cmd.cmd_type_)];
+bool BankState::IsReady(CommandType cmd_type, long time) {
+    return time >= timing_[int(cmd_type)];
 }

@@ -9,7 +9,8 @@
 class Controller {
     public:
         Controller(int ranks, int bankgroups, int banks_per_group, const Timing& timing);
-        Command GetRequiredCommand();
+        Command GetRequiredCommand(const Command& cmd);
+        bool IsReady(const Command& cmd);
         void UpdateState(const Command& cmd);
         void UpdateTiming(const Command& cmd);
     private:
@@ -19,21 +20,20 @@ class Controller {
         std::vector< std::vector< std::vector<BankState*> > > bank_states_;
 
         //Update timing of the bank the command corresponds to
-        void UpdateSameBank(int rank, int bankgroup, int bank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
+        void UpdateSameBankTiming(int rank, int bankgroup, int bank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
 
         //Update timing of the other banks in the same bankgroup as the command
-        void UpdateOtherBanksSameBankgroup(int rank, int bankgroup, int bank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
+        void UpdateOtherBanksSameBankgroupTiming(int rank, int bankgroup, int bank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
 
         //Update timing of banks in the same rank but different bankgroup as the command
-        void UpdateOtherBankgroupsSameRank(int rank, int bankgroup, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
+        void UpdateOtherBankgroupsSameRankTiming(int rank, int bankgroup, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
 
         //Update timing of banks in a different rank as the command
-        void UpdateOtherRanks(int rank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
+        void UpdateOtherRanksTiming(int rank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
 
-        void UpdateSameRank(int rank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
+        //Update timing of the entire rank (for rank level commands)
+        void UpdateSameRankTiming(int rank, const std::list< std::pair<CommandType, int> >& cmd_timing_list);
 
-        void UpdateBankState(const Command& cmd);
-        void UpdateRankState(const Command& cmd);
 };
 
 #endif
