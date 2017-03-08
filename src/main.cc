@@ -1,7 +1,6 @@
 #include <iostream>
 #include "controller.h"
 #include "timing.h"
-#include "scheduler.h"
 
 using namespace std;
 
@@ -13,7 +12,8 @@ int main(int argc, char **argv)
 
     Timing timing;
     Controller ctrl(ranks, bank_groups, banks_per_group, timing);
-    ctrl.scheduler_ = new Scheduler(ctrl);
+
+    ctrl.ClockTick();
 
     return 0;
 }

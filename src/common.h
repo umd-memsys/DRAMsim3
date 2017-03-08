@@ -31,6 +31,7 @@ class Command {
         Command(const Command& cmd, CommandType cmd_type) :
             cmd_type_(cmd_type), channel_(cmd.channel_), rank_(cmd.rank_), bankgroup_(cmd.bankgroup_), bank_(cmd.bank_), row_(cmd.row_), column_(cmd.column_) {}
 
+        bool IsValid() { return cmd_type_ != CommandType::SIZE; }
         CommandType cmd_type_;
         int channel_, rank_, bankgroup_, bank_, row_, column_;
 };

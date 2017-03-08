@@ -9,7 +9,12 @@ Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Tim
     banks_per_group_(banks_per_group),
     clk(0),
     timing_(timing),
-    bank_states_(ranks_, vector< vector<BankState*> >(bankgroups_, vector<BankState*>(banks_per_group_, NULL) ) )
+    req_q_(ranks_, vector< vector<list<Request*>> >(bankgroups_, vector<list<Request*>>(banks_per_group_, list<Request*>()) ) ),
+    bank_states_(ranks_, vector< vector<BankState*> >(bankgroups_, vector<BankState*>(banks_per_group_, NULL) ) ),
+    next_rank_(0),
+    next_bankgroup_(0),
+    next_bank_(0),
+    size_q(16)
 {
     for(auto i = 0; i < ranks_; i++) {
         for(auto j = 0; j < bankgroups_; j++) {
@@ -21,8 +26,8 @@ Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Tim
 }
 
 void Controller::ClockTick() {
-    Command cmd = scheduler_->GetCommandToIssue();
-    if(cmd.cmd_type_ != CommandType::SIZE) {
+    Command cmd = GetCommandToIssue();
+    if(cmd.IsValid()) {
         IssueCommand(cmd);
     }
     else {
@@ -31,9 +36,32 @@ void Controller::ClockTick() {
     clk++;
 }
 
+Command Controller::GetCommandToIssue() {
+    //Rank, Bank, Bankgroup traversal of queues
+    for(auto i = 0; i < ranks_; i++) {
+        for(auto k = 0; k < banks_per_group_; k++) {
+            for(auto j = 0; j < bankgroups_; j++) {
+                const list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
+                IterateNext();
+                //FRFCFS (First ready first come first serve)
+                //Search the queue to pickup the first request whose required command could be issued this cycle
+                for(auto req : queue) {
+                    Command cmd = GetRequiredCommand(req->cmd_);
+                    if(IsReady(cmd)) 
+                        return cmd;
+                    //TODO - PreventRead write dependencies
+                    //Having unified read write queues appears to a very dumb idea!
+                }
+            }
+        }
+    }
+    return Command();
+}
+
 void Controller::IssueCommand(const Command& cmd) {
     UpdateState(cmd);
     UpdateTiming(cmd);
+    return;
 }
 
 Command Controller::GetRequiredCommand(const Command& cmd) const {
@@ -152,6 +180,16 @@ void Controller::UpdateTiming(const Command& cmd) {
     return ;
 }
 
+bool Controller::InsertReq(Request* req) {
+    auto r = req->cmd_.rank_, bg = req->cmd_.bankgroup_, b = req->cmd_.bank_;
+    if( req_q_[r][bg][b].size() < size_q ) {
+        req_q_[r][bg][b].push_back(req);
+        return true;
+    }
+    else
+        return false;
+}
+
 inline void Controller::UpdateSameBankTiming(int rank, int bankgroup, int bank, const list< pair<CommandType, int> >& cmd_timing_list) {
     for(auto cmd_timing : cmd_timing_list ) {
         bank_states_[rank][bankgroup][bank]->UpdateTiming(cmd_timing.first, clk + cmd_timing.second);
@@ -204,6 +242,17 @@ inline void Controller::UpdateSameRankTiming(int rank, const list< pair<CommandT
             for(auto cmd_timing : cmd_timing_list ) {
                 bank_states_[rank][j][k]->UpdateTiming(cmd_timing.first, clk + cmd_timing.second);
             }
+        }
+    }
+    return;
+}
+
+inline void Controller::IterateNext() {
+    next_bankgroup_ = (next_bankgroup_ + 1) % bankgroups_;
+    if(next_bankgroup_ == 0) {
+        next_bank_ = (next_bank_ + 1) % banks_per_group_;
+        if(next_bank_ == 0) {
+            next_rank_ = (next_rank_ + 1) % ranks_;
         }
     }
     return;
