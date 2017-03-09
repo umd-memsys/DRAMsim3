@@ -41,14 +41,20 @@ Command Controller::GetCommandToIssue() {
     for(auto i = 0; i < ranks_; i++) {
         for(auto k = 0; k < banks_per_group_; k++) {
             for(auto j = 0; j < bankgroups_; j++) {
-                const list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
+                list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
                 IterateNext();
                 //FRFCFS (First ready first come first serve)
                 //Search the queue to pickup the first request whose required command could be issued this cycle
-                for(auto req : queue) {
+                for(auto itr = queue.begin(); itr != queue.end(); itr++) {
+                    auto req = *itr;
                     Command cmd = GetRequiredCommand(req->cmd_);
-                    if(IsReady(cmd)) 
+                    if(IsReady(cmd)) {
+                        if(req->cmd_.cmd_type_ == cmd.cmd_type_) {
+                            //Sought of actually issuing the read/write command
+                            queue.erase(itr);
+                        }
                         return cmd;
+                    }
                     //TODO - PreventRead write dependencies
                     //Having unified read write queues appears to a very dumb idea!
                 }
@@ -59,6 +65,7 @@ Command Controller::GetCommandToIssue() {
 }
 
 void Controller::IssueCommand(const Command& cmd) {
+    cout << "Command Issue at clk = " << clk << " - "<< cmd << endl;
     UpdateState(cmd);
     UpdateTiming(cmd);
     return;

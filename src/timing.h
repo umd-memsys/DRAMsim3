@@ -15,20 +15,20 @@ class Timing {
         std::vector< std::list< std::pair<CommandType, int> > > other_ranks;
         std::vector< std::list< std::pair<CommandType, int> > > same_rank;
 
-        int tBurst = 4;
+        int tBurst = 8; //tBL
         int tCCDL = 6;
-        int tCCDS = 5;
+        int tCCDS = 4;
         int tRTRS = 2;
-        int tRTP = 6;
-        int tCAS = 3;
-        int tCWD = 4;
-        int tWTR = 2;
-        int tWR = 4;
-        int tRP = 5;
-        int tRRD = 10;
-        int tRAS = 8;
-        int tRCD = 4;
-        int tRFC = 60;
+        int tRTP = 5;
+        int tCAS = 3; //tCL
+        int tCWD = 3; // =tCAS
+        int tWTR = 5;
+        int tWR = 10;
+        int tRP = 10;
+        int tRRD = 4;
+        int tRAS = 24;
+        int tRCD = 10;
+        int tRFC = 74;
         int tRC = tRAS + tRP;
         int tCKESR = 50;
         int tXS = 10;

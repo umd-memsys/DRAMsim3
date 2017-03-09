@@ -1,6 +1,8 @@
 #ifndef __COMMON_H
 #define __COMMON_H
 
+#include <iostream>
+
 enum class State {
     OPEN,
     CLOSED,
@@ -34,6 +36,8 @@ class Command {
         bool IsValid() { return cmd_type_ != CommandType::SIZE; }
         CommandType cmd_type_;
         int channel_, rank_, bankgroup_, bank_, row_;
+
+        friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
 
 
@@ -44,6 +48,8 @@ class Request {
         Command cmd_;
         long arrival_time_;
         long exit_time_;
+
+        friend std::ostream& operator<<(std::ostream& os, const Request& req);
 };
 
 #endif
