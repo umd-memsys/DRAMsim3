@@ -8,6 +8,7 @@ BankState::BankState(int rank, int bankgroup, int bank) :
     state_(State::CLOSED),
     timing_(int(CommandType::SIZE)),
     open_row_(-1),
+    refresh_waiting_(false),
     rank_(rank),
     bankgroup_(bankgroup),
     bank_(bank)
@@ -196,4 +197,15 @@ void BankState::UpdateTiming(CommandType cmd_type, long time) {
 
 bool BankState::IsReady(CommandType cmd_type, long time) {
     return time >= timing_[int(cmd_type)];
+}
+
+
+void BankState::UpdateRefreshWaitingStatus(bool status) {
+    refresh_waiting_ = status;
+    return;
+}
+
+
+bool BankState::IsRefreshWaiting() {
+    return refresh_waiting_;
 }

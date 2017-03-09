@@ -43,6 +43,9 @@ class Command {
 
 class Request {
     public:
+        //These constructors are hopelessly stupid. Create a addr sturct and make them right
+        Request(CommandType cmd_type, int rank) :
+            cmd_(Command(cmd_type, -1, rank, -1, -1, -1)), arrival_time_(-1), exit_time_(-1) {}
         Request(CommandType cmd_type, int rank, int bankgroup, int bank, int row) :
             cmd_(Command(cmd_type, -1, rank, bankgroup, bank, row)), arrival_time_(-1), exit_time_(-1) {}
         Command cmd_;

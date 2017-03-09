@@ -14,7 +14,10 @@ class ChannelState {
         bool IsReady(const Command& cmd, long clk) const;
         void UpdateState(const Command& cmd);
         void UpdateTiming(const Command& cmd, long clk);
-
+        void IssueCommand(const Command& cmd, long clk);
+        void UpdateRefreshWaitingStatusRank(int rank, bool status);
+        void UpdateRefreshWaitingStatusBank(int rank, int bankgroup, int bank, bool status);
+        bool IsRefreshWaiting(int rank, int bankgroup, int bank) const;
     private:
         int ranks_, bankgroups_, banks_per_group_;
         std::vector< std::vector< std::vector<BankState*> > > bank_states_;

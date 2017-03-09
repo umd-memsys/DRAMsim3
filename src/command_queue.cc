@@ -24,23 +24,25 @@ Command CommandQueue::GetCommandToIssue() {
     for(auto i = 0; i < ranks_; i++) {
         for(auto k = 0; k < banks_per_group_; k++) {
             for(auto j = 0; j < bankgroups_; j++) {
-                list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
-                IterateNext();
-                //FRFCFS (First ready first come first serve)
-                //Search the queue to pickup the first request whose required command could be issued this cycle
-                for(auto itr = queue.begin(); itr != queue.end(); itr++) {
-                    auto req = *itr;
-                    Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-                    if(channel_state_.IsReady(cmd, clk)) {
-                        if(req->cmd_.cmd_type_ == cmd.cmd_type_) {
-                            //Sought of actually issuing the read/write command
-                            queue.erase(itr);
+                if( !channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_) ) {
+                    list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
+                    //FRFCFS (First ready first come first serve)
+                    //Search the queue to pickup the first request whose required command could be issued this cycle
+                    for(auto itr = queue.begin(); itr != queue.end(); itr++) {
+                        auto req = *itr;
+                        Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+                        if(channel_state_.IsReady(cmd, clk)) {
+                            if(req->cmd_.cmd_type_ == cmd.cmd_type_) {
+                                //Sought of actually issuing the read/write command
+                                queue.erase(itr);
+                            }
+                            return cmd;
                         }
-                        return cmd;
+                        //TODO - PreventRead write dependencies
+                        //Having unified read write queues appears to a very dumb idea!
                     }
-                    //TODO - PreventRead write dependencies
-                    //Having unified read write queues appears to a very dumb idea!
                 }
+                IterateNext();
             }
         }
     }

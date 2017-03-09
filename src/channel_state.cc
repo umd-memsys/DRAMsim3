@@ -189,3 +189,27 @@ inline void ChannelState::UpdateSameRankTiming(int rank, const list< pair<Comman
     }
     return;
 }
+
+void ChannelState::IssueCommand(const Command& cmd, long clk) {
+    UpdateState(cmd);
+    UpdateTiming(cmd, clk);
+    return;
+}
+
+void ChannelState::UpdateRefreshWaitingStatusRank(int rank, bool status) {
+    for( auto j = 0; j < bankgroups_; j++) {
+        for( auto k = 0; k < banks_per_group_; k++) {
+            bank_states_[rank][j][k]->UpdateRefreshWaitingStatus(status);
+        }
+    }
+    return;
+}
+
+void ChannelState::UpdateRefreshWaitingStatusBank(int rank, int bankgroup, int bank, bool status) {
+    bank_states_[rank][bankgroup][bank]->UpdateRefreshWaitingStatus(status);
+    return;
+}
+
+bool ChannelState::IsRefreshWaiting(int rank, int bankgroup, int bank) const {
+    return bank_states_[rank][bankgroup][bank]->IsRefreshWaiting();
+}

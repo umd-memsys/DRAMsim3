@@ -21,6 +21,10 @@ class BankState {
 
         //Check the timing constraints to see if the command can executed at the given time
         bool IsReady(CommandType cmd_type, long time);
+
+        void UpdateRefreshWaitingStatus(bool status);
+
+        bool IsRefreshWaiting();
     private:
         //Current state of the Bank
         //Apriori or instantaneously transitions on a command.
@@ -36,6 +40,8 @@ class BankState {
         //Maximum allowed row hits to a bank before aggressively precharing it
         //To prevent starvation and allow fairness
         int row_hit_count_ = 4;
+
+        int refresh_waiting_;
 
         int rank_, bankgroup_, bank_;
 };

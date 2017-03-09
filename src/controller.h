@@ -3,24 +3,21 @@
 
 #include <vector>
 #include "common.h"
-#include "bankstate.h"
-#include "timing.h"
 #include "channel_state.h"
 #include "command_queue.h"
+#include "refresh.h"
 
 class Controller {
     public:
         Controller(int ranks, int bankgroups, int banks_per_group, const Timing& timing);
         void ClockTick();
-        void IssueCommand(const Command& cmd);
-        
         bool InsertReq(Request* req);
-
     private:
         int ranks_, bankgroups_, banks_per_group_;
         long clk;
         ChannelState channel_state_;
         CommandQueue cmd_queue_;
+        Refresh refresh_;
 
         
 
