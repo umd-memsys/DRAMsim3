@@ -9,12 +9,8 @@ Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Tim
     banks_per_group_(banks_per_group),
     clk(0),
     timing_(timing),
-    req_q_(ranks_, vector< vector<list<Request*>> >(bankgroups_, vector<list<Request*>>(banks_per_group_, list<Request*>()) ) ),
     bank_states_(ranks_, vector< vector<BankState*> >(bankgroups_, vector<BankState*>(banks_per_group_, NULL) ) ),
-    next_rank_(0),
-    next_bankgroup_(0),
-    next_bank_(0),
-    size_q(16)
+    cmd_queue_(ranks, bankgroups, banks_per_group, &bank_states_)
 {
     for(auto i = 0; i < ranks_; i++) {
         for(auto j = 0; j < bankgroups_; j++) {
@@ -26,7 +22,7 @@ Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Tim
 }
 
 void Controller::ClockTick() {
-    Command cmd = GetCommandToIssue();
+    Command cmd = cmd_queue_.GetCommandToIssue();
     if(cmd.IsValid()) {
         IssueCommand(cmd);
     }
@@ -34,34 +30,7 @@ void Controller::ClockTick() {
         //Look for closing open banks if any. (Aggressive precharing)
     }
     clk++;
-}
-
-Command Controller::GetCommandToIssue() {
-    //Rank, Bank, Bankgroup traversal of queues
-    for(auto i = 0; i < ranks_; i++) {
-        for(auto k = 0; k < banks_per_group_; k++) {
-            for(auto j = 0; j < bankgroups_; j++) {
-                list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
-                IterateNext();
-                //FRFCFS (First ready first come first serve)
-                //Search the queue to pickup the first request whose required command could be issued this cycle
-                for(auto itr = queue.begin(); itr != queue.end(); itr++) {
-                    auto req = *itr;
-                    Command cmd = GetRequiredCommand(req->cmd_);
-                    if(IsReady(cmd)) {
-                        if(req->cmd_.cmd_type_ == cmd.cmd_type_) {
-                            //Sought of actually issuing the read/write command
-                            queue.erase(itr);
-                        }
-                        return cmd;
-                    }
-                    //TODO - PreventRead write dependencies
-                    //Having unified read write queues appears to a very dumb idea!
-                }
-            }
-        }
-    }
-    return Command();
+    cmd_queue_.clk++;
 }
 
 void Controller::IssueCommand(const Command& cmd) {
@@ -70,65 +39,6 @@ void Controller::IssueCommand(const Command& cmd) {
     UpdateTiming(cmd);
     return;
 }
-
-Command Controller::GetRequiredCommand(const Command& cmd) const {
-    switch(cmd.cmd_type_) {
-        case CommandType::READ:
-        case CommandType::READ_PRECHARGE:
-        case CommandType::WRITE:
-        case CommandType::WRITE_PRECHARGE:
-        case CommandType::ACTIVATE:
-        case CommandType::PRECHARGE:
-        case CommandType::REFRESH_BANK:
-            return Command(cmd, bank_states_[cmd.rank_][cmd.bankgroup_][cmd.bank_]->GetRequiredCommandType(cmd));
-            break;
-        case CommandType::REFRESH:
-        case CommandType::SELF_REFRESH_ENTER:
-        case CommandType::SELF_REFRESH_EXIT:
-            //Static fixed order to check banks
-            for(auto j = 0; j < bankgroups_; j++) {
-                for(auto k = 0; k < banks_per_group_; k++) {
-                    CommandType required_cmd_type = bank_states_[cmd.rank_][cmd.bankgroup_][cmd.bank_]->GetRequiredCommandType(cmd);
-                    if( required_cmd_type != cmd.cmd_type_)
-                        return Command(cmd, required_cmd_type);
-                }
-            }
-            return cmd;
-            break;
-        default:
-            exit(-1);
-    }
-}
-
-bool Controller::IsReady(const Command& cmd) const {
-    switch(cmd.cmd_type_) {
-        case CommandType::READ:
-        case CommandType::READ_PRECHARGE:
-        case CommandType::WRITE:
-        case CommandType::WRITE_PRECHARGE:
-        case CommandType::ACTIVATE:
-        case CommandType::PRECHARGE:
-        case CommandType::REFRESH_BANK:
-            return bank_states_[cmd.rank_][cmd.bankgroup_][cmd.bank_]->IsReady(cmd.cmd_type_, clk);
-            break;
-        case CommandType::REFRESH:
-        case CommandType::SELF_REFRESH_ENTER:
-        case CommandType::SELF_REFRESH_EXIT: {
-            bool is_ready = true;
-            for(auto j = 0; j < bankgroups_; j++) {
-                for(auto k = 0; k < banks_per_group_; k++) {
-                    is_ready &= bank_states_[cmd.rank_][cmd.bankgroup_][cmd.bank_]->IsReady(cmd.cmd_type_, clk);
-                    //if(!is_ready) return false //Early return for simulator performance?
-                }
-            }
-            return is_ready;
-            break;
-        }
-        default:
-            exit(-1);
-    }
-}
-
 
 void Controller::UpdateState(const Command& cmd) {
     switch(cmd.cmd_type_) {
@@ -188,13 +98,7 @@ void Controller::UpdateTiming(const Command& cmd) {
 }
 
 bool Controller::InsertReq(Request* req) {
-    auto r = req->cmd_.rank_, bg = req->cmd_.bankgroup_, b = req->cmd_.bank_;
-    if( req_q_[r][bg][b].size() < size_q ) {
-        req_q_[r][bg][b].push_back(req);
-        return true;
-    }
-    else
-        return false;
+    return cmd_queue_.InsertReq(req);
 }
 
 inline void Controller::UpdateSameBankTiming(int rank, int bankgroup, int bank, const list< pair<CommandType, int> >& cmd_timing_list) {
@@ -249,17 +153,6 @@ inline void Controller::UpdateSameRankTiming(int rank, const list< pair<CommandT
             for(auto cmd_timing : cmd_timing_list ) {
                 bank_states_[rank][j][k]->UpdateTiming(cmd_timing.first, clk + cmd_timing.second);
             }
-        }
-    }
-    return;
-}
-
-inline void Controller::IterateNext() {
-    next_bankgroup_ = (next_bankgroup_ + 1) % bankgroups_;
-    if(next_bankgroup_ == 0) {
-        next_bank_ = (next_bank_ + 1) % banks_per_group_;
-        if(next_bank_ == 0) {
-            next_rank_ = (next_rank_ + 1) % ranks_;
         }
     }
     return;
