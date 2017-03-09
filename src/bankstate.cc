@@ -127,12 +127,14 @@ void BankState::UpdateState(const Command& cmd) {
             switch(cmd.cmd_type_) {
                 case CommandType::READ:
                 case CommandType::WRITE:
+                    row_hit_count_++;
                     break;
                 case CommandType::READ_PRECHARGE:
                 case CommandType::WRITE_PRECHARGE:
                 case CommandType::PRECHARGE:
                     state_ = State::CLOSED;
                     open_row_ = -1;
+                    row_hit_count_ = 0;
                     break;
                 case CommandType::ACTIVATE:
                 case CommandType::REFRESH:

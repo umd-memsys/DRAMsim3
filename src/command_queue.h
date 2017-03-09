@@ -20,7 +20,7 @@ class CommandQueue {
         int size_q_;
 
         std::vector< std::vector< std::vector< std::list<Request*> > > > req_q_;
-        std::vector< std::vector< std::vector<BankState*> > >* bank_states_ptr_;
+        const std::vector< std::vector< std::vector<BankState*> > >* bank_states_ptr_;
 
         void IterateNext();
 };

@@ -22,8 +22,8 @@ class BankState {
         //Check the timing constraints to see if the command can executed at the given time
         bool IsReady(CommandType cmd_type, long time);
     private:
-        // Current state of the Bank
-        // Apriori or instantaneously transitions on a command.
+        //Current state of the Bank
+        //Apriori or instantaneously transitions on a command.
         State state_;
 
         // Earliest time when the particular Command can be executed in this bank
@@ -32,6 +32,10 @@ class BankState {
         //Currently open row
         //Applicable only if the bank is in OPEN state
         int open_row_;
+
+        //Maximum allowed row hits to a bank before aggressively precharing it
+        //To prevent starvation and allow fairness
+        int row_hit_count_ = 4;
 
         int rank_, bankgroup_, bank_;
 };

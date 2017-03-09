@@ -48,7 +48,7 @@ Command CommandQueue::GetCommandToIssue() {
 }
 
 Command CommandQueue::GetRequiredCommand(const Command& cmd) const {
-    auto bank_states = *bank_states_ptr_;
+    auto bank_states = *bank_states_ptr_; 
     switch(cmd.cmd_type_) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
