@@ -4,7 +4,7 @@
 
 using namespace std;
 
-CommandQueue::CommandQueue(int ranks, int bankgroups, int banks_per_group, std::vector< std::vector< std::vector<BankState*> > >* bank_states_ptr) :
+CommandQueue::CommandQueue(int ranks, int bankgroups, int banks_per_group, const ChannelState& channel_state) :
     clk(0),
     ranks_(ranks),
     bankgroups_(bankgroups),
@@ -14,7 +14,7 @@ CommandQueue::CommandQueue(int ranks, int bankgroups, int banks_per_group, std::
     next_bank_(0),
     size_q_(16),
     req_q_(ranks, vector< vector<list<Request*>> >(bankgroups, vector<list<Request*>>(banks_per_group, list<Request*>()) ) ),
-    bank_states_ptr_(bank_states_ptr)
+    channel_state_(channel_state)
 {
 
 }
@@ -30,8 +30,8 @@ Command CommandQueue::GetCommandToIssue() {
                 //Search the queue to pickup the first request whose required command could be issued this cycle
                 for(auto itr = queue.begin(); itr != queue.end(); itr++) {
                     auto req = *itr;
-                    Command cmd = GetRequiredCommand(req->cmd_);
-                    if(IsReady(cmd)) {
+                    Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+                    if(channel_state_.IsReady(cmd, clk)) {
                         if(req->cmd_.cmd_type_ == cmd.cmd_type_) {
                             //Sought of actually issuing the read/write command
                             queue.erase(itr);
@@ -47,65 +47,7 @@ Command CommandQueue::GetCommandToIssue() {
     return Command();
 }
 
-Command CommandQueue::GetRequiredCommand(const Command& cmd) const {
-    auto bank_states = *bank_states_ptr_; 
-    switch(cmd.cmd_type_) {
-        case CommandType::READ:
-        case CommandType::READ_PRECHARGE:
-        case CommandType::WRITE:
-        case CommandType::WRITE_PRECHARGE:
-        case CommandType::ACTIVATE:
-        case CommandType::PRECHARGE:
-        case CommandType::REFRESH_BANK:
-            return Command(cmd, bank_states[cmd.rank_][cmd.bankgroup_][cmd.bank_]->GetRequiredCommandType(cmd));
-            break;
-        case CommandType::REFRESH:
-        case CommandType::SELF_REFRESH_ENTER:
-        case CommandType::SELF_REFRESH_EXIT:
-            //Static fixed order to check banks
-            for(auto j = 0; j < bankgroups_; j++) {
-                for(auto k = 0; k < banks_per_group_; k++) {
-                    CommandType required_cmd_type = bank_states[cmd.rank_][cmd.bankgroup_][cmd.bank_]->GetRequiredCommandType(cmd);
-                    if( required_cmd_type != cmd.cmd_type_)
-                        return Command(cmd, required_cmd_type);
-                }
-            }
-            return cmd;
-            break;
-        default:
-            exit(-1);
-    }
-}
 
-bool CommandQueue::IsReady(const Command& cmd) const {
-    auto bank_states = *bank_states_ptr_;
-    switch(cmd.cmd_type_) {
-        case CommandType::READ:
-        case CommandType::READ_PRECHARGE:
-        case CommandType::WRITE:
-        case CommandType::WRITE_PRECHARGE:
-        case CommandType::ACTIVATE:
-        case CommandType::PRECHARGE:
-        case CommandType::REFRESH_BANK:
-            return bank_states[cmd.rank_][cmd.bankgroup_][cmd.bank_]->IsReady(cmd.cmd_type_, clk);
-            break;
-        case CommandType::REFRESH:
-        case CommandType::SELF_REFRESH_ENTER:
-        case CommandType::SELF_REFRESH_EXIT: {
-            bool is_ready = true;
-            for(auto j = 0; j < bankgroups_; j++) {
-                for(auto k = 0; k < banks_per_group_; k++) {
-                    is_ready &= bank_states[cmd.rank_][cmd.bankgroup_][cmd.bank_]->IsReady(cmd.cmd_type_, clk);
-                    //if(!is_ready) return false //Early return for simulator performance?
-                }
-            }
-            return is_ready;
-            break;
-        }
-        default:
-            exit(-1);
-    }
-}
 
 bool CommandQueue::InsertReq(Request* req) {
     auto r = req->cmd_.rank_, bg = req->cmd_.bankgroup_, b = req->cmd_.bank_;
