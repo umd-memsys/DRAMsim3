@@ -34,6 +34,7 @@ Command CommandQueue::GetCommandToIssue() {
                         if(channel_state_.IsReady(cmd, clk)) {
                             if(req->cmd_.cmd_type_ == cmd.cmd_type_) {
                                 //Sought of actually issuing the read/write command
+                                delete(*itr);
                                 queue.erase(itr);
                             }
                             return cmd;

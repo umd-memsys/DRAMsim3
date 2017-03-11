@@ -14,7 +14,7 @@ int main(int argc, char **argv)
     int rows = 1024;
     
     long clk = 0;
-    int cycles = 1000;
+    int cycles = 1000000;
 
     Timing timing;
     Controller ctrl(ranks, bank_groups, banks_per_group, timing);

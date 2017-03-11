@@ -34,6 +34,7 @@ class Command {
             cmd_type_(cmd_type), channel_(cmd.channel_), rank_(cmd.rank_), bankgroup_(cmd.bankgroup_), bank_(cmd.bank_), row_(cmd.row_) {}
 
         bool IsValid() { return cmd_type_ != CommandType::SIZE; }
+        bool IsRefresh() { return cmd_type_ == CommandType::REFRESH || cmd_type_ == CommandType::REFRESH_BANK; }
         CommandType cmd_type_;
         int channel_, rank_, bankgroup_, bank_, row_;
 

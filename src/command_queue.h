@@ -8,7 +8,7 @@
 
 class CommandQueue {
     public:
-        CommandQueue(int ranks, int bankgroups, int banks_per_group, const ChannelState& channel_state_);
+        CommandQueue(int ranks, int bankgroups, int banks_per_group, const ChannelState& channel_state);
         Command GetCommandToIssue() ;
         bool InsertReq(Request* req);
         long clk;

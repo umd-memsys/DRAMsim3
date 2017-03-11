@@ -142,13 +142,13 @@ Timing::Timing() :
         //{ CommandType::ACTIVATE, activate_to_activate }
     };
 
-    other_banks_same_bankgroup[int(CommandType::WRITE_PRECHARGE)] = list< pair<CommandType, int> >
+    other_banks_same_bankgroup[int(CommandType::ACTIVATE)] = list< pair<CommandType, int> >
     {
         { CommandType::ACTIVATE, activate_to_activate_o },
         { CommandType::REFRESH_BANK, activate_to_refresh }
     };
 
-    other_bankgroups_same_rank[int(CommandType::WRITE_PRECHARGE)] = list< pair<CommandType, int> >
+    other_bankgroups_same_rank[int(CommandType::ACTIVATE)] = list< pair<CommandType, int> >
     {
         { CommandType::ACTIVATE, activate_to_activate_o },
         { CommandType::REFRESH_BANK, activate_to_refresh }

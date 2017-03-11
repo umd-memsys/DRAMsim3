@@ -10,24 +10,29 @@ Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Tim
     clk(0),
     channel_state_(ranks, bankgroups, banks_per_group, timing),
     cmd_queue_(ranks, bankgroups, banks_per_group, channel_state_),
-    refresh_(ranks, bankgroups, banks_per_group)
+    refresh_(ranks, bankgroups, banks_per_group, channel_state_)
 {
-    printf("Creating a controller object with ranks = %d, bankgroups = %d, banks_per_group = %d", ranks_, bankgroups_, banks_per_group_);
+    printf("Creating a controller object with ranks = %d, bankgroups = %d, banks_per_group = %d\n", ranks_, bankgroups_, banks_per_group_);
 }
 
 void Controller::ClockTick() {
     //Refresh command is queued
+    refresh_.ClockTick();
     if( !refresh_.refresh_q_.empty()) {
-        auto req = refresh_.refresh_q_.front();
-
-        if(refresh_.PrepareForRefreshIssue())
+        auto req_itr = refresh_.refresh_q_.begin();
+        channel_state_.UpdateRefreshWaitingStatus((*req_itr)->cmd_, true); //Why is this updated each time? Not smart.
+        auto cmd = refresh_.GetRefreshOrAssociatedCommand(req_itr);
+        if(cmd.IsValid()) {
+            channel_state_.IssueCommand(cmd, clk);
+            if(cmd.IsRefresh())
+                channel_state_.UpdateRefreshWaitingStatus(cmd, false);
             return;
+        }
     }
 
     //Read write queues
-    Command cmd = cmd_queue_.GetCommandToIssue();
+    auto cmd = cmd_queue_.GetCommandToIssue();
     if(cmd.IsValid()) {
-        cout << "Command Issue at clk = " << clk << " - "<< cmd << endl;
         channel_state_.IssueCommand(cmd, clk);
     }
     else {

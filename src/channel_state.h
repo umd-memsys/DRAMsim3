@@ -15,12 +15,14 @@ class ChannelState {
         void UpdateState(const Command& cmd);
         void UpdateTiming(const Command& cmd, long clk);
         void IssueCommand(const Command& cmd, long clk);
-        void UpdateRefreshWaitingStatusRank(int rank, bool status);
-        void UpdateRefreshWaitingStatusBank(int rank, int bankgroup, int bank, bool status);
+        void UpdateRefreshWaitingStatus(const Command& cmd, bool status);
         bool IsRefreshWaiting(int rank, int bankgroup, int bank) const;
+        bool ActivationConstraint(int rank, long curr_time) const;
+        void UpdateActivationTimes(int rank, long curr_time);
     private:
         int ranks_, bankgroups_, banks_per_group_;
         std::vector< std::vector< std::vector<BankState*> > > bank_states_;
+        std::vector< std::list<long> > activation_times_;
         const Timing& timing_;
 
         //Update timing of the bank the command corresponds to
@@ -37,6 +39,8 @@ class ChannelState {
 
         //Update timing of the entire rank (for rank level commands)
         void UpdateSameRankTiming(int rank, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk);
+
+        int tFAW = 50;
 };
 
 #endif
