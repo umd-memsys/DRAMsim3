@@ -24,7 +24,13 @@ class BankState {
 
         void UpdateRefreshWaitingStatus(bool status);
 
-        bool IsRefreshWaiting();
+        bool IsRefreshWaiting() const;
+
+        bool IsRowOpen() const;
+
+        int OpenRow() const;
+
+        int RowHitCount() const;
     private:
         //Current state of the Bank
         //Apriori or instantaneously transitions on a command.
@@ -39,7 +45,7 @@ class BankState {
 
         //Maximum allowed row hits to a bank before aggressively precharing it
         //To prevent starvation and allow fairness
-        int row_hit_count_ = 4;
+        int row_hit_count_;
 
         int refresh_waiting_;
 

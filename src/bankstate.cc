@@ -8,6 +8,7 @@ BankState::BankState(int rank, int bankgroup, int bank) :
     state_(State::CLOSED),
     timing_(int(CommandType::SIZE)),
     open_row_(-1),
+    row_hit_count_(0),
     refresh_waiting_(false),
     rank_(rank),
     bankgroup_(bankgroup),
@@ -206,6 +207,18 @@ void BankState::UpdateRefreshWaitingStatus(bool status) {
 }
 
 
-bool BankState::IsRefreshWaiting() {
+bool BankState::IsRefreshWaiting() const {
     return refresh_waiting_;
+}
+
+bool BankState::IsRowOpen() const {
+    return state_ == State::OPEN;
+}
+
+int BankState::OpenRow() const {
+    return open_row_;
+}
+
+int BankState::RowHitCount() const {
+    return row_hit_count_;
 }

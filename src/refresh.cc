@@ -1,4 +1,5 @@
 #include "refresh.h"
+#include <iostream>
 
 using namespace std;
 
@@ -11,7 +12,9 @@ Refresh::Refresh(int ranks, int bankgroups, int banks_per_group, const ChannelSt
     last_bank_refresh_(ranks, vector< vector<long>>(bankgroups, vector<long>(banks_per_group, 0))),
     last_rank_refresh_(ranks, 0),
     next_rank_(0)
-{}
+{
+    printf("Creating refresh object with bankgroups = %d, banks = %d\n", bankgroups_, banks_per_group_);
+}
 
 void Refresh::ClockTick() {
     clk++;

@@ -35,6 +35,7 @@ class Command {
 
         bool IsValid() { return cmd_type_ != CommandType::SIZE; }
         bool IsRefresh() { return cmd_type_ == CommandType::REFRESH || cmd_type_ == CommandType::REFRESH_BANK; }
+        bool IsRead() { return cmd_type_ == CommandType::READ || cmd_type_ == CommandType::READ_PRECHARGE; }
         CommandType cmd_type_;
         int channel_, rank_, bankgroup_, bank_, row_;
 

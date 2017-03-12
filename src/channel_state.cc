@@ -244,3 +244,15 @@ void ChannelState::UpdateActivationTimes(int rank, long curr_time) {
     }
     return;
 }
+
+bool ChannelState::IsRowOpen(int rank, int bankgroup, int bank) const {
+    return bank_states_[rank][bankgroup][bank]->IsRefreshWaiting();
+}
+
+int ChannelState::OpenRow(int rank, int bankgroup, int bank) const {
+    return bank_states_[rank][bankgroup][bank]->OpenRow();
+}
+
+int ChannelState::RowHitCount(int rank, int bankgroup, int bank) const {
+    return bank_states_[rank][bankgroup][bank]->RowHitCount();
+}

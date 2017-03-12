@@ -19,6 +19,9 @@ class ChannelState {
         bool IsRefreshWaiting(int rank, int bankgroup, int bank) const;
         bool ActivationConstraint(int rank, long curr_time) const;
         void UpdateActivationTimes(int rank, long curr_time);
+        bool IsRowOpen(int rank, int bankgroup, int bank) const;
+        int OpenRow(int rank, int bankgroup, int bank) const;
+        int RowHitCount(int rank, int bankgroup, int bank) const;
     private:
         int ranks_, bankgroups_, banks_per_group_;
         std::vector< std::vector< std::vector<BankState*> > > bank_states_;
