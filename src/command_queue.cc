@@ -20,15 +20,12 @@ CommandQueue::CommandQueue(int ranks, int bankgroups, int banks_per_group, const
 }
 
 Command CommandQueue::GetCommandToIssue() {
-
-    //Unified Per bank queues
-
     //Rank, Bank, Bankgroup traversal of queues
     for(auto i = 0; i < ranks_; i++) {
         for(auto k = 0; k < banks_per_group_; k++) {
             for(auto j = 0; j < bankgroups_; j++) {
                 if( !channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_) ) {
-                    list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
+                    auto& queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
                     //Prioritize row hits while honoring read, write dependencies
                     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
                         auto req = *req_itr;
@@ -77,16 +74,6 @@ Command CommandQueue::GetCommandToIssue() {
         }
     }
     return Command();
-
-    //Unified per rank queues
-
-    //Unified single queue
-
-    //Separate read/write queues with write bufer
-
-    //Separate read/write queues per rank with write buffer
-
-    //Separate read/write queues per bank with write buffer
 }
 
 bool CommandQueue::InsertReq(Request* req) {

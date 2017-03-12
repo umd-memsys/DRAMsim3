@@ -12,9 +12,9 @@ int main(int argc, char **argv)
     ofstream req_log("requests.log");
     //ofstream cmd_log("commands.log");
 
-    int ranks = 2;
-    int bank_groups = 2;
-    int banks_per_group = 4;
+    int ranks = 1;
+    int bank_groups = 1;
+    int banks_per_group = 1;
     int rows = 1024;
     
     long clk = 0;
