@@ -32,3 +32,4 @@
 obj
 dramcore
 dramcore.dSYM
+*.log

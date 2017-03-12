@@ -14,7 +14,7 @@ Refresh::Refresh(int ranks, int bankgroups, int banks_per_group, const ChannelSt
     last_rank_refresh_(ranks, 0),
     next_rank_(0)
 {
-    printf("Creating refresh object with bankgroups = %d, banks = %d", bankgroups_, banks_per_group_);
+    printf("Creating refresh object with bankgroups = %d, banks = %d\n", bankgroups_, banks_per_group_);
 }
 
 void Refresh::ClockTick() {

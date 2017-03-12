@@ -28,13 +28,13 @@ Command CommandQueue::GetCommandToIssue() {
         for(auto k = 0; k < banks_per_group_; k++) {
             for(auto j = 0; j < bankgroups_; j++) {
                 if( !channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_) ) {
-                    auto queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
+                    list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
                     //Prioritize row hits while honoring read, write dependencies
                     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
                         auto req = *req_itr;
                         Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-                        if ( req->cmd_.cmd_type_ == cmd.cmd_type_) { //Essentially checking for a row hit
-                            if(channel_state_.IsReady(cmd, clk)) {
+                        if(channel_state_.IsReady(cmd, clk)) {
+                            if ( req->cmd_.cmd_type_ == cmd.cmd_type_) { //Essentially checking for a row hit. Replace with IsReadWrite() function?
                                 //Check for read/write dependency check. Necessary only for unified queues
                                 bool dependency = false;
                                 for(auto dep_itr = queue.begin(); dep_itr != req_itr; dep_itr++) {
@@ -52,14 +52,7 @@ Command CommandQueue::GetCommandToIssue() {
                                     return cmd;
                                 }
                             }
-                        }
-                    }
-                    //No read/write to issue.
-                    for(auto itr = queue.begin(); itr != queue.end(); itr++) {
-                        auto req = *itr;
-                        Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-                        if( !cmd.IsReadWrite() && channel_state_.IsReady(cmd, clk)) {
-                            if(cmd.cmd_type_ == CommandType::PRECHARGE) {
+                            else if( cmd.cmd_type_ == CommandType::PRECHARGE) {
                                 // Only attempt issuing a precharge if either one of the following conditions are satisfied
                                 // 1. There are no pending row hits to the open row in the bank
                                 // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
@@ -71,10 +64,11 @@ Command CommandQueue::GetCommandToIssue() {
                                         break;
                                     }
                                 }
-                                if(pending_row_hits_exist && channel_state_.RowHitCount(cmd.rank_, cmd.bankgroup_, cmd.bank_) < 4)
-                                    break;
+                                if( !pending_row_hits_exist || channel_state_.RowHitCount(cmd.rank_, cmd.bankgroup_, cmd.bank_) >= 4)
+                                    return cmd;
                             }
-                            return cmd;
+                            else
+                                return cmd;
                         }
                     }
                 }
