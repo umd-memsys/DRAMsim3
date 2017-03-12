@@ -11,6 +11,7 @@ class CommandQueue {
         CommandQueue(int ranks, int bankgroups, int banks_per_group, const ChannelState& channel_state);
         Command GetCommandToIssue() ;
         bool InsertReq(Request* req);
+        std::list<Request*>& GetQueue(int rank, int bankgroup, int bank);
         long clk;
     private:
         int ranks_, bankgroups_, banks_per_group_;

@@ -28,7 +28,7 @@ Command CommandQueue::GetCommandToIssue() {
         for(auto k = 0; k < banks_per_group_; k++) {
             for(auto j = 0; j < bankgroups_; j++) {
                 if( !channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_) ) {
-                    list<Request*>& queue = req_q_[next_rank_][next_bankgroup_][next_bank_];
+                    auto queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
                     //Prioritize row hits while honoring read, write dependencies
                     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
                         auto req = *req_itr;
@@ -114,4 +114,9 @@ inline void CommandQueue::IterateNext() {
         }
     }
     return;
+}
+
+
+list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
+    return req_q_[rank][bankgroup][bank];
 }

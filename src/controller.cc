@@ -10,7 +10,7 @@ Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Tim
     clk(0),
     channel_state_(ranks, bankgroups, banks_per_group, timing),
     cmd_queue_(ranks, bankgroups, banks_per_group, channel_state_),
-    refresh_(ranks, bankgroups, banks_per_group, channel_state_)
+    refresh_(ranks, bankgroups, banks_per_group, channel_state_, cmd_queue_)
 {
     printf("Creating a controller object with ranks = %d, bankgroups = %d, banks_per_group = %d\n", ranks_, bankgroups_, banks_per_group_);
 }
