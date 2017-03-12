@@ -35,7 +35,8 @@ class Command {
 
         bool IsValid() { return cmd_type_ != CommandType::SIZE; }
         bool IsRefresh() { return cmd_type_ == CommandType::REFRESH || cmd_type_ == CommandType::REFRESH_BANK; }
-        bool IsRead() { return cmd_type_ == CommandType::READ || cmd_type_ == CommandType::READ_PRECHARGE; }
+        bool IsReadWrite() const { return cmd_type_ == CommandType::READ || cmd_type_ == CommandType::READ_PRECHARGE ||
+                                          cmd_type_ == CommandType::WRITE || cmd_type_ == CommandType::WRITE_PRECHARGE; }
         CommandType cmd_type_;
         int channel_, rank_, bankgroup_, bank_, row_;
 
@@ -48,11 +49,12 @@ class Request {
         //These constructors are hopelessly stupid. Create a addr sturct and make them right
         Request(CommandType cmd_type, int rank) :
             cmd_(Command(cmd_type, -1, rank, -1, -1, -1)), arrival_time_(-1), exit_time_(-1) {}
-        Request(CommandType cmd_type, int rank, int bankgroup, int bank, int row) :
-            cmd_(Command(cmd_type, -1, rank, bankgroup, bank, row)), arrival_time_(-1), exit_time_(-1) {}
+        Request(CommandType cmd_type, int rank, int bankgroup, int bank, int row, int id) :
+            cmd_(Command(cmd_type, -1, rank, bankgroup, bank, row)), arrival_time_(-1), exit_time_(-1), id_(id) {}
         Command cmd_;
         long arrival_time_;
         long exit_time_;
+        int id_ = 0;
 
         friend std::ostream& operator<<(std::ostream& os, const Request& req);
 };

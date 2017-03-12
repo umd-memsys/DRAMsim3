@@ -23,6 +23,6 @@ ostream& operator<<(ostream& os, const Command& cmd) {
 }
 
 ostream& operator<<(ostream& os, const Request& req) {
-    os << "(" << req.arrival_time_ << "," << req.exit_time_ << ")" << " " << req.cmd_;
+    os << "(" << req.arrival_time_ << "," << req.exit_time_ << "," << req.id_ << ")" << " " << req.cmd_;
     return os;
 }

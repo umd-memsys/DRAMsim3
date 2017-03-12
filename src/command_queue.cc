@@ -58,7 +58,7 @@ Command CommandQueue::GetCommandToIssue() {
                     for(auto itr = queue.begin(); itr != queue.end(); itr++) {
                         auto req = *itr;
                         Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-                        if(channel_state_.IsReady(cmd, clk)) {
+                        if( !cmd.IsReadWrite() && channel_state_.IsReady(cmd, clk)) {
                             if(cmd.cmd_type_ == CommandType::PRECHARGE) {
                                 // Only attempt issuing a precharge if either one of the following conditions are satisfied
                                 // 1. There are no pending row hits to the open row in the bank
