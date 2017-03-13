@@ -33,17 +33,40 @@ void Refresh::InsertRefresh() {
 
 Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator req_itr) {
     auto req = *req_itr;
-    
+    // Issue a single pending request 
     if( req->cmd_.cmd_type_ == CommandType::REFRESH) {
         for(auto k = 0; k < banks_per_group_; k++) {
             for(auto j = 0; j < bankgroups_; j++) {
-                auto queue = cmd_queue_.GetQueue(req->cmd_.rank_, j, k);
-                //Issue pending row buffer hits upto cap
+                if(channel_state_.IsRowOpen(req->cmd_.rank_, j, k) && channel_state_.RowHitCount(req->cmd_.rank_, j, k) == 0) {
+                    auto& queue = cmd_queue_.GetQueue(req->cmd_.rank_, j, k);
+                    for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
+                        auto req = *req_itr;
+                        Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+                        if(cmd.IsReadWrite()) { //Rowhit
+                            if(channel_state_.IsReady(cmd, clk)) {
+                                delete(*req_itr);
+                                queue.erase(req_itr);
+                                return cmd;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
     else if( req->cmd_.cmd_type_ == CommandType::REFRESH_BANK) {
-        auto queue = cmd_queue_.GetQueue(req->cmd_.rank_, req->cmd_.bankgroup_, req->cmd_.bank_);
+        if(channel_state_.IsRowOpen(req->cmd_.rank_, req->cmd_.bankgroup_, req->cmd_.bank_) && channel_state_.RowHitCount(req->cmd_.rank_, req->cmd_.bankgroup_, req->cmd_.bank_) == 0) {
+            auto& queue = cmd_queue_.GetQueue(req->cmd_.rank_, req->cmd_.bankgroup_, req->cmd_.bank_);
+            for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
+                auto req = *req_itr;
+                Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+                if(channel_state_.IsReady(cmd, clk)) {
+                    delete(*req_itr);
+                    queue.erase(req_itr);
+                    return cmd;
+                }
+            }
+        }
     }
 
     auto cmd = channel_state_.GetRequiredCommand(req->cmd_);

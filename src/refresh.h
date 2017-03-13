@@ -33,7 +33,7 @@ class Refresh {
 
         void IterateNext();
 
-        int tREFI = 7800;
+        int tREFI = 780;
         //int tREFIb = 1950; //4 banks. Temporary hard coding.
         
 };

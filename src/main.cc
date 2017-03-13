@@ -12,13 +12,13 @@ int main(int argc, char **argv)
     ofstream req_log("requests.log");
     //ofstream cmd_log("commands.log");
 
-    int ranks = 1;
-    int bank_groups = 1;
-    int banks_per_group = 1;
+    int ranks = 2;
+    int bank_groups = 2;
+    int banks_per_group = 2;
     int rows = 1024;
     
     long clk = 0;
-    int cycles = 1000;
+    int cycles = 10000;
 
     Timing timing;
     Controller ctrl(ranks, bank_groups, banks_per_group, timing);
