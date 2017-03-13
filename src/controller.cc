@@ -37,18 +37,15 @@ void Controller::ClockTick() {
     }
     else {
         //Look for closing open banks if any. (Aggressive precharing)
-        auto pre_cmd = AggressivePrecharge();
-        if(cmd.IsValid()) {
-            channel_state_.IssueCommand(cmd, clk);
+        //To which no read/write requests exist in the queues
+        auto pre_cmd = cmd_queue_.AggressivePrecharge();
+        if(pre_cmd.IsValid()) {
+            channel_state_.IssueCommand(pre_cmd, clk);
         }
     }
     clk++;
     cmd_queue_.clk++;
 }
-
-
-
-
 
 bool Controller::InsertReq(Request* req) {
     return cmd_queue_.InsertReq(req);

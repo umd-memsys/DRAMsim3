@@ -56,7 +56,7 @@ Command CommandQueue::GetCommandToIssue() {
                                 bool pending_row_hits_exist = false;
                                 auto open_row = channel_state_.OpenRow(cmd.rank_, cmd.bankgroup_, cmd.bank_);
                                 for(auto pending_req : queue) {
-                                    if( pending_req->cmd_.row_ == open_row) {
+                                    if( pending_req->cmd_.row_ == open_row) { //ToDo - And same bank if queues are rank based
                                         pending_row_hits_exist = true;
                                         break;
                                     }
@@ -76,6 +76,32 @@ Command CommandQueue::GetCommandToIssue() {
     return Command();
 }
 
+Command CommandQueue::AggressivePrecharge() {
+    for(auto i = 0; i < ranks_; i++) {
+        for(auto k = 0; k < banks_per_group_; k++) {
+            for(auto j = 0; j < bankgroups_; j++) {
+                if(channel_state_.IsRowOpen(i, j, k)) {
+                    auto cmd = Command(CommandType::PRECHARGE, -1, i, j, k, -1);
+                    if(channel_state_.IsReady(cmd, clk)) {
+                        bool pending_row_hits_exist = false;
+                        auto open_row = channel_state_.OpenRow(i, j, k);
+                        auto& queue = GetQueue(i, j, k);
+                        for(auto pending_req : queue) {
+                            if( pending_req->cmd_.row_ == open_row) { //ToDo - And same bank if queues are rank based
+                                pending_row_hits_exist = true;
+                                break;
+                            }
+                        }
+                        if(!pending_row_hits_exist)
+                            return Command(CommandType::PRECHARGE, -1, i, j, k, -1);
+                    }
+                }
+            }
+        }
+    }
+    return Command();
+}
+
 bool CommandQueue::InsertReq(Request* req) {
     auto r = req->cmd_.rank_, bg = req->cmd_.bankgroup_, b = req->cmd_.bank_;
     if( req_q_[r][bg][b].size() < size_q_ ) {
@@ -84,6 +110,10 @@ bool CommandQueue::InsertReq(Request* req) {
     }
     else
         return false;
+}
+
+list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
+    return req_q_[rank][bankgroup][bank];
 }
 
 inline void CommandQueue::IterateNext() {
@@ -95,23 +125,4 @@ inline void CommandQueue::IterateNext() {
         }
     }
     return;
-}
-
-
-list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
-    return req_q_[rank][bankgroup][bank];
-}
-
-
-Command CommandQueue::AggressivePrecharge() {
-    for(auto i = 0; i < ranks_; i++) {
-        for(auto k = 0; k < banks_per_group_; k++) {
-            for(auto j = 0; j < bankgroups_; j++) {
-                if(channel_state_.IsRowOpen(i, j, k)) {
-                    auto& queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
-                }
-            }
-        }
-    }
-    return Command();
 }

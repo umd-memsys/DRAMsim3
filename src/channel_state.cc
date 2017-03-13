@@ -246,7 +246,7 @@ void ChannelState::UpdateActivationTimes(int rank, long curr_time) {
 }
 
 bool ChannelState::IsRowOpen(int rank, int bankgroup, int bank) const {
-    return bank_states_[rank][bankgroup][bank]->IsRefreshWaiting();
+    return bank_states_[rank][bankgroup][bank]->IsRowOpen();
 }
 
 int ChannelState::OpenRow(int rank, int bankgroup, int bank) const {

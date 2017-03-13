@@ -38,6 +38,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
+                    cout << "In unknown state" << endl;
                     exit(-1);
             }
             case CommandType::READ_PRECHARGE:
@@ -49,6 +50,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
+                    cout << "In unknown state" << endl;
                     exit(-1);
             }
         case CommandType::WRITE:
@@ -60,6 +62,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
+                    cout << "In unknown state" << endl;
                     exit(-1);
             }
             case CommandType::WRITE_PRECHARGE:
@@ -71,6 +74,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
+                    cout << "In unknown state" << endl;
                     exit(-1);
             }
             case CommandType::REFRESH_BANK:
@@ -82,6 +86,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
+                    cout << "In unknown state" << endl;
                     exit(-1);
             }
         case CommandType::REFRESH:
@@ -93,6 +98,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
+                    cout << "In unknown state" << endl;
                     exit(-1);
             }
         case CommandType::SELF_REFRESH_ENTER:
@@ -103,6 +109,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                     return CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                 default:
+                    cout << "In unknown state" << endl;
                     exit(-1);
             }
         case CommandType::SELF_REFRESH_EXIT:
@@ -112,6 +119,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::CLOSED:
                 case State::OPEN:
                 default:
+                    cout << "In unknown state" << endl;
                     exit(-1);
             }
         // ACTIVATE and PRECHARGE are on demand commands
