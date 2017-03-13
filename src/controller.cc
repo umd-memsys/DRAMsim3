@@ -37,6 +37,10 @@ void Controller::ClockTick() {
     }
     else {
         //Look for closing open banks if any. (Aggressive precharing)
+        auto pre_cmd = AggressivePrecharge();
+        if(cmd.IsValid()) {
+            channel_state_.IssueCommand(cmd, clk);
+        }
     }
     clk++;
     cmd_queue_.clk++;

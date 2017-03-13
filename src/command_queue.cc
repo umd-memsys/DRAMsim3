@@ -101,3 +101,17 @@ inline void CommandQueue::IterateNext() {
 list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
     return req_q_[rank][bankgroup][bank];
 }
+
+
+Command CommandQueue::AggressivePrecharge() {
+    for(auto i = 0; i < ranks_; i++) {
+        for(auto k = 0; k < banks_per_group_; k++) {
+            for(auto j = 0; j < bankgroups_; j++) {
+                if(channel_state_.IsRowOpen(i, j, k)) {
+                    auto& queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
+                }
+            }
+        }
+    }
+    return Command();
+}
