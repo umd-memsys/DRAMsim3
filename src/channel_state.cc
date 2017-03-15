@@ -223,7 +223,7 @@ bool ChannelState::ActivationConstraint(int rank, long curr_time) const {
         else
             break; //Activation times are ordered. For simulator performance. Really needed?
     }
-    return count >= config_.activation_window_depth; //ASSERT that count is never greater than 4
+    return count >= config_.activation_window_depth; //ASSERT that count is never greater than activation_window_depth
 }
 
 void ChannelState::UpdateActivationTimes(int rank, long curr_time) {

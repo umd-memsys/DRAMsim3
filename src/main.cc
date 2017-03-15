@@ -5,6 +5,7 @@
 #include "timing.h"
 #include "common.h"
 #include "config.h"
+#include "cpu.h"
 
 using namespace std;
 
@@ -13,6 +14,7 @@ int main(int argc, char **argv)
     ofstream req_log("requests.log");
 
     Config config;
+    TraceBasedCPU cpu;
     Timing timing(config);
     Controller ctrl(config, timing);
 
