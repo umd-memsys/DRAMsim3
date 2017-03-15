@@ -9,18 +9,14 @@
 
 class Controller {
     public:
-        Controller(int ranks, int bankgroups, int banks_per_group, const Timing& timing);
+        Controller(const Config& config, const Timing& timing);
         void ClockTick();
         bool InsertReq(Request* req);
     private:
-        int ranks_, bankgroups_, banks_per_group_;
         long clk;
         ChannelState channel_state_;
         CommandQueue cmd_queue_;
         Refresh refresh_;
-
-        
-
 };
 
 #endif

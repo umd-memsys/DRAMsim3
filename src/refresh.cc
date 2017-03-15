@@ -3,19 +3,15 @@
 
 using namespace std;
 
-Refresh::Refresh(int ranks, int bankgroups, int banks_per_group, const ChannelState& channel_state, CommandQueue& cmd_queue) :
-    clk(0),
-    ranks_(ranks),
-    bankgroups_(bankgroups),
-    banks_per_group_(banks_per_group),
+Refresh::Refresh(const Config& config, const ChannelState& channel_state, CommandQueue& cmd_queue) :
+    config_(config),
     channel_state_(channel_state),
     cmd_queue_(cmd_queue),
-    last_bank_refresh_(ranks, vector< vector<long>>(bankgroups, vector<long>(banks_per_group, 0))),
-    last_rank_refresh_(ranks, 0),
+    clk(0),
+    last_bank_refresh_(config_.ranks, vector< vector<long>>(config_.bankgroups, vector<long>(config_.banks_per_group, 0))),
+    last_rank_refresh_(config_.ranks, 0),
     next_rank_(0)
-{
-    printf("Creating refresh object with bankgroups = %d, banks = %d\n", bankgroups_, banks_per_group_);
-}
+{}
 
 void Refresh::ClockTick() {
     clk++;
@@ -24,7 +20,7 @@ void Refresh::ClockTick() {
 }
 
 void Refresh::InsertRefresh() {
-    if( clk % tREFI == 0) {
+    if( clk % config_.tREFI == 0) {
         refresh_q_.push_back(new Request(CommandType::REFRESH, next_rank_));
         IterateNext();
     }
@@ -35,8 +31,8 @@ Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator req_itr)
     auto req = *req_itr;
     // Issue a single pending request 
     if( req->cmd_.cmd_type_ == CommandType::REFRESH) {
-        for(auto k = 0; k < banks_per_group_; k++) {
-            for(auto j = 0; j < bankgroups_; j++) {
+        for(auto k = 0; k < config_.banks_per_group; k++) {
+            for(auto j = 0; j < config_.bankgroups; j++) {
                 if(channel_state_.IsRowOpen(req->cmd_.rank_, j, k) && channel_state_.RowHitCount(req->cmd_.rank_, j, k) == 0) {
                     auto& queue = cmd_queue_.GetQueue(req->cmd_.rank_, j, k);
                     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
@@ -82,6 +78,6 @@ Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator req_itr)
 }
 
 inline void Refresh::IterateNext() {
-    next_rank_ = (next_rank_ + 1) % ranks_;
+    next_rank_ = (next_rank_ + 1) % config_.ranks;
     return;
 }

@@ -3,17 +3,12 @@
 
 using namespace std;
 
-Controller::Controller(int ranks, int bankgroups, int banks_per_group, const Timing& timing) :
-    ranks_(ranks),
-    bankgroups_(bankgroups),
-    banks_per_group_(banks_per_group),
+Controller::Controller(const Config& config, const Timing& timing) :
     clk(0),
-    channel_state_(ranks, bankgroups, banks_per_group, timing),
-    cmd_queue_(ranks, bankgroups, banks_per_group, channel_state_),
-    refresh_(ranks, bankgroups, banks_per_group, channel_state_, cmd_queue_)
-{
-    printf("Creating a controller object with ranks = %d, bankgroups = %d, banks_per_group = %d\n", ranks_, bankgroups_, banks_per_group_);
-}
+    channel_state_(config, timing),
+    cmd_queue_(config, channel_state_),
+    refresh_(config, channel_state_, cmd_queue_)
+{}
 
 void Controller::ClockTick() {
     //Refresh command is queued

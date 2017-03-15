@@ -6,20 +6,20 @@
 #include "common.h"
 #include "channel_state.h"
 #include "command_queue.h"
+#include "config.h"
 
 class Refresh {
     public:
-        Refresh(int ranks, int bankgroups, int banks_per_group, const ChannelState& channel_state, CommandQueue& cmd_queue);
-        std::list<Request*> refresh_q_;
+        Refresh(const Config& config, const ChannelState& channel_state, CommandQueue& cmd_queue);
+        std::list<Request*> refresh_q_; // Queue of refresh commands
         void ClockTick();
         Command GetRefreshOrAssociatedCommand(std::list<Request*>::iterator itr);
     private:
-        long clk;
-        int ranks_, bankgroups_, banks_per_group_;
+        const Config& config_;
         const ChannelState& channel_state_;
         CommandQueue& cmd_queue_;
-        // Queue of refresh commands
-
+        long clk;
+        
         //Keep track of the last time when a refresh command was issued to this bank 
         std::vector< std::vector< std::vector<long> > > last_bank_refresh_;
 
@@ -32,9 +32,6 @@ class Refresh {
         void InsertRefresh();
 
         void IterateNext();
-
-        int tREFI = 780;
-        //int tREFIb = 1950; //4 banks. Temporary hard coding.
         
 };
 

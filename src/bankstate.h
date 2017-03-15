@@ -20,24 +20,20 @@ class BankState {
         void UpdateTiming(const CommandType cmd_type, long time);
 
         //Check the timing constraints to see if the command can executed at the given time
-        bool IsReady(CommandType cmd_type, long time);
-
-        void UpdateRefreshWaitingStatus(bool status);
-
-        bool IsRefreshWaiting() const;
-
-        bool IsRowOpen() const;
-
-        int OpenRow() const;
-
-        int RowHitCount() const;
+        bool IsReady(CommandType cmd_type, long time) const { return time >= cmd_timing_[int(cmd_type)]; }
+        
+        void UpdateRefreshWaitingStatus(bool status) { refresh_waiting_ = status; return; }
+        bool IsRefreshWaiting() const { return refresh_waiting_; }
+        bool IsRowOpen() const { return state_ == State::OPEN; }
+        int OpenRow() const { return open_row_; }
+        int RowHitCount() const { return row_hit_count_; }
     private:
         //Current state of the Bank
         //Apriori or instantaneously transitions on a command.
         State state_;
 
         // Earliest time when the particular Command can be executed in this bank
-        std::vector<long> timing_;
+        std::vector<long> cmd_timing_;
 
         //Currently open row
         //Applicable only if the bank is in OPEN state
@@ -48,8 +44,6 @@ class BankState {
         int row_hit_count_;
 
         int refresh_waiting_;
-
-        int rank_, bankgroup_, bank_;
 };
 
 #endif

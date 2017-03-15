@@ -6,25 +6,21 @@ using namespace std;
 
 BankState::BankState(int rank, int bankgroup, int bank) :
     state_(State::CLOSED),
-    timing_(int(CommandType::SIZE)),
+    cmd_timing_(int(CommandType::SIZE)),
     open_row_(-1),
     row_hit_count_(0),
-    refresh_waiting_(false),
-    rank_(rank),
-    bankgroup_(bankgroup),
-    bank_(bank)
+    refresh_waiting_(false)
 {
-    timing_[int(CommandType::READ)] = 0;
-    timing_[int(CommandType::READ_PRECHARGE)] = 0;
-    timing_[int(CommandType::WRITE)] = 0;
-    timing_[int(CommandType::WRITE_PRECHARGE)] = 0;
-    timing_[int(CommandType::ACTIVATE)] = 0;
-    timing_[int(CommandType::PRECHARGE)] = 0;
-    timing_[int(CommandType::REFRESH)] = 0;
-    timing_[int(CommandType::SELF_REFRESH_ENTER)] = 0;
-    timing_[int(CommandType::SELF_REFRESH_EXIT)] = 0;
+    cmd_timing_[int(CommandType::READ)] = 0;
+    cmd_timing_[int(CommandType::READ_PRECHARGE)] = 0;
+    cmd_timing_[int(CommandType::WRITE)] = 0;
+    cmd_timing_[int(CommandType::WRITE_PRECHARGE)] = 0;
+    cmd_timing_[int(CommandType::ACTIVATE)] = 0;
+    cmd_timing_[int(CommandType::PRECHARGE)] = 0;
+    cmd_timing_[int(CommandType::REFRESH)] = 0;
+    cmd_timing_[int(CommandType::SELF_REFRESH_ENTER)] = 0;
+    cmd_timing_[int(CommandType::SELF_REFRESH_EXIT)] = 0;
 
-    printf("Bankstate object created with rank = %d, bankgroup = %d, bank = %d\n", rank_, bankgroup_, bank_);
 }
 
 CommandType BankState::GetRequiredCommandType(const Command& cmd) {
@@ -200,33 +196,6 @@ void BankState::UpdateState(const Command& cmd) {
 }
 
 void BankState::UpdateTiming(CommandType cmd_type, long time) {
-    timing_[int(cmd_type)] = max(timing_[int(cmd_type)], time);
+    cmd_timing_[int(cmd_type)] = max(cmd_timing_[int(cmd_type)], time);
     return;
-}
-
-bool BankState::IsReady(CommandType cmd_type, long time) {
-    return time >= timing_[int(cmd_type)];
-}
-
-
-void BankState::UpdateRefreshWaitingStatus(bool status) {
-    refresh_waiting_ = status;
-    return;
-}
-
-
-bool BankState::IsRefreshWaiting() const {
-    return refresh_waiting_;
-}
-
-bool BankState::IsRowOpen() const {
-    return state_ == State::OPEN;
-}
-
-int BankState::OpenRow() const {
-    return open_row_;
-}
-
-int BankState::RowHitCount() const {
-    return row_hit_count_;
 }

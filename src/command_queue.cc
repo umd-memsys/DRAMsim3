@@ -4,26 +4,23 @@
 
 using namespace std;
 
-CommandQueue::CommandQueue(int ranks, int bankgroups, int banks_per_group, const ChannelState& channel_state) :
+CommandQueue::CommandQueue(const Config& config, const ChannelState& channel_state) :
     clk(0),
-    ranks_(ranks),
-    bankgroups_(bankgroups),
-    banks_per_group_(banks_per_group),
+    config_(config),
+    channel_state_(channel_state),
     next_rank_(0),
     next_bankgroup_(0),
     next_bank_(0),
-    size_q_(16),
-    req_q_(ranks, vector< vector<list<Request*>> >(bankgroups, vector<list<Request*>>(banks_per_group, list<Request*>()) ) ),
-    channel_state_(channel_state)
+    req_q_(config_.ranks, vector< vector<list<Request*>> >(config_.bankgroups, vector<list<Request*>>(config_.banks_per_group, list<Request*>()) ) )
 {
 
 }
 
 Command CommandQueue::GetCommandToIssue() {
     //Rank, Bank, Bankgroup traversal of queues
-    for(auto i = 0; i < ranks_; i++) {
-        for(auto k = 0; k < banks_per_group_; k++) {
-            for(auto j = 0; j < bankgroups_; j++) {
+    for(auto i = 0; i < config_.ranks; i++) {
+        for(auto k = 0; k < config_.banks_per_group; k++) {
+            for(auto j = 0; j < config_.bankgroups; j++) {
                 if( !channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_) ) {
                     auto& queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
                     //Prioritize row hits while honoring read, write dependencies
@@ -77,9 +74,9 @@ Command CommandQueue::GetCommandToIssue() {
 }
 
 Command CommandQueue::AggressivePrecharge() {
-    for(auto i = 0; i < ranks_; i++) {
-        for(auto k = 0; k < banks_per_group_; k++) {
-            for(auto j = 0; j < bankgroups_; j++) {
+    for(auto i = 0; i < config_.ranks; i++) {
+        for(auto k = 0; k < config_.banks_per_group; k++) {
+            for(auto j = 0; j < config_.bankgroups; j++) {
                 if(channel_state_.IsRowOpen(i, j, k)) {
                     auto cmd = Command(CommandType::PRECHARGE, -1, i, j, k, -1);
                     if(channel_state_.IsReady(cmd, clk)) {
@@ -104,7 +101,7 @@ Command CommandQueue::AggressivePrecharge() {
 
 bool CommandQueue::InsertReq(Request* req) {
     auto r = req->cmd_.rank_, bg = req->cmd_.bankgroup_, b = req->cmd_.bank_;
-    if( req_q_[r][bg][b].size() < size_q_ ) {
+    if( req_q_[r][bg][b].size() < config_.queue_size ) {
         req_q_[r][bg][b].push_back(req);
         return true;
     }
@@ -112,16 +109,12 @@ bool CommandQueue::InsertReq(Request* req) {
         return false;
 }
 
-list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
-    return req_q_[rank][bankgroup][bank];
-}
-
 inline void CommandQueue::IterateNext() {
-    next_bankgroup_ = (next_bankgroup_ + 1) % bankgroups_;
+    next_bankgroup_ = (next_bankgroup_ + 1) % config_.bankgroups;
     if(next_bankgroup_ == 0) {
-        next_bank_ = (next_bank_ + 1) % banks_per_group_;
+        next_bank_ = (next_bank_ + 1) % config_.banks_per_group;
         if(next_bank_ == 0) {
-            next_rank_ = (next_rank_ + 1) % ranks_;
+            next_rank_ = (next_rank_ + 1) % config_.ranks;
         }
     }
     return;
