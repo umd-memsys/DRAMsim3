@@ -3,6 +3,9 @@
 
 #include <string>
 
+int LogBase2(int power_of_two);
+
+
 class Config {
     public:
         Config();
@@ -15,8 +18,8 @@ class Config {
     int ranks = 2;
     int bankgroups = 2;
     int banks_per_group = 4;
-    int rows = 2^16;
-    int columns = 2^10;
+    int rows = 1 << 16;
+    int columns = 1 << 10;
 
     int queue_size = 16;
 
@@ -51,7 +54,8 @@ class Config {
     std::string address_mapping = "rorababgchcl"; //Rank-Bank-Bankgroup-Channel-Column-Row
 
 
-
+    //Computed parameters
+    int channel_width_, rank_width_, bankgroup_width_, bank_width_, row_width_, column_width_;
 };
 
 #endif

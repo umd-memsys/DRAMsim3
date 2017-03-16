@@ -18,7 +18,8 @@ class Access {
 };
 
 
-int LogBase2(int power_of_two);
+
+int ModuloWidth(uint32_t addr, int bit_width, int pos);
 Address AddressMapping(uint64_t hex_addr, const Config& config);
 
 
@@ -38,8 +39,6 @@ class TraceBasedCPU {
         Request* req_;
         bool get_next_ = true;
         int req_id_ = 0;
-
-        int channel_width_, rank_width_, bankgroup_width_, bank_width_, row_width_, column_width_;
 
         Request* FormRequest(const Access& access);
 };

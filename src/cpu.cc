@@ -17,12 +17,8 @@ TraceBasedCPU::TraceBasedCPU(vector<Controller*>& ctrls, const Config& config) :
         exit(-1);
     }
 
-    channel_width_ = LogBase2(config_.channels);
-    rank_width_ = LogBase2(config_.ranks);
-    bankgroup_width_ = LogBase2(config_.bankgroups);
-    bank_width_ = LogBase2(config_.banks_per_group);
-    row_width_ = LogBase2(config_.rows);
-    column_width_ = LogBase2(config_.columns);
+    
+
     /*Access access;
     auto count = 0;
     uint64_t largest = 0;
@@ -68,11 +64,23 @@ ostream& operator<<(ostream& os, const Access& access) {
 
 Address AddressMapping(uint64_t hex_addr, const Config& config) {
     //Implement address mapping functionality
+    int pos = 3;
     if(config.address_mapping == "rorababgchcl") {
-        //int channel, rank, bankgroup, bank, row, column;
-        
-    }
-    return Address();
+       auto column = ModuloWidth(hex_addr, config.column_width_, pos);
+       pos += config.column_width_;
+       auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
+       pos += config.channel_width_;
+       auto rank =  ModuloWidth(hex_addr, config.rank_width_, pos);
+       pos += config.rank_width_;
+       auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
+       pos += config.bankgroup_width_;
+       auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
+       pos += config.bank_width_;
+       auto row = ModuloWidth(hex_addr, config.row_width_, pos);
+       return Address(channel, rank, bankgroup, bank, row, column);
+    };
+    cerr << "Unknown address_mapping" << endl;
+    exit(-1);
 }
 
 Request* TraceBasedCPU::FormRequest(const Access& access) {
@@ -89,10 +97,10 @@ Request* TraceBasedCPU::FormRequest(const Access& access) {
     return new Request(cmd_type, addr, access.time_, req_id_);
 }
 
-int LogBase2(int power_of_two) {
-    int i = 0;
-    while( power_of_two > 0) {
-        power_of_two /= 2;
-    }
-    return i;
+int ModuloWidth(uint32_t addr, int bit_width, int pos) {
+    addr >>= pos;
+    auto store = addr;
+    addr >>= bit_width;
+    addr <<= bit_width;
+    return store ^ addr;
 }
