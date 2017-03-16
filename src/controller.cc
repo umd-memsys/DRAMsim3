@@ -3,7 +3,8 @@
 
 using namespace std;
 
-Controller::Controller(const Config& config, const Timing& timing) :
+Controller::Controller(int channel, const Config& config, const Timing& timing) :
+    channel_(channel),
     clk(0),
     channel_state_(config, timing),
     cmd_queue_(config, channel_state_),

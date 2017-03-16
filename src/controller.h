@@ -9,9 +9,10 @@
 
 class Controller {
     public:
-        Controller(const Config& config, const Timing& timing);
+        Controller(int channel, const Config& config, const Timing& timing);
         void ClockTick();
         bool InsertReq(Request* req);
+        int channel_;
     private:
         long clk;
         ChannelState channel_state_;

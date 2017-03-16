@@ -14,9 +14,16 @@ int main(int argc, char **argv)
     ofstream req_log("requests.log");
 
     Config config;
-    TraceBasedCPU cpu;
     Timing timing(config);
-    Controller ctrl(config, timing);
+
+    vector<Controller*> ctrls(config.channels);
+    for(auto i = 0; i < config.channels; i++) {
+        ctrls[i] = new Controller(i, config, timing);
+    }
+
+    TraceBasedCPU cpu(ctrls, config);
+
+    cpu.ClockTick();
 
     // Create random CPU requests at random time intervals
     // With random row buffer hits
@@ -35,13 +42,13 @@ int main(int argc, char **argv)
 
             Request* req = new Request(cmd_type, rank, bankgroup, bank, row, id);
             req->arrival_time_ = clk;
-            if(ctrl.InsertReq(req)) {
+            if(ctrls[0]->InsertReq(req)) {
                 id++;
                 req_log << "Request Inserted at clk = " << clk << " " << *req << endl;
             }
         }
         //Memory Controller Clock Tick
-        ctrl.ClockTick();
+        ctrls[0]->ClockTick();
     }
 
     req_log.close();

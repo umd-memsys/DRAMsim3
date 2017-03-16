@@ -1,22 +1,24 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include <string>
+
 class Config {
     public:
         Config();
 
     //Simulation Parameters
-    int cycles = 10000;
+    int cycles = 1000;
 
     //DRAM physical structure
-    int channels = 1;
-    int ranks = 1;
-    int bankgroups = 1;
-    int banks_per_group = 1;
-    int rows = 1024;
+    int channels = 4;
+    int ranks = 2;
+    int bankgroups = 2;
+    int banks_per_group = 4;
+    int rows = 2^16;
+    int columns = 2^10;
 
     int queue_size = 16;
-
 
     //DRAM timing parameters
     int tBurst = 8; //tBL
@@ -45,6 +47,8 @@ class Config {
     int tFAW = 50;
 
     int activation_window_depth = 4;
+
+    std::string address_mapping = "rorababgchcl"; //Rank-Bank-Bankgroup-Channel-Column-Row
 
 
 
