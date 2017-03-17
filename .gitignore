@@ -33,3 +33,4 @@ obj
 dramcore
 dramcore.dSYM
 *.log
+build

@@ -23,12 +23,17 @@ int main(int argc, char **argv)
 
     TraceBasedCPU cpu(ctrls, config);
 
-    cpu.ClockTick();
+
+    for(auto clk = 0; clk < config.cycles; clk++) {
+        cpu.ClockTick();
+        for( auto ctrl : ctrls)
+            ctrl->ClockTick();
+    }
 
     // Create random CPU requests at random time intervals
     // With random row buffer hits
     // And insert them into the controller
-    auto last_row = 0;
+    /*auto last_row = 0;
     auto id = 0;
     for(auto clk = 0; clk < config.cycles; clk++) {
         //CPU Clock Tick
@@ -49,7 +54,7 @@ int main(int argc, char **argv)
         }
         //Memory Controller Clock Tick
         ctrls[0]->ClockTick();
-    }
+    }*/
 
     req_log.close();
     return 0;

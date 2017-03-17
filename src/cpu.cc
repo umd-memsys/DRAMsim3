@@ -16,23 +16,7 @@ TraceBasedCPU::TraceBasedCPU(vector<Controller*>& ctrls, const Config& config) :
         cerr << "Trace file does not exist" << endl << " Exiting abruptly" << endl;
         exit(-1);
     }
-
-    
-
-    /*Access access;
-    auto count = 0;
-    uint64_t largest = 0;
-    while(!trace_file_.eof()) {
-        trace_file_ >> access;
-        //cout << access;
-        largest = access.hex_addr_ > largest ? access.hex_addr_ : largest;
-        count++;
-        //if(count >= 100) break;
-    }
-    cout << "Count = " << count << endl;
-    cout << "Largest = " << hex << largest << dec << endl;*/
 }
-
 
 void TraceBasedCPU::ClockTick() {
     Access access;
