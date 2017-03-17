@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="dramcore" type="CMakeRunConfiguration" factoryName="Application" WORKING_DIR="" PASS_PARENT_ENVS_2="true" PROJECT_NAME="dram-core" TARGET_NAME="dramcore" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="dram-core" RUN_TARGET_NAME="dramcore">
+    <envs />
+    <method />
+  </configuration>
+</component>

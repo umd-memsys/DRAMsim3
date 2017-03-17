@@ -34,3 +34,6 @@ dramcore
 dramcore.dSYM
 *.log
 build
+cmake-build-debug
+.idea/workspace.xml
+.idea/tasks.xml
