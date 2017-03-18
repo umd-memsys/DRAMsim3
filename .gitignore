@@ -31,9 +31,11 @@
 # User defined
 obj
 dramcore
+dramcoretest
 dramcore.dSYM
 *.log
 build
+googletest
 cmake-build-debug
 .idea/workspace.xml
 .idea/tasks.xml
