@@ -11,7 +11,7 @@ class Config {
         Config();
 
     //Simulation Parameters
-    int cycles = 1000;
+    int cycles = 100000;
 
     //DRAM physical structure
     int channels = 4;
@@ -21,7 +21,7 @@ class Config {
     int rows = 1 << 16;
     int columns = 1 << 10;
 
-    int queue_size = 16;
+    unsigned int queue_size = 16;
 
     //DRAM timing parameters
     int tBurst = 8; //tBL

@@ -24,7 +24,18 @@ Address AddressMapping(uint64_t hex_addr, const Config& config);
 
 
 class RandomCPU {
-    RandomCPU();
+    public:
+        RandomCPU(std::vector<Controller*>& ctrls, const Config& config);
+        void ClockTick();
+    private:
+        std::vector<Controller*>& ctrls_;
+        const Config& config_;
+        long clk_;
+        Address last_addr_;
+        Request* req_;
+        bool get_next_ = true;
+        int req_id_ = 0;
+        std::ofstream req_log_;
 };
 
 class TraceBasedCPU {

@@ -3,8 +3,42 @@
 
 using namespace std;
 
-RandomCPU::RandomCPU()
+RandomCPU::RandomCPU(vector<Controller*>& ctrls, const Config& config) :
+    ctrls_(ctrls),
+    config_(config),
+    clk_(0),
+    last_addr_(0, 0, 0, 0, 0, -1),
+    req_log_("requests.log")
 {}
+
+
+void RandomCPU::ClockTick()
+{
+    // Create random CPU requests at random time intervals
+    // With random row buffer hits
+    // And insert them into the controller
+    auto column = -1;
+    if ( rand() % 4 == 0) { 
+        if(get_next_) {
+            get_next_ = false;
+            auto channel = rand() % config_.channels;
+            auto rank = rand() % config_.ranks;
+            auto bankgroup = rand() % config_.bankgroups;
+            auto bank = rand() % config_.banks_per_group;
+            auto row =  rand() % config_.rows;
+            auto addr = rand() % 3 == 0 ? Address(channel, rank, bankgroup, bank, row, column) : last_addr_;
+            last_addr_ = addr;
+            auto cmd_type = rand() % 3 == 0 ? CommandType::WRITE : CommandType::READ;
+            req_ = new Request(cmd_type, addr, clk_, req_id_);
+        }
+        if(ctrls_[req_->cmd_.channel_]->InsertReq(req_)) {
+            get_next_ = true;
+            req_id_++;
+            req_log_ << "Request Inserted at clk = " << clk_ << " " << *req_ << endl;
+        }
+    }
+    return;
+}
 
 TraceBasedCPU::TraceBasedCPU(vector<Controller*>& ctrls, const Config& config) :
     ctrls_(ctrls),
@@ -19,14 +53,14 @@ TraceBasedCPU::TraceBasedCPU(vector<Controller*>& ctrls, const Config& config) :
 }
 
 void TraceBasedCPU::ClockTick() {
-    Access access;
     if(!trace_file_.eof()) {
         if(get_next_) {
+            get_next_ = false;
+            Access access;
             trace_file_ >> access;
             req_ = FormRequest(access);
-            get_next_ = false;
         }
-        if(access.time_ >= clk) {
+        if(req_->arrival_time_ <= clk) {
             if(ctrls_[req_->cmd_.channel_]->InsertReq(req_)) {
                 get_next_ = true;
                 req_id_++;

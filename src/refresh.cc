@@ -20,7 +20,7 @@ void Refresh::ClockTick() {
 }
 
 void Refresh::InsertRefresh() {
-    if( clk % config_.tREFI == 0) {
+    if( clk % (config_.tREFI/config_.ranks) == 0) {
         refresh_q_.push_back(new Request(CommandType::REFRESH, next_rank_));
         IterateNext();
     }

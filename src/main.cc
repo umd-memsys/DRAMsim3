@@ -11,8 +11,7 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    ofstream req_log("requests.log");
-
+    bool enable_trace_cpu = false;
     Config config;
     Timing timing(config);
 
@@ -21,41 +20,13 @@ int main(int argc, char **argv)
         ctrls[i] = new Controller(i, config, timing);
     }
 
-    TraceBasedCPU cpu(ctrls, config);
-
+    TraceBasedCPU trace_cpu(ctrls, config);
+    RandomCPU random_cpu(ctrls, config);
 
     for(auto clk = 0; clk < config.cycles; clk++) {
-        cpu.ClockTick();
+        enable_trace_cpu ? trace_cpu.ClockTick() : random_cpu.ClockTick();
         for( auto ctrl : ctrls)
             ctrl->ClockTick();
     }
-
-    // Create random CPU requests at random time intervals
-    // With random row buffer hits
-    // And insert them into the controller
-    /*auto last_row = 0;
-    auto id = 0;
-    for(auto clk = 0; clk < config.cycles; clk++) {
-        //CPU Clock Tick
-        if ( rand() % 4 == 0) {
-            auto rank = rand() % config.ranks;
-            auto bankgroup = rand() % config.bankgroups;
-            auto bank = rand() % config.banks_per_group;
-            auto row = rand() % 3 == 0 ? rand() % config.rows : last_row;
-            last_row = row;
-            auto cmd_type = rand() % 3 == 0 ? CommandType::WRITE : CommandType::READ;
-
-            Request* req = new Request(cmd_type, rank, bankgroup, bank, row, id);
-            req->arrival_time_ = clk;
-            if(ctrls[0]->InsertReq(req)) {
-                id++;
-                req_log << "Request Inserted at clk = " << clk << " " << *req << endl;
-            }
-        }
-        //Memory Controller Clock Tick
-        ctrls[0]->ClockTick();
-    }*/
-
-    req_log.close();
     return 0;
 }
