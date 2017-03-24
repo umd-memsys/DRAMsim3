@@ -6,6 +6,7 @@
 #include <utility>
 #include "common.h"
 
+
 class BankState {
     public:
         BankState(int rank, int bankgroup, int bank);
@@ -20,7 +21,7 @@ class BankState {
         void UpdateTiming(const CommandType cmd_type, long time);
 
         //Check the timing constraints to see if the command can executed at the given time
-        bool IsReady(CommandType cmd_type, long time) const { return time >= cmd_timing_[int(cmd_type)]; }
+        bool IsReady(CommandType cmd_type, long time) const { return time >= cmd_timing_[static_cast<int>(cmd_type)]; }
         
         void UpdateRefreshWaitingStatus(bool status) { refresh_waiting_ = status; return; }
         bool IsRefreshWaiting() const { return refresh_waiting_; }

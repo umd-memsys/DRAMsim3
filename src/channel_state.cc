@@ -26,7 +26,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
         case CommandType::ACTIVATE:
         case CommandType::PRECHARGE:
         case CommandType::REFRESH_BANK:
-            return Command(cmd, bank_states_[cmd.rank_][cmd.bankgroup_][cmd.bank_]->GetRequiredCommandType(cmd));
+            return Command(cmd, bank_states_[cmd.rank_][cmd.bankgroup_][cmd.bank_]->GetRequiredCommandType(cmd)); //TODO - Modify Command constructor to (addr, cmd_type)
             break;
         case CommandType::REFRESH:
         case CommandType::SELF_REFRESH_ENTER:
@@ -50,7 +50,7 @@ bool ChannelState::IsReady(const Command& cmd, long clk) const {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
             if(ActivationConstraint(cmd.rank_, clk))
-                return false; //Note : no break here. Is this kind of coding good?
+                return false; //TODO - Bad coding. Case statement is not supposed to be used like this
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
         case CommandType::WRITE:
@@ -105,29 +105,30 @@ void ChannelState::UpdateState(const Command& cmd) {
 void ChannelState::UpdateTiming(const Command& cmd, long clk) {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
-            UpdateActivationTimes(cmd.rank_, clk); //Note : no break here
+            UpdateActivationTimes(cmd.rank_, clk); //TODO - Bad coding. Note : no break here
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
         case CommandType::PRECHARGE:
         case CommandType::REFRESH_BANK:
+            //TODO - simulator speed? - Speciazlize which of the below functions to call depending on the command type
             //Same Bank
-            UpdateSameBankTiming(cmd.rank_, cmd.bankgroup_, cmd.bank_, timing_.same_bank[int(cmd.cmd_type_)], clk);
+            UpdateSameBankTiming(cmd.rank_, cmd.bankgroup_, cmd.bank_, timing_.same_bank[static_cast<int>(cmd.cmd_type_)], clk); //TODO - Just pass in addr, cmd_type, clk
 
             //Same Bankgroup other banks
-            UpdateOtherBanksSameBankgroupTiming(cmd.rank_, cmd.bankgroup_, cmd.bank_, timing_.other_banks_same_bankgroup[int(cmd.cmd_type_)], clk);
+            UpdateOtherBanksSameBankgroupTiming(cmd.rank_, cmd.bankgroup_, cmd.bank_, timing_.other_banks_same_bankgroup[static_cast<int>(cmd.cmd_type_)], clk); //TODO - same as above
 
             //Other bankgroups
-            UpdateOtherBankgroupsSameRankTiming(cmd.rank_, cmd.bankgroup_, timing_.other_bankgroups_same_rank[int(cmd.cmd_type_)], clk);
+            UpdateOtherBankgroupsSameRankTiming(cmd.rank_, cmd.bankgroup_, timing_.other_bankgroups_same_rank[static_cast<int>(cmd.cmd_type_)], clk); //TODO - same as above
 
             //Other ranks
-            UpdateOtherRanksTiming(cmd.rank_, timing_.other_ranks[int(cmd.cmd_type_)], clk);
+            UpdateOtherRanksTiming(cmd.rank_, timing_.other_ranks[static_cast<int>(cmd.cmd_type_)], clk); //TODO - same as above
             break;
         case CommandType::REFRESH:
         case CommandType::SELF_REFRESH_ENTER:
         case CommandType::SELF_REFRESH_EXIT:
-            UpdateSameRankTiming(cmd.rank_, timing_.same_rank[int(cmd.cmd_type_)], clk);
+            UpdateSameRankTiming(cmd.rank_, timing_.same_rank[static_cast<int>(cmd.cmd_type_)], clk);
             break;
         default:
             exit(-1);
@@ -195,7 +196,7 @@ inline void ChannelState::UpdateSameRankTiming(int rank, const list< pair<Comman
 void ChannelState::IssueCommand(const Command& cmd, long clk) {
     cout << "Command Issue at clk = " << clk << " - "<< cmd << endl;
     UpdateState(cmd);
-    UpdateTiming(cmd, clk);
+    UpdateTiming(cmd, clk); //TODO - Can be optimized a lot for simulator speed. Worth the time?
     return;
 }
 
@@ -218,7 +219,7 @@ void ChannelState::UpdateRefreshWaitingStatus(const Command& cmd, bool status) {
 bool ChannelState::ActivationConstraint(int rank, long curr_time) const {
     auto count = 0;
     for( auto act_time : activation_times_[rank]) {
-        if(curr_time - act_time < config_.tFAW)
+        if(curr_time - act_time < config_.tFAW) //TODO Strict less than or less than or equal to?
             count++;
         else
             break; //Activation times are ordered. For simulator performance. Really needed?
@@ -227,7 +228,6 @@ bool ChannelState::ActivationConstraint(int rank, long curr_time) const {
 }
 
 void ChannelState::UpdateActivationTimes(int rank, long curr_time) {
-    activation_times_[rank].push_front(curr_time);
     //Delete stale time entries
     for(auto list_itr = activation_times_[rank].begin(); list_itr != activation_times_[rank].end(); list_itr++) {
         auto act_time = *list_itr;
@@ -236,5 +236,6 @@ void ChannelState::UpdateActivationTimes(int rank, long curr_time) {
             break;
         }
     }
+    activation_times_[rank].push_front(curr_time);
     return;
 }

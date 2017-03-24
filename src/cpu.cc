@@ -26,7 +26,7 @@ void RandomCPU::ClockTick()
             auto bankgroup = rand() % config_.bankgroups;
             auto bank = rand() % config_.banks_per_group;
             auto row =  rand() % config_.rows;
-            auto addr = rand() % 3 == 0 ? last_addr_ : Address(channel, rank, bankgroup, bank, row, column);
+            auto addr = rand() % 2 == 0 ? last_addr_ : Address(channel, rank, bankgroup, bank, row, column);
             last_addr_ = addr;
             auto cmd_type = rand() % 3 == 0 ? CommandType::WRITE : CommandType::READ;
             req_ = new Request(cmd_type, addr, clk_, req_id_);

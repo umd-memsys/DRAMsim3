@@ -23,12 +23,14 @@ Command CommandQueue::GetCommandToIssue() {
             for(auto j = 0; j < config_.bankgroups; j++) {
                 if( !channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_) ) {
                     auto& queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
+                    IterateNext();
                     //Prioritize row hits while honoring read, write dependencies
                     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
                         auto req = *req_itr;
                         Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+                        //TODO - For per bank unified queues no need to process out of order (simulator speed)
                         if(channel_state_.IsReady(cmd, clk)) {
-                            if ( req->cmd_.cmd_type_ == cmd.cmd_type_) { //Essentially checking for a row hit. Replace with IsReadWrite() function?
+                            if ( req->cmd_.cmd_type_ == cmd.cmd_type_) { //TODO - Essentially checking for a row hit. Replace with IsReadWrite() function?
                                 //Check for read/write dependency check. Necessary only for unified queues
                                 bool dependency = false;
                                 for(auto dep_itr = queue.begin(); dep_itr != req_itr; dep_itr++) {
@@ -53,7 +55,7 @@ Command CommandQueue::GetCommandToIssue() {
                                 bool pending_row_hits_exist = false;
                                 auto open_row = channel_state_.OpenRow(cmd.rank_, cmd.bankgroup_, cmd.bank_);
                                 for(auto pending_req : queue) {
-                                    if( pending_req->cmd_.row_ == open_row) { //ToDo - And same bank if queues are rank based
+                                    if( pending_req->cmd_.row_ == open_row) { //TODO - And same bank if queues are rank based
                                         pending_row_hits_exist = true;
                                         break;
                                     }
@@ -66,7 +68,6 @@ Command CommandQueue::GetCommandToIssue() {
                         }
                     }
                 }
-                IterateNext();
             }
         }
     }

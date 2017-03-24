@@ -6,20 +6,20 @@ using namespace std;
 
 BankState::BankState(int rank, int bankgroup, int bank) :
     state_(State::CLOSED),
-    cmd_timing_(int(CommandType::SIZE)),
+    cmd_timing_(static_cast<int>(CommandType::SIZE)),
     open_row_(-1),
     row_hit_count_(0),
     refresh_waiting_(false)
 {
-    cmd_timing_[int(CommandType::READ)] = 0;
-    cmd_timing_[int(CommandType::READ_PRECHARGE)] = 0;
-    cmd_timing_[int(CommandType::WRITE)] = 0;
-    cmd_timing_[int(CommandType::WRITE_PRECHARGE)] = 0;
-    cmd_timing_[int(CommandType::ACTIVATE)] = 0;
-    cmd_timing_[int(CommandType::PRECHARGE)] = 0;
-    cmd_timing_[int(CommandType::REFRESH)] = 0;
-    cmd_timing_[int(CommandType::SELF_REFRESH_ENTER)] = 0;
-    cmd_timing_[int(CommandType::SELF_REFRESH_EXIT)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::READ)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::READ_PRECHARGE)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::WRITE)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::WRITE_PRECHARGE)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::ACTIVATE)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::PRECHARGE)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::REFRESH)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::SELF_REFRESH_ENTER)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::SELF_REFRESH_EXIT)] = 0;
 
 }
 
@@ -196,6 +196,6 @@ void BankState::UpdateState(const Command& cmd) {
 }
 
 void BankState::UpdateTiming(CommandType cmd_type, long time) {
-    cmd_timing_[int(cmd_type)] = max(cmd_timing_[int(cmd_type)], time);
+    cmd_timing_[static_cast<int>(cmd_type)] = max(cmd_timing_[static_cast<int>(cmd_type)], time);
     return;
 }
