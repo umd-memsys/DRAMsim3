@@ -14,10 +14,10 @@ class Config {
     int cycles = 100000;
 
     //DRAM physical structure
-    int channels = 4;
+    int channels = 1;
     int ranks = 2;
     int bankgroups = 2;
-    int banks_per_group = 4;
+    int banks_per_group = 2;
     int rows = 1 << 16;
     int columns = 1 << 10;
 

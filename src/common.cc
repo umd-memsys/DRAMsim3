@@ -18,7 +18,7 @@ ostream& operator<<(ostream& os, const Command& cmd) {
         "SELF_REFRESH_EXIT",
         "SIZE"
     };
-    os << command_string[int(cmd.cmd_type_)] << " " << cmd.rank_ << " " << cmd.bankgroup_ << " " << cmd.bank_ << " " << cmd.row_;
+    os << command_string[int(cmd.cmd_type_)] << " " << cmd.channel_ << " " << cmd.rank_ << " " << cmd.bankgroup_ << " " << cmd.bank_ << " " << cmd.row_;
     return os;
 }
 

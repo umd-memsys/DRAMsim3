@@ -30,11 +30,11 @@ add_library(dramcorelib SHARED ${SOURCES})
 
 add_executable(dramcore src/main.cc)
 target_link_libraries(dramcore dramcorelib)
-set_target_properties(dramcore PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+#set_target_properties(dramcore PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(dramcoretest ${SOURCES_TEST})
 target_link_libraries(dramcoretest gtest_main dramcorelib)
-set_target_properties(dramcoretest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+#set_target_properties(dramcoretest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 # set_target_properties(dramcore PROPERTIES DEBUG_POSTFIX "_d")

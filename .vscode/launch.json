@@ -5,7 +5,7 @@
             "name": "C++ Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/dramcore",
+            "program": "${workspaceRoot}/build/dramcore",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
