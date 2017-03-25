@@ -1,0 +1,27 @@
+cmake_minimum_required(VERSION 3.0)
+
+project(dram-core)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "-O0 -Wall")
+
+# file(GLOB SOURCES "src/*.cc")
+
+set(SOURCES src/bankstate.cc
+            src/channel_state.cc
+            src/command_queue.cc
+            src/common.cc
+            src/config.cc
+            src/controller.cc
+            src/cpu.cc
+            src/refresh.cc
+            src/timing.cc
+            src/main.cc
+)
+
+include_directories(src)
+
+add_executable(dramcore ${SOURCES})
+
+message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
+# set_target_properties(dramcore PROPERTIES DEBUG_POSTFIX "_d")

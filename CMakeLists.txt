@@ -26,7 +26,8 @@ set(SOURCES_TEST test/timing_test.cc
 
 include_directories(src)
 
-add_library(dramcorelib SHARED ${SOURCES})
+# add_library(dramcorelib SHARED ${SOURCES})
+add_library(dramcorelib STATIC ${SOURCES})
 
 add_executable(dramcore src/main.cc)
 target_link_libraries(dramcore dramcorelib)
