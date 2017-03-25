@@ -49,18 +49,26 @@ Command CommandQueue::GetCommandToIssue() {
                                 }
                             }
                             else if( cmd.cmd_type_ == CommandType::PRECHARGE) {
-                                // Only attempt issuing a precharge if either one of the following conditions are satisfied
-                                // 1. There are no pending row hits to the open row in the bank
-                                // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
+                                // Attempt to issue a precharge only if
+                                // 1. There are no prior requests to the same bank in the queue (and)
+                                    // 1. There are no pending row hits to the open row in the bank (or)
+                                    // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
+                                
+                                bool prior_requests_to_bank_exist = false;
+                                for(auto prior_itr = queue.begin(); prior_itr != req_itr; prior_itr++ ) {
+                                    prior_requests_to_bank_exist = true; //TODO - Entire address upto bank matches (currently written only for per bank queues)
+                                    break;
+                                }
                                 bool pending_row_hits_exist = false;
                                 auto open_row = channel_state_.OpenRow(cmd.rank_, cmd.bankgroup_, cmd.bank_);
                                 for(auto pending_req : queue) {
-                                    if( pending_req->cmd_.row_ == open_row) { //TODO - And same bank if queues are rank based
+                                    if( pending_req->cmd_.row_ == open_row) { //TODO - Entire address upto row matches (currently written only for per bank queues)
                                         pending_row_hits_exist = true;
                                         break;
                                     }
                                 }
-                                if( !pending_row_hits_exist || channel_state_.RowHitCount(cmd.rank_, cmd.bankgroup_, cmd.bank_) >= 4)
+                                bool rowhit_limit_reached = channel_state_.RowHitCount(cmd.rank_, cmd.bankgroup_, cmd.bank_) >= 4;
+                                if( !prior_requests_to_bank_exist && (!pending_row_hits_exist || rowhit_limit_reached))
                                     return cmd;
                             }
                             else
