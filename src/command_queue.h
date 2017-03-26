@@ -10,7 +10,7 @@
 class CommandQueue {
     public:
         CommandQueue(const Config& config, const ChannelState& channel_state);
-        Command GetCommandToIssue() ;
+        Command GetCommandToIssue();
         Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
         Command AggressivePrecharge();
         bool InsertReq(Request* req);

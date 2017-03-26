@@ -13,9 +13,7 @@ CommandQueue::CommandQueue(const Config& config, const ChannelState& channel_sta
     next_bank_(0),
     req_q_per_bank_(config_.ranks, vector< vector<list<Request*>> >(config_.bankgroups, vector<list<Request*>>(config_.banks_per_group, list<Request*>()) ) ),
     req_q_per_rank_(config_.ranks, list<Request*>())
-{
-
-}
+{}
 
 Command CommandQueue::GetCommandToIssue() {
     if(config_.queue_structure == "PER_BANK") {
@@ -25,9 +23,9 @@ Command CommandQueue::GetCommandToIssue() {
                 for (auto j = 0; j < config_.bankgroups; j++) {
                     auto &queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
                     IterateNext();
-                    if (!channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_)) {
-                        GetCommandToIssueFromQueue(queue);
-                    }
+                    auto cmd = GetCommandToIssueFromQueue(queue);
+                    if (cmd.IsValid())
+                        return cmd;
                 }
             }
         }
@@ -37,9 +35,9 @@ Command CommandQueue::GetCommandToIssue() {
         for (auto i = 0; i < config_.ranks; i++) {
             auto &queue = GetQueue(next_rank_, -1, -1);
             IterateNext();
-            if (!channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_)) {
-                GetCommandToIssueFromQueue(queue);
-            }
+            auto cmd = GetCommandToIssueFromQueue(queue);
+            if(cmd.IsValid())
+                return cmd;
         }
         return Command();
     }
@@ -47,6 +45,7 @@ Command CommandQueue::GetCommandToIssue() {
         cerr << "Unknown queue structure\n";
         exit(-1);
     }
+
 }
 
 Command CommandQueue::GetCommandToIssueFromQueue(list<Request*>& queue) {
@@ -166,6 +165,10 @@ inline void CommandQueue::IterateNext() {
     }
     else if(config_.queue_structure == "PER_RANK") {
         next_rank_ = (next_rank_ + 1) % config_.ranks;
+    }
+    else {
+        cerr << "Unknown queue structure\n";
+        exit(-1);
     }
     return;
 }
