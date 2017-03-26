@@ -52,6 +52,7 @@ class Config {
     int activation_window_depth = 4;
 
     std::string address_mapping = "rorababgchcl"; //Rank-Bank-Bankgroup-Channel-Column-Row
+    std::string queue_structure = "PER_BANK";
 
 
     //Computed parameters

@@ -11,27 +11,41 @@ CommandQueue::CommandQueue(const Config& config, const ChannelState& channel_sta
     next_rank_(0),
     next_bankgroup_(0),
     next_bank_(0),
-    req_q_(config_.ranks, vector< vector<list<Request*>> >(config_.bankgroups, vector<list<Request*>>(config_.banks_per_group, list<Request*>()) ) )
-{
-
-}
+    req_q_per_bank_(config_.ranks, vector< vector<list<Request*>> >(config_.bankgroups, vector<list<Request*>>(config_.banks_per_group, list<Request*>()) ) ),
+    req_q_per_rank_(config_.ranks, list<Request*>())
+{}
 
 Command CommandQueue::GetCommandToIssue() {
-    //Rank, Bank, Bankgroup traversal of queues
-    for(auto i = 0; i < config_.ranks; i++) {
-        for(auto k = 0; k < config_.banks_per_group; k++) {
-            for(auto j = 0; j < config_.bankgroups; j++) {
-                auto& queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
-                IterateNext();
-                if( !channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_) ) {
+    if(config_.queue_structure == "PER_BANK") {
+        //Rank, Bank, Bankgroup traversal of queues
+        for (auto i = 0; i < config_.ranks; i++) {
+            for (auto k = 0; k < config_.banks_per_group; k++) {
+                for (auto j = 0; j < config_.bankgroups; j++) {
+                    auto &queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
+                    IterateNext();
                     auto cmd = GetCommandToIssueFromQueue(queue);
                     if (cmd.IsValid())
                         return cmd;
                 }
             }
         }
+        return Command();
     }
-    return Command();
+    if(config_.queue_structure == "PER_RANK") {
+        for (auto i = 0; i < config_.ranks; i++) {
+            auto &queue = GetQueue(next_rank_, -1, -1);
+            IterateNext();
+            auto cmd = GetCommandToIssueFromQueue(queue);
+            if(cmd.IsValid())
+                return cmd;
+        }
+        return Command();
+    }
+    else {
+        cerr << "Unknown queue structure\n";
+        exit(-1);
+    }
+
 }
 
 Command CommandQueue::GetCommandToIssueFromQueue(list<Request*>& queue) {
@@ -89,6 +103,7 @@ Command CommandQueue::GetCommandToIssueFromQueue(list<Request*>& queue) {
     return Command();
 }
 
+
 Command CommandQueue::AggressivePrecharge() {
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
@@ -100,7 +115,7 @@ Command CommandQueue::AggressivePrecharge() {
                         auto open_row = channel_state_.OpenRow(i, j, k);
                         auto& queue = GetQueue(i, j, k);
                         for(auto pending_req : queue) {
-                            if( pending_req->cmd_.row_ == open_row) { //ToDo - And same bank if queues are rank based
+                            if( pending_req->cmd_.row_ == open_row) { //ToDo - Same address (Currently implemented only for per bank queues)
                                 pending_row_hits_exist = true;
                                 break;
                             }
@@ -116,22 +131,55 @@ Command CommandQueue::AggressivePrecharge() {
 }
 
 bool CommandQueue::InsertReq(Request* req) {
-    auto r = req->cmd_.rank_, bg = req->cmd_.bankgroup_, b = req->cmd_.bank_;
-    if( req_q_[r][bg][b].size() < config_.queue_size ) {
-        req_q_[r][bg][b].push_back(req);
-        return true;
+    if(config_.queue_structure == "PER_BANK") {
+        auto r = req->cmd_.rank_, bg = req->cmd_.bankgroup_, b = req->cmd_.bank_;
+        if (req_q_per_bank_[r][bg][b].size() < config_.queue_size) {
+            req_q_per_bank_[r][bg][b].push_back(req);
+            return true;
+        } else
+            return false;
     }
-    else
-        return false;
+    else if(config_.queue_structure == "PER_RANK") {
+        auto r = req->cmd_.rank_;
+        if (req_q_per_rank_[r].size() < config_.queue_size) {
+            req_q_per_rank_[r].push_back(req);
+            return true;
+        } else
+            return false;
+    }
+    else {
+        cerr << "Unknown queue structure\n";
+        exit(-1);
+    }
 }
 
 inline void CommandQueue::IterateNext() {
-    next_bankgroup_ = (next_bankgroup_ + 1) % config_.bankgroups;
-    if(next_bankgroup_ == 0) {
-        next_bank_ = (next_bank_ + 1) % config_.banks_per_group;
-        if(next_bank_ == 0) {
-            next_rank_ = (next_rank_ + 1) % config_.ranks;
+    if(config_.queue_structure == "PER_BANK") {
+        next_bankgroup_ = (next_bankgroup_ + 1) % config_.bankgroups;
+        if (next_bankgroup_ == 0) {
+            next_bank_ = (next_bank_ + 1) % config_.banks_per_group;
+            if (next_bank_ == 0) {
+                next_rank_ = (next_rank_ + 1) % config_.ranks;
+            }
         }
     }
+    else if(config_.queue_structure == "PER_RANK") {
+        next_rank_ = (next_rank_ + 1) % config_.ranks;
+    }
+    else {
+        cerr << "Unknown queue structure\n";
+        exit(-1);
+    }
     return;
+}
+
+std::list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
+    if(config_.queue_structure == "PER_BANK")
+        return req_q_per_bank_[rank][bankgroup][bank];
+    else if(config_.queue_structure == "PER_RANK")
+        return req_q_per_rank_[rank];
+    else {
+        cerr << "Unknown queue structure\n";
+        exit(-1);
+    }
 }

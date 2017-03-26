@@ -47,6 +47,8 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
 }
 
 bool ChannelState::IsReady(const Command& cmd, long clk) const {
+    if(cmd.cmd_type_ != CommandType::REFRESH && cmd.cmd_type_ != CommandType::PRECHARGE && IsRefreshWaiting(cmd.rank_, cmd.bankgroup_, cmd.bank_))
+        return false;
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
             if(ActivationConstraint(cmd.rank_, clk))
@@ -136,14 +138,14 @@ void ChannelState::UpdateTiming(const Command& cmd, long clk) {
     return ;
 }
 
-inline void ChannelState::UpdateSameBankTiming(int rank, int bankgroup, int bank, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateSameBankTiming(int rank, int bankgroup, int bank, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
     for(auto cmd_timing : cmd_timing_list ) {
         bank_states_[rank][bankgroup][bank]->UpdateTiming(cmd_timing.first, clk + cmd_timing.second);
     }
     return;
 }
 
-inline void ChannelState::UpdateOtherBanksSameBankgroupTiming(int rank, int bankgroup, int bank, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherBanksSameBankgroupTiming(int rank, int bankgroup, int bank, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
     for(auto k = 0; k < config_.banks_per_group; k++) {
         if( k != bank) {
             for(auto cmd_timing : cmd_timing_list ) {
@@ -154,7 +156,7 @@ inline void ChannelState::UpdateOtherBanksSameBankgroupTiming(int rank, int bank
     return;
 }
 
-inline void ChannelState::UpdateOtherBankgroupsSameRankTiming(int rank, int bankgroup, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherBankgroupsSameRankTiming(int rank, int bankgroup, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
     for(auto j = 0; j < config_.bankgroups; j++) {
         if(j != bankgroup) {
             for(auto k = 0; k < config_.banks_per_group; k++) {
@@ -167,7 +169,7 @@ inline void ChannelState::UpdateOtherBankgroupsSameRankTiming(int rank, int bank
     return;
 }
 
-inline void ChannelState::UpdateOtherRanksTiming(int rank, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherRanksTiming(int rank, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
     for(auto i = 0; i < config_.ranks; i++) {
         if(i != rank) {
             for(auto j = 0; j < config_.bankgroups; j++) {
@@ -182,7 +184,7 @@ inline void ChannelState::UpdateOtherRanksTiming(int rank, const list< pair<Comm
     return;
 }
 
-inline void ChannelState::UpdateSameRankTiming(int rank, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateSameRankTiming(int rank, const list< pair<CommandType, int> >& cmd_timing_list, long clk) {
     for(auto j = 0; j < config_.bankgroups; j++) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto cmd_timing : cmd_timing_list ) {
@@ -196,7 +198,7 @@ inline void ChannelState::UpdateSameRankTiming(int rank, const list< pair<Comman
 void ChannelState::IssueCommand(const Command& cmd, long clk) {
     cout << "Command Issue at clk = " << clk << " - "<< cmd << endl;
     UpdateState(cmd);
-    UpdateTiming(cmd, clk); //TODO - Can be optimized a lot for simulator speed. Worth the time?
+    UpdateTiming(cmd, clk);
     return;
 }
 
