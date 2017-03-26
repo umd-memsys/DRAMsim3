@@ -21,62 +21,69 @@ Command CommandQueue::GetCommandToIssue() {
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto j = 0; j < config_.bankgroups; j++) {
+                auto& queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
+                IterateNext();
                 if( !channel_state_.IsRefreshWaiting(next_rank_, next_bankgroup_, next_bank_) ) {
-                    auto& queue = GetQueue(next_rank_, next_bankgroup_, next_bank_);
-                    IterateNext();
-                    //Prioritize row hits while honoring read, write dependencies
-                    for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
-                        auto req = *req_itr;
-                        Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-                        //TODO - For per bank unified queues no need to process out of order (simulator speed)
-                        if(channel_state_.IsReady(cmd, clk)) {
-                            if ( req->cmd_.cmd_type_ == cmd.cmd_type_) { //TODO - Essentially checking for a row hit. Replace with IsReadWrite() function?
-                                //Check for read/write dependency check. Necessary only for unified queues
-                                bool dependency = false;
-                                for(auto dep_itr = queue.begin(); dep_itr != req_itr; dep_itr++) {
-                                    auto dep = *dep_itr;
-                                    if( dep->cmd_.row_ == cmd.row_) { //Just check the address to be more generic
-                                        //ASSERT the cmd are of different types. If one is read, other write. Vice versa.
-                                        dependency = true;
-                                        break;
-                                    }
-                                }
-                                if(!dependency) {
-                                    //Sought of actually issuing the read/write command
-                                    delete(*req_itr);
-                                    queue.erase(req_itr);
-                                    return cmd;
-                                }
-                            }
-                            else if( cmd.cmd_type_ == CommandType::PRECHARGE) {
-                                // Attempt to issue a precharge only if
-                                // 1. There are no prior requests to the same bank in the queue (and)
-                                    // 1. There are no pending row hits to the open row in the bank (or)
-                                    // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
-                                
-                                bool prior_requests_to_bank_exist = false;
-                                for(auto prior_itr = queue.begin(); prior_itr != req_itr; prior_itr++ ) {
-                                    prior_requests_to_bank_exist = true; //TODO - Entire address upto bank matches (currently written only for per bank queues)
-                                    break;
-                                }
-                                bool pending_row_hits_exist = false;
-                                auto open_row = channel_state_.OpenRow(cmd.rank_, cmd.bankgroup_, cmd.bank_);
-                                for(auto pending_req : queue) {
-                                    if( pending_req->cmd_.row_ == open_row) { //TODO - Entire address upto row matches (currently written only for per bank queues)
-                                        pending_row_hits_exist = true;
-                                        break;
-                                    }
-                                }
-                                bool rowhit_limit_reached = channel_state_.RowHitCount(cmd.rank_, cmd.bankgroup_, cmd.bank_) >= 4;
-                                if( !prior_requests_to_bank_exist && (!pending_row_hits_exist || rowhit_limit_reached))
-                                    return cmd;
-                            }
-                            else
-                                return cmd;
-                        }
-                    }
+                    auto cmd = GetCommandToIssueFromQueue(queue);
+                    if (cmd.IsValid())
+                        return cmd;
                 }
             }
+        }
+    }
+    return Command();
+}
+
+Command CommandQueue::GetCommandToIssueFromQueue(list<Request*>& queue) {
+    //Prioritize row hits while honoring read, write dependencies
+    for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
+        auto req = *req_itr;
+        Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+        //TODO - For per bank unified queues no need to process out of order (simulator speed)
+        if(channel_state_.IsReady(cmd, clk)) {
+            if ( req->cmd_.cmd_type_ == cmd.cmd_type_) { //TODO - Essentially checking for a row hit. Replace with IsReadWrite() function?
+                //Check for read/write dependency check. Necessary only for unified queues
+                bool dependency = false;
+                for(auto dep_itr = queue.begin(); dep_itr != req_itr; dep_itr++) {
+                    auto dep = *dep_itr;
+                    if( dep->cmd_.row_ == cmd.row_) { //Just check the address to be more generic
+                        //ASSERT the cmd are of different types. If one is read, other write. Vice versa.
+                        dependency = true;
+                        break;
+                    }
+                }
+                if(!dependency) {
+                    //Sought of actually issuing the read/write command
+                    delete(*req_itr);
+                    queue.erase(req_itr);
+                    return cmd;
+                }
+            }
+            else if( cmd.cmd_type_ == CommandType::PRECHARGE) {
+                // Attempt to issue a precharge only if
+                // 1. There are no prior requests to the same bank in the queue (and)
+                // 1. There are no pending row hits to the open row in the bank (or)
+                // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
+
+                bool prior_requests_to_bank_exist = false;
+                for(auto prior_itr = queue.begin(); prior_itr != req_itr; prior_itr++ ) {
+                    prior_requests_to_bank_exist = true; //TODO - Entire address upto bank matches (currently written only for per bank queues)
+                    break;
+                }
+                bool pending_row_hits_exist = false;
+                auto open_row = channel_state_.OpenRow(cmd.rank_, cmd.bankgroup_, cmd.bank_);
+                for(auto pending_req : queue) {
+                    if( pending_req->cmd_.row_ == open_row) { //TODO - Entire address upto row matches (currently written only for per bank queues)
+                        pending_row_hits_exist = true;
+                        break;
+                    }
+                }
+                bool rowhit_limit_reached = channel_state_.RowHitCount(cmd.rank_, cmd.bankgroup_, cmd.bank_) >= 4;
+                if( !prior_requests_to_bank_exist && (!pending_row_hits_exist || rowhit_limit_reached))
+                    return cmd;
+            }
+            else
+                return cmd;
         }
     }
     return Command();
