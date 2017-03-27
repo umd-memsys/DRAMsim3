@@ -4,6 +4,7 @@ project(dram-core)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-O0 -Wall")
+# set(CMAKE_CXX_FLAGS "-O0")
 
 add_subdirectory(googletest)
 

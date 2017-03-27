@@ -21,7 +21,8 @@ void Refresh::ClockTick() {
 
 void Refresh::InsertRefresh() {
     if( clk % (config_.tREFI/config_.ranks) == 0) {
-        refresh_q_.push_back(new Request(CommandType::REFRESH, next_rank_));
+        auto addr = Address(); addr.rank_ = next_rank_;
+        refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
         IterateNext();
     }
     return;
@@ -33,8 +34,8 @@ Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator req_itr)
     if( req->cmd_.cmd_type_ == CommandType::REFRESH) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto j = 0; j < config_.bankgroups; j++) {
-                if(channel_state_.IsRowOpen(req->cmd_.rank_, j, k) && channel_state_.RowHitCount(req->cmd_.rank_, j, k) == 0) {
-                    auto& queue = cmd_queue_.GetQueue(req->cmd_.rank_, j, k);
+                if(channel_state_.IsRowOpen(req->Rank(), j, k) && channel_state_.RowHitCount(req->Rank(), j, k) == 0) {
+                    auto& queue = cmd_queue_.GetQueue(req->Rank(), j, k);
                     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
                         auto req = *req_itr;
                         Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
@@ -51,8 +52,8 @@ Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator req_itr)
         }
     }
     else if( req->cmd_.cmd_type_ == CommandType::REFRESH_BANK) {
-        if(channel_state_.IsRowOpen(req->cmd_.rank_, req->cmd_.bankgroup_, req->cmd_.bank_) && channel_state_.RowHitCount(req->cmd_.rank_, req->cmd_.bankgroup_, req->cmd_.bank_) == 0) {
-            auto& queue = cmd_queue_.GetQueue(req->cmd_.rank_, req->cmd_.bankgroup_, req->cmd_.bank_);
+        if(channel_state_.IsRowOpen(req->Rank(), req->Bankgroup(), req->Bank()) && channel_state_.RowHitCount(req->Rank(), req->Bankgroup(), req->Bank()) == 0) {
+            auto& queue = cmd_queue_.GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
             for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
                 auto req = *req_itr;
                 Command cmd = channel_state_.GetRequiredCommand(req->cmd_);

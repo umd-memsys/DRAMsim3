@@ -30,7 +30,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
                 case State::OPEN:
-                    return cmd.row_ == open_row_ ? CommandType::READ : CommandType::PRECHARGE;
+                    return cmd.Row() == open_row_ ? CommandType::READ : CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
@@ -42,7 +42,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
                 case State::OPEN:
-                    return cmd.row_ == open_row_ ? CommandType::READ_PRECHARGE : CommandType::PRECHARGE;
+                    return cmd.Row() == open_row_ ? CommandType::READ_PRECHARGE : CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
@@ -54,7 +54,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
                 case State::OPEN:
-                    return cmd.row_ == open_row_ ? CommandType::WRITE : CommandType::PRECHARGE;
+                    return cmd.Row() == open_row_ ? CommandType::WRITE : CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
@@ -66,7 +66,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
                 case State::OPEN:
-                    return cmd.row_ == open_row_ ? CommandType::WRITE_PRECHARGE : CommandType::PRECHARGE;
+                    return cmd.Row() == open_row_ ? CommandType::WRITE_PRECHARGE : CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
@@ -158,7 +158,7 @@ void BankState::UpdateState(const Command& cmd) {
                     break;
                 case CommandType::ACTIVATE:
                     state_ = State::OPEN;
-                    open_row_ = cmd.row_;
+                    open_row_ = cmd.Row();
                     break;
                 case CommandType::SELF_REFRESH_ENTER:
                     state_ = State::SELF_REFRESH;

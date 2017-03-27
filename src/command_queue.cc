@@ -60,7 +60,7 @@ Command CommandQueue::GetCommandToIssueFromQueue(list<Request*>& queue) {
                 bool dependency = false;
                 for(auto dep_itr = queue.begin(); dep_itr != req_itr; dep_itr++) {
                     auto dep = *dep_itr;
-                    if( dep->cmd_.row_ == cmd.row_) { //Just check the address to be more generic
+                    if( dep->Row() == cmd.Row()) { //Just check the address to be more generic
                         //ASSERT the cmd are of different types. If one is read, other write. Vice versa.
                         dependency = true;
                         break;
@@ -85,14 +85,14 @@ Command CommandQueue::GetCommandToIssueFromQueue(list<Request*>& queue) {
                     break;
                 }
                 bool pending_row_hits_exist = false;
-                auto open_row = channel_state_.OpenRow(cmd.rank_, cmd.bankgroup_, cmd.bank_);
+                auto open_row = channel_state_.OpenRow(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
                 for(auto pending_req : queue) {
-                    if( pending_req->cmd_.row_ == open_row) { //TODO - Entire address upto row matches (currently written only for per bank queues)
+                    if( pending_req->Row() == open_row) { //TODO - Entire address upto row matches (currently written only for per bank queues)
                         pending_row_hits_exist = true;
                         break;
                     }
                 }
-                bool rowhit_limit_reached = channel_state_.RowHitCount(cmd.rank_, cmd.bankgroup_, cmd.bank_) >= 4;
+                bool rowhit_limit_reached = channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >= 4;
                 if( !prior_requests_to_bank_exist && (!pending_row_hits_exist || rowhit_limit_reached))
                     return cmd;
             }
@@ -109,19 +109,19 @@ Command CommandQueue::AggressivePrecharge() {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto j = 0; j < config_.bankgroups; j++) {
                 if(channel_state_.IsRowOpen(i, j, k)) {
-                    auto cmd = Command(CommandType::PRECHARGE, -1, i, j, k, -1);
+                    auto cmd = Command(CommandType::PRECHARGE, Address( -1, i, j, k, -1, -1));
                     if(channel_state_.IsReady(cmd, clk)) {
                         bool pending_row_hits_exist = false;
                         auto open_row = channel_state_.OpenRow(i, j, k);
                         auto& queue = GetQueue(i, j, k);
                         for(auto pending_req : queue) {
-                            if( pending_req->cmd_.row_ == open_row) { //ToDo - Same address (Currently implemented only for per bank queues)
+                            if( pending_req->Row() == open_row) { //ToDo - Same address (Currently implemented only for per bank queues)
                                 pending_row_hits_exist = true;
                                 break;
                             }
                         }
                         if(!pending_row_hits_exist)
-                            return Command(CommandType::PRECHARGE, -1, i, j, k, -1);
+                            return Command(CommandType::PRECHARGE, Address(-1, i, j, k, -1, -1));
                     }
                 }
             }
@@ -132,7 +132,7 @@ Command CommandQueue::AggressivePrecharge() {
 
 bool CommandQueue::InsertReq(Request* req) {
     if(config_.queue_structure == "PER_BANK") {
-        auto r = req->cmd_.rank_, bg = req->cmd_.bankgroup_, b = req->cmd_.bank_;
+        auto r = req->Rank(), bg = req->Bankgroup(), b = req->Bank();
         if (req_q_per_bank_[r][bg][b].size() < config_.queue_size) {
             req_q_per_bank_[r][bg][b].push_back(req);
             return true;
@@ -140,7 +140,7 @@ bool CommandQueue::InsertReq(Request* req) {
             return false;
     }
     else if(config_.queue_structure == "PER_RANK") {
-        auto r = req->cmd_.rank_;
+        auto r = req->Rank();
         if (req_q_per_rank_[r].size() < config_.queue_size) {
             req_q_per_rank_[r].push_back(req);
             return true;

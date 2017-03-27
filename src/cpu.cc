@@ -31,7 +31,7 @@ void RandomCPU::ClockTick()
             auto cmd_type = rand() % 3 == 0 ? CommandType::WRITE : CommandType::READ;
             req_ = new Request(cmd_type, addr, clk_, req_id_);
         }
-        if(ctrls_[req_->cmd_.channel_]->InsertReq(req_)) {
+        if(ctrls_[req_->Channel()]->InsertReq(req_)) {
             get_next_ = true;
             req_id_++;
             req_log_ << "Request Inserted at clk = " << clk_ << " " << *req_ << endl;
@@ -62,7 +62,7 @@ void TraceBasedCPU::ClockTick() {
             req_ = FormRequest(access);
         }
         if(req_->arrival_time_ <= clk) {
-            if(ctrls_[req_->cmd_.channel_]->InsertReq(req_)) {
+            if(ctrls_[req_->Channel()]->InsertReq(req_)) {
                 get_next_ = true;
                 req_id_++;
             }
