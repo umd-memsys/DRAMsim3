@@ -1,5 +1,4 @@
 #include "refresh.h"
-#include <iostream>
 
 using namespace std;
 
@@ -8,7 +7,7 @@ Refresh::Refresh(const Config& config, const ChannelState& channel_state, Comman
     channel_state_(channel_state),
     cmd_queue_(cmd_queue),
     clk(0),
-    last_bank_refresh_(config_.ranks, vector< vector<long>>(config_.bankgroups, vector<long>(config_.banks_per_group, 0))),
+    last_bank_refresh_(config_.ranks, std::vector< vector<long>>(config_.bankgroups, vector<long>(config_.banks_per_group, 0))),
     last_rank_refresh_(config_.ranks, 0),
     next_rank_(0)
 {}
@@ -29,7 +28,7 @@ void Refresh::InsertRefresh() {
 }
 
 Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator req_itr) {
-    auto req = *req_itr;
+    auto req = *req_itr; //TODO - req_itr carlessly used (Fix)
     // Issue a single pending request 
     if( req->cmd_.cmd_type_ == CommandType::REFRESH) {
         for(auto k = 0; k < config_.banks_per_group; k++) {

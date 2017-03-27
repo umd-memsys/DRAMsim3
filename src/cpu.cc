@@ -1,5 +1,4 @@
 #include "cpu.h"
-#include <iostream>
 
 using namespace std;
 
@@ -83,7 +82,7 @@ ostream& operator<<(ostream& os, const Access& access) {
 
 Address AddressMapping(uint64_t hex_addr, const Config& config) {
     //Implement address mapping functionality
-    int pos = 3;
+    unsigned int pos = 3; //TODO - Remove hardcoding
     if(config.address_mapping == "rorababgchcl") {
        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
        pos += config.column_width_;
@@ -116,10 +115,10 @@ Request* TraceBasedCPU::FormRequest(const Access& access) {
     return new Request(cmd_type, addr, access.time_, req_id_);
 }
 
-int ModuloWidth(uint32_t addr, int bit_width, int pos) {
+unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos) {
     addr >>= pos;
     auto store = addr;
     addr >>= bit_width;
     addr <<= bit_width;
-    return store ^ addr;
+    return static_cast<unsigned int>(store ^ addr);
 }

@@ -30,19 +30,19 @@ class ChannelState {
         std::vector< std::list<long> > activation_times_;
 
         //Update timing of the bank the command corresponds to
-        void UpdateSameBankTiming(const Address& addr, const std::list<std::pair<CommandType, int> > &cmd_timing_list, long clk);
+        void UpdateSameBankTiming(const Address& addr, const std::list<std::pair<CommandType, unsigned int> > &cmd_timing_list, long clk);
 
         //Update timing of the other banks in the same bankgroup as the command
-        void UpdateOtherBanksSameBankgroupTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk);
+        void UpdateOtherBanksSameBankgroupTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk);
 
         //Update timing of banks in the same rank but different bankgroup as the command
-        void UpdateOtherBankgroupsSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk);
+        void UpdateOtherBankgroupsSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk);
 
         //Update timing of banks in a different rank as the command
-        void UpdateOtherRanksTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk);
+        void UpdateOtherRanksTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk);
 
         //Update timing of the entire rank (for rank level commands)
-        void UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk);
+        void UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk);
 };
 
 #endif

@@ -1,10 +1,8 @@
 #include "bankstate.h"
-#include <iostream>
-#include <algorithm>
 
 using namespace std;
 
-BankState::BankState(int rank, int bankgroup, int bank) :
+BankState::BankState() :
     state_(State::CLOSED),
     cmd_timing_(static_cast<int>(CommandType::SIZE)),
     open_row_(-1),

@@ -69,7 +69,7 @@ class Request {
     public:
         Request(CommandType cmd_type, const Address& addr) :
                 cmd_(Command(cmd_type, addr)), arrival_time_(-1), exit_time_(-1), id_(-1) {}
-        Request(CommandType cmd_type, const Address& addr, int arrival_time, int id) :
+        Request(CommandType cmd_type, const Address& addr, long arrival_time, int id) :
             cmd_(Command(cmd_type, addr)), arrival_time_(arrival_time), exit_time_(-1), id_(id) {}
 
         Command cmd_;

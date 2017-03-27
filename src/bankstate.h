@@ -9,7 +9,7 @@
 
 class BankState {
     public:
-        BankState(int rank, int bankgroup, int bank);
+        BankState();
 
         //Get the command that needs to executed first to execute the comand of interest given the state of the bank
         CommandType GetRequiredCommandType(const Command& cmd);
@@ -44,7 +44,7 @@ class BankState {
         //To prevent starvation and allow fairness
         int row_hit_count_;
 
-        int refresh_waiting_;
+        bool refresh_waiting_;
 };
 
 #endif

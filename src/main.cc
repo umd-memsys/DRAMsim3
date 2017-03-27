@@ -1,10 +1,5 @@
 #include <iostream>
-#include <cstdlib>
-#include <fstream>
 #include "controller.h"
-#include "timing.h"
-#include "common.h"
-#include "config.h"
 #include "cpu.h"
 
 using namespace std;

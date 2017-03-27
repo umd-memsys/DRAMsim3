@@ -13,8 +13,8 @@ Config::Config()
 }
 
 
-int LogBase2(int power_of_two) {
-    int i = 0;
+unsigned int LogBase2(unsigned int power_of_two) {
+    unsigned int i = 0;
     while( power_of_two > 1) {
         power_of_two /= 2;
         i++;

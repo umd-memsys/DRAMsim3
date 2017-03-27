@@ -5,13 +5,13 @@ using namespace std;
 ChannelState::ChannelState(const Config& config, const Timing& timing) :
     config_(config),
     timing_(timing),
-    bank_states_(config_.ranks, vector< vector<BankState*> >(config_.bankgroups, vector<BankState*>(config_.banks_per_group, NULL) ) ),
-    activation_times_(config_.ranks, list<long>())
+    bank_states_(config_.ranks, std::vector< std::vector<BankState*> >(config_.bankgroups, std::vector<BankState*>(config_.banks_per_group, NULL) ) ),
+    activation_times_(config_.ranks, std::list<long>())
 {
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto j = 0; j < config_.bankgroups; j++) {
             for(auto k = 0; k < config_.banks_per_group; k++) {
-                bank_states_[i][j][k] = new BankState(i, j, k);
+                bank_states_[i][j][k] = new BankState();
             }
         }
     }
@@ -26,8 +26,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
         case CommandType::ACTIVATE:
         case CommandType::PRECHARGE:
         case CommandType::REFRESH_BANK:
-            return Command(bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]->GetRequiredCommandType(cmd), cmd.addr_); //TODO - Modify Command constructor to (cmd_type, addr) (Done)
-            break;
+            return Command(bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]->GetRequiredCommandType(cmd), cmd.addr_);
         case CommandType::REFRESH:
         case CommandType::SELF_REFRESH_ENTER:
         case CommandType::SELF_REFRESH_EXIT:
@@ -44,7 +43,6 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
                 }
             }
             return cmd;
-            break;
         default:
             exit(-1);
     }
@@ -64,7 +62,6 @@ bool ChannelState::IsReady(const Command& cmd, long clk) const {
         case CommandType::PRECHARGE:
         case CommandType::REFRESH_BANK:
             return bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]->IsReady(cmd.cmd_type_, clk);
-            break;
         case CommandType::REFRESH:
         case CommandType::SELF_REFRESH_ENTER:
         case CommandType::SELF_REFRESH_EXIT: {
@@ -76,7 +73,6 @@ bool ChannelState::IsReady(const Command& cmd, long clk) const {
                 }
             }
             return is_ready;
-            break;
         }
         default:
             exit(-1);
@@ -142,14 +138,14 @@ void ChannelState::UpdateTiming(const Command& cmd, long clk) {
     return ;
 }
 
-void ChannelState::UpdateSameBankTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateSameBankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
     for(auto cmd_timing : cmd_timing_list ) {
         bank_states_[addr.rank_][addr.bankgroup_][addr.bank_]->UpdateTiming(cmd_timing.first, clk + cmd_timing.second);
     }
     return;
 }
 
-void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
     for(auto k = 0; k < config_.banks_per_group; k++) {
         if( k != addr.bank_) {
             for(auto cmd_timing : cmd_timing_list ) {
@@ -160,7 +156,7 @@ void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, cons
     return;
 }
 
-void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
     for(auto j = 0; j < config_.bankgroups; j++) {
         if(j != addr.bankgroup_) {
             for(auto k = 0; k < config_.banks_per_group; k++) {
@@ -173,7 +169,7 @@ void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, cons
     return;
 }
 
-void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
     for(auto i = 0; i < config_.ranks; i++) {
         if(i != addr.rank_) {
             for(auto j = 0; j < config_.bankgroups; j++) {
@@ -188,7 +184,7 @@ void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< 
     return;
 }
 
-void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
     for(auto j = 0; j < config_.bankgroups; j++) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto cmd_timing : cmd_timing_list ) {

@@ -1,6 +1,4 @@
 #include "command_queue.h"
-#include <vector>
-#include <list>
 
 using namespace std;
 
@@ -11,7 +9,7 @@ CommandQueue::CommandQueue(const Config& config, const ChannelState& channel_sta
     next_rank_(0),
     next_bankgroup_(0),
     next_bank_(0),
-    req_q_per_bank_(config_.ranks, vector< vector<list<Request*>> >(config_.bankgroups, vector<list<Request*>>(config_.banks_per_group, list<Request*>()) ) ),
+    req_q_per_bank_(config_.ranks, std::vector< vector<std::list<Request*>> >(config_.bankgroups, std::vector<std::list<Request*>>(config_.banks_per_group, std::list<Request*>()) ) ),
     req_q_per_rank_(config_.ranks, list<Request*>())
 {}
 
@@ -48,7 +46,7 @@ Command CommandQueue::GetCommandToIssue() {
 
 }
 
-Command CommandQueue::GetCommandToIssueFromQueue(list<Request*>& queue) {
+Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
     //Prioritize row hits while honoring read, write dependencies
     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
         auto req = *req_itr;
