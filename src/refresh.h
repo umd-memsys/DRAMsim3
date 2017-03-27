@@ -13,7 +13,7 @@ class Refresh {
         Refresh(const Config& config, const ChannelState& channel_state, CommandQueue& cmd_queue);
         std::list<Request*> refresh_q_; // Queue of refresh commands
         void ClockTick();
-        Command GetRefreshOrAssociatedCommand(std::list<Request*>::iterator itr);
+        Command GetRefreshOrAssociatedCommand(std::list<Request*>::iterator refresh_itr);
     private:
         const Config& config_;
         const ChannelState& channel_state_;
@@ -21,7 +21,7 @@ class Refresh {
         long clk;
         
         //Keep track of the last time when a refresh command was issued to this bank 
-        std::vector< std::vector< std::vector<long> > > last_bank_refresh_;
+        std::vector< std::vector< std::vector<long> > > last_bank_refresh_; //TODO - Wouldn't it be better to move this to bankstate?
 
         //Last time when a refresh command was issued to the entire rank
         //Also updated when an epoch of bank level refreshed is done as well

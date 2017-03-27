@@ -49,8 +49,6 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
 }
 
 bool ChannelState::IsReady(const Command& cmd, long clk) const {
-    if(cmd.cmd_type_ != CommandType::REFRESH && cmd.cmd_type_ != CommandType::PRECHARGE && IsRefreshWaiting(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()))
-        return false;
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
             if(ActivationConstraint(cmd.Rank(), clk))

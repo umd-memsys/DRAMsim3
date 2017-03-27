@@ -50,57 +50,59 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
     //Prioritize row hits while honoring read, write dependencies
     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
         auto req = *req_itr;
-        Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-        //TODO - Can specizalize for PER_BANK queeus (simulator speed)
-        if(channel_state_.IsReady(cmd, clk)) {
-            if ( cmd.IsReadWrite()) {
-                //Check for read/write dependency check. Necessary only for unified queues
-                bool dependency = false;
-                for(auto dep_itr = queue.begin(); dep_itr != req_itr; dep_itr++) {
-                    auto dep = *dep_itr;
-                    if( dep->Row() == cmd.Row()) { //Just check the address to be more generic
-                        //ASSERT the cmd are of different types. If one is read, other write. Vice versa.
-                        dependency = true;
-                        break;
+        if(!channel_state_.IsRefreshWaiting(req->Rank(), req->Bankgroup(), req->Bank())) {
+            Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+            //TODO - Can specizalize for PER_BANK queeus (simulator speed)
+            if (channel_state_.IsReady(cmd, clk)) {
+                if (cmd.IsReadWrite()) {
+                    //Check for read/write dependency check. Necessary only for unified queues
+                    bool dependency = false;
+                    for (auto dep_itr = queue.begin(); dep_itr != req_itr; dep_itr++) {
+                        auto dep = *dep_itr;
+                        if (dep->Row() == cmd.Row()) { //Just check the address to be more generic
+                            //ASSERT the cmd are of different types. If one is read, other write. Vice versa.
+                            dependency = true;
+                            break;
+                        }
                     }
-                }
-                if(!dependency) {
-                    //Sought of actually issuing the read/write command
-                    delete(*req_itr);
-                    queue.erase(req_itr);
-                    return cmd;
-                }
-            }
-            else if( cmd.cmd_type_ == CommandType::PRECHARGE) {
-                // Attempt to issue a precharge only if
-                // 1. There are no prior requests to the same bank in the queue (and)
-                // 1. There are no pending row hits to the open row in the bank (or)
-                // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
+                    if (!dependency) {
+                        //Sought of actually issuing the read/write command
+                        delete (*req_itr);
+                        queue.erase(req_itr);
+                        return cmd;
+                    }
+                } else if (cmd.cmd_type_ == CommandType::PRECHARGE) {
+                    // Attempt to issue a precharge only if
+                    // 1. There are no prior requests to the same bank in the queue (and)
+                    // 1. There are no pending row hits to the open row in the bank (or)
+                    // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
 
-                bool prior_requests_to_bank_exist = false;
-                for(auto prior_itr = queue.begin(); prior_itr != req_itr; prior_itr++) {
-                    auto prior_req = *prior_itr;
-                    if( prior_req->Bank() == cmd.Bank() && prior_req->Bankgroup() == cmd.Bankgroup() && prior_req->Rank() == cmd.Rank()) {
-                        prior_requests_to_bank_exist = true; //Entire address upto bank matches
-                        break;
+                    bool prior_requests_to_bank_exist = false;
+                    for (auto prior_itr = queue.begin(); prior_itr != req_itr; prior_itr++) {
+                        auto prior_req = *prior_itr;
+                        if (prior_req->Bank() == cmd.Bank() && prior_req->Bankgroup() == cmd.Bankgroup() &&
+                            prior_req->Rank() == cmd.Rank()) {
+                            prior_requests_to_bank_exist = true; //Entire address upto bank matches
+                            break;
+                        }
                     }
-                }
-                bool pending_row_hits_exist = false;
-                auto open_row = channel_state_.OpenRow(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
-                for(auto pending_itr = req_itr; pending_itr != queue.end(); pending_itr++) { //TODO - req_itr + 1?
-                    auto pending_req = *pending_itr;
-                    if( pending_req->Row() == open_row && pending_req->Bank() == cmd.Bank() &&
-                        pending_req->Bankgroup() == cmd.Bankgroup() && pending_req->Rank() == cmd.Rank()) {
-                        pending_row_hits_exist = true; //Entire address upto row matches
-                        break;
+                    bool pending_row_hits_exist = false;
+                    auto open_row = channel_state_.OpenRow(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
+                    for (auto pending_itr = req_itr; pending_itr != queue.end(); pending_itr++) { //TODO - req_itr + 1?
+                        auto pending_req = *pending_itr;
+                        if (pending_req->Row() == open_row && pending_req->Bank() == cmd.Bank() &&
+                            pending_req->Bankgroup() == cmd.Bankgroup() && pending_req->Rank() == cmd.Rank()) {
+                            pending_row_hits_exist = true; //Entire address upto row matches
+                            break;
+                        }
                     }
-                }
-                bool rowhit_limit_reached = channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >= 4;
-                if( !prior_requests_to_bank_exist && (!pending_row_hits_exist || rowhit_limit_reached))
+                    bool rowhit_limit_reached =
+                            channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >= 4;
+                    if (!prior_requests_to_bank_exist && (!pending_row_hits_exist || rowhit_limit_reached))
+                        return cmd;
+                } else
                     return cmd;
             }
-            else
-                return cmd;
         }
     }
     return Command();
