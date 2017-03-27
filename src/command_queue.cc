@@ -51,9 +51,9 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
         auto req = *req_itr;
         Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-        //TODO - For per bank unified queues no need to process out of order (simulator speed)
+        //TODO - Can specizalize for PER_BANK queeus (simulator speed)
         if(channel_state_.IsReady(cmd, clk)) {
-            if ( req->cmd_.cmd_type_ == cmd.cmd_type_) { //TODO - Essentially checking for a row hit. Replace with IsReadWrite() function?
+            if ( cmd.IsReadWrite()) {
                 //Check for read/write dependency check. Necessary only for unified queues
                 bool dependency = false;
                 for(auto dep_itr = queue.begin(); dep_itr != req_itr; dep_itr++) {
@@ -78,15 +78,20 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
                 // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
 
                 bool prior_requests_to_bank_exist = false;
-                for(auto prior_itr = queue.begin(); prior_itr != req_itr; prior_itr++ ) {
-                    prior_requests_to_bank_exist = true; //TODO - Entire address upto bank matches (currently written only for per bank queues)
-                    break;
+                for(auto prior_itr = queue.begin(); prior_itr != req_itr; prior_itr++) {
+                    auto prior_req = *prior_itr;
+                    if( prior_req->Bank() == cmd.Bank() && prior_req->Bankgroup() == cmd.Bankgroup() && prior_req->Rank() == cmd.Rank()) {
+                        prior_requests_to_bank_exist = true; //Entire address upto bank matches
+                        break;
+                    }
                 }
                 bool pending_row_hits_exist = false;
                 auto open_row = channel_state_.OpenRow(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
-                for(auto pending_req : queue) {
-                    if( pending_req->Row() == open_row) { //TODO - Entire address upto row matches (currently written only for per bank queues)
-                        pending_row_hits_exist = true;
+                for(auto pending_itr = req_itr; pending_itr != queue.end(); pending_itr++) { //TODO - req_itr + 1?
+                    auto pending_req = *pending_itr;
+                    if( pending_req->Row() == open_row && pending_req->Bank() == cmd.Bank() &&
+                        pending_req->Bankgroup() == cmd.Bankgroup() && pending_req->Rank() == cmd.Rank()) {
+                        pending_row_hits_exist = true; //Entire address upto row matches
                         break;
                     }
                 }
@@ -103,6 +108,7 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
 
 
 Command CommandQueue::AggressivePrecharge() {
+    //TODO - Why such round robin order?
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto j = 0; j < config_.bankgroups; j++) {
@@ -113,8 +119,9 @@ Command CommandQueue::AggressivePrecharge() {
                         auto open_row = channel_state_.OpenRow(i, j, k);
                         auto& queue = GetQueue(i, j, k);
                         for(auto pending_req : queue) {
-                            if( pending_req->Row() == open_row) { //ToDo - Same address (Currently implemented only for per bank queues)
-                                pending_row_hits_exist = true;
+                            if( pending_req->Row() == open_row && pending_req->Bank() == k &&
+                                pending_req->Bankgroup() == j && pending_req->Rank() == i) {
+                                pending_row_hits_exist = true; //Entire address upto row matches
                                 break;
                             }
                         }
