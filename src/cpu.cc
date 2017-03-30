@@ -83,22 +83,109 @@ ostream& operator<<(ostream& os, const Access& access) {
 Address AddressMapping(uint64_t hex_addr, const Config& config) {
     //Implement address mapping functionality
     unsigned int pos = 3; //TODO - Remove hardcoding
-    if(config.address_mapping == "rorababgchcl") {
-       auto column = ModuloWidth(hex_addr, config.column_width_, pos);
-       pos += config.column_width_;
-       auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
-       pos += config.channel_width_;
-       auto rank =  ModuloWidth(hex_addr, config.rank_width_, pos);
-       pos += config.rank_width_;
-       auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
-       pos += config.bankgroup_width_;
-       auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
-       pos += config.bank_width_;
-       auto row = ModuloWidth(hex_addr, config.row_width_, pos);
-       return Address(channel, rank, bankgroup, bank, row, column);
-    };
-    cerr << "Unknown address_mapping" << endl;
-    exit(-1);
+    //There could be as many as 6! = 720 different address mappings!
+    if(config.address_mapping == "chrarocobabg") {  // channel:rank:row:column:bank:bankgroup
+        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
+        pos += config.bankgroup_width_;
+        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
+        pos += config.bank_width_;
+        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
+        pos += config.column_width_;
+        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
+        pos += config.row_width_;
+        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
+        pos += config.rank_width_;
+        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
+        return Address(channel, rank, bankgroup, bank, row, column);
+    }
+    else if(config.address_mapping == "chrocobabgra") {  // channel:row:column:bank:bankgroup:rank
+        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
+        pos += config.rank_width_;
+        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
+        pos += config.bankgroup_width_;
+        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
+        pos += config.bank_width_;
+        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
+        pos += config.column_width_;
+        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
+        pos += config.row_width_;
+        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
+        return Address(channel, rank, bankgroup, bank, row, column);
+    }
+    else if(config.address_mapping == "chrababgcoro") {  // channel:rank:bank:bankgroup:column:row
+        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
+        pos += config.row_width_;
+        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
+        pos += config.column_width_;
+        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
+        pos += config.bankgroup_width_;
+        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
+        pos += config.bank_width_;
+        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
+        pos += config.rank_width_;
+        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
+        return Address(channel, rank, bankgroup, bank, row, column);
+    }
+    else if(config.address_mapping == "chrababgroco") {  // channel:rank:bank:bankgroup:row:column
+        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
+        pos += config.column_width_;
+        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
+        pos += config.row_width_;
+        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
+        pos += config.bankgroup_width_;
+        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
+        pos += config.bank_width_;
+        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
+        pos += config.rank_width_;
+        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
+        return Address(channel, rank, bankgroup, bank, row, column);
+    }
+    else if(config.address_mapping == "chrocorababg") {  // channel:row:column:rank:bank:bankgroup
+        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
+        pos += config.bankgroup_width_;
+        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
+        pos += config.bank_width_;
+        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
+        pos += config.rank_width_;
+        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
+        pos += config.column_width_;
+        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
+        pos += config.row_width_;
+        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
+        return Address(channel, rank, bankgroup, bank, row, column);
+    }
+    else if(config.address_mapping == "chrobabgraco") {  // channel:row:bank:bankgroup:rank:column
+        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
+        pos += config.column_width_;
+        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
+        pos += config.rank_width_;
+        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
+        pos += config.bankgroup_width_;
+        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
+        pos += config.bank_width_;
+        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
+        pos += config.row_width_;
+        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
+        return Address(channel, rank, bankgroup, bank, row, column);
+    }
+    else if(config.address_mapping == "rocorababgch") {  // row:column:rank:bank:bankgroup:channel
+        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
+        pos += config.channel_width_;
+        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
+        pos += config.bankgroup_width_;
+        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
+        pos += config.bank_width_;
+        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
+        pos += config.rank_width_;
+        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
+        pos += config.column_width_;
+        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
+        return Address(channel, rank, bankgroup, bank, row, column);
+    }
+    else {
+        cerr << "Unknown address mapping" << endl;
+        exit(-1);
+    }
 }
 
 Request* TraceBasedCPU::FormRequest(const Access& access) {

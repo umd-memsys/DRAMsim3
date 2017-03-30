@@ -51,7 +51,7 @@ class Config {
 
     unsigned int activation_window_depth = 4;
 
-    std::string address_mapping = "rorababgchcl"; //Rank-Bank-Bankgroup-Channel-Column-Row
+    std::string address_mapping = "chrobabgraco";
     std::string queue_structure = "PER_BANK";
 
 

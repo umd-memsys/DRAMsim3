@@ -6,7 +6,7 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    bool enable_trace_cpu = false;
+    bool enable_trace_cpu = true;
     Config config;
     Timing timing(config);
 
