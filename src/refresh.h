@@ -32,6 +32,9 @@ class Refresh {
         void InsertRefresh();
 
         void IterateNext();
+
+        bool ReadWritesToFinish(int rank, int bankgroup, int bank);
+        Command GetReadWritesToOpenRow(int rank, int bankgroup, int bank);
         
 };
 

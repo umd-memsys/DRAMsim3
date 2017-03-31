@@ -25,7 +25,6 @@ void Controller::ClockTick() {
             return;
         }
     }
-
     //Read write queues
     auto cmd = cmd_queue_.GetCommandToIssue();
     if(cmd.IsValid()) {

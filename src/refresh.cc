@@ -32,51 +32,15 @@ Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator refresh_
     if( refresh_req->cmd_.cmd_type_ == CommandType::REFRESH) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto j = 0; j < config_.bankgroups; j++) {
-                auto rank = refresh_req->Rank();
-                // Issue a single pending request
-                if(channel_state_.IsRowOpen(rank, j, k) && channel_state_.RowHitCount(rank, j, k) == 0) {
-                    auto& queue = cmd_queue_.GetQueue(rank, j, k);
-                    for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
-                        auto req = *req_itr;
-                        //If the req belongs to the same bank which is being checked if it is okay for refresh
-                        //Necessary for PER_RANK queues
-                        if(req->Rank() == rank && req->Bankgroup() == j && req->Bank() == k) {
-                            Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-                            if (cmd.IsReadWrite()) { //Rowhit
-                                if (channel_state_.IsReady(cmd, clk)) {
-                                    delete (*req_itr);
-                                    queue.erase(req_itr);
-                                    return cmd;
-                                }
-                            }
-                        }
-                    }
-                    return Command(); //Do not precharge before issuing that single pending read
+                if(ReadWritesToFinish(refresh_req->Rank(), j, k)) {
+                    return GetReadWritesToOpenRow(refresh_req->Rank(), j, k);
                 }
             }
         }
     }
     else if( refresh_req->cmd_.cmd_type_ == CommandType::REFRESH_BANK) {
-        auto rank = refresh_req->Rank();
-        auto bankgroup = refresh_req->Bankgroup();
-        auto bank = refresh_req->Bank();
-        // Issue a single pending request
-        if(channel_state_.IsRowOpen(rank, bankgroup, bank) && channel_state_.RowHitCount(rank, bankgroup, bank) == 0) {
-            auto& queue = cmd_queue_.GetQueue(rank, bankgroup, bank);
-            for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
-                auto req = *req_itr;
-                //If the req belongs to the same bank which is being checked if it is okay for refresh
-                //Necessary for PER_RANK queues
-                if(req->Rank() == rank && req->Bankgroup() == bankgroup && req->Bank() == bank) {
-                    Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-                    if (channel_state_.IsReady(cmd, clk)) {
-                        delete (*req_itr);
-                        queue.erase(req_itr);
-                        return cmd;
-                    }
-                }
-            }
-            return Command(); //Do not precharge before issuing that single pending read
+        if(ReadWritesToFinish(refresh_req->Rank(), refresh_req->Bankgroup(), refresh_req->Bank())) {
+            return GetReadWritesToOpenRow(refresh_req->Rank(), refresh_req->Bankgroup(), refresh_req->Bank());
         }
     }
 
@@ -91,6 +55,31 @@ Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator refresh_
     }
     return Command();
 }
+
+
+bool Refresh::ReadWritesToFinish(int rank, int bankgroup, int bank) {
+    // Issue a single pending request
+    return channel_state_.IsRowOpen(rank, bankgroup, bank) && channel_state_.RowHitCount(rank, bankgroup, bank) == 0;
+}
+
+Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup, int bank) {
+    auto& queue = cmd_queue_.GetQueue(rank, bankgroup, bank);
+    for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
+        auto req = *req_itr;
+        //If the req belongs to the same bank which is being checked if it is okay for refresh
+        //Necessary for PER_RANK queues
+        if(req->Rank() == rank && req->Bankgroup() == bankgroup && req->Bank() == bank) {
+            Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+            if (channel_state_.IsReady(cmd, clk)) {
+                delete (*req_itr);
+                queue.erase(req_itr);
+                return cmd;
+            }
+        }
+    }
+    return Command(); //Do not precharge before issuing that single pending read
+}
+
 
 inline void Refresh::IterateNext() {
     next_rank_ = (next_rank_ + 1) % config_.ranks;
