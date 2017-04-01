@@ -13,6 +13,7 @@ class CommandQueue {
         Command GetCommandToIssue();
         Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
         Command AggressivePrecharge();
+        void IssueRequest(std::list<Request*>& queue, std::list<Request*>::iterator req_itr);
         bool InsertReq(Request* req);
         std::list<Request*>& GetQueue(int rank, int bankgroup, int bank);
         long clk;
@@ -22,6 +23,8 @@ class CommandQueue {
         int next_rank_, next_bankgroup_, next_bank_;
         std::vector< std::vector< std::vector< std::list<Request*> > > > req_q_per_bank_;
         std::vector< std::list<Request*> > req_q_per_rank_;
+
+        std::list<Request*> issued_read_req_; //TODO - Here or in the controller or main?
 
         void IterateNext();
 };

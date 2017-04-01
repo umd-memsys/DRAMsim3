@@ -29,6 +29,7 @@ void Refresh::InsertRefresh() {
 
 Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator refresh_itr) {
     auto refresh_req = *refresh_itr;
+    //TODO - Strict round robin search of queues?
     if( refresh_req->cmd_.cmd_type_ == CommandType::REFRESH) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto j = 0; j < config_.bankgroups; j++) {
@@ -71,13 +72,12 @@ Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup, int bank) {
         if(req->Rank() == rank && req->Bankgroup() == bankgroup && req->Bank() == bank) {
             Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
             if (channel_state_.IsReady(cmd, clk)) {
-                delete (*req_itr);
-                queue.erase(req_itr);
+                cmd_queue_.IssueRequest(queue, req_itr);
                 return cmd;
             }
         }
     }
-    return Command(); //Do not precharge before issuing that single pending read
+    return Command();
 }
 
 

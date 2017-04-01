@@ -66,9 +66,7 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
                         }
                     }
                     if (!dependency) {
-                        //Sought of actually issuing the read/write command
-                        delete (*req_itr);
-                        queue.erase(req_itr);
+                        IssueRequest(queue, req_itr);
                         return cmd;
                     }
                 } else if (cmd.cmd_type_ == CommandType::PRECHARGE) {
@@ -189,4 +187,17 @@ std::list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
         cerr << "Unknown queue structure\n";
         exit(-1);
     }
+}
+
+void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>::iterator req_itr) {
+    auto req = *req_itr;
+    if( req->cmd_.IsRead()) {
+        //Put the read requests into a new buffer. They will be returned to the CPU after the read latency
+        issued_read_req_.splice(issued_read_req_.end(), queue, req_itr);
+    }
+    else {
+        queue.erase(req_itr);
+        delete (*req_itr);
+    }
+    return;
 }
