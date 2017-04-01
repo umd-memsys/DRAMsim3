@@ -11,7 +11,7 @@ class Config {
         Config();
 
     //Simulation Parameters
-    unsigned int cycles = 14000000;
+    unsigned int cycles = 100000;
 
     //DRAM physical structure
     unsigned int channels = 1;

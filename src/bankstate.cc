@@ -1,8 +1,10 @@
 #include "bankstate.h"
+#include "statistics.h"
 
 using namespace std;
 
-BankState::BankState() :
+BankState::BankState(Statistics &stats) :
+    stats_(stats),
     state_(State::CLOSED),
     cmd_timing_(static_cast<int>(CommandType::SIZE)),
     open_row_(-1),
@@ -131,6 +133,11 @@ void BankState::UpdateState(const Command& cmd) {
             switch(cmd.cmd_type_) {
                 case CommandType::READ:
                 case CommandType::WRITE:
+                    if(row_hit_count_ != 0) {
+                        stats_.numb_row_hits++;
+                        if (cmd.cmd_type_ == CommandType::READ) stats_.numb_read_row_hits++;
+                        if (cmd.cmd_type_ == CommandType::WRITE) stats_.numb_write_row_hits++;
+                    }
                     row_hit_count_++;
                     break;
                 case CommandType::READ_PRECHARGE:

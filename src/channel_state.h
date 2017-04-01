@@ -10,7 +10,7 @@
 
 class ChannelState {
     public:
-        ChannelState(const Config& config, const Timing& timing);
+        ChannelState(const Config &config, const Timing &timing, Statistics &stats);
         Command GetRequiredCommand(const Command& cmd) const;
         bool IsReady(const Command& cmd, long clk) const;
         void UpdateState(const Command& cmd);
@@ -26,6 +26,7 @@ class ChannelState {
     private:
         const Config& config_;
         const Timing& timing_;
+        Statistics& stats_;
         std::vector< std::vector< std::vector<BankState*> > > bank_states_;
         std::vector< std::list<long> > activation_times_;
 

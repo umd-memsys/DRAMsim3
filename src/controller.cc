@@ -1,20 +1,31 @@
 #include <iostream>
 #include "controller.h"
-#include "statistics.h"
 
 using namespace std;
 
 Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats) :
     channel_(channel),
     clk_(0),
-    channel_state_(config, timing),
+    channel_state_(config, timing, stats),
     cmd_queue_(config, channel_state_, stats), //TODO - Isn't it really a request_queue. Why call it command_queue?
-    refresh_(config, channel_state_, cmd_queue_)
+    refresh_(config, channel_state_, cmd_queue_, stats)
 {}
 
 void Controller::ClockTick() {
     clk_++;
     cmd_queue_.clk_++;
+
+    //Return already issued read requests back to the CPU
+    for( auto req_itr = cmd_queue_.issued_req_.begin(); req_itr !=  cmd_queue_.issued_req_.end(); req_itr++) {
+        auto issued_req = *req_itr;
+        if(clk_ > issued_req->exit_time_) {
+            //Return request to cpu
+            delete(issued_req);
+            cmd_queue_.issued_req_.erase(req_itr);
+            break; // Returning one request per cycle
+        }
+    }
+
     //Refresh command is queued
     refresh_.ClockTick();
     if( !refresh_.refresh_q_.empty()) {
@@ -33,6 +44,7 @@ void Controller::ClockTick() {
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
     }
+    /* //TODO Make- Aggressive precharing a knob
     else {
         //Look for closing open banks if any. (Aggressive precharing)
         //To which no read/write requests exist in the queues
@@ -41,6 +53,7 @@ void Controller::ClockTick() {
             channel_state_.IssueCommand(pre_cmd, clk_);
         }
     }
+    */
 }
 
 bool Controller::InsertReq(Request* req) {

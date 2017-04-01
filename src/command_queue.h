@@ -18,6 +18,7 @@ class CommandQueue {
         bool InsertReq(Request* req);
         std::list<Request*>& GetQueue(int rank, int bankgroup, int bank);
         long clk_;
+        std::list<Request*> issued_req_; //TODO - Here or in the controller or main?
     private:
         const Config& config_;
         const ChannelState& channel_state_;
@@ -25,8 +26,6 @@ class CommandQueue {
         int next_rank_, next_bankgroup_, next_bank_;
         std::vector< std::vector< std::vector< std::list<Request*> > > > req_q_per_bank_;
         std::vector< std::list<Request*> > req_q_per_rank_;
-
-        std::list<Request*> issued_read_req_; //TODO - Here or in the controller or main?
 
         void IterateNext();
 };

@@ -37,5 +37,6 @@ dramcore.dSYM
 build
 googletest
 cmake-build-debug
+release
 .idea
 

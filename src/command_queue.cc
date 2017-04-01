@@ -98,8 +98,10 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
                     }
                     bool rowhit_limit_reached =
                             channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >= 4;
-                    if (!prior_requests_to_bank_exist && (!pending_row_hits_exist || rowhit_limit_reached))
+                    if (!prior_requests_to_bank_exist && (!pending_row_hits_exist || rowhit_limit_reached)) {
+                        stats_.numb_ondemand_precharges++;
                         return cmd;
+                    }
                 } else
                     return cmd;
             }
@@ -127,8 +129,10 @@ Command CommandQueue::AggressivePrecharge() {
                                 break;
                             }
                         }
-                        if(!pending_row_hits_exist)
+                        if(!pending_row_hits_exist) {
+                            stats_.numb_aggressive_precharges++;
                             return Command(CommandType::PRECHARGE, Address(-1, i, j, k, -1, -1));
+                        }
                     }
                 }
             }
@@ -195,9 +199,8 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>:
     auto req = *req_itr;
     if( req->cmd_.IsRead()) {
         //Put the read requests into a new buffer. They will be returned to the CPU after the read latency
-        //issued_read_req_.splice(issued_read_req_.end(), queue, req_itr);
-        queue.erase(req_itr);
-        delete (*req_itr);
+        req->exit_time_ = clk_ + config_.tBurst;
+        issued_req_.splice(issued_req_.end(), queue, req_itr);
         stats_.numb_read_reqs_issued++;
     }
     else {

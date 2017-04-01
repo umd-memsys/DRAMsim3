@@ -2,16 +2,17 @@
 
 using namespace std;
 
-ChannelState::ChannelState(const Config& config, const Timing& timing) :
+ChannelState::ChannelState(const Config &config, const Timing &timing, Statistics &stats) :
     config_(config),
     timing_(timing),
+    stats_(stats),
     bank_states_(config_.ranks, std::vector< std::vector<BankState*> >(config_.bankgroups, std::vector<BankState*>(config_.banks_per_group, NULL) ) ),
     activation_times_(config_.ranks, std::list<long>())
 {
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto j = 0; j < config_.bankgroups; j++) {
             for(auto k = 0; k < config_.banks_per_group; k++) {
-                bank_states_[i][j][k] = new BankState();
+                bank_states_[i][j][k] = new BankState(stats);
             }
         }
     }

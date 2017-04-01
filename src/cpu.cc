@@ -53,6 +53,7 @@ TraceBasedCPU::TraceBasedCPU(vector<Controller*>& ctrls, const Config& config) :
 }
 
 void TraceBasedCPU::ClockTick() {
+    clk_++;
     if(!trace_file_.eof()) {
         if(get_next_) {
             get_next_ = false;
@@ -67,7 +68,6 @@ void TraceBasedCPU::ClockTick() {
             }
         }
     }
-    clk_++;
     return;
 }
 

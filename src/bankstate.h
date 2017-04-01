@@ -5,11 +5,12 @@
 #include <list>
 #include <utility>
 #include "common.h"
+#include "statistics.h"
 
 
 class BankState {
     public:
-        BankState();
+        BankState(Statistics &stats);
 
         //Get the command that needs to executed first to execute the comand of interest given the state of the bank
         CommandType GetRequiredCommandType(const Command& cmd);
@@ -29,6 +30,7 @@ class BankState {
         int OpenRow() const { return open_row_; }
         int RowHitCount() const { return row_hit_count_; }
     private:
+        Statistics& stats_;
         //Current state of the Bank
         //Apriori or instantaneously transitions on a command.
         State state_;
@@ -45,6 +47,7 @@ class BankState {
         int row_hit_count_;
 
         bool refresh_waiting_;
+
 };
 
 #endif

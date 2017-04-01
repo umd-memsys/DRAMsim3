@@ -10,7 +10,8 @@
 
 class Refresh {
     public:
-        Refresh(const Config& config, const ChannelState& channel_state, CommandQueue& cmd_queue);
+        Refresh(const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue,
+                        Statistics &stats);
         std::list<Request*> refresh_q_; // Queue of refresh commands
         void ClockTick();
         Command GetRefreshOrAssociatedCommand(std::list<Request*>::iterator refresh_itr);
@@ -18,6 +19,7 @@ class Refresh {
         const Config& config_;
         const ChannelState& channel_state_;
         CommandQueue& cmd_queue_;
+        Statistics& stats_;
         long clk_;
         
         //Keep track of the last time when a refresh command was issued to this bank 

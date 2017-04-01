@@ -2,10 +2,11 @@
 
 using namespace std;
 
-Refresh::Refresh(const Config& config, const ChannelState& channel_state, CommandQueue& cmd_queue) :
+Refresh::Refresh(const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue, Statistics &stats) :
     config_(config),
     channel_state_(channel_state),
     cmd_queue_(cmd_queue),
+    stats_(stats),
     clk_(0),
     last_bank_refresh_(config_.ranks, std::vector< vector<long>>(config_.bankgroups, vector<long>(config_.banks_per_group, 0))),
     last_rank_refresh_(config_.ranks, 0),
