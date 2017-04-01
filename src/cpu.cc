@@ -43,7 +43,7 @@ void RandomCPU::ClockTick()
 TraceBasedCPU::TraceBasedCPU(vector<Controller*>& ctrls, const Config& config) :
     ctrls_(ctrls),
     config_(config),
-    clk(0)
+    clk_(0)
 {
     trace_file_.open("sample_trace.txt");
     if(trace_file_.fail()) {
@@ -60,14 +60,14 @@ void TraceBasedCPU::ClockTick() {
             trace_file_ >> access;
             req_ = FormRequest(access);
         }
-        if(req_->arrival_time_ <= clk) {
+        if(req_->arrival_time_ <= clk_) {
             if(ctrls_[req_->Channel()]->InsertReq(req_)) {
                 get_next_ = true;
                 req_id_++;
             }
         }
     }
-    clk++;
+    clk_++;
     return;
 }
 

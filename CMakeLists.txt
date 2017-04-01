@@ -17,6 +17,7 @@ set(SOURCES src/bankstate.cc
             src/controller.cc
             src/cpu.cc
             src/refresh.cc
+            src/statistics.cc
             src/timing.cc
 )
 

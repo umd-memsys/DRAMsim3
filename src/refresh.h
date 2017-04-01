@@ -18,7 +18,7 @@ class Refresh {
         const Config& config_;
         const ChannelState& channel_state_;
         CommandQueue& cmd_queue_;
-        long clk;
+        long clk_;
         
         //Keep track of the last time when a refresh command was issued to this bank 
         std::vector< std::vector< std::vector<long> > > last_bank_refresh_; //TODO - Wouldn't it be better to move this to bankstate?

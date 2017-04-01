@@ -6,20 +6,20 @@ Refresh::Refresh(const Config& config, const ChannelState& channel_state, Comman
     config_(config),
     channel_state_(channel_state),
     cmd_queue_(cmd_queue),
-    clk(0),
+    clk_(0),
     last_bank_refresh_(config_.ranks, std::vector< vector<long>>(config_.bankgroups, vector<long>(config_.banks_per_group, 0))),
     last_rank_refresh_(config_.ranks, 0),
     next_rank_(0)
 {}
 
 void Refresh::ClockTick() {
-    clk++;
+    clk_++;
     InsertRefresh();
     return;
 }
 
 void Refresh::InsertRefresh() {
-    if( clk % (config_.tREFI/config_.ranks) == 0) {
+    if( clk_ % (config_.tREFI/config_.ranks) == 0) {
         auto addr = Address(); addr.rank_ = next_rank_;
         refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
         IterateNext();
@@ -46,7 +46,7 @@ Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator refresh_
     }
 
     auto cmd = channel_state_.GetRequiredCommand(refresh_req->cmd_);
-    if(channel_state_.IsReady(cmd, clk)) {
+    if(channel_state_.IsReady(cmd, clk_)) {
         if(cmd.IsRefresh()) {
             //Sought of actually issuing the refresh command
             delete(*refresh_itr);
@@ -71,7 +71,7 @@ Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup, int bank) {
         //Necessary for PER_RANK queues
         if(req->Rank() == rank && req->Bankgroup() == bankgroup && req->Bank() == bank) {
             Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-            if (channel_state_.IsReady(cmd, clk)) {
+            if (channel_state_.IsReady(cmd, clk_)) {
                 cmd_queue_.IssueRequest(queue, req_itr);
                 return cmd;
             }

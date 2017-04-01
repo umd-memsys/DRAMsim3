@@ -1,6 +1,7 @@
 #include <iostream>
 #include "controller.h"
 #include "cpu.h"
+#include "statistics.h"
 
 using namespace std;
 
@@ -9,10 +10,11 @@ int main(int argc, char **argv)
     bool enable_trace_cpu = true;
     Config config;
     Timing timing(config);
+    Statistics stats;
 
     vector<Controller*> ctrls(config.channels);
     for(auto i = 0; i < config.channels; i++) {
-        ctrls[i] = new Controller(i, config, timing);
+        ctrls[i] = new Controller(i, config, timing, stats);
     }
 
     TraceBasedCPU trace_cpu(ctrls, config);
@@ -23,5 +25,10 @@ int main(int argc, char **argv)
         for( auto ctrl : ctrls)
             ctrl->ClockTick();
     }
+
+    cout << "-----------------------------------------------------" << endl;
+    cout << "Printing Statistics -- " << endl;
+    cout << "-----------------------------------------------------" << endl;
+    cout << stats;
     return 0;
 }

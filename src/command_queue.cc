@@ -1,11 +1,13 @@
 #include "command_queue.h"
+#include "statistics.h"
 
 using namespace std;
 
-CommandQueue::CommandQueue(const Config& config, const ChannelState& channel_state) :
-    clk(0),
+CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats) :
+    clk_(0),
     config_(config),
     channel_state_(channel_state),
+    stats_(stats),
     next_rank_(0),
     next_bankgroup_(0),
     next_bank_(0),
@@ -52,8 +54,8 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
         auto req = *req_itr;
         if(!channel_state_.IsRefreshWaiting(req->Rank(), req->Bankgroup(), req->Bank())) {
             Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
-            //TODO - Can specizalize for PER_BANK queeus (simulator speed)
-            if (channel_state_.IsReady(cmd, clk)) {
+            //TODO - Can specizalize for PER_BANK queues (simulator speed)
+            if (channel_state_.IsReady(cmd, clk_)) {
                 if (cmd.IsReadWrite()) {
                     //Check for read/write dependency check. Necessary only for unified queues
                     bool dependency = false;
@@ -114,7 +116,7 @@ Command CommandQueue::AggressivePrecharge() {
             for(auto j = 0; j < config_.bankgroups; j++) {
                 if(channel_state_.IsRowOpen(i, j, k)) {
                     auto cmd = Command(CommandType::PRECHARGE, Address( -1, i, j, k, -1, -1));
-                    if(channel_state_.IsReady(cmd, clk)) {
+                    if(channel_state_.IsReady(cmd, clk_)) {
                         bool pending_row_hits_exist = false;
                         auto open_row = channel_state_.OpenRow(i, j, k);
                         auto& queue = GetQueue(i, j, k);
@@ -193,11 +195,15 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>:
     auto req = *req_itr;
     if( req->cmd_.IsRead()) {
         //Put the read requests into a new buffer. They will be returned to the CPU after the read latency
-        issued_read_req_.splice(issued_read_req_.end(), queue, req_itr);
+        //issued_read_req_.splice(issued_read_req_.end(), queue, req_itr);
+        queue.erase(req_itr);
+        delete (*req_itr);
+        stats_.numb_read_reqs_issued++;
     }
     else {
         queue.erase(req_itr);
         delete (*req_itr);
+        stats_.numb_write_reqs_issued++;
     }
     return;
 }

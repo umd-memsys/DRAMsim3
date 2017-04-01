@@ -45,7 +45,7 @@ class TraceBasedCPU {
     private:
         std::vector<Controller*>& ctrls_;
         const Config& config_;
-        long clk;
+        long clk_;
         std::ifstream trace_file_;
         Request* req_;
         bool get_next_ = true;
