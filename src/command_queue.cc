@@ -2,6 +2,7 @@
 #include "statistics.h"
 
 using namespace std;
+using namespace dramcore;
 
 CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats) :
     clk_(0),

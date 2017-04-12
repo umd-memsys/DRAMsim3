@@ -1,9 +1,10 @@
 #include "cpu.h"
 
 using namespace std;
+using namespace dramcore;
 
-RandomCPU::RandomCPU(vector<Controller*>& ctrls, const Config& config) :
-    ctrls_(ctrls),
+RandomCPU::RandomCPU(MemorySystem& memory_system, const Config& config) :
+    memory_system_(memory_system),
     config_(config),
     clk_(0),
     last_addr_(0, 0, 0, 0, 0, -1),
@@ -30,7 +31,7 @@ void RandomCPU::ClockTick()
             auto cmd_type = rand() % 3 == 0 ? CommandType::WRITE : CommandType::READ;
             req_ = new Request(cmd_type, addr, clk_, req_id_);
         }
-        if(ctrls_[req_->Channel()]->InsertReq(req_)) {
+        if(memory_system_.ctrls_[req_->Channel()]->InsertReq(req_)) { //TODO - This is silly. Modify it.
             get_next_ = true;
             req_id_++;
             req_log_ << "Request Inserted at clk = " << clk_ << " " << *req_ << endl;
@@ -40,8 +41,8 @@ void RandomCPU::ClockTick()
     return;
 }
 
-TraceBasedCPU::TraceBasedCPU(vector<Controller*>& ctrls, const Config& config) :
-    ctrls_(ctrls),
+TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system, const Config& config) :
+    memory_system_(memory_system),
     config_(config),
     clk_(0)
 {
@@ -62,130 +63,13 @@ void TraceBasedCPU::ClockTick() {
             req_ = FormRequest(access);
         }
         if(req_->arrival_time_ <= clk_) {
-            if(ctrls_[req_->Channel()]->InsertReq(req_)) {
+            if(memory_system_.ctrls_[req_->Channel()]->InsertReq(req_)) { //TODO - This is silly. Modify it.
                 get_next_ = true;
                 req_id_++;
             }
         }
     }
     return;
-}
-
-istream& operator>>(istream& is, Access& access) {
-    is >> hex >> access.hex_addr_ >> access.access_type_ >> dec >> access.time_;
-    return is;
-}
-
-ostream& operator<<(ostream& os, const Access& access) {
-    return os;
-}
-
-Address AddressMapping(uint64_t hex_addr, const Config& config) {
-    //Implement address mapping functionality
-    unsigned int pos = 3; //TODO - Remove hardcoding
-    //There could be as many as 6! = 720 different address mappings!
-    if(config.address_mapping == "chrarocobabg") {  // channel:rank:row:column:bank:bankgroup
-        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
-        pos += config.bankgroup_width_;
-        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
-        pos += config.bank_width_;
-        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
-        pos += config.column_width_;
-        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
-        pos += config.row_width_;
-        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
-        pos += config.rank_width_;
-        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
-        return Address(channel, rank, bankgroup, bank, row, column);
-    }
-    else if(config.address_mapping == "chrocobabgra") {  // channel:row:column:bank:bankgroup:rank
-        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
-        pos += config.rank_width_;
-        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
-        pos += config.bankgroup_width_;
-        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
-        pos += config.bank_width_;
-        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
-        pos += config.column_width_;
-        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
-        pos += config.row_width_;
-        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
-        return Address(channel, rank, bankgroup, bank, row, column);
-    }
-    else if(config.address_mapping == "chrababgcoro") {  // channel:rank:bank:bankgroup:column:row
-        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
-        pos += config.row_width_;
-        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
-        pos += config.column_width_;
-        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
-        pos += config.bankgroup_width_;
-        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
-        pos += config.bank_width_;
-        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
-        pos += config.rank_width_;
-        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
-        return Address(channel, rank, bankgroup, bank, row, column);
-    }
-    else if(config.address_mapping == "chrababgroco") {  // channel:rank:bank:bankgroup:row:column
-        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
-        pos += config.column_width_;
-        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
-        pos += config.row_width_;
-        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
-        pos += config.bankgroup_width_;
-        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
-        pos += config.bank_width_;
-        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
-        pos += config.rank_width_;
-        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
-        return Address(channel, rank, bankgroup, bank, row, column);
-    }
-    else if(config.address_mapping == "chrocorababg") {  // channel:row:column:rank:bank:bankgroup
-        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
-        pos += config.bankgroup_width_;
-        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
-        pos += config.bank_width_;
-        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
-        pos += config.rank_width_;
-        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
-        pos += config.column_width_;
-        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
-        pos += config.row_width_;
-        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
-        return Address(channel, rank, bankgroup, bank, row, column);
-    }
-    else if(config.address_mapping == "chrobabgraco") {  // channel:row:bank:bankgroup:rank:column
-        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
-        pos += config.column_width_;
-        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
-        pos += config.rank_width_;
-        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
-        pos += config.bankgroup_width_;
-        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
-        pos += config.bank_width_;
-        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
-        pos += config.row_width_;
-        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
-        return Address(channel, rank, bankgroup, bank, row, column);
-    }
-    else if(config.address_mapping == "rocorababgch") {  // row:column:rank:bank:bankgroup:channel
-        auto channel = ModuloWidth(hex_addr, config.channel_width_, pos);
-        pos += config.channel_width_;
-        auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
-        pos += config.bankgroup_width_;
-        auto bank = ModuloWidth(hex_addr, config.bank_width_, pos);
-        pos += config.bank_width_;
-        auto rank = ModuloWidth(hex_addr, config.rank_width_, pos);
-        pos += config.rank_width_;
-        auto column = ModuloWidth(hex_addr, config.column_width_, pos);
-        pos += config.column_width_;
-        auto row = ModuloWidth(hex_addr, config.row_width_, pos);
-        return Address(channel, rank, bankgroup, bank, row, column);
-    }
-    else {
-        cerr << "Unknown address mapping" << endl;
-        exit(-1);
-    }
 }
 
 Request* TraceBasedCPU::FormRequest(const Access& access) {
@@ -202,10 +86,3 @@ Request* TraceBasedCPU::FormRequest(const Access& access) {
     return new Request(cmd_type, addr, access.time_, req_id_);
 }
 
-unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos) {
-    addr >>= pos;
-    auto store = addr;
-    addr >>= bit_width;
-    addr <<= bit_width;
-    return static_cast<unsigned int>(store ^ addr);
-}

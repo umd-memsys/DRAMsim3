@@ -8,6 +8,8 @@
 #include "refresh.h"
 #include "statistics.h"
 
+namespace dramcore {
+
 class Controller {
     public:
         Controller(int channel, const Config &config, const Timing &timing, Statistics &stats);
@@ -21,4 +23,5 @@ class Controller {
         Refresh refresh_;
 };
 
+}
 #endif

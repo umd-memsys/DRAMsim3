@@ -2,6 +2,9 @@
 #define __COMMON_H
 
 #include <iostream>
+#include "config.h"
+
+namespace dramcore {
 
 class Address {
     public:
@@ -88,4 +91,19 @@ class Request {
         friend std::ostream& operator<<(std::ostream& os, const Request& req);
 };
 
+class Access {
+public:
+    uint64_t hex_addr_;
+    std::string access_type_;
+    long time_;
+    friend std::istream& operator>>(std::istream& is, Access& access);
+    friend std::ostream& operator<<(std::ostream& os, const Access& access);
+};
+
+
+
+unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos);
+Address AddressMapping(uint64_t hex_addr, const Config& config);
+
+}
 #endif

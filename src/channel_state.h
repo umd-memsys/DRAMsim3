@@ -8,6 +8,8 @@
 #include <vector>
 #include <list>
 
+namespace  dramcore {
+
 class ChannelState {
     public:
         ChannelState(const Config &config, const Timing &timing, Statistics &stats);
@@ -46,4 +48,5 @@ class ChannelState {
         void UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk);
 };
 
+}
 #endif

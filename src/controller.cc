@@ -2,6 +2,7 @@
 #include "controller.h"
 
 using namespace std;
+using namespace dramcore;
 
 Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats) :
     channel_(channel),
@@ -60,3 +61,13 @@ bool Controller::InsertReq(Request* req) {
     return cmd_queue_.InsertReq(req);
 }
 
+// This function can be used by autoconf AC_CHECK_LIB since
+// apparently it can't detect C++ functions.
+// Basically just an entry in the symbol table
+extern "C"
+{
+  void libdramcore_is_present(void)
+  {
+	;
+  }
+}

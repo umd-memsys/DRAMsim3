@@ -3,6 +3,8 @@
 
 #include <string>
 
+namespace dramcore {
+
 unsigned int LogBase2(unsigned int power_of_two);
 
 
@@ -59,4 +61,5 @@ class Config {
     unsigned int channel_width_, rank_width_, bankgroup_width_, bank_width_, row_width_, column_width_;
 };
 
+}
 #endif

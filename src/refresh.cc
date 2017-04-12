@@ -1,6 +1,7 @@
 #include "refresh.h"
 
 using namespace std;
+using namespace dramcore;
 
 Refresh::Refresh(const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue, Statistics &stats) :
     config_(config),

@@ -7,6 +7,7 @@
 #include "common.h"
 #include "statistics.h"
 
+namespace dramcore {
 
 class BankState {
     public:
@@ -50,4 +51,5 @@ class BankState {
 
 };
 
+}
 #endif

@@ -1,6 +1,7 @@
 #include "channel_state.h"
 
 using namespace std;
+using namespace dramcore;
 
 ChannelState::ChannelState(const Config &config, const Timing &timing, Statistics &stats) :
     config_(config),

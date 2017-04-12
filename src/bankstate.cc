@@ -2,6 +2,7 @@
 #include "statistics.h"
 
 using namespace std;
+using namespace dramcore;
 
 BankState::BankState(Statistics &stats) :
     stats_(stats),

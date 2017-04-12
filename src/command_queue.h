@@ -8,6 +8,8 @@
 #include "config.h"
 #include "statistics.h"
 
+namespace dramcore {
+
 class CommandQueue {
     public:
         CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats);
@@ -30,5 +32,5 @@ class CommandQueue {
         void IterateNext();
 };
 
-
+}
 #endif

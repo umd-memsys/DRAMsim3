@@ -1,6 +1,7 @@
 #include "statistics.h"
 
 using namespace std;
+using namespace dramcore;
 
 Statistics::Statistics():
         numb_read_reqs_issued(0),
@@ -12,6 +13,7 @@ Statistics::Statistics():
         numb_ondemand_precharges(0)
 {}
 
+namespace dramcore {
 
 ostream& operator<<(ostream& os, const Statistics& stats) {
     os << "numb_read_reqs_issued = " << stats.numb_read_reqs_issued << endl;
@@ -22,4 +24,6 @@ ostream& operator<<(ostream& os, const Statistics& stats) {
     os << "numb_aggressive_precharges = " << stats.numb_aggressive_precharges << endl;
     os << "numb_ondemand_precharges = " << stats.numb_ondemand_precharges << endl;
     return os;
+}
+
 }
