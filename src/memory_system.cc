@@ -10,7 +10,7 @@ MemorySystem::MemorySystem(std::function<void(uint64_t)> callback) :
 {
     ctrls_.resize(config_.channels);
     for(auto i = 0; i < config_.channels; i++) {
-        ctrls_[i] = new Controller(i, config_, timing_, stats_);
+        ctrls_[i] = new Controller(i, config_, timing_, stats_, callback_);
     }
 }
 
