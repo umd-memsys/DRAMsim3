@@ -20,10 +20,10 @@ public:
     void PrintStats();
     std::function<void(uint64_t req_id)> callback_;
     std::vector<Controller*> ctrls_;
-    Config config_;
+    Config* ptr_config_;
 private:
-    Timing timing_;
-    Statistics stats_;
+    Timing* ptr_timing_;
+    Statistics* ptr_stats_;
 };
 
 }

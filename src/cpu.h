@@ -12,7 +12,7 @@ namespace dramcore {
 
 class RandomCPU {
 public:
-    RandomCPU(MemorySystem& memory_system, const Config& config);
+    RandomCPU(MemorySystem& memory_system);
     void ClockTick();
 private:
     MemorySystem& memory_system_;
@@ -27,7 +27,7 @@ private:
 
 class TraceBasedCPU {
 public:
-    TraceBasedCPU(MemorySystem& memory_system, const Config& config);
+    TraceBasedCPU(MemorySystem& memory_system);
     void ClockTick();
 private:
     MemorySystem& memory_system_;

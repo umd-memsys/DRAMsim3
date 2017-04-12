@@ -3,9 +3,9 @@
 using namespace std;
 using namespace dramcore;
 
-RandomCPU::RandomCPU(MemorySystem& memory_system, const Config& config) :
+RandomCPU::RandomCPU(MemorySystem& memory_system) :
     memory_system_(memory_system),
-    config_(config),
+    config_(*(memory_system.ptr_config_)),
     clk_(0),
     last_addr_(0, 0, 0, 0, 0, -1),
     req_log_("requests.log")
@@ -41,9 +41,9 @@ void RandomCPU::ClockTick()
     return;
 }
 
-TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system, const Config& config) :
+TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system) :
     memory_system_(memory_system),
-    config_(config),
+    config_(*(memory_system.ptr_config_)),
     clk_(0)
 {
     trace_file_.open("sample_trace.txt");

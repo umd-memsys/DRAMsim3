@@ -14,10 +14,10 @@ int main(int argc, char **argv)
 
     MemorySystem memory_system(callback_func);
 
-    TraceBasedCPU trace_cpu(memory_system, memory_system.config_);
-    RandomCPU random_cpu(memory_system, memory_system.config_);
+    TraceBasedCPU trace_cpu(memory_system);
+    RandomCPU random_cpu(memory_system);
 
-    for(auto clk = 0; clk < memory_system.config_.cycles; clk++) {
+    for(auto clk = 0; clk < (*memory_system.ptr_config_).cycles; clk++) { //TODO - Yuck - 3AM coding :P
         enable_trace_cpu ? trace_cpu.ClockTick() : random_cpu.ClockTick();
         memory_system.ClockTick();
     }
