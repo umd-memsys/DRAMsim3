@@ -5,9 +5,10 @@ using namespace dramcore;
 
 MemorySystem::MemorySystem(std::function<void(uint64_t)> callback) :
     callback_(callback),
+    // ctrls_(config_.channels), //TODO - Dig deep why this seqfaults?
     timing_(config_)
 {
-    vector<Controller*> ctrls(config_.channels);
+    ctrls_.resize(config_.channels);
     for(auto i = 0; i < config_.channels; i++) {
         ctrls_[i] = new Controller(i, config_, timing_, stats_);
     }
