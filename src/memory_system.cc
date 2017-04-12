@@ -7,12 +7,12 @@ MemorySystem::MemorySystem(std::function<void(uint64_t)> callback) :
     callback_(callback)
 {
     ptr_config_ = new Config();
-    auto config = *ptr_config_;
-    ptr_timing_ = new Timing(config);
+    //auto config = *ptr_config_;
+    ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();
-    ctrls_.resize(config.channels);
-    for(auto i = 0; i < config.channels; i++) {
-        ctrls_[i] = new Controller(i, config, *ptr_timing_, *ptr_stats_, callback_);
+    ctrls_.resize((*ptr_config_).channels);
+    for(auto i = 0; i < (*ptr_config_).channels; i++) {
+        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
     }
 }
 
