@@ -8,6 +8,8 @@
 #include "command_queue.h"
 #include "config.h"
 
+namespace dramcore {
+
 class Refresh {
     public:
         Refresh(const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue,
@@ -39,5 +41,7 @@ class Refresh {
         Command GetReadWritesToOpenRow(int rank, int bankgroup, int bank);
         
 };
+
+}
 
 #endif

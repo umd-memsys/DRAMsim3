@@ -1,5 +1,6 @@
 #include "config.h"
 
+using namespace dramcore;
 
 Config::Config()
 {
@@ -12,6 +13,7 @@ Config::Config()
     column_width_ = LogBase2(columns);
 }
 
+namespace dramcore {
 
 unsigned int LogBase2(unsigned int power_of_two) {
     unsigned int i = 0;
@@ -20,4 +22,6 @@ unsigned int LogBase2(unsigned int power_of_two) {
         i++;
     }
     return i;
+}
+
 }

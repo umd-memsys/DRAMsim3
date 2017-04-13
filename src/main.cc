@@ -1,34 +1,34 @@
 #include <iostream>
 #include "controller.h"
 #include "cpu.h"
-#include "statistics.h"
+#include "memory_system.h"
 
 using namespace std;
+using namespace dramcore;
+
+void callback_func(uint64_t req_id); //TODO - Avoid Forward declaration of the dummy callback function
 
 int main(int argc, char **argv)
 {
     bool enable_trace_cpu = true;
-    Config config;
-    Timing timing(config);
-    Statistics stats;
 
-    vector<Controller*> ctrls(config.channels);
-    for(auto i = 0; i < config.channels; i++) {
-        ctrls[i] = new Controller(i, config, timing, stats);
-    }
+    MemorySystem memory_system(callback_func);
 
-    TraceBasedCPU trace_cpu(ctrls, config);
-    RandomCPU random_cpu(ctrls, config);
+    TraceBasedCPU trace_cpu(memory_system);
+    RandomCPU random_cpu(memory_system);
 
-    for(auto clk = 0; clk < config.cycles; clk++) {
+    for(auto clk = 0; clk < (*memory_system.ptr_config_).cycles; clk++) { //TODO - Yuck - 3AM coding :P
         enable_trace_cpu ? trace_cpu.ClockTick() : random_cpu.ClockTick();
-        for( auto ctrl : ctrls)
-            ctrl->ClockTick();
+        memory_system.ClockTick();
     }
 
-    cout << "-----------------------------------------------------" << endl;
-    cout << "Printing Statistics -- " << endl;
-    cout << "-----------------------------------------------------" << endl;
-    cout << stats;
+    memory_system.PrintStats();
+
     return 0;
+}
+
+//Dummy callback function for use when the simulator is not integrated with SST or other frontend feeders
+void callback_func(uint64_t req_id) {
+    cout << "Request with id = " << req_id << " is returned" << endl;
+    return;
 }

@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+namespace dramcore {
+
 class Statistics {
 public:
     Statistics();
@@ -17,5 +19,5 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const Statistics& stats);
 };
 
-
+}
 #endif

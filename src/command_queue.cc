@@ -2,8 +2,10 @@
 #include "statistics.h"
 
 using namespace std;
+using namespace dramcore;
 
-CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats) :
+CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback) :
+    callback_(callback),
     clk_(0),
     config_(config),
     channel_state_(channel_state),
@@ -204,6 +206,7 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>:
         stats_.numb_read_reqs_issued++;
     }
     else {
+        callback_(req->id_);
         queue.erase(req_itr);
         delete (*req_itr);
         stats_.numb_write_reqs_issued++;

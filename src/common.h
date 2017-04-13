@@ -2,6 +2,9 @@
 #define __COMMON_H
 
 #include <iostream>
+#include "config.h"
+
+namespace dramcore {
 
 class Address {
     public:
@@ -70,13 +73,13 @@ class Request {
     public:
         Request(CommandType cmd_type, const Address& addr) :
                 cmd_(Command(cmd_type, addr)), arrival_time_(-1), exit_time_(-1), id_(-1) {}
-        Request(CommandType cmd_type, const Address& addr, long arrival_time, int id) :
+        Request(CommandType cmd_type, const Address& addr, long arrival_time, int64_t id) :
             cmd_(Command(cmd_type, addr)), arrival_time_(arrival_time), exit_time_(-1), id_(id) {}
 
         Command cmd_;
         long arrival_time_;
         long exit_time_;
-        int id_ = 0;
+        int64_t id_ = 0;
 
         int Channel() const { return cmd_.Channel(); }
         int Rank() const { return cmd_.Rank(); }
@@ -88,4 +91,19 @@ class Request {
         friend std::ostream& operator<<(std::ostream& os, const Request& req);
 };
 
+class Access {
+public:
+    uint64_t hex_addr_;
+    std::string access_type_;
+    long time_;
+    friend std::istream& operator>>(std::istream& is, Access& access);
+    friend std::ostream& operator<<(std::ostream& os, const Access& access);
+};
+
+
+
+unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos);
+Address AddressMapping(uint64_t hex_addr, const Config& config);
+
+}
 #endif

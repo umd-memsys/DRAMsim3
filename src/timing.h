@@ -6,6 +6,7 @@
 #include "common.h"
 #include "config.h"
 
+namespace dramcore {
 
 class Timing {
     public:
@@ -51,4 +52,5 @@ class Timing {
         unsigned int self_refresh_exit;
 };
 
+}
 #endif

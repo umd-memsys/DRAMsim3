@@ -6,52 +6,40 @@
 #include "controller.h"
 #include "common.h"
 #include "config.h"
+#include "memory_system.h"
 
-
-class Access {
-    public:
-        uint64_t hex_addr_;
-        std::string access_type_;
-        long time_;
-        friend std::istream& operator>>(std::istream& is, Access& access);
-        friend std::ostream& operator<<(std::ostream& os, const Access& access);
-};
-
-
-
-unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos);
-Address AddressMapping(uint64_t hex_addr, const Config& config);
-
+namespace dramcore {
 
 class RandomCPU {
-    public:
-        RandomCPU(std::vector<Controller*>& ctrls, const Config& config);
-        void ClockTick();
-    private:
-        std::vector<Controller*>& ctrls_;
-        const Config& config_;
-        long clk_;
-        Address last_addr_;
-        Request* req_;
-        bool get_next_ = true;
-        int req_id_ = 0;
-        std::ofstream req_log_;
+public:
+    RandomCPU(MemorySystem& memory_system);
+    void ClockTick();
+private:
+    MemorySystem& memory_system_;
+    const Config& config_;
+    long clk_;
+    Address last_addr_;
+    Request* req_;
+    bool get_next_ = true;
+    int req_id_ = 0;
+    std::ofstream req_log_;
 };
 
 class TraceBasedCPU {
-    public:
-        TraceBasedCPU(std::vector<Controller*>& ctrls, const Config& config);
-        void ClockTick();
-    private:
-        std::vector<Controller*>& ctrls_;
-        const Config& config_;
-        long clk_;
-        std::ifstream trace_file_;
-        Request* req_;
-        bool get_next_ = true;
-        int req_id_ = 0;
+public:
+    TraceBasedCPU(MemorySystem& memory_system);
+    void ClockTick();
+private:
+    MemorySystem& memory_system_;
+    const Config& config_;
+    long clk_;
+    std::ifstream trace_file_;
+    Request* req_;
+    bool get_next_ = true;
+    int req_id_ = 0;
 
-        Request* FormRequest(const Access& access);
+    Request* FormRequest(const Access& access);
 };
 
+}
 #endif

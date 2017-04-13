@@ -2,6 +2,7 @@
 #include <utility>
 
 using namespace std;
+using namespace dramcore;
 
 Timing::Timing(const Config& config) :
     config_(config),

@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(dram-core)
+project(dramcore)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "-O0 -Wall")
+# set(CMAKE_CXX_FLAGS "-O0 -Wall")
+set(CMAKE_CXX_FLAGS "-O0 -Wall -fPIC") 
 # set(CMAKE_CXX_FLAGS "-O0")
 
 # file(GLOB SOURCES "src/*.cc")
@@ -19,6 +20,7 @@ set(SOURCES src/bankstate.cc
             src/refresh.cc
             src/statistics.cc
             src/timing.cc
+            src/memory_system.cc
 )
 
 set(SOURCES_TEST test/main.cc
@@ -28,14 +30,17 @@ set(SOURCES_TEST test/main.cc
 include_directories(src)
 
 # add_library(dramcorelib SHARED ${SOURCES})
-add_library(dramcorelib STATIC ${SOURCES})
+# add_library(dramcorelib STATIC ${SOURCES})
+add_library(dramcore SHARED ${SOURCES})
+set_target_properties(dramcore PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(dramcore src/main.cc)
-target_link_libraries(dramcore dramcorelib)
+
+add_executable(dramcoremain src/main.cc)
+target_link_libraries(dramcoremain dramcore)
 #set_target_properties(dramcore PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(dramcoretest ${SOURCES_TEST})
-target_link_libraries(dramcoretest dramcorelib)
+target_link_libraries(dramcoretest dramcore)
 #set_target_properties(dramcoretest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
