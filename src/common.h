@@ -105,6 +105,6 @@ public:
 unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos);
 Address AddressMapping(uint64_t hex_addr, const Config& config);
 unsigned int LogBase2(unsigned int power_of_two);
-
+void AbruptExit(const std::string& file, int line);
 }
 #endif

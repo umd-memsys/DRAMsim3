@@ -41,15 +41,15 @@ void RandomCPU::ClockTick()
     return;
 }
 
-TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system) :
+TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system, std::string trace_file) :
     memory_system_(memory_system),
     config_(*(memory_system.ptr_config_)),
     clk_(0)
 {
-    trace_file_.open("sample_trace.txt");
+    trace_file_.open(trace_file);
     if(trace_file_.fail()) {
-        cerr << "Trace file does not exist" << endl << " Exiting abruptly" << endl;
-        exit(-1);
+        cerr << "Trace file does not exist" << endl;
+        AbruptExit(__FILE__, __LINE__);
     }
 }
 
@@ -81,7 +81,7 @@ Request* TraceBasedCPU::FormRequest(const Access& access) {
         cmd_type = CommandType::WRITE;
     else {
         cerr << "Unknown access type, should be either READ or WRITE" << endl;
-        exit(-1);
+        AbruptExit(__FILE__, __LINE__);
     }
     return new Request(cmd_type, addr, access.time_, req_id_);
 }

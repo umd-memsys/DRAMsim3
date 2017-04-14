@@ -44,8 +44,8 @@ Command CommandQueue::GetCommandToIssue() {
         return Command();
     }
     else {
-        cerr << "Unknown queue structure\n";
-        exit(-1);
+        cerr << "Unknown queue structure" << endl;
+        AbruptExit(__FILE__, __LINE__);
     }
 
 }
@@ -162,7 +162,7 @@ bool CommandQueue::InsertReq(Request* req) {
     }
     else {
         cerr << "Unknown queue structure\n";
-        exit(-1);
+        AbruptExit(__FILE__, __LINE__);
     }
 }
 
@@ -181,7 +181,7 @@ inline void CommandQueue::IterateNext() {
     }
     else {
         cerr << "Unknown queue structure\n";
-        exit(-1);
+        AbruptExit(__FILE__, __LINE__);
     }
     return;
 }
@@ -193,7 +193,7 @@ std::list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
         return req_q_per_rank_[rank];
     else {
         cerr << "Unknown queue structure\n";
-        exit(-1);
+        AbruptExit(__FILE__, __LINE__);
     }
 }
 

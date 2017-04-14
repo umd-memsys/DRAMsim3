@@ -27,7 +27,7 @@ private:
 
 class TraceBasedCPU {
 public:
-    TraceBasedCPU(MemorySystem& memory_system);
+    TraceBasedCPU(MemorySystem& memory_system, std::string trace_file);
     void ClockTick();
 private:
     MemorySystem& memory_system_;

@@ -3,10 +3,10 @@
 using namespace std;
 using namespace dramcore;
 
-MemorySystem::MemorySystem(std::function<void(uint64_t)> callback) :
+MemorySystem::MemorySystem(std::string config_file, std::function<void(uint64_t)> callback) :
     callback_(callback)
 {
-    ptr_config_ = new Config("./../configs/dummy_config.ini");
+    ptr_config_ = new Config(config_file);
     //auto config = *ptr_config_;
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();

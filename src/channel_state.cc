@@ -46,7 +46,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
             }
             return cmd;
         default:
-            exit(-1);
+            AbruptExit(__FILE__, __LINE__);
     }
 }
 
@@ -75,7 +75,7 @@ bool ChannelState::IsReady(const Command& cmd, long clk) const {
             return is_ready;
         }
         default:
-            exit(-1);
+            AbruptExit(__FILE__, __LINE__);
     }
 }
 
@@ -100,7 +100,7 @@ void ChannelState::UpdateState(const Command& cmd) {
             }
             break;
         default:
-            exit(-1);
+            AbruptExit(__FILE__, __LINE__);
     }
 }
 
@@ -133,7 +133,7 @@ void ChannelState::UpdateTiming(const Command& cmd, long clk) {
             UpdateSameRankTiming(cmd.addr_, timing_.same_rank[static_cast<int>(cmd.cmd_type_)], clk);
             break;
         default:
-            exit(-1);
+            AbruptExit(__FILE__, __LINE__);
     }
     return ;
 }

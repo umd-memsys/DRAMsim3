@@ -143,7 +143,7 @@ Address AddressMapping(uint64_t hex_addr, const Config& config) {
     }
     else {
         cerr << "Unknown address mapping" << endl;
-        exit(-1);
+        AbruptExit(__FILE__, __LINE__);
     }
 }
 
@@ -162,6 +162,11 @@ unsigned int LogBase2(unsigned int power_of_two) {
         i++;
     }
     return i;
+}
+
+void AbruptExit(const std::string& file, int line) {
+    std::cerr << "Exiting Abruptly - " << file << ":" << line << endl; \
+    exit(-1);
 }
 
 }

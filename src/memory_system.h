@@ -14,7 +14,7 @@ namespace dramcore {
 
 class MemorySystem {
 public:
-    MemorySystem(std::function<void(uint64_t)> callback);
+    MemorySystem(std::string config_file, std::function<void(uint64_t)> callback);
     bool InsertReq(uint64_t req_id, uint64_t hex_addr_, CommandType cmd_type);
     void ClockTick();
     void PrintStats();

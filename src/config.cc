@@ -10,8 +10,8 @@ Config::Config(std::string config_file)
     INIReader reader(config_file);
 
     if(reader.ParseError() < 0) {
-        std::cerr << "Can't load " << config_file << " file" << endl;
-        exit(-1);
+        std::cerr << "Can't load config file - " << config_file << endl;
+        AbruptExit(__FILE__, __LINE__);
     }
 
     //DRAM structure parameters
