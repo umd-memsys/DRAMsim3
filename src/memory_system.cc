@@ -6,7 +6,7 @@ using namespace dramcore;
 MemorySystem::MemorySystem(std::function<void(uint64_t)> callback) :
     callback_(callback)
 {
-    ptr_config_ = new Config("dummy_config");
+    ptr_config_ = new Config("./../configs/dummy_config.ini");
     //auto config = *ptr_config_;
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();

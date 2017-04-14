@@ -7,7 +7,7 @@ namespace dramcore {
 
 class Config {
 public:
-    Config(std::string filename);
+    Config(std::string config_file);
 
     //Simulation Parameters
     unsigned int cycles = 100000;
