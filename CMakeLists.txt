@@ -2,13 +2,12 @@ cmake_minimum_required(VERSION 3.0)
 
 project(dramcore)
 
-set(CMAKE_CXX_STANDARD 11)
-# set(CMAKE_CXX_FLAGS "-O0 -Wall")
-set(CMAKE_CXX_FLAGS "-O0 -Wall -fPIC") 
-# set(CMAKE_CXX_FLAGS "-O0")
+add_subdirectory("ext/inih")
 
-# file(GLOB SOURCES "src/*.cc")
-# file(GLOB SOURCES_TEST "test/*.cc")
+set(CMAKE_CXX_STANDARD 11)
+# set(CMAKE_CXX_FLAGS "-O0")
+# set(CMAKE_CXX_FLAGS "-O0 -Wall")
+set(CMAKE_CXX_FLAGS "-O0 -Wall -fPIC")
 
 set(SOURCES src/bankstate.cc
             src/channel_state.cc
@@ -27,11 +26,10 @@ set(SOURCES_TEST test/main.cc
                  test/test.cc
 )
 
-include_directories(src)
+include_directories(src ext/src)
 
-# add_library(dramcorelib SHARED ${SOURCES})
-# add_library(dramcorelib STATIC ${SOURCES})
 add_library(dramcore SHARED ${SOURCES})
+target_link_libraries(dramcore inih)
 set_target_properties(dramcore PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 

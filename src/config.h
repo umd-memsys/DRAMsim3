@@ -5,12 +5,9 @@
 
 namespace dramcore {
 
-unsigned int LogBase2(unsigned int power_of_two);
-
-
 class Config {
-    public:
-        Config();
+public:
+    Config(std::string filename);
 
     //Simulation Parameters
     unsigned int cycles = 100000;

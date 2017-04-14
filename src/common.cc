@@ -155,4 +155,13 @@ unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos
     return static_cast<unsigned int>(store ^ addr);
 }
 
+unsigned int LogBase2(unsigned int power_of_two) {
+    unsigned int i = 0;
+    while( power_of_two > 1) {
+        power_of_two /= 2;
+        i++;
+    }
+    return i;
+}
+
 }

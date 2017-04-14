@@ -1,7 +1,6 @@
 #include <iostream>
 #include "controller.h"
 #include "cpu.h"
-#include "memory_system.h"
 
 using namespace std;
 using namespace dramcore;
@@ -10,7 +9,7 @@ void callback_func(uint64_t req_id); //TODO - Avoid Forward declaration of the d
 
 int main(int argc, char **argv)
 {
-    bool enable_trace_cpu = true;
+    bool enable_trace_cpu = false;
 
     MemorySystem memory_system(callback_func);
 
