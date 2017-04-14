@@ -29,14 +29,13 @@ It also creates `libdramcore.so` shared library in the parent directory.
 
 
 ### Running
-This is still in development. Everything is still hardcoded. Current hacky way of running is
 
 ```
-# Copy the sample trace file into the directory from which the dramcoremain executable is being run
-cp ./../sample_trace.txt .
+// Running random cpu with a config file
+dramcoremain -c ./../configs/dummy_config.ini -n 100000 
 
-# Run the dramcore executable
-./dramcoremain
+// Running trace cpu with a trace file and a config file
+dramcoremain -c ./../configs/dummy_config.ini -n 100000 --trace-cpu --trace-file ./../sample_trace.txt
 
 # Run the dramcoretest executable (No actual tests are currently written :P)
 ./dramcoretest

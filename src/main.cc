@@ -6,16 +6,16 @@
 using namespace std;
 using namespace dramcore;
 
-void callback_func(uint64_t req_id); //TODO - Avoid Forward declaration of the dummy callback function
-
 int main(int argc, const char **argv)
 {
     args::ArgumentParser parser("This is a test program.", "This goes after the options.");
+    args::ValueFlag<uint64_t > numb_cycles_arg(parser, "numb_cycles", "Number of cycles to simulate", {'n', "numb-cycles"});
     args::ValueFlag<std::string> config_arg(parser, "config", "The config file", {'c', "config-file"});
     args::Flag enable_trace_cpu_arg(parser, "trace cpu", "Enable trace cpu", {"trace-cpu"});
     args::ValueFlag<std::string> trace_file_arg(parser, "trace", "The trace file", {"trace-file"});
     parser.ParseCLI(argc, argv);
 
+    uint64_t cycles = args::get(numb_cycles_arg);
     bool enable_trace_cpu = enable_trace_cpu_arg;
     std::string config_file, trace_file;
     config_file = args::get(config_arg);
@@ -30,7 +30,7 @@ int main(int argc, const char **argv)
     else
         random_cpu = new RandomCPU(memory_system);
 
-    for(auto clk = 0; clk < (*memory_system.ptr_config_).cycles; clk++) { //TODO - Yuck - 3AM coding :P
+    for(auto clk = 0; clk < cycles; clk++) {
         enable_trace_cpu ? trace_cpu->ClockTick() : random_cpu->ClockTick();
         memory_system.ClockTick();
     }
@@ -40,8 +40,3 @@ int main(int argc, const char **argv)
     return 0;
 }
 
-//Dummy callback function for use when the simulator is not integrated with SST or other frontend feeders
-void callback_func(uint64_t req_id) {
-    cout << "Request with id = " << req_id << " is returned" << endl;
-    return;
-}

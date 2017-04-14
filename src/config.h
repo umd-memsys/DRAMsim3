@@ -9,50 +9,46 @@ class Config {
 public:
     Config(std::string config_file);
 
-    //Simulation Parameters
-    unsigned int cycles = 100000;
-
     //DRAM physical structure
-    unsigned int channels = 1;
-    unsigned int ranks = 2;
-    unsigned int bankgroups = 2;
-    unsigned int banks_per_group = 2;
-    unsigned int rows = 1 << 16;
-    unsigned int columns = 1 << 10;
+    unsigned int channels;
+    unsigned int ranks;
+    unsigned int bankgroups;
+    unsigned int banks_per_group;
+    unsigned int rows;
+    unsigned int columns;
 
-    unsigned int queue_size = 16;
+    unsigned int queue_size;
 
     //DRAM timing parameters
-    unsigned int tBurst = 8; //tBL
-    unsigned int tCCDL = 6;
-    unsigned int tCCDS = 4;
-    unsigned int tRTRS = 2;
-    unsigned int tRTP = 5;
-    unsigned int tCAS = 3; //tCL
-    unsigned int tCWD = 3; // =tCAS
-    unsigned int tWTR = 5;
-    unsigned int tWR = 10;
-    unsigned int tRP = 10;
-    unsigned int tRRD = 4;
-    unsigned int tRAS = 24;
-    unsigned int tRCD = 10;
-    unsigned int tRFC = 74;
-    unsigned int tRC = tRAS + tRP;
-    unsigned int tCKESR = 50;
-    unsigned int tXS = 10;
-    unsigned int tRFCb = 20;
-    unsigned int tRREFD = 5;
+    unsigned int tBurst; //tBL
+    unsigned int tCCDL;
+    unsigned int tCCDS;
+    unsigned int tRTRS;
+    unsigned int tRTP;
+    unsigned int tCAS; //tCL
+    unsigned int tCWD; // =tCAS
+    unsigned int tWTR;
+    unsigned int tWR;
+    unsigned int tRP;
+    unsigned int tRRD;
+    unsigned int tRAS;
+    unsigned int tRCD;
+    unsigned int tRFC;
+    unsigned int tRC;
+    unsigned int tCKESR;
+    unsigned int tXS;
+    unsigned int tRFCb;
+    unsigned int tRREFD;
 
-    unsigned int tREFI = 7800;
-    unsigned int tREFIb = 1950;
+    unsigned int tREFI;
+    unsigned int tREFIb;
 
-    unsigned int tFAW = 50;
+    unsigned int tFAW;
 
     unsigned int activation_window_depth = 4;
 
-    std::string address_mapping = "chrobabgraco";
-    std::string queue_structure = "PER_BANK";
-
+    std::string address_mapping;
+    std::string queue_structure;
 
     //Computed parameters
     unsigned int channel_width_, rank_width_, bankgroup_width_, bank_width_, row_width_, column_width_;
