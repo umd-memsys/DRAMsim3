@@ -17,7 +17,7 @@ public:
 private:
     MemorySystem& memory_system_;
     const Config& config_;
-    long clk_;
+    uint64_t clk_;
     Address last_addr_;
     Request* req_;
     bool get_next_ = true;
@@ -32,7 +32,7 @@ public:
 private:
     MemorySystem& memory_system_;
     const Config& config_;
-    long clk_;
+    uint64_t clk_;
     std::ifstream trace_file_;
     Request* req_;
     bool get_next_ = true;

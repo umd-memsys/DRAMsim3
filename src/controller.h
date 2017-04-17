@@ -19,7 +19,7 @@ public:
     std::function<void(uint64_t)>& callback_;
     int channel_;
 private:
-    long clk_;
+    uint64_t clk_;
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;

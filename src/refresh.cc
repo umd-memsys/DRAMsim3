@@ -9,7 +9,7 @@ Refresh::Refresh(const Config &config, const ChannelState &channel_state, Comman
     cmd_queue_(cmd_queue),
     stats_(stats),
     clk_(0),
-    last_bank_refresh_(config_.ranks, std::vector< vector<long>>(config_.bankgroups, vector<long>(config_.banks_per_group, 0))),
+    last_bank_refresh_(config_.ranks, std::vector< vector<uint64_t>>(config_.bankgroups, vector<uint64_t>(config_.banks_per_group, 0))),
     last_rank_refresh_(config_.ranks, 0),
     next_rank_(0)
 {}
@@ -69,7 +69,7 @@ Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup, int bank) {
     auto& queue = cmd_queue_.GetQueue(rank, bankgroup, bank);
     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
         auto req = *req_itr;
-        //If the req belongs to the same bank which is being checked if it is okay for refresh
+        //If the req beuint64_ts to the same bank which is being checked if it is okay for refresh
         //Necessary for PER_RANK queues
         if(req->Rank() == rank && req->Bankgroup() == bankgroup && req->Bank() == bank) {
             Command cmd = channel_state_.GetRequiredCommand(req->cmd_);

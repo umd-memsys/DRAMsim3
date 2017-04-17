@@ -201,7 +201,7 @@ void BankState::UpdateState(const Command& cmd) {
     return;
 }
 
-void BankState::UpdateTiming(CommandType cmd_type, long time) {
+void BankState::UpdateTiming(CommandType cmd_type, uint64_t time) {
     cmd_timing_[static_cast<int>(cmd_type)] = max(cmd_timing_[static_cast<int>(cmd_type)], time);
     return;
 }

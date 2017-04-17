@@ -21,7 +21,7 @@ public:
     void IssueRequest(std::list<Request*>& queue, std::list<Request*>::iterator req_itr);
     bool InsertReq(Request* req);
     std::list<Request*>& GetQueue(int rank, int bankgroup, int bank);
-    long clk_;
+    uint64_t clk_;
     std::list<Request*> issued_req_; //TODO - Here or in the controller or main?
 private:
     const Config& config_;

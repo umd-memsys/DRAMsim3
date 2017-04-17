@@ -8,7 +8,7 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
     timing_(timing),
     stats_(stats),
     bank_states_(config_.ranks, std::vector< std::vector<BankState*> >(config_.bankgroups, std::vector<BankState*>(config_.banks_per_group, NULL) ) ),
-    activation_times_(config_.ranks, std::list<long>())
+    activation_times_(config_.ranks, std::list<uint64_t>())
 {
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto j = 0; j < config_.bankgroups; j++) {
@@ -50,7 +50,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     }
 }
 
-bool ChannelState::IsReady(const Command& cmd, long clk) const {
+bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
             if(ActivationConstraint(cmd.Rank(), clk))
@@ -104,7 +104,7 @@ void ChannelState::UpdateState(const Command& cmd) {
     }
 }
 
-void ChannelState::UpdateTiming(const Command& cmd, long clk) {
+void ChannelState::UpdateTiming(const Command& cmd, uint64_t clk) {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
             UpdateActivationTimes(cmd.Rank(), clk); //TODO - Bad coding. Note : no break here
@@ -138,14 +138,14 @@ void ChannelState::UpdateTiming(const Command& cmd, long clk) {
     return ;
 }
 
-void ChannelState::UpdateSameBankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateSameBankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
     for(auto cmd_timing : cmd_timing_list ) {
         bank_states_[addr.rank_][addr.bankgroup_][addr.bank_]->UpdateTiming(cmd_timing.first, clk + cmd_timing.second);
     }
     return;
 }
 
-void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
     for(auto k = 0; k < config_.banks_per_group; k++) {
         if( k != addr.bank_) {
             for(auto cmd_timing : cmd_timing_list ) {
@@ -156,7 +156,7 @@ void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, cons
     return;
 }
 
-void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
     for(auto j = 0; j < config_.bankgroups; j++) {
         if(j != addr.bankgroup_) {
             for(auto k = 0; k < config_.banks_per_group; k++) {
@@ -169,7 +169,7 @@ void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, cons
     return;
 }
 
-void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
     for(auto i = 0; i < config_.ranks; i++) {
         if(i != addr.rank_) {
             for(auto j = 0; j < config_.bankgroups; j++) {
@@ -184,7 +184,7 @@ void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< 
     return;
 }
 
-void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, long clk) {
+void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
     for(auto j = 0; j < config_.bankgroups; j++) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto cmd_timing : cmd_timing_list ) {
@@ -195,7 +195,7 @@ void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< st
     return;
 }
 
-void ChannelState::IssueCommand(const Command& cmd, long clk) {
+void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
     cout << "Command Issue at clk = " << clk << " - "<< cmd << endl;
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
@@ -218,7 +218,7 @@ void ChannelState::UpdateRefreshWaitingStatus(const Command& cmd, bool status) {
     return;
 }
 
-bool ChannelState::ActivationConstraint(int rank, long curr_time) const {
+bool ChannelState::ActivationConstraint(int rank, uint64_t curr_time) const {
     auto count = 0;
     for( auto act_time : activation_times_[rank]) {
         if(curr_time - act_time < config_.tFAW) //TODO Strict less than or less than or equal to?
@@ -229,7 +229,7 @@ bool ChannelState::ActivationConstraint(int rank, long curr_time) const {
     return count >= config_.activation_window_depth; //ASSERT that count is never greater than activation_window_depth
 }
 
-void ChannelState::UpdateActivationTimes(int rank, long curr_time) {
+void ChannelState::UpdateActivationTimes(int rank, uint64_t curr_time) {
     //Delete stale time entries
     for(auto list_itr = activation_times_[rank].begin(); list_itr != activation_times_[rank].end(); list_itr++) {
         auto act_time = *list_itr;

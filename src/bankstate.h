@@ -20,10 +20,10 @@ class BankState {
         void UpdateState(const Command& cmd);
 
         //Update the existing timing constraints for the command
-        void UpdateTiming(const CommandType cmd_type, long time);
+        void UpdateTiming(const CommandType cmd_type, uint64_t time);
 
         //Check the timing constraints to see if the command can executed at the given time
-        bool IsReady(CommandType cmd_type, long time) const { return time >= cmd_timing_[static_cast<int>(cmd_type)]; }
+        bool IsReady(CommandType cmd_type, uint64_t time) const { return time >= cmd_timing_[static_cast<int>(cmd_type)]; }
         
         void UpdateRefreshWaitingStatus(bool status) { refresh_waiting_ = status; return; }
         bool IsRefreshWaiting() const { return refresh_waiting_; }
@@ -37,7 +37,7 @@ class BankState {
         State state_;
 
         // Earliest time when the particular Command can be executed in this bank
-        std::vector<long> cmd_timing_;
+        std::vector<uint64_t> cmd_timing_;
 
         //Currently open row
         //Applicable only if the bank is in OPEN state
