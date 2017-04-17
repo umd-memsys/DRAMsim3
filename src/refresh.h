@@ -22,14 +22,14 @@ class Refresh {
         const ChannelState& channel_state_;
         CommandQueue& cmd_queue_;
         Statistics& stats_;
-        long clk_;
+        uint64_t clk_;
         
         //Keep track of the last time when a refresh command was issued to this bank 
-        std::vector< std::vector< std::vector<long> > > last_bank_refresh_; //TODO - Wouldn't it be better to move this to bankstate?
+        std::vector< std::vector< std::vector<uint64_t> > > last_bank_refresh_; //TODO - Wouldn't it be better to move this to bankstate?
 
         //Last time when a refresh command was issued to the entire rank
         //Also updated when an epoch of bank level refreshed is done as well
-        std::vector<long> last_rank_refresh_;
+        std::vector<uint64_t> last_rank_refresh_;
 
         int next_rank_;
 

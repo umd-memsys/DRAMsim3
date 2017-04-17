@@ -30,7 +30,7 @@ int main(int argc, const char **argv)
     else
         random_cpu = new RandomCPU(memory_system);
 
-    for(auto clk = 0; clk < cycles; clk++) {
+    for(uint64_t clk = 0; clk < cycles; clk++) {
         enable_trace_cpu ? trace_cpu->ClockTick() : random_cpu->ClockTick();
         memory_system.ClockTick();
     }
