@@ -53,6 +53,10 @@ Config::Config(std::string config_file)
     queue_structure = reader.Get("controller", "queue_structure", "PER_BANK");
     queue_size = static_cast<unsigned int>(reader.GetInteger("controller", "queue_size", 16));
 
+    //Other Parameters
+    verification_output_file = reader.Get("other", "verification_output", "");
+    verification_output = verification_output_file.empty() ? false: true;
+
     channel_width_ = LogBase2(channels);
     rank_width_ = LogBase2(ranks);
     bankgroup_width_ = LogBase2(bankgroups);
