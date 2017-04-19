@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <stdint.h>
-#include "config.h"
+#include "configuration.h"
 
 namespace dramcore {
 
@@ -22,6 +22,12 @@ class Address {
         int row_;
         int column_;
 };
+
+unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos);
+Address AddressMapping(uint64_t hex_addr, const Config& config);
+unsigned int LogBase2(unsigned int power_of_two);
+void AbruptExit(const std::string& file, int line);
+void callback_func(uint64_t req_id);
 
 enum class State {
     OPEN,
@@ -72,12 +78,21 @@ class Command {
 
 class Request {
     public:
+        //TODO - These constructors are terrible. Fix them ASAP
         Request(CommandType cmd_type, const Address& addr) :
-                cmd_(Command(cmd_type, addr)), arrival_time_(-1), exit_time_(-1), id_(-1) {}
+                cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(0), exit_time_(0), id_(-1) {}
+
+        Request(CommandType cmd_type, uint64_t hex_addr, const Config& config) :
+            cmd_(Command(cmd_type, AddressMapping(hex_addr, config))), hex_addr_(hex_addr), arrival_time_(0), exit_time_(0), id_(-1) {}
+
         Request(CommandType cmd_type, const Address& addr, uint64_t arrival_time, int64_t id) :
-            cmd_(Command(cmd_type, addr)), arrival_time_(arrival_time), exit_time_(-1), id_(id) {}
+            cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
+
+        Request(CommandType cmd_type, uint64_t hex_addr, const Config& config, uint64_t arrival_time, int64_t id) :
+            cmd_(Command(cmd_type, AddressMapping(hex_addr, config))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
 
         Command cmd_;
+        uint64_t hex_addr_;
         uint64_t arrival_time_;
         uint64_t exit_time_;
         int64_t id_ = 0;
@@ -100,13 +115,5 @@ public:
     friend std::istream& operator>>(std::istream& is, Access& access);
     friend std::ostream& operator<<(std::ostream& os, const Access& access);
 };
-
-
-
-unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos);
-Address AddressMapping(uint64_t hex_addr, const Config& config);
-unsigned int LogBase2(unsigned int power_of_two);
-void AbruptExit(const std::string& file, int line);
-void callback_func(uint64_t req_id);
 }
 #endif

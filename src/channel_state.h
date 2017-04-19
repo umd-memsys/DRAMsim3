@@ -4,7 +4,7 @@
 #include "common.h"
 #include "bankstate.h"
 #include "timing.h"
-#include "config.h"
+#include "configuration.h"
 #include <vector>
 #include <list>
 

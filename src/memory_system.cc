@@ -3,7 +3,7 @@
 using namespace std;
 using namespace dramcore;
 
-MemorySystem::MemorySystem(std::string config_file, std::function<void(uint64_t)> callback) :
+MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> callback) :
     callback_(callback)
 {
     ptr_config_ = new Config(config_file);
@@ -16,9 +16,9 @@ MemorySystem::MemorySystem(std::string config_file, std::function<void(uint64_t)
     }
 }
 
-bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr_, CommandType cmd_type) {
-    auto addr = dramcore::AddressMapping(hex_addr_, *ptr_config_);
-    Request* req = new Request(cmd_type, addr, -1, req_id); //TODO - Flip the order to maintain consistency. Figure out how to extract time from SST
+bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
+    CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
+    Request* req = new Request(cmd_type, hex_addr, *ptr_config_);
     return ctrls_[req->Channel()]->InsertReq(req);
 }
 

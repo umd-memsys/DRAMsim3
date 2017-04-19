@@ -4,7 +4,7 @@
 #include <vector>
 #include <list>
 #include "common.h"
-#include "config.h"
+#include "configuration.h"
 
 namespace dramcore {
 

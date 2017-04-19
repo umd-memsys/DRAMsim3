@@ -1,4 +1,4 @@
-#include "config.h"
+#include "configuration.h"
 #include "common.h"
 #include "../ext/inih/src/INIReader.h"
 
