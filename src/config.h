@@ -49,8 +49,7 @@ public:
 
     std::string address_mapping;
     std::string queue_structure;
-    std::string verification_output_file;
-    bool verification_output;
+    std::string validation_output_file;
 
     //Computed parameters
     unsigned int channel_width_, rank_width_, bankgroup_width_, bank_width_, row_width_, column_width_;

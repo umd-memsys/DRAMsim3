@@ -11,7 +11,13 @@ Controller::Controller(int channel, const Config &config, const Timing &timing, 
     channel_state_(config, timing, stats),
     cmd_queue_(config, channel_state_, stats, callback_), //TODO - Isn't it really a request_queue. Why call it command_queue?
     refresh_(config, channel_state_, cmd_queue_, stats)
-{}
+{
+    if (!config.validation_output_file.empty()) {
+        cout << "Validation Command Trace write to "<< config.validation_output_file << endl;
+        val_output_enable = true;
+        val_output_.open(config.validation_output_file, std::ofstream::out);
+    }
+}
 
 void Controller::ClockTick() {
     clk_++;
@@ -46,6 +52,9 @@ void Controller::ClockTick() {
     auto cmd = cmd_queue_.GetCommandToIssue();
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
+        if (val_output_enable) {
+            cmd.print(val_output_);
+        }
     }
     /* //TODO Make- Aggressive precharing a knob
     else {
@@ -61,6 +70,10 @@ void Controller::ClockTick() {
 
 bool Controller::InsertReq(Request* req) {
     return cmd_queue_.InsertReq(req);
+}
+
+Controller::~Controller() {
+    val_output_.close();
 }
 
 // This function can be used by autoconf AC_CHECK_LIB since

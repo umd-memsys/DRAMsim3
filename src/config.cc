@@ -54,8 +54,7 @@ Config::Config(std::string config_file)
     queue_size = static_cast<unsigned int>(reader.GetInteger("controller", "queue_size", 16));
 
     //Other Parameters
-    verification_output_file = reader.Get("other", "verification_output", "");
-    verification_output = verification_output_file.empty() ? false: true;
+    validation_output_file = reader.Get("other", "validation_output", "");
 
     channel_width_ = LogBase2(channels);
     rank_width_ = LogBase2(ranks);

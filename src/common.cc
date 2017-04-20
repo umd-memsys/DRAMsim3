@@ -25,6 +25,25 @@ ostream& operator<<(ostream& os, const Command& cmd) {
     return os;
 }
 
+void Command::print(std::ofstream& val_file) {
+    vector<string> command_string = {
+        "READ",
+        "READ_PRECHARGE",
+        "WRITE",
+        "WRITE_PRECHARGE",
+        "ACTIVATE",
+        "PRECHARGE",
+        "REFRESH_BANK",
+        "REFRESH",
+        "SELF_REFRESH_ENTER",
+        "SELF_REFRESH_EXIT",
+        "SIZE"
+    };
+    val_file << command_string[static_cast<int>(cmd_type_)] <<", " << Rank() << ", " << Bank() << std::endl; 
+    cout << command_string[static_cast<int>(cmd_type_)]<<std::endl;
+    return;
+}
+
 ostream& operator<<(ostream& os, const Request& req) {
     os << "(" << req.arrival_time_ << "," << req.exit_time_ << "," << req.id_ << ")" << " " << req.cmd_;
     return os;

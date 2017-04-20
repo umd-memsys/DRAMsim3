@@ -2,6 +2,7 @@
 #define __COMMON_H
 
 #include <iostream>
+#include <fstream>
 #include <stdint.h>
 #include "config.h"
 
@@ -67,6 +68,7 @@ class Command {
         int Column() const { return addr_.column_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
+        void print(std::ofstream& val_file);
 };
 
 
