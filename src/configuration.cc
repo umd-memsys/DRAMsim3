@@ -52,6 +52,7 @@ Config::Config(std::string config_file)
     address_mapping = reader.Get("controller", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("controller", "queue_structure", "PER_BANK");
     queue_size = static_cast<unsigned int>(reader.GetInteger("controller", "queue_size", 16));
+    req_buffering_enabled = reader.GetBoolean("controller", "req_buffering_enabled", false);
 
     channel_width_ = LogBase2(channels);
     rank_width_ = LogBase2(ranks);

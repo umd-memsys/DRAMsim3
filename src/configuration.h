@@ -49,6 +49,7 @@ public:
 
     std::string address_mapping;
     std::string queue_structure;
+    bool req_buffering_enabled;
 
     //Computed parameters
     unsigned int channel_width_, rank_width_, bankgroup_width_, bank_width_, row_width_, column_width_;

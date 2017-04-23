@@ -4,6 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <functional>
+#include <list>
 #include "common.h"
 #include "configuration.h"
 #include "timing.h"
@@ -21,9 +22,14 @@ public:
     std::function<void(uint64_t req_id)> callback_;
     std::vector<Controller*> ctrls_;
     Config* ptr_config_;
+
+    int numb_buffered_requests;
 private:
+    uint64_t clk_;
+    uint64_t id_;
     Timing* ptr_timing_;
     Statistics* ptr_stats_;
+    std::list<Request*> buffer_q_;
 };
 
 }
