@@ -55,6 +55,7 @@ Config::Config(std::string config_file)
 
     //Other Parameters
     validation_output_file = reader.Get("other", "validation_output", "");
+    epoch_period = static_cast<unsigned int>(reader.GetInteger("other", "epoch_period", 0));
 
     channel_width_ = LogBase2(channels);
     rank_width_ = LogBase2(ranks);

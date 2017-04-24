@@ -53,7 +53,7 @@ void Controller::ClockTick() {
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
         if (val_output_enable) {
-            cmd.print(val_output_);
+            val_output_ << clk_ << "," << cmd <<std::endl;
         }
     }
     /* //TODO Make- Aggressive precharing a knob

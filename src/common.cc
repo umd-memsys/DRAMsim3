@@ -9,39 +9,22 @@ namespace dramcore {
 
 ostream& operator<<(ostream& os, const Command& cmd) {
     vector<string> command_string = {
-        "READ",
-        "READ_PRECHARGE",
-        "WRITE",
-        "WRITE_PRECHARGE",
-        "ACTIVATE",
-        "PRECHARGE",
-        "REFRESH_BANK",
-        "REFRESH",
-        "SELF_REFRESH_ENTER",
-        "SELF_REFRESH_EXIT",
-        "SIZE"
+        "read",
+        "read_p",
+        "write",
+        "write_p",
+        "activate",
+        "precharge",
+        "refresh",  // verilog model doesn't distinguish bank/rank refresh 
+        "refresh",
+        "self_refresh",
+        "self_refresh_exit",
+        "WRONG"
     };
-    os << setw(10) << command_string[static_cast<int>(cmd.cmd_type_)] << " " << cmd.Channel() << " " << cmd.Rank() << " " << cmd.Bankgroup() << " " << cmd.Bank() << " " << cmd.Row();
+    os << command_string[static_cast<int>(cmd.cmd_type_)] << "," << cmd.Channel() << "," 
+        << cmd.Rank() << "," << cmd.Bankgroup() << "," << cmd.Bank() << "," << cmd.Row() 
+        << "," <<cmd.Column();
     return os;
-}
-
-void Command::print(std::ofstream& val_file) {
-    vector<string> command_string = {
-        "READ",
-        "READ_PRECHARGE",
-        "WRITE",
-        "WRITE_PRECHARGE",
-        "ACTIVATE",
-        "PRECHARGE",
-        "REFRESH_BANK",
-        "REFRESH",
-        "SELF_REFRESH_ENTER",
-        "SELF_REFRESH_EXIT",
-        "SIZE"
-    };
-    val_file << command_string[static_cast<int>(cmd_type_)] <<", " << Rank() << ", " << Bank() << std::endl; 
-    cout << command_string[static_cast<int>(cmd_type_)]<<std::endl;
-    return;
 }
 
 ostream& operator<<(ostream& os, const Request& req) {
