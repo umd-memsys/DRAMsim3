@@ -57,6 +57,6 @@ void MemorySystem::PrintStats() {
     cout << "Printing Statistics -- " << endl;
     cout << "-----------------------------------------------------" << endl;
     cout << *ptr_stats_;
-    cout << "numb_buffered_requests" << numb_buffered_requests << endl;
+    cout << "numb_buffered_requests=" << numb_buffered_requests << endl;
     return;
 }

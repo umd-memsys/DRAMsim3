@@ -10,17 +10,20 @@ public:
     Config(std::string config_file);
 
     //DRAM physical structure
+    unsigned int channel_size;
     unsigned int channels;
     unsigned int ranks;
+    unsigned int banks;
     unsigned int bankgroups;
     unsigned int banks_per_group;
     unsigned int rows;
     unsigned int columns;
-
+    unsigned int device_width;
+    unsigned int bus_width;
     unsigned int queue_size;
+    unsigned int burst_len;
 
     //DRAM timing parameters
-    unsigned int tBurst; //tBL
     unsigned int tCCDL;
     unsigned int tCCDS;
     unsigned int tRTRS;
@@ -56,7 +59,11 @@ public:
     unsigned int epoch_period;
 
     //Computed parameters
-    unsigned int channel_width_, rank_width_, bankgroup_width_, bank_width_, row_width_, column_width_;
+    unsigned int channel_width_, rank_width_, bankgroup_width_, 
+        bank_width_, row_width_, column_width_, throwaway_bits;
+
+private:
+    void CalculateSize();
 };
 
 }

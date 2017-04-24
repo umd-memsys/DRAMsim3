@@ -12,25 +12,26 @@ Timing::Timing(const Config& config) :
     other_ranks(static_cast<int>(CommandType::SIZE)),
     same_rank(static_cast<int>(CommandType::SIZE))
 {
-    read_to_read_l = std::max(config_.tBurst, config_.tCCDL);
-    read_to_read_s = std::max(config_.tBurst, config_.tCCDS);
-    read_to_read_o = config_.tBurst + config_.tRTRS;
-    read_to_write = std::max(config_.tBurst, config_.tCCDL) + config_.tCAS - config_.tCWD; // What if (tCAS - tCWD) < 0? Would that help issue an early write?
-    read_to_write_o = config_.tBurst + config_.tRTRS + config_.tCAS - config_.tCWD; // What if (tCAS - tCWD) < 0? Would that help issue an early write?
-    read_to_precharge = config_.tRTP + config_.tBurst - config_.tCCDL; // What if (tBurst - tCCD) < 0? Would that help issue an early precharge?
+    read_to_read_l = std::max(config_.burst_len/2, config_.tCCDL     );
+    read_to_read_s = std::max(config_.burst_len/2, config_.tCCDS);
+    read_to_read_o = config_.burst_len/2 + config_.tRTRS;
+    read_to_write = std::max(config_.burst_len/2, config_.tCCDL) + config_.tCAS - config_.tCWD; // What if (tCAS - tCWD) < 0? Would that help issue an early write?
+    read_to_write_o = config_.burst_len/2 + config_.tRTRS + config_.tCAS - config_.tCWD; // What if (tCAS - tCWD) < 0? Would that help issue an early write?
+    read_to_precharge = config_.tRTP + config_.burst_len/2 - config_.tCCDL; // What if (burst_len/2 - tCCD) < 0? Would that help issue an early precharge?
 
-    write_to_read = config_.tCWD + config_.tBurst + config_.tWTR; //Why doesn't tCCD come into the picture?
-    write_to_read_o = config_.tCWD + config_.tBurst + config_.tRTRS - config_.tCAS; // What if (tCWD - tCAS) < 0? Would that help issue an early read?
-    write_to_write_l = std::max(config_.tBurst, config_.tCCDL);
-    write_to_write_s = std::max(config_.tBurst, config_.tCCDS);
-    write_to_write_o = config_.tBurst + config_.tRTRS; // Let's say tRTRS == tOST
-    write_to_precharge = config_.tCWD + config_.tBurst + config_.tWR;
+    write_to_read = config_.tCWD + config_.burst_len/2 + config_.tWTR; //Why doesn't tCCD come into the picture?
+    write_to_read_o = config_.tCWD + config_.burst_len/2 + config_.tRTRS - config_.tCAS; // What if (tCWD - tCAS) < 0? Would that help issue an early read?
+    write_to_write_l = std::max(config_.burst_len/2, config_.tCCDL);
+    write_to_write_s = std::max(config_.burst_len/2, config_.tCCDS);
+    write_to_write_o = config_.burst_len/2 + config_.tRTRS; // Let's say tRTRS == tOST
+    write_to_precharge = config_.tCWD + config_.burst_len/2 + config_.tWR;
 
     precharge_to_activate = config_.tRP;
     read_to_activate = read_to_precharge + precharge_to_activate;
     write_to_activate = write_to_precharge + precharge_to_activate;
 
     activate_to_activate = config_.tRC;
+    // TODO act to act should also be tRRD_L and tRRD_S
     activate_to_activate_o = config_.tRRD;
     activate_to_precharge = config_.tRAS;
     activate_to_read_write = config_.tRCD;

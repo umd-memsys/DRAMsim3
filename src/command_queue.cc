@@ -201,7 +201,7 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>:
     auto req = *req_itr;
     if( req->cmd_.IsRead()) {
         //Put the read requests into a new buffer. They will be returned to the CPU after the read latency
-        req->exit_time_ = clk_ + config_.tBurst;
+        req->exit_time_ = clk_ + config_.burst_len / 2;
         issued_req_.splice(issued_req_.end(), queue, req_itr);
         stats_.numb_read_reqs_issued++;
     }

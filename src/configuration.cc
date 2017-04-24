@@ -14,16 +14,30 @@ Config::Config(std::string config_file)
         AbruptExit(__FILE__, __LINE__);
     }
 
-    //DRAM structure parameters
-    channels = static_cast<unsigned int>(reader.GetInteger("dram_structure", "channels", 1));
-    ranks = static_cast<unsigned int>(reader.GetInteger("dram_structure", "ranks", 2));
+    // System/controller Parameters
+    channel_size = static_cast<unsigned int>(reader.GetInteger("system", "channel_size", 1024));
+    channels = static_cast<unsigned int>(reader.GetInteger("system", "channels", 1));
+    bus_width = static_cast<unsigned int>(reader.GetInteger("system", "bus_width", 64));
+    address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
+    queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
+    queue_size = static_cast<unsigned int>(reader.GetInteger("system", "queue_size", 16));
+    req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
+
+    // DRAM organization
     bankgroups = static_cast<unsigned int>(reader.GetInteger("dram_structure", "bankgroups", 2));
     banks_per_group = static_cast<unsigned int>(reader.GetInteger("dram_structure", "banks_per_group", 2));
+    banks = bankgroups * banks_per_group;
     rows = static_cast<unsigned int>(reader.GetInteger("dram_structure", "rows", 1 << 16));
     columns = static_cast<unsigned int>(reader.GetInteger("dram_structure", "columns", 1 << 10));
+    device_width = static_cast<unsigned int>(reader.GetInteger("dram_structure", "device_width", 8));
+    burst_len = static_cast<unsigned int>(reader.GetInteger("dram_structure", "BL", 8)); //tBL
 
-    //Timing Parameters
-    tBurst = static_cast<unsigned int>(reader.GetInteger("timing", "tBurst", 8)); //tBL
+    // calculate rank and re-calculate channel_size
+    CalculateSize();
+
+    // Timing Parameters
+    // TODO there is no need to keep all of these variables, they should just be temporary
+    // ultimately we only need cmd to cmd Timing instead of these     
     tCCDL = static_cast<unsigned int>(reader.GetInteger("timing", "tCCDL", 6));
     tCCDS = static_cast<unsigned int>(reader.GetInteger("timing", "tCCDS", 4));
     tRTRS = static_cast<unsigned int>(reader.GetInteger("timing", "tRTRS", 2));
@@ -46,15 +60,9 @@ Config::Config(std::string config_file)
     tREFIb = static_cast<unsigned int>(reader.GetInteger("timing", "tREFIb", 1950));
     tFAW = static_cast<unsigned int>(reader.GetInteger("timing", "tFAW", 50));
 
-    activation_window_depth = static_cast<unsigned int>(reader.GetInteger("timing", "activation_window_depth", 4));
+    activation_window_depth = static_cast<unsigned int>(reader.GetInteger("timing", "activation_window_depth", 4));    
 
-    //Controller Parameters
-    address_mapping = reader.Get("controller", "address_mapping", "chrobabgraco");
-    queue_structure = reader.Get("controller", "queue_structure", "PER_BANK");
-    queue_size = static_cast<unsigned int>(reader.GetInteger("controller", "queue_size", 16));
-    req_buffering_enabled = reader.GetBoolean("controller", "req_buffering_enabled", false);
-
-    //Other Parameters
+    // Other Parameters
     validation_output_file = reader.Get("other", "validation_output", "");
     epoch_period = static_cast<unsigned int>(reader.GetInteger("other", "epoch_period", 0));
 
@@ -64,4 +72,34 @@ Config::Config(std::string config_file)
     bank_width_ = LogBase2(banks_per_group);
     row_width_ = LogBase2(rows);
     column_width_ = LogBase2(columns);
+    unsigned int bytes_offset = LogBase2(bus_width / 8);
+    unsigned int transaction_size = bus_width / 8 * burst_len;  // transaction size in bytes
+
+    // for each address given, because we're transimitting trascation_size bytes per transcation
+    // therefore there will be throwaway_bits not used in the address
+    // part of it is due to the bytes offset, the other part is the burst len 
+    // (same as column auto increment)
+    // so effectively only column_width_ -(throwaway_bits - bytes_offset) will be used in column addressing
+    throwaway_bits = LogBase2(transaction_size);
+    column_width_ -= (throwaway_bits - bytes_offset);
+}
+
+void Config::CalculateSize() {
+    unsigned int devices_per_rank = bus_width / device_width;
+
+    // shift 20 bits first so that we won't have an overflow problem...
+    unsigned int megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
+    unsigned int megs_per_rank = megs_per_bank * banks * devices_per_rank;
+
+    if (megs_per_rank > channel_size) {
+        std::cout<< "WARNING: Cannot create memory system of size " << channel_size 
+            << "MB with given device choice! Using default size " << megs_per_rank 
+            << " instead!" << std::endl;
+        ranks = 1;
+        channel_size = megs_per_rank;
+    } else {
+        ranks = channel_size / megs_per_rank;
+        channel_size = ranks * megs_per_rank;  // reset this in case users inputs a weird number...
+    }
+    return;
 }

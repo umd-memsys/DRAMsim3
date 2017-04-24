@@ -40,3 +40,5 @@ cmake-build-debug
 release
 .idea
 
+# IDEs
+.vscode/settings.json

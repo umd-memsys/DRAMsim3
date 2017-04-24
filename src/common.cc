@@ -15,15 +15,15 @@ ostream& operator<<(ostream& os, const Command& cmd) {
         "write_p",
         "activate",
         "precharge",
-        "refresh",  // verilog model doesn't distinguish bank/rank refresh 
+        "refresh_bank",  // verilog model doesn't distinguish bank/rank refresh 
         "refresh",
         "self_refresh",
         "self_refresh_exit",
         "WRONG"
     };
-    os << command_string[static_cast<int>(cmd.cmd_type_)] << "," << cmd.Channel() << "," 
-        << cmd.Rank() << "," << cmd.Bankgroup() << "," << cmd.Bank() << "," << cmd.Row() 
-        << "," <<cmd.Column();
+    os << setw(12) << command_string[static_cast<int>(cmd.cmd_type_)] << " " << cmd.Channel() << " " 
+        << cmd.Rank() << " " << cmd.Bankgroup() << " " << cmd.Bank() << " " 
+        << setw(6) << cmd.Row() << " " << setw(6) << cmd.Column();
     return os;
 }
 
@@ -43,7 +43,7 @@ ostream& operator<<(ostream& os, const Access& access) {
 
 Address AddressMapping(uint64_t hex_addr, const Config& config) {
     //Implement address mapping functionality
-    unsigned int pos = 3; //TODO - Remove hardcoding
+    unsigned int pos = config.throwaway_bits; //TODO - Remove hardcoding
     //There could be as many as 6! = 720 different address mappings!
     if(config.address_mapping == "chrarocobabg") {  // channel:rank:row:column:bank:bankgroup
         auto bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);

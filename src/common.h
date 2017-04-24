@@ -2,6 +2,7 @@
 #define __COMMON_H
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <stdint.h>
 #include "configuration.h"
