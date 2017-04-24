@@ -54,6 +54,10 @@ Config::Config(std::string config_file)
     queue_size = static_cast<unsigned int>(reader.GetInteger("controller", "queue_size", 16));
     req_buffering_enabled = reader.GetBoolean("controller", "req_buffering_enabled", false);
 
+    //Other Parameters
+    validation_output_file = reader.Get("other", "validation_output", "");
+    epoch_period = static_cast<unsigned int>(reader.GetInteger("other", "epoch_period", 0));
+
     channel_width_ = LogBase2(channels);
     rank_width_ = LogBase2(ranks);
     bankgroup_width_ = LogBase2(bankgroups);

@@ -51,6 +51,10 @@ public:
     std::string queue_structure;
     bool req_buffering_enabled;
 
+    std::string validation_output_file;
+
+    unsigned int epoch_period;
+
     //Computed parameters
     unsigned int channel_width_, rank_width_, bankgroup_width_, bank_width_, row_width_, column_width_;
 };
