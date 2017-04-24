@@ -5,7 +5,7 @@
 #include <vector>
 #include "controller.h"
 #include "common.h"
-#include "config.h"
+#include "configuration.h"
 #include "memory_system.h"
 
 namespace dramcore {

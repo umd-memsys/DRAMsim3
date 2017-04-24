@@ -6,7 +6,7 @@
 #include "common.h"
 #include "channel_state.h"
 #include "command_queue.h"
-#include "config.h"
+#include "configuration.h"
 
 namespace dramcore {
 

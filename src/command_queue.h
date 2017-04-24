@@ -6,7 +6,7 @@
 #include <functional>
 #include "common.h"
 #include "channel_state.h"
-#include "config.h"
+#include "configuration.h"
 #include "statistics.h"
 
 namespace dramcore {

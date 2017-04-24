@@ -28,7 +28,7 @@ void Controller::ClockTick() {
         auto issued_req = *req_itr;
         if(clk_ > issued_req->exit_time_) {
             //Return request to cpu
-            callback_(issued_req->id_);
+            callback_(issued_req->hex_addr_);
             delete(issued_req);
             cmd_queue_.issued_req_.erase(req_itr);
             break; // Returning one request per cycle

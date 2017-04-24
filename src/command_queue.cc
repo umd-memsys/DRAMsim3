@@ -206,7 +206,7 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>:
         stats_.numb_read_reqs_issued++;
     }
     else {
-        callback_(req->id_);
+        callback_(req->hex_addr_);
         queue.erase(req_itr);
         delete (*req_itr);
         stats_.numb_write_reqs_issued++;

@@ -9,17 +9,18 @@ set(CMAKE_CXX_STANDARD 11)
 # set(CMAKE_CXX_FLAGS "-O0 -Wall")
 set(CMAKE_CXX_FLAGS "-O0 -Wall -fPIC")
 
-set(SOURCES src/bankstate.cc
-            src/channel_state.cc
-            src/command_queue.cc
-            src/common.cc
-            src/config.cc
-            src/controller.cc
-            src/cpu.cc
-            src/refresh.cc
-            src/statistics.cc
-            src/timing.cc
-            src/memory_system.cc
+set(SOURCES
+        src/bankstate.cc
+        src/channel_state.cc
+        src/command_queue.cc
+        src/common.cc
+        src/configuration.cc
+        src/controller.cc
+        src/cpu.cc
+        src/refresh.cc
+        src/statistics.cc
+        src/timing.cc
+        src/memory_system.cc
 )
 
 set(SOURCES_TEST test/main.cc

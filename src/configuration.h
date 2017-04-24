@@ -49,6 +49,8 @@ public:
 
     std::string address_mapping;
     std::string queue_structure;
+    bool req_buffering_enabled;
+
     std::string validation_output_file;
 
     unsigned int epoch_period;
