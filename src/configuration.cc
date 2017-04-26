@@ -82,6 +82,17 @@ Config::Config(std::string config_file)
     // so effectively only column_width_ -(throwaway_bits - bytes_offset) will be used in column addressing
     throwaway_bits = LogBase2(transaction_size);
     column_width_ -= (throwaway_bits - bytes_offset);
+
+#ifdef DEBUG_OUTPUT
+    cout << "Address bits:" << endl;
+    cout << setw(10) << "Channel " << channel_width_ << endl;
+    cout << setw(10) << "Rank " << rank_width_ << endl;
+    cout << setw(10) << "Bankgroup " << bankgroup_width_ << endl;
+    cout << setw(10) << "Bank " << bank_width_ << endl;
+    cout << setw(10) << "Row " << row_width_ << endl;
+    cout << setw(10) << "Column " << column_width_ << endl;
+#endif
+
 }
 
 void Config::CalculateSize() {
@@ -90,7 +101,10 @@ void Config::CalculateSize() {
     // shift 20 bits first so that we won't have an overflow problem...
     unsigned int megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
     unsigned int megs_per_rank = megs_per_bank * banks * devices_per_rank;
-
+#ifdef DEBUG_OUTPUT
+cout << "megs per bank " << megs_per_bank << endl;
+cout << "megs per rank " << megs_per_rank << endl;
+#endif 
     if (megs_per_rank > channel_size) {
         std::cout<< "WARNING: Cannot create memory system of size " << channel_size 
             << "MB with given device choice! Using default size " << megs_per_rank 
