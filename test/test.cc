@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "./../ext/headers/catch.hpp"
 #include "timing.h"
 
 TEST_CASE("Timing Relations", "[timing]") {

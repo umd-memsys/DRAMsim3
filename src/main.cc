@@ -1,7 +1,7 @@
 #include <iostream>
 #include "memory_system.h"
 #include "cpu.h"
-#include "./../ext/args.hxx"
+#include "./../ext/headers/args.hxx"
 
 using namespace std;
 using namespace dramcore;
