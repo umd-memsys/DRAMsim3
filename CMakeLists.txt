@@ -39,8 +39,29 @@ target_link_libraries(dramcoremain dramcore)
 #set_target_properties(dramcore PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(dramcoretest ${SOURCES_TEST})
-target_link_libraries(dramcoretest dramcore)
+target_link_libraries(dramcoretest PUBLIC dramcore)
 #set_target_properties(dramcoretest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+
+# make debug to get more verbose outputs
+add_executable(debug src/main.cc ${SOURCES})
+target_link_libraries(debug inih)
+set_target_properties(debug PROPERTIES OUTPUT_NAME dramcoredebug)
+target_compile_definitions(debug PRIVATE -DDEBUG_OUTPUT)
+
+
+# add validation flow here to make life easier...
+add_executable(validation src/main.cc ${SOURCES})
+target_link_libraries(validation inih)
+set_target_properties(validation PROPERTIES OUTPUT_NAME dramcore-validate)  # reuse same output name
+# target_compile_definitions(validation PRIVATE -DVALIDATION)
+add_custom_command(TARGET validation
+                   POST_BUILD
+                   COMMAND ./dramcore-validate -c configs/ddr4_8G_x8_config.ini -n 10000
+                   # post processing scripts here...
+                   COMMAND rm dramcore-validate
+)
+
 
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 # set_target_properties(dramcore PROPERTIES DEBUG_POSTFIX "_d")

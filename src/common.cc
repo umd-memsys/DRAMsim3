@@ -173,7 +173,9 @@ void AbruptExit(const std::string& file, int line) {
 
 //Dummy callback function for use when the simulator is not integrated with SST or other frontend feeders
 void callback_func(uint64_t req_id) {
+#ifdef DEBUG_OUTPUT
     cout << "Request with id = " << req_id << " is returned" << endl;
+#endif
     return;
 }
 

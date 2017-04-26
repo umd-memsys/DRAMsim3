@@ -52,6 +52,9 @@ void Controller::ClockTick() {
     auto cmd = cmd_queue_.GetCommandToIssue();
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
+        #ifdef DEBUG_OUTPUT
+            cout << left << setw(8) << clk_ << " " << cmd <<std::endl;
+        #endif  //DEBUG_OUTPUT
         if (val_output_enable) {
             val_output_ << left << setw(8) << clk_ << " " << cmd <<std::endl;
         }
