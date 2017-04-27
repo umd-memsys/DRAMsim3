@@ -23,7 +23,7 @@ ostream& operator<<(ostream& os, const Command& cmd) {
     };
     os << setw(12) << command_string[static_cast<int>(cmd.cmd_type_)] << " " << cmd.Channel() << " " 
         << cmd.Rank() << " " << cmd.Bankgroup() << " " << cmd.Bank() << " " 
-        << hex << cmd.Row() << " " << setw(6) << cmd.Column();
+        << hex << "0x" << setw(6) << cmd.Row() << " 0x" << cmd.Column() << dec;
     return os;
 }
 

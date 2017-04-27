@@ -51,8 +51,6 @@ class Timing {
         unsigned int self_refresh_entry_to_exit;
         unsigned int self_refresh_exit;
 
-        unsigned int read_delay;
-        unsigned int write_delay;
 };
 
 }
