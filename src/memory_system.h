@@ -29,7 +29,7 @@ private:
     uint64_t id_;
     Timing* ptr_timing_;
     Statistics* ptr_stats_;
-    std::vector<Request*> buffer_q_;
+    std::list<Request*> buffer_q_;
 };
 
 }

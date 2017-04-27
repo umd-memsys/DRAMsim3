@@ -52,7 +52,7 @@ public:
 
     std::string address_mapping;
     std::string queue_structure;
-    unsigned int req_buffer_size;
+    bool req_buffering_enabled;
 
     std::string validation_output_file;
 

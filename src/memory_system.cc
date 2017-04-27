@@ -8,7 +8,6 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
 {
     ptr_config_ = new Config(config_file);
     //auto config = *ptr_config_;
-    buffer_q_.reserve((*ptr_config_).req_buffer_size);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();
     ctrls_.resize((*ptr_config_).channels);
@@ -28,18 +27,12 @@ bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) 
     // Note - This is an approximation and if the size of such buffer queue becomes large during the course of the
     // simulation, then the accuracy sought of devolves into that of a trace based simulation.
     bool is_insertable = ctrls_[req->Channel()]->InsertReq(req);
-
-    if (!is_insertable) {
-        if (buffer_q_.size() < (*ptr_config_).req_buffer_size) {
-            buffer_q_.push_back(req);
-            numb_buffered_requests++;
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        return true;
+    if((*ptr_config_).req_buffering_enabled && !is_insertable) {
+        buffer_q_.push_back(req);
+        is_insertable = true;
+        numb_buffered_requests++;
     }
+    return is_insertable;
 }
 
 void MemorySystem::ClockTick() {
@@ -63,7 +56,7 @@ void MemorySystem::PrintStats() {
     cout << "-----------------------------------------------------" << endl;
     cout << "Printing Statistics -- " << endl;
     cout << "-----------------------------------------------------" << endl;
-    cout << dec << *ptr_stats_;
+    cout << *ptr_stats_;
     cout << "numb_buffered_requests=" << numb_buffered_requests << endl;
     return;
 }

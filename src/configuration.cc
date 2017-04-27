@@ -21,7 +21,7 @@ Config::Config(std::string config_file)
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
     queue_size = static_cast<unsigned int>(reader.GetInteger("system", "queue_size", 16));
-    req_buffer_size = reader.GetInteger("system", "req_buffer_size", 16);
+    req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
 
     // DRAM organization
     bankgroups = static_cast<unsigned int>(reader.GetInteger("dram_structure", "bankgroups", 2));
