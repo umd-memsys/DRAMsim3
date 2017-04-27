@@ -38,6 +38,9 @@ Config::Config(std::string config_file)
     // Timing Parameters
     // TODO there is no need to keep all of these variables, they should just be temporary
     // ultimately we only need cmd to cmd Timing instead of these     
+    AL = static_cast<unsigned int>(reader.GetInteger("timing", "AL", 0));
+    CL = static_cast<unsigned int>(reader.GetInteger("timing", "CL", 12));
+    CWL = static_cast<unsigned int>(reader.GetInteger("timing", "CL", 12));
     tCCDL = static_cast<unsigned int>(reader.GetInteger("timing", "tCCDL", 6));
     tCCDS = static_cast<unsigned int>(reader.GetInteger("timing", "tCCDS", 4));
     tRTRS = static_cast<unsigned int>(reader.GetInteger("timing", "tRTRS", 2));
@@ -59,6 +62,8 @@ Config::Config(std::string config_file)
     tREFI = static_cast<unsigned int>(reader.GetInteger("timing", "tREFI", 7800));
     tREFIb = static_cast<unsigned int>(reader.GetInteger("timing", "tREFIb", 1950));
     tFAW = static_cast<unsigned int>(reader.GetInteger("timing", "tFAW", 50));
+    read_delay = AL + CL + burst_len / 2;
+    write_delay = AL + CWL + burst_len / 2;
 
     activation_window_depth = static_cast<unsigned int>(reader.GetInteger("timing", "activation_window_depth", 4));    
 

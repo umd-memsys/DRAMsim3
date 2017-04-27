@@ -24,6 +24,9 @@ public:
     unsigned int burst_len;
 
     //DRAM timing parameters
+    unsigned int AL;
+    unsigned int CL;
+    unsigned int CWL;
     unsigned int tCCDL;
     unsigned int tCCDS;
     unsigned int tRTRS;
@@ -47,6 +50,8 @@ public:
     unsigned int tREFIb;
 
     unsigned int tFAW;
+    unsigned int read_delay;
+    unsigned int write_delay;
 
     unsigned int activation_window_depth = 4;
 
