@@ -29,19 +29,19 @@ class Command(object):
         if self.cmd == "activate":
             return "activate(.bg(%d), .ba(%d), .row(%d));\n" % (self.bankgroup, self.bank, self.row)
         elif self.cmd == "read":  # ap=0 no auto precharge, bc=1 NO burst chop, weird...
-            return "read(.bg(%d), .ba(%d), .col(%d), ap(0), bc(1));\n" % \
+            return "read(.bg(%d), .ba(%d), .col(%d), .ap(0), .bc(1));\n" % \
                    (self.bankgroup, self.bank, self.col)
         elif self.cmd == "read_p":
-            return "read(.bg(%d), .ba(%d), .col(%d), ap(1), bc(1));\n" % \
+            return "read(.bg(%d), .ba(%d), .col(%d), .ap(1), .bc(1));\n" % \
                    (self.bankgroup, self.bank, self.col)
         elif self.cmd == "write":
-            return "write(.bg(%d), .ba(%d), .col(%d), ap(0), bc(1));\n" % \
+            return "write(.bg(%d), .ba(%d), .col(%d), .ap(0), .bc(1));\n" % \
                    (self.bankgroup, self.bank, self.col)
         elif self.cmd == "write_p":
-            return "write(.bg(%d), .ba(%d), .col(%d), ap(1), bc(1));\n" % \
+            return "write(.bg(%d), .ba(%d), .col(%d), .ap(1), .bc(1));\n" % \
                    (self.bankgroup, self.bank, self.col)
         elif self.cmd == "precharge":
-            return "precharge(.bg(%d), .ba(%d), ap(0));\n" % \
+            return "precharge(.bg(%d), .ba(%d), .ap(0));\n" % \
                    (self.bankgroup, self.bank)
         elif self.cmd == "refresh" or self.cmd == "refresh_bank":
             return "refresh();\n"  # currently the verilog model doesnt do bank refresh
@@ -155,7 +155,7 @@ def get_ddr4_prefix_str(config):
     dqs_en <= 1'b0;
     default_period(nominal_ts);
     // POWERUP SECTION 
-    power_up
+    power_up();
     // Reset DLL
     dut_mode_config = _state.DefaultDutModeConfig(.cl(%d),
                                                     .write_recovery(%d),
