@@ -24,7 +24,7 @@ class Command(object):
 
     def get_ddr4_str(self):
         """
-        get a command line for verilog model benchmark
+        get a command line for verilog model workbench
         """
         if self.cmd == "activate":
             return "activate(.bg(%d), .ba(%d), .row(%d));\n" % (self.bankgroup, self.bank, self.row)
@@ -46,6 +46,25 @@ class Command(object):
         elif self.cmd == "refresh" or self.cmd == "refresh_bank":
             return "refresh();\n"  # currently the verilog model doesnt do bank refresh
         return
+
+    def get_ddr3_str(self):
+        """
+        get a command line for verilog model workbench
+        """
+        if self.cmd == "activate":
+            return "activate(%d, %d);\n" % (self.bank, self.row)
+        elif self.cmd == "read":
+            return "read(%d, %d, %d, %d);\n" % (self.bank, self.col, 0, 1)
+        elif self.cmd == "read_p":
+            return "read(%d, %d, %d, %d);\n" % (self.bank, self.col, 1, 1)
+        elif self.cmd == "write":
+            return "write(%d, %d, %d, %d, %d, %d);\n" % (self.bank, self.col, 0, 1, 0, 0xdeadbeaf)
+        elif self.cmd == "write_p":
+            return "write(%d, %d, %d, %d, %d, %d);\n" % (self.bank, self.col, 1, 1, 0, 0xdeadbeaf)
+        elif self.cmd == "refresh":
+            return "refresh;\n"
+        elif self.cmd == "precharge":
+            return "precharge(%d, %d);\n" % (self.bank, 0)
 
 
 def get_val(config, sec, opt):
@@ -82,7 +101,7 @@ def get_config_dict(config_file):
 
 def calculate_megs_per_device(config):
     """
-    given config dict, calculate device density in MBs
+    given config dict, calculate device density in Mbits
     """
     rows = config["dram_structure"]["rows"]
     cols = config["dram_structure"]["columns"]
@@ -90,9 +109,98 @@ def calculate_megs_per_device(config):
     bgs = config["dram_structure"]["bankgroups"]
     banks_per_group = config["dram_structure"]["banks_per_group"]
     banks = bgs * banks_per_group
-    bytes_per_bank = rows * cols * width / 8
+    bytes_per_bank = rows * cols * width
     mega_bytes_per_device = bytes_per_bank * banks / 1024 /1024
     return mega_bytes_per_device
+
+
+def get_ddr3_prefix_str():
+    """
+    nothing more than just setting up the workbench initialization
+    """
+    prefix_str = """
+    initial begin : test
+        parameter [31:0] REP = DQ_BITS/8.0;
+        reg         [BA_BITS-1:0] r_bank;
+        reg        [ROW_BITS-1:0] r_row;
+        reg        [COL_BITS-1:0] r_col;
+        reg  [BL_MAX*DQ_BITS-1:0] r_data;
+        integer                   r_i, r_j;
+        real original_tck;
+        reg [8*DQ_BITS-1:0] d0, d1, d2, d3;
+        d0 = {
+           {REP{8'h07}}, {REP{8'h06}}, {REP{8'h05}}, {REP{8'h04}},
+           {REP{8'h03}}, {REP{8'h02}}, {REP{8'h01}}, {REP{8'h00}}
+        };
+        d1 = {
+           {REP{8'h17}}, {REP{8'h16}}, {REP{8'h15}}, {REP{8'h14}},
+           {REP{8'h13}}, {REP{8'h12}}, {REP{8'h11}}, {REP{8'h10}}
+        };
+        d2 = {
+           {REP{8'h27}}, {REP{8'h26}}, {REP{8'h25}}, {REP{8'h24}},
+           {REP{8'h23}}, {REP{8'h22}}, {REP{8'h21}}, {REP{8'h20}}
+        };
+        d3 = {
+           {REP{8'h37}}, {REP{8'h36}}, {REP{8'h35}}, {REP{8'h34}},
+           {REP{8'h33}}, {REP{8'h32}}, {REP{8'h31}}, {REP{8'h30}}
+        };
+        rst_n   <=  1'b0;
+        cke     <=  1'b0;
+        cs_n    <=  1'b1;
+        ras_n   <=  1'b1;
+        cas_n   <=  1'b1;
+        we_n    <=  1'b1;
+        ba      <=  {BA_BITS{1'bz}};
+        a       <=  {ADDR_BITS{1'bz}};
+        odt_out <=  1'b0;
+        dq_en   <=  1'b0;
+        dqs_en  <=  1'b0;
+        // POWERUP SECTION 
+        power_up;
+        // INITIALIZE SECTION
+        zq_calibration  (1);                            // perform Long ZQ Calibration
+        load_mode       (3, 14'b00000000000000);        // Extended Mode Register (3)
+        nop             (tmrd-1);
+        load_mode       (2, {14'b00001000_000_000} | mr_cwl<<3); // Extended Mode Register 2 with DCC Disable
+        nop             (tmrd-1);
+        load_mode       (1, 14'b0000010110);            // Extended Mode Register with DLL Enable, AL=CL-1
+        nop             (tmrd-1);
+        load_mode       (0, {14'b0_0_000_1_0_000_1_0_00} | mr_wr<<9 | mr_cl<<2); // Mode Register with DLL Reset
+        nop             (max(TDLLK,TZQINIT));
+        odt_out         <= 1;                           // turn on odt
+        nop (10);
+        """
+    return prefix_str
+
+
+def get_ddr3_postfix_str():
+    """
+    end the workbench file
+    """
+    postfix_str = """
+        test_done;
+    end
+    """
+    return postfix_str
+
+
+def ddr3_trace_converter(trace_file_in, verilog_out):
+    with open(trace_file_in, "r") as trace_in:
+        cmds = []
+        for line in trace_in:
+            cmds.append(Command(line))
+
+        last_clk = 0
+        for cmd in cmds:
+            this_clk = cmd.clk
+            nop_cycles = this_clk - last_clk - 1
+            if nop_cycles > 0:
+                nop_str = "nop(%d);\n" % nop_cycles
+                verilog_out.write(nop_str)
+            last_clk = this_clk
+            verilog_out.write(cmd.get_ddr3_str())
+    return
+
 
 def get_ddr4_prefix_str(config):
     """
@@ -194,11 +302,10 @@ def get_ddr4_prefix_str(config):
 
 
 def get_ddr4_postfix_str():
-    postfix_str = """
-        test_done;
-    end
     """
-    return postfix_str
+    end the workbench file
+    """
+    return get_ddr3_postfix_str();
 
 
 def ddr4_trace_converter(trace_file_in, verilog_out):
@@ -223,7 +330,48 @@ def ddr4_trace_converter(trace_file_in, verilog_out):
 
 
 def ddr3_validation(config, trace_file):
+    """
+    the command string should be something like:
+    vlog +define+den2048Mb +define+x8 +define+sg15 tb.v ddr3.v
+    also generate a trace_file.vh file that can be included in verilog workbench
+    """
+    megs = calculate_megs_per_device(config)
+    if megs == 1024:
+        density = "den1024Mb"
+    elif megs == 2048:
+        density = "den2048Mb"
+    elif megs == 4096:
+        density = "den4096Mb"
+    elif megs == 8192:
+        density = "den8192Mb"
+    else:
+        print "unknown device density: %d! MBs" % (megs)
+        exit(1)
+    width = config["dram_structure"]["device_width"]
+    tck = config["timing"]["tck"]
+    speed_table = {  # based on 1Gb device
+        0.938: "sg093",  # 2133
+        1.07 : "sg107",  # 1866
+        1.25 : "sg125", # 1600
+        1.50 : "sg15",  # 1333J, there is also sg15E
+        1.875: "sg187", # 1066G, there is also sg187E
+        2.5:   "sg25",  # 800, there is also sg25E
+    }
+    if tck not in speed_table.keys():
+        print "Invalid tCK value in ini file, use the followings for DDR3:" +\
+               str([k for k in speed_table])
+    speed = speed_table[tck]
+
+    cmd_str = "vlog +define+%s +define+x%d +define+%s tb.v ddr3.v" % (density, width, speed)
+    print cmd_str
+
+    trace_out = trace_file + ".vh"
+    with open(trace_out, "wb") as vh_out:
+        vh_out.write(get_ddr3_prefix_str())
+        ddr3_trace_converter(trace_file, vh_out)
+        vh_out.write(get_ddr3_postfix_str())
     return
+
 
 def ddr4_validation(config, trace_file):
     """
@@ -233,11 +381,11 @@ def ddr4_validation(config, trace_file):
     """
     dev_str = "DDR4_"
     megs = calculate_megs_per_device(config)
-    if megs == 512:
+    if megs == 4096:
         density = "4G"
-    elif megs == 1024:
+    elif megs == 8192:
         density = "8G"
-    elif megs == 2048:
+    elif megs == 16384:
         density = "16G"
     else:
         print "unknown device density: %d! MBs" % (megs)
