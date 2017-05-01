@@ -1,14 +1,15 @@
 {
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "C++ Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/dramcore",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceRoot}",
+            "program": "${workspaceRoot}/build/dramcoremain",
+            "args": ["-c", "./../configs/ddr4_8G_x8_config.ini", "-n", "100000", "--trace-cpu", "--trace-file", "./../sample_trace.txt"],
+            "stopAtEntry": true,
+            "cwd": "${workspaceRoot}/build",
             "environment": [],
             "externalConsole": true,
             "linux": {

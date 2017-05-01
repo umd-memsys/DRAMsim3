@@ -4,10 +4,16 @@ project(dramcore)
 
 add_subdirectory("ext/inih")
 
+set(EXTRA_CXX_FLAGS "-Wall -fPIC")
+set(EXTRA_CXX_FLAGS_DEBUG "-O0 -DDEBUG_OUTPUT")
+set(EXTRA_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(EXTRA_CXX_FLAGS_RELWITHDEBINFO "-O0 -DNDDEBUG")
+
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "-Wall -fPIC")
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -DDEBUG_OUTPUT")
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS_DEBUG}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS_RELWITHDEBINFO}")
 
 set(SOURCES
         src/bankstate.cc
@@ -38,20 +44,12 @@ add_executable(dramcoremain src/main.cc)
 target_link_libraries(dramcoremain dramcore)
 #set_target_properties(dramcore PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(dramcoretest EXCLUDE_FROM_ALL ${SOURCES_TEST})
+add_executable(dramcoretest ${SOURCES_TEST})
 target_link_libraries(dramcoretest dramcore)
 #set_target_properties(dramcoretest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-if (NOT CMAKE_BUILD_TYPE)
-        set(CMAKE_BUILD_TYPE "Release")
-        message(STATUS "CMAKE_BUILD_TYPE not specified, using RELEASE mode by default")
-        message(STATUS "To change it, using cmake -DCMAKE_BUILD_TYPE=DEBUG/RELEASE")
-endif(NOT CMAKE_BUILD_TYPE)
-
-
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 # set_target_properties(dramcore PROPERTIES DEBUG_POSTFIX "_d")
-
 
 # add validation flow here to make life easier...
 add_executable(validation EXCLUDE_FROM_ALL src/main.cc ${SOURCES})
@@ -63,5 +61,5 @@ add_custom_command(TARGET validation
                    COMMAND ./dramcore-validate -c configs/ddr4_8G_x8_config.ini -n 10000
                    # post processing scripts here...
                    COMMAND rm dramcore-validate
-)
+        )
 
