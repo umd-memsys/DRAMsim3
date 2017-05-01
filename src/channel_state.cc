@@ -202,6 +202,9 @@ void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< st
 
 void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
     // cout << "Command Issue at clk = " << clk << " - "<< cmd << endl;
+    #ifdef DEBUG_OUTPUT
+        cout << left << setw(8) << clk << " " << cmd << endl;
+    #endif  //DEBUG_OUTPUT
     if (val_output_enable) {
         val_output_ << left << setw(8) << clk << " " << cmd <<std::endl;
     }

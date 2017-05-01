@@ -48,9 +48,6 @@ void Controller::ClockTick() {
     auto cmd = cmd_queue_.GetCommandToIssue();
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
-        #ifdef DEBUG_OUTPUT
-            cout << left << setw(8) << clk_ << " " << cmd << endl;
-        #endif  //DEBUG_OUTPUT
     }
     /* //TODO Make- Aggressive precharing a knob
     else {
