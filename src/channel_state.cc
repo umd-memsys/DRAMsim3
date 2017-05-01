@@ -17,6 +17,11 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
             }
         }
     }
+    if (!config.validation_output_file.empty()) {
+        cout << "Validation Command Trace write to "<< config.validation_output_file << endl;
+        val_output_enable = true;
+        val_output_.open(config.validation_output_file, std::ofstream::out);
+    }
 }
 
 Command ChannelState::GetRequiredCommand(const Command& cmd) const { 
@@ -197,6 +202,9 @@ void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< st
 
 void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
     // cout << "Command Issue at clk = " << clk << " - "<< cmd << endl;
+    if (val_output_enable) {
+        val_output_ << left << setw(8) << clk << " " << cmd <<std::endl;
+    }
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
     return;

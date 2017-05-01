@@ -28,6 +28,8 @@ class ChannelState {
     private:
         const Config& config_;
         const Timing& timing_;
+        bool val_output_enable;
+        std::ofstream val_output_;
         Statistics& stats_;
         std::vector< std::vector< std::vector<BankState*> > > bank_states_;
         std::vector< std::list<uint64_t> > activation_times_;

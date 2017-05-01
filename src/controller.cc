@@ -12,11 +12,6 @@ Controller::Controller(int channel, const Config &config, const Timing &timing, 
     cmd_queue_(config, channel_state_, stats, callback_), //TODO - Isn't it really a request_queue. Why call it command_queue?
     refresh_(config, channel_state_, cmd_queue_, stats)
 {
-    if (!config.validation_output_file.empty()) {
-        cout << "Validation Command Trace write to "<< config.validation_output_file << endl;
-        val_output_enable = true;
-        val_output_.open(config.validation_output_file, std::ofstream::out);
-    }
 }
 
 void Controller::ClockTick() {
@@ -45,9 +40,6 @@ void Controller::ClockTick() {
             channel_state_.IssueCommand(cmd, clk_);
             if(cmd.IsRefresh()) {
                 channel_state_.UpdateRefreshWaitingStatus(cmd, false);
-                if (val_output_enable) {
-                    val_output_ << left << setw(8) << clk_ << " " << cmd <<std::endl;
-                }
             }
             return;
         }
@@ -59,9 +51,6 @@ void Controller::ClockTick() {
         #ifdef DEBUG_OUTPUT
             cout << left << setw(8) << clk_ << " " << cmd << endl;
         #endif  //DEBUG_OUTPUT
-        if (val_output_enable) {
-            val_output_ << left << setw(8) << clk_ << " " << cmd <<std::endl;
-        }
     }
     /* //TODO Make- Aggressive precharing a knob
     else {
