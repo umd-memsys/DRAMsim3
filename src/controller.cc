@@ -43,8 +43,12 @@ void Controller::ClockTick() {
         auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
         if(cmd.IsValid()) {
             channel_state_.IssueCommand(cmd, clk_);
-            if(cmd.IsRefresh())
+            if(cmd.IsRefresh()) {
                 channel_state_.UpdateRefreshWaitingStatus(cmd, false);
+                if (val_output_enable) {
+                    val_output_ << left << setw(8) << clk_ << " " << cmd <<std::endl;
+                }
+            }
             return;
         }
     }
