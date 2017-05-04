@@ -40,17 +40,17 @@ Config::Config(std::string config_file)
     // ultimately we only need cmd to cmd Timing instead of these     
     AL = static_cast<unsigned int>(reader.GetInteger("timing", "AL", 0));
     CL = static_cast<unsigned int>(reader.GetInteger("timing", "CL", 12));
-    CWL = static_cast<unsigned int>(reader.GetInteger("timing", "CL", 12));
-    tCCDL = static_cast<unsigned int>(reader.GetInteger("timing", "tCCDL", 6));
-    tCCDS = static_cast<unsigned int>(reader.GetInteger("timing", "tCCDS", 4));
+    CWL = static_cast<unsigned int>(reader.GetInteger("timing", "CWL", 12));
+    tCCD_L = static_cast<unsigned int>(reader.GetInteger("timing", "tCCD_L", 6));
+    tCCD_S = static_cast<unsigned int>(reader.GetInteger("timing", "tCCD_S", 4));
     tRTRS = static_cast<unsigned int>(reader.GetInteger("timing", "tRTRS", 2));
     tRTP = static_cast<unsigned int>(reader.GetInteger("timing", "tRTP", 5));
-    tCAS = static_cast<unsigned int>(reader.GetInteger("timing", "tCAS", 3)); //tCL
-    tCWD = static_cast<unsigned int>(reader.GetInteger("timing", "tCWD", 3)); // =tCAS
-    tWTR = static_cast<unsigned int>(reader.GetInteger("timing", "tWTR", 5));
+    tWTR_L = static_cast<unsigned int>(reader.GetInteger("timing", "tWTR_L", 5));
+    tWTR_S = static_cast<unsigned int>(reader.GetInteger("timing", "tWTR_S", 5));
     tWR = static_cast<unsigned int>(reader.GetInteger("timing", "tWR", 10));
     tRP = static_cast<unsigned int>(reader.GetInteger("timing", "tRP", 10));
-    tRRD = static_cast<unsigned int>(reader.GetInteger("timing", "tRRD", 4));
+    tRRD_L = static_cast<unsigned int>(reader.GetInteger("timing", "tRRD_L", 4));
+    tRRD_S = static_cast<unsigned int>(reader.GetInteger("timing", "tRRD_S", 4));
     tRAS = static_cast<unsigned int>(reader.GetInteger("timing", "tRAS", 24));
     tRCD = static_cast<unsigned int>(reader.GetInteger("timing", "tRCD", 10));
     tRFC = static_cast<unsigned int>(reader.GetInteger("timing", "tRFC", 74));
@@ -62,6 +62,9 @@ Config::Config(std::string config_file)
     tREFI = static_cast<unsigned int>(reader.GetInteger("timing", "tREFI", 7800));
     tREFIb = static_cast<unsigned int>(reader.GetInteger("timing", "tREFIb", 1950));
     tFAW = static_cast<unsigned int>(reader.GetInteger("timing", "tFAW", 50));
+    tRPRE = static_cast<unsigned int>(reader.GetInteger("timing", "tRPRE", 1));
+    tWPRE = static_cast<unsigned int>(reader.GetInteger("timing", "tWPRE", 1));
+
     read_delay = AL + CL + burst_len / 2;
     write_delay = AL + CWL + burst_len / 2;
 
@@ -107,8 +110,8 @@ void Config::CalculateSize() {
     unsigned int megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
     unsigned int megs_per_rank = megs_per_bank * banks * devices_per_rank;
 #ifdef DEBUG_OUTPUT
-cout << "megs per bank " << megs_per_bank << endl;
-cout << "megs per rank " << megs_per_rank << endl;
+    cout << "megs per bank " << megs_per_bank << endl;
+    cout << "megs per rank " << megs_per_rank << endl;
 #endif 
     if (megs_per_rank > channel_size) {
         std::cout<< "WARNING: Cannot create memory system of size " << channel_size 

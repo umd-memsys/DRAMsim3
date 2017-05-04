@@ -24,8 +24,10 @@ class Timing {
         unsigned int read_to_write;
         unsigned int read_to_write_o;
         unsigned int read_to_precharge;
+        unsigned int readp_to_act;
 
-        unsigned int write_to_read;
+        unsigned int write_to_read_l;
+        unsigned int write_to_read_s;
         unsigned int write_to_read_o;
         unsigned int write_to_write_l;
         unsigned int write_to_write_s;
@@ -37,7 +39,8 @@ class Timing {
         unsigned int write_to_activate;
 
         unsigned int activate_to_activate;
-        unsigned int activate_to_activate_o;
+        unsigned int activate_to_activate_l;
+        unsigned int activate_to_activate_s;
         unsigned int activate_to_precharge;
         unsigned int activate_to_read_write;
         unsigned int activate_to_refresh;

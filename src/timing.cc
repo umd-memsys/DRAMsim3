@@ -12,30 +12,35 @@ Timing::Timing(const Config& config) :
     other_ranks(static_cast<int>(CommandType::SIZE)),
     same_rank(static_cast<int>(CommandType::SIZE))
 {
-    read_to_read_l = std::max(config_.burst_len/2, config_.tCCDL     );
-    read_to_read_s = std::max(config_.burst_len/2, config_.tCCDS);
+    
+    read_to_read_l = std::max(config_.burst_len/2, config_.tCCD_L);
+    read_to_read_s = std::max(config_.burst_len/2, config_.tCCD_S);
     read_to_read_o = config_.burst_len/2 + config_.tRTRS;
-    read_to_write = std::max(config_.burst_len/2, config_.tCCDL) + config_.tCAS - config_.tCWD; // What if (tCAS - tCWD) < 0? Would that help issue an early write?
-    read_to_write_o = config_.burst_len/2 + config_.tRTRS + config_.tCAS - config_.tCWD; // What if (tCAS - tCWD) < 0? Would that help issue an early write?
-    read_to_precharge = config_.tRTP + config_.burst_len/2 - config_.tCCDL; // What if (burst_len/2 - tCCD) < 0? Would that help issue an early precharge?
+    read_to_write = config_.read_delay + config_.burst_len/2 - config_.write_delay + config_.tRPRE + config_.tRTRS;  // refer page 94 of DDR4 spec
+    read_to_write_o = config_.read_delay + config_.burst_len/2 + config_.tRTRS - config_.write_delay;
+    read_to_precharge = config_.AL + config_.tRTP + config_.burst_len/2 - config_.tCCD_L; 
+    readp_to_act = config_.AL + config_.burst_len/2 + config_.tRTP + config_.tRP;
 
-    write_to_read = config_.tCWD + config_.burst_len/2 + config_.tWTR; //Why doesn't tCCD come into the picture?
-    write_to_read_o = config_.tCWD + config_.burst_len/2 + config_.tRTRS - config_.tCAS; // What if (tCWD - tCAS) < 0? Would that help issue an early read?
-    write_to_write_l = std::max(config_.burst_len/2, config_.tCCDL);
-    write_to_write_s = std::max(config_.burst_len/2, config_.tCCDS);
-    write_to_write_o = config_.burst_len/2 + config_.tRTRS; // Let's say tRTRS == tOST
-    write_to_precharge = config_.tCWD + config_.burst_len/2 + config_.tWR;
+    write_to_read_l = config_.write_delay + config_.burst_len/2 + config_.tWTR_L;
+    write_to_read_s = config_.write_delay + config_.burst_len/2 + config_.tWTR_S;
+    write_to_read_o = config_.write_delay + config_.burst_len/2 + config_.tRTRS - config_.read_delay;
+    write_to_write_l = std::max(config_.burst_len/2, config_.tCCD_L);
+    write_to_write_s = std::max(config_.burst_len/2, config_.tCCD_S);
+    write_to_write_o = config_.burst_len/2 + config_.tWPRE; 
+    write_to_precharge = config_.write_delay + config_.burst_len/2 + config_.tWR;
 
     precharge_to_activate = config_.tRP;
     read_to_activate = read_to_precharge + precharge_to_activate;
     write_to_activate = write_to_precharge + precharge_to_activate;
 
     activate_to_activate = config_.tRC;
-    // TODO act to act should also be tRRD_L and tRRD_S
-    activate_to_activate_o = config_.tRRD;
+    activate_to_activate_l = config_.tRRD_L;
+    activate_to_activate_s = config_.tRRD_S;
     activate_to_precharge = config_.tRAS;
-    activate_to_read_write = config_.tRCD;
-    activate_to_refresh = config_.tRRD;
+    activate_to_read_write = config_.tRCD - config_.AL;
+    activate_to_refresh = config_.tRC;  // need to precharge before ref, so it's tRC
+
+    // TODO the following ref timings need to be fixed
     refresh_to_refresh = config_.tRREFD;
     refresh_to_activate = refresh_to_refresh;
 
@@ -80,24 +85,24 @@ Timing::Timing(const Config& config) :
     //command WRITE
     same_bank[static_cast<int>(CommandType::WRITE)] = std::list< std::pair<CommandType, unsigned int> >
     {
-        { CommandType::READ, write_to_read },
+        { CommandType::READ, write_to_read_l },
         { CommandType::WRITE, write_to_write_l },
-        { CommandType::READ_PRECHARGE, write_to_read },
+        { CommandType::READ_PRECHARGE, write_to_read_l },
         { CommandType::WRITE_PRECHARGE, write_to_write_l },
         { CommandType::PRECHARGE, write_to_precharge }
     };
     other_banks_same_bankgroup[static_cast<int>(CommandType::WRITE)] = std::list< std::pair<CommandType, unsigned int> >
     {
-        { CommandType::READ, write_to_read },
+        { CommandType::READ, write_to_read_l },
         { CommandType::WRITE, write_to_write_l },
-        { CommandType::READ_PRECHARGE, write_to_read },
+        { CommandType::READ_PRECHARGE, write_to_read_l },
         { CommandType::WRITE_PRECHARGE, write_to_write_l }
     };
     other_bankgroups_same_rank[static_cast<int>(CommandType::WRITE)] = std::list< std::pair<CommandType, unsigned int> >
     {
-        { CommandType::READ, write_to_read },
+        { CommandType::READ, write_to_read_s },
         { CommandType::WRITE, write_to_write_s },
-        { CommandType::READ_PRECHARGE, write_to_read },
+        { CommandType::READ_PRECHARGE, write_to_read_s },
         { CommandType::WRITE_PRECHARGE, write_to_write_s }
     };
     other_ranks[static_cast<int>(CommandType::WRITE)] = std::list< std::pair<CommandType, unsigned int> >
@@ -111,7 +116,7 @@ Timing::Timing(const Config& config) :
     //command READ_PRECHARGE
     same_bank[static_cast<int>(CommandType::READ_PRECHARGE)] = std::list< std::pair<CommandType, unsigned int> >
     {
-        { CommandType::ACTIVATE, read_to_activate },
+        { CommandType::ACTIVATE, readp_to_act },
         { CommandType::REFRESH, read_to_activate },
         { CommandType::REFRESH_BANK, read_to_activate },
         { CommandType::SELF_REFRESH_ENTER, read_to_activate }
@@ -148,16 +153,16 @@ Timing::Timing(const Config& config) :
     };
     other_banks_same_bankgroup[static_cast<int>(CommandType::WRITE_PRECHARGE)] = std::list< std::pair<CommandType, unsigned int> >
     {
-        { CommandType::READ, write_to_read },
+        { CommandType::READ, write_to_read_l },
         { CommandType::WRITE, write_to_write_l },
-        { CommandType::READ_PRECHARGE, write_to_read },
+        { CommandType::READ_PRECHARGE, write_to_read_l },
         { CommandType::WRITE_PRECHARGE, write_to_write_l }
     };
     other_bankgroups_same_rank[static_cast<int>(CommandType::WRITE_PRECHARGE)] = std::list< std::pair<CommandType, unsigned int> >
     {
-        { CommandType::READ, write_to_read },
+        { CommandType::READ, write_to_read_s },
         { CommandType::WRITE, write_to_write_s },
-        { CommandType::READ_PRECHARGE, write_to_read },
+        { CommandType::READ_PRECHARGE, write_to_read_s },
         { CommandType::WRITE_PRECHARGE, write_to_write_s }
     };
     other_ranks[static_cast<int>(CommandType::WRITE_PRECHARGE)] = std::list< std::pair<CommandType, unsigned int> >
@@ -181,13 +186,13 @@ Timing::Timing(const Config& config) :
 
     other_banks_same_bankgroup[static_cast<int>(CommandType::ACTIVATE)] = std::list< std::pair<CommandType, unsigned int> >
     {
-        { CommandType::ACTIVATE, activate_to_activate_o },
+        { CommandType::ACTIVATE, activate_to_activate_l },
         { CommandType::REFRESH_BANK, activate_to_refresh }
     };
 
     other_bankgroups_same_rank[static_cast<int>(CommandType::ACTIVATE)] = std::list< std::pair<CommandType, unsigned int> >
     {
-        { CommandType::ACTIVATE, activate_to_activate_o },
+        { CommandType::ACTIVATE, activate_to_activate_s },
         { CommandType::REFRESH_BANK, activate_to_refresh }
     };
 

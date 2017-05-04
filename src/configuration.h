@@ -20,23 +20,22 @@ public:
     unsigned int columns;
     unsigned int device_width;
     unsigned int bus_width;
-    unsigned int queue_size;
     unsigned int burst_len;
 
     //DRAM timing parameters
     unsigned int AL;
     unsigned int CL;
     unsigned int CWL;
-    unsigned int tCCDL;
-    unsigned int tCCDS;
+    unsigned int tCCD_L;
+    unsigned int tCCD_S;
     unsigned int tRTRS;
     unsigned int tRTP;
-    unsigned int tCAS; //tCL
-    unsigned int tCWD; // =tCAS
-    unsigned int tWTR;
+    unsigned int tWTR_L;
+    unsigned int tWTR_S;
     unsigned int tWR;
     unsigned int tRP;
-    unsigned int tRRD;
+    unsigned int tRRD_L;
+    unsigned int tRRD_S;
     unsigned int tRAS;
     unsigned int tRCD;
     unsigned int tRFC;
@@ -45,11 +44,11 @@ public:
     unsigned int tXS;
     unsigned int tRFCb;
     unsigned int tRREFD;
-
     unsigned int tREFI;
     unsigned int tREFIb;
-
     unsigned int tFAW;
+    unsigned int tRPRE;  // read preamble and write preamble are important
+    unsigned int tWPRE; 
     unsigned int read_delay;
     unsigned int write_delay;
 
@@ -57,6 +56,7 @@ public:
 
     std::string address_mapping;
     std::string queue_structure;
+    unsigned int queue_size;
     bool req_buffering_enabled;
 
     std::string validation_output_file;
