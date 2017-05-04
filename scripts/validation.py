@@ -118,6 +118,22 @@ def get_ddr3_prefix_str():
     """
     nothing more than just setting up the workbench initialization
     """
+    al = configs["timing"]["al"]
+    cl = configs["timing"]["cl"]
+
+    if al== 0:
+        mod_1_str = "b0000000110"
+    elif al == (cl - 1):
+        mod_1_str = "b0000001110"
+    elif al == (cl - 2):
+        mod_1_str = "b0000010110"
+    else:
+        mod_1_str = "b0000000110"
+        print "Invalid AL/CL values!"
+        exit(1)
+
+    print "CL:", al, " CL:", cl, " MOD Reg 1:" + mod_1_str
+
     prefix_str = """
     initial begin : test
         parameter [31:0] REP = DQ_BITS/8.0;
@@ -163,13 +179,13 @@ def get_ddr3_prefix_str():
         nop             (tmrd-1);
         load_mode       (2, {14'b00001000_000_000} | mr_cwl<<3); // Extended Mode Register 2 with DCC Disable
         nop             (tmrd-1);
-        load_mode       (1, 14'b0000010110);            // Extended Mode Register with DLL Enable, AL=CL-1
+        load_mode       (1, 14'%s);            // Extended Mode Register with DLL Enable, AL=CL-1
         nop             (tmrd-1);
-        load_mode       (0, {14'b0_0_000_1_0_000_1_0_00} | mr_wr<<9 | mr_cl<<2); // Mode Register with DLL Reset
+        load_mode       (0, {14'b0_1_000_1_0_000_1_0_00} | mr_wr<<9 | mr_cl<<2); // Mode Register with DLL Reset
         nop             (max(TDLLK,TZQINIT));
         odt_out         <= 1;                           // turn on odt
-        nop (10);
-        """
+        nop (512);  // satisfy tDLLK wierd the last nop wont do it...
+        """ % (mod_1_str)
     return prefix_str
 
 
