@@ -179,12 +179,12 @@ def get_ddr3_prefix_str():
         nop             (tmrd-1);
         load_mode       (2, {14'b00001000_000_000} | mr_cwl<<3); // Extended Mode Register 2 with DCC Disable
         nop             (tmrd-1);
-        load_mode       (1, 14'%s);            // Extended Mode Register with DLL Enable, AL=CL-1
+        load_mode       (1, 14'%s);            // Extended Mode Register with DLL Enable
         nop             (tmrd-1);
         load_mode       (0, {14'b0_1_000_1_0_000_1_0_00} | mr_wr<<9 | mr_cl<<2); // Mode Register with DLL Reset
-        nop             (max(TDLLK,TZQINIT));
-        odt_out         <= 1;                           // turn on odt
-        nop (512);  // satisfy tDLLK wierd the last nop wont do it...
+        nop             (683);  // make sure tDLLK and tZQINIT satisify
+        odt_out         <= 0;                           // turn off odt, making life much easier...
+        nop (7);  // satisfy tDLLK wierd the last nop wont do it...
         """ % (mod_1_str)
     return prefix_str
 
