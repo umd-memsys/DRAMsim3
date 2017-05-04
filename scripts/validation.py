@@ -184,7 +184,7 @@ def get_ddr3_prefix_str():
         load_mode       (0, {14'b0_1_000_1_0_000_1_0_00} | mr_wr<<9 | mr_cl<<2); // Mode Register with DLL Reset
         nop             (683);  // make sure tDLLK and tZQINIT satisify
         odt_out         <= 0;                           // turn off odt, making life much easier...
-        nop (7);  // satisfy tDLLK wierd the last nop wont do it...
+        nop (7);  
         """ % (mod_1_str)
     return prefix_str
 
@@ -285,10 +285,12 @@ def get_ddr4_prefix_str(config):
                                                     .write_recovery(%d),
                                                     .qoff(0),
                                                     .cwl(%d),
+                                                    .rd_preamble_clocks(%d),
                                                     .wr_preamble_clocks(%d),
-                                                    .bl_reg(rBLFLY),
+                                                    .bl_reg(rBL8),
                                                     .dll_enable(1),
-                                                    .dll_reset(1));
+                                                    .dll_reset(1),
+                                                    .dm_enable(0));
     _state.ModeToAddrDecode(dut_mode_config, mode_regs);
     load_mode(.bg(0), .ba(1), .addr(mode_regs[1]));
     deselect(timing.tDLLKc); 
@@ -310,10 +312,20 @@ def get_ddr4_prefix_str(config):
     deselect(timing.tMOD/timing.tCK);
     zq_cl();
     deselect(timing.tZQinitc);
-    odt_out <= 1;                           // turn on odt
-    """ % (ts_table[ts][0], ts_table[ts][1], ts_table[ts][2],
-           config["timing"]["cl"], config["timing"]["twr"],
-           config["timing"]["cwl"], config["timing"]["twpre"])
+    odt_out <= 0;                           // turn off odt
+
+    golden_model.SetDutModeConfig(dut_mode_config);
+    golden_model.set_timing_parameter_lock(.locked(1), .recalculate_params(1), .non_spec_tck(%s)); // Prevent tCK changes from changing the loaded timeset.
+    """ % (ts_table[ts][0],  # min_ts, not used
+           ts_table[ts][1],
+           ts_table[ts][2],  # max_ts, not used
+           config["timing"]["cl"],
+           config["timing"]["twr"] + 1,  # have to + 1 to satisfy the verilog model, wierd..
+           config["timing"]["cwl"],
+           config["timing"]["trpre"],
+           config["timing"]["twpre"],
+           ts_table[ts][1][3:],  # non_spec_tck, throw away TS_ and only leaves clock
+          )
     return ddr4_prefix_str
 
 
@@ -321,7 +333,7 @@ def get_ddr4_postfix_str():
     """
     end the workbench file
     """
-    return get_ddr3_postfix_str();
+    return get_ddr3_postfix_str()
 
 
 def ddr4_trace_converter(trace_file_in, verilog_out):
