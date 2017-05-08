@@ -287,10 +287,14 @@ def get_ddr4_prefix_str(config):
                                                     .cwl(%d),
                                                     .rd_preamble_clocks(%d),
                                                     .wr_preamble_clocks(%d),
+                                                    .read_dbi(0),
+                                                    .write_dbi(0),
                                                     .bl_reg(rBL8),
                                                     .dll_enable(1),
                                                     .dll_reset(1),
                                                     .dm_enable(0));
+    dut_mode_config.AL = 0;
+    dut_mode_config.BL = 8;
     _state.ModeToAddrDecode(dut_mode_config, mode_regs);
     load_mode(.bg(0), .ba(1), .addr(mode_regs[1]));
     deselect(timing.tDLLKc); 

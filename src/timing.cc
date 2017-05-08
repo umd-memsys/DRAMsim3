@@ -18,7 +18,7 @@ Timing::Timing(const Config& config) :
     read_to_read_o = config_.burst_len/2 + config_.tRTRS;
     read_to_write = config_.read_delay + config_.burst_len/2 - config_.write_delay + config_.tRPRE + config_.tRTRS;  // refer page 94 of DDR4 spec
     read_to_write_o = config_.read_delay + config_.burst_len/2 + config_.tRTRS - config_.write_delay;
-    read_to_precharge = config_.AL + config_.tRTP + config_.burst_len/2 - config_.tCCD_L; 
+    read_to_precharge = config_.AL + config_.tRTP; // + config_.burst_len/2 - config_.tCCD_L; 
     readp_to_act = config_.AL + config_.burst_len/2 + config_.tRTP + config_.tRP;
 
     write_to_read_l = config_.write_delay + config_.burst_len/2 + config_.tWTR_L;
@@ -176,12 +176,12 @@ Timing::Timing(const Config& config) :
     //command ACTIVATE
     same_bank[static_cast<int>(CommandType::ACTIVATE)] = std::list< std::pair<CommandType, unsigned int> >
     {
+        { CommandType::ACTIVATE, activate_to_activate },
         { CommandType::READ, activate_to_read_write },
         { CommandType::WRITE, activate_to_read_write },
         { CommandType::READ_PRECHARGE, activate_to_read_write },
         { CommandType::WRITE_PRECHARGE, activate_to_read_write },
         { CommandType::PRECHARGE, activate_to_precharge },
-        //{ CommandType::ACTIVATE, activate_to_activate }
     };
 
     other_banks_same_bankgroup[static_cast<int>(CommandType::ACTIVATE)] = std::list< std::pair<CommandType, unsigned int> >
