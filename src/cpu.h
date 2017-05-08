@@ -18,11 +18,9 @@ private:
     MemorySystem& memory_system_;
     const Config& config_;
     uint64_t clk_;
-    Address last_addr_;
-    Request* req_;
+    uint64_t last_addr_;
     bool get_next_ = true;
     int req_id_ = 0;
-    std::ofstream req_log_;
 };
 
 class TraceBasedCPU {

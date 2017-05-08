@@ -81,18 +81,11 @@ class Command {
 
 class Request {
     public:
-        //TODO - These constructors are terrible. Fix them ASAP
         Request(CommandType cmd_type, const Address& addr) :
                 cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(0), exit_time_(0), id_(-1) {}
 
-        Request(CommandType cmd_type, uint64_t hex_addr, const Config& config) :
-            cmd_(Command(cmd_type, AddressMapping(hex_addr, config))), hex_addr_(hex_addr), arrival_time_(0), exit_time_(0), id_(-1) {}
-
         Request(CommandType cmd_type, const Address& addr, uint64_t arrival_time, int64_t id) :
             cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
-
-        Request(CommandType cmd_type, uint64_t hex_addr, const Config& config, uint64_t arrival_time, int64_t id) :
-            cmd_(Command(cmd_type, AddressMapping(hex_addr, config))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
 
         Command cmd_;
         uint64_t hex_addr_;

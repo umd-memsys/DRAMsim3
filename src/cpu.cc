@@ -6,9 +6,7 @@ using namespace dramcore;
 RandomCPU::RandomCPU(MemorySystem& memory_system) :
     memory_system_(memory_system),
     config_(*(memory_system.ptr_config_)),
-    clk_(0),
-    last_addr_(0, 0, 0, 0, 0, -1),
-    req_log_("requests.log")
+    clk_(0)
 {}
 
 
@@ -17,26 +15,28 @@ void RandomCPU::ClockTick()
     // Create random CPU requests at random time intervals
     // With random row buffer hits
     // And insert them into the controller
-    if ( rand() % 4 == 0) { 
-        if(get_next_) {
-            get_next_ = false;
-            auto channel = rand() % config_.channels;
-            auto rank = rand() % config_.ranks;
-            auto bankgroup = rand() % config_.bankgroups;
-            auto bank = rand() % config_.banks_per_group;
-            auto row =  rand() % config_.rows;
-            auto col = rand() % config_.columns;
-            auto addr = rand() % 3 == 0 ? last_addr_ : Address(channel, rank, bankgroup, bank, row, col);
-            last_addr_ = addr;
-            auto cmd_type = rand() % 3 == 0 ? CommandType::WRITE : CommandType::READ;
-            req_ = new Request(cmd_type, addr, clk_, req_id_);
-        }
-        if(memory_system_.ctrls_[req_->Channel()]->InsertReq(req_)) { //TODO - This is silly. Modify it.
-            get_next_ = true;
-            req_id_++;
-            req_log_ << "Request Inserted at clk = " << clk_ << " " << *req_ << endl;
-        }
+    int hex_addr;
+    bool is_write;
+    bool issue_row_hit = (rand() % 5 == 0);  // every 5 reqs get a row hit
+
+    if (issue_row_hit || (!get_next_)) { 
+        hex_addr = last_addr_;  // use same address as last request to guarantee row hit
+    } else {
+        hex_addr = rand();
     }
+
+    is_write = rand() % 3 == 0 ? true: false;  // R/W ratio 2:1
+
+    bool is_inserted = memory_system_.InsertReq(req_id_, hex_addr, is_write);
+
+    if (is_inserted) {
+        req_id_++;
+        get_next_ = true;
+    } else {
+        last_addr_ = hex_addr;  // failed to insert, keep the address
+        get_next_ = false;
+    }
+
     clk_++;
     return;
 }

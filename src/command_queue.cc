@@ -149,8 +149,9 @@ bool CommandQueue::InsertReq(Request* req) {
         if (req_q_per_bank_[r][bg][b].size() < config_.queue_size) {
             req_q_per_bank_[r][bg][b].push_back(req);
             return true;
-        } else
+        } else {
             return false;
+        }
     }
     else if(config_.queue_structure == "PER_RANK") {
         auto r = req->Rank();

@@ -19,7 +19,8 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
 bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
-    Request* req = new Request(cmd_type, hex_addr, *ptr_config_, clk_, id_);
+    Address addr = AddressMapping(hex_addr, *ptr_config_);
+    Request* req = new Request(cmd_type, addr);
 
     // Some CPU simulators might not model the backpressure because queues are full.
     // An approximate way of addressing this scenario is to buffer all such requests here in the DRAM simulator and then
@@ -46,6 +47,7 @@ void MemorySystem::ClockTick() {
             auto req = *req_itr;
             if(ctrls_[req->Channel()]->InsertReq(req)) {
                 buffer_q_.erase(req_itr);
+                break;  // either break or set req_itr to the return value of erase() 
             }
         }
     }

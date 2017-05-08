@@ -18,7 +18,7 @@ Timing::Timing(const Config& config) :
     read_to_read_o = config_.burst_len/2 + config_.tRTRS;
     read_to_write = config_.read_delay + config_.burst_len/2 - config_.write_delay + config_.tRPRE + config_.tRTRS;  // refer page 94 of DDR4 spec
     read_to_write_o = config_.read_delay + config_.burst_len/2 + config_.tRTRS - config_.write_delay;
-    read_to_precharge = config_.AL + config_.tRTP; // + config_.burst_len/2 - config_.tCCD_L; 
+    read_to_precharge = config_.AL + config_.tRTP;
     readp_to_act = config_.AL + config_.burst_len/2 + config_.tRTP + config_.tRP;
 
     write_to_read_l = config_.write_delay + config_.burst_len/2 + config_.tWTR_L;
