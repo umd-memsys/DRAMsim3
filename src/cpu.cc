@@ -15,6 +15,12 @@ void RandomCPU::ClockTick()
     // Create random CPU requests at random time intervals
     // With random row buffer hits
     // And insert them into the controller
+    
+    if (rand() % 4 != 0) {  // issue a request every 4 cycles
+        clk_++;
+        return;
+    }
+
     int hex_addr;
     bool is_write;
     bool issue_row_hit = (rand() % 5 == 0);  // every 5 reqs get a row hit
