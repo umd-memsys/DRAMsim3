@@ -394,8 +394,19 @@ def ddr3_validation(config, trace_file):
                str([k for k in speed_table])
     speed = speed_table[tck]
 
-    cmd_str = "vlog +define+%s +define+x%d +define+%s tb.v ddr3.v" % (density, width, speed)
-    print cmd_str
+    # generate script to run modelsim simulation in command line mode
+    # note this will generate a run_modelsim.sh script file
+    # also a v_out.log file after running the script
+    cmd_str = \
+    """
+    vlib work
+    vlog -quiet -suppress 2597 +define+%s +define+x%d +define+%s tb.v ddr3.v
+    vsim -quiet -nostdout -c -l v_out.log -novopt tb -do "run -all"
+
+    """ % (density, width, speed)
+
+    with open("run_modelsim.sh", "wb") as script_out:
+        script_out.write(cmd_str)
 
     trace_out = trace_file + ".vh"
     with open(trace_out, "wb") as vh_out:
