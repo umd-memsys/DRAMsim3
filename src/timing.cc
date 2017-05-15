@@ -12,7 +12,7 @@ Timing::Timing(const Config& config) :
     other_ranks(static_cast<int>(CommandType::SIZE)),
     same_rank(static_cast<int>(CommandType::SIZE))
 {
-    
+    // TODO tCCD_S is used when BG is disabled, this needs to be corrected   
     read_to_read_l = std::max(config_.burst_cycle, config_.tCCD_L);
     read_to_read_s = std::max(config_.burst_cycle, config_.tCCD_S);
     read_to_read_o = config_.burst_cycle + config_.tRTRS;
