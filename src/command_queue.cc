@@ -4,7 +4,7 @@
 using namespace std;
 using namespace dramcore;
 
-CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback) :
+CommandQueue::CommandQueue(const Config &config, ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback) :
     callback_(callback),
     clk_(0),
     config_(config),

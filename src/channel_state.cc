@@ -8,7 +8,7 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
     timing_(timing),
     stats_(stats),
     bank_states_(config_.ranks, std::vector< std::vector<BankState*> >(config_.bankgroups, std::vector<BankState*>(config_.banks_per_group, NULL) ) ),
-    activation_times_(config_.ranks, std::list<uint64_t>())
+    activation_times_(config_.ranks, std::vector<uint64_t>())
 {
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto j = 0; j < config_.bankgroups; j++) {
@@ -55,7 +55,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     }
 }
 
-bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
+bool ChannelState::IsReady(const Command& cmd, uint64_t clk) {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
             if(ActivationConstraint(cmd.Rank(), clk))
@@ -229,26 +229,24 @@ void ChannelState::UpdateRefreshWaitingStatus(const Command& cmd, bool status) {
     return;
 }
 
-bool ChannelState::ActivationConstraint(int rank, uint64_t curr_time) const {
-    auto count = 0;
-    for( auto act_time : activation_times_[rank]) {
-        if(curr_time - act_time < config_.tFAW) //TODO Strict less than or less than or equal to?
-            count++;
-        else
-            break; //Activation times are ordered. For simulator performance. Really needed?
+bool ChannelState::ActivationConstraint(int rank, uint64_t curr_time) {
+    if (!activation_times_[rank].empty()) {
+        if ( curr_time < activation_times_[rank][0]) {
+            if (activation_times_[rank].size() < 4 ){
+                return false;
+            } else {
+                return true;
+            }
+        } else {
+            activation_times_[rank].erase(activation_times_[rank].begin());
+            return false;
+        }
+    } else {
+        return false;
     }
-    return count >= config_.activation_window_depth; //ASSERT that count is never greater than activation_window_depth
 }
 
 void ChannelState::UpdateActivationTimes(int rank, uint64_t curr_time) {
-    //Delete stale time entries
-    for(auto list_itr = activation_times_[rank].begin(); list_itr != activation_times_[rank].end(); list_itr++) {
-        auto act_time = *list_itr;
-        if( curr_time - act_time > config_.tFAW) {
-            activation_times_[rank].erase(list_itr, activation_times_[rank].end()); //ASSERT There will always be only one element to delete (+1 error - check)
-            break;
-        }
-    }
-    activation_times_[rank].push_front(curr_time);
+    activation_times_[rank].push_back(curr_time + config_.tFAW);
     return;
 }

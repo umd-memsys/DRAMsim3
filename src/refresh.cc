@@ -3,7 +3,7 @@
 using namespace std;
 using namespace dramcore;
 
-Refresh::Refresh(const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue, Statistics &stats) :
+Refresh::Refresh(const Config &config, ChannelState &channel_state, CommandQueue &cmd_queue, Statistics &stats) :
     config_(config),
     channel_state_(channel_state),
     cmd_queue_(cmd_queue),
