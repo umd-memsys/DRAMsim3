@@ -15,6 +15,7 @@ Config::Config(std::string config_file)
     }
 
     // System/controller Parameters
+    protocol = reader.Get("dram_structure", "protocol", "DDR3");
     channel_size = static_cast<unsigned int>(reader.GetInteger("system", "channel_size", 1024));
     channels = static_cast<unsigned int>(reader.GetInteger("system", "channels", 1));
     bus_width = static_cast<unsigned int>(reader.GetInteger("system", "bus_width", 64));
@@ -30,7 +31,7 @@ Config::Config(std::string config_file)
     rows = static_cast<unsigned int>(reader.GetInteger("dram_structure", "rows", 1 << 16));
     columns = static_cast<unsigned int>(reader.GetInteger("dram_structure", "columns", 1 << 10));
     device_width = static_cast<unsigned int>(reader.GetInteger("dram_structure", "device_width", 8));
-    burst_len = static_cast<unsigned int>(reader.GetInteger("dram_structure", "BL", 8)); //tBL
+    BL = static_cast<unsigned int>(reader.GetInteger("dram_structure", "BL", 8)); //tBL
 
     // calculate rank and re-calculate channel_size
     CalculateSize();
@@ -65,8 +66,25 @@ Config::Config(std::string config_file)
     tRPRE = static_cast<unsigned int>(reader.GetInteger("timing", "tRPRE", 1));
     tWPRE = static_cast<unsigned int>(reader.GetInteger("timing", "tWPRE", 1));
 
-    read_delay = AL + CL + burst_len / 2;
-    write_delay = AL + CWL + burst_len / 2;
+    // GDDR5 only 
+    tRCDRD = static_cast<unsigned int>(reader.GetInteger("timing", "tRCDRD", 24));
+    tRCDWR = static_cast<unsigned int>(reader.GetInteger("timing", "tRCDWR", 20));
+
+
+    RL = AL + CL;
+    WL = AL + CWL;
+
+    // Protocol specific timing
+    if (protocol == "GDDR5") {
+        burst_cycle = BL/4;
+    } else if (protocol == "GDDR5X") {
+        burst_cycle = BL/8;
+    } else {
+        burst_cycle = BL/2;
+    }
+
+    read_delay = RL + burst_cycle;
+    write_delay = WL + burst_cycle;
 
     activation_window_depth = static_cast<unsigned int>(reader.GetInteger("timing", "activation_window_depth", 4));    
 
@@ -81,7 +99,7 @@ Config::Config(std::string config_file)
     row_width_ = LogBase2(rows);
     column_width_ = LogBase2(columns);
     unsigned int bytes_offset = LogBase2(bus_width / 8);
-    unsigned int transaction_size = bus_width / 8 * burst_len;  // transaction size in bytes
+    unsigned int transaction_size = bus_width / 8 * BL;  // transaction size in bytes
 
     // for each address given, because we're transimitting trascation_size bytes per transcation
     // therefore there will be throwaway_bits not used in the address

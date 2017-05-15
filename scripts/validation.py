@@ -495,12 +495,12 @@ class LPDDRValidtion(DRAMValidation):
             bl_bits = "011"
         else:  # BL=16
             bl_bits = "100"
-        
+
         if cl == 2:
             cl_bits = "10"
         else:
             cl_bits = "11"
-        
+
         prefix = """
         initial begin:test
         //ck     <= 1'b0;

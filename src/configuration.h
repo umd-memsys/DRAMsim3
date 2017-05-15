@@ -10,6 +10,7 @@ public:
     Config(std::string config_file);
 
     //DRAM physical structure
+    std::string protocol;
     unsigned int channel_size;
     unsigned int channels;
     unsigned int ranks;
@@ -20,12 +21,15 @@ public:
     unsigned int columns;
     unsigned int device_width;
     unsigned int bus_width;
-    unsigned int burst_len;
+    unsigned int BL;
 
-    //DRAM timing parameters
+    //Generic DRAM timing parameters
+    unsigned int burst_cycle;   // seperate BL with timing since fot GDDRx it's not BL/2
     unsigned int AL;
     unsigned int CL;
     unsigned int CWL;
+    unsigned int RL;
+    unsigned int WL;
     unsigned int tCCD_L;
     unsigned int tCCD_S;
     unsigned int tRTRS;
@@ -51,6 +55,10 @@ public:
     unsigned int tWPRE; 
     unsigned int read_delay;
     unsigned int write_delay;
+
+    // GDDR5 
+    unsigned int tRCDRD;
+    unsigned int tRCDWR;
 
     unsigned int activation_window_depth = 4;
 

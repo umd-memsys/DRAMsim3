@@ -13,21 +13,21 @@ Timing::Timing(const Config& config) :
     same_rank(static_cast<int>(CommandType::SIZE))
 {
     
-    read_to_read_l = std::max(config_.burst_len/2, config_.tCCD_L);
-    read_to_read_s = std::max(config_.burst_len/2, config_.tCCD_S);
-    read_to_read_o = config_.burst_len/2 + config_.tRTRS;
-    read_to_write = config_.read_delay + config_.burst_len/2 - config_.write_delay + config_.tRPRE + config_.tRTRS;  // refer page 94 of DDR4 spec
-    read_to_write_o = config_.read_delay + config_.burst_len/2 + config_.tRTRS - config_.write_delay;
+    read_to_read_l = std::max(config_.burst_cycle, config_.tCCD_L);
+    read_to_read_s = std::max(config_.burst_cycle, config_.tCCD_S);
+    read_to_read_o = config_.burst_cycle + config_.tRTRS;
+    read_to_write = config_.RL + config_.burst_cycle - config_.WL + config_.tRPRE + config_.tRTRS;  // refer page 94 of DDR4 spec
+    read_to_write_o = config_.read_delay + config_.burst_cycle + config_.tRTRS - config_.write_delay;
     read_to_precharge = config_.AL + config_.tRTP;
-    readp_to_act = config_.AL + config_.burst_len/2 + config_.tRTP + config_.tRP;
-
-    write_to_read_l = config_.write_delay + config_.burst_len/2 + config_.tWTR_L;
-    write_to_read_s = config_.write_delay + config_.burst_len/2 + config_.tWTR_S;
-    write_to_read_o = config_.write_delay + config_.burst_len/2 + config_.tRTRS - config_.read_delay;
-    write_to_write_l = std::max(config_.burst_len/2, config_.tCCD_L);
-    write_to_write_s = std::max(config_.burst_len/2, config_.tCCD_S);
-    write_to_write_o = config_.burst_len/2 + config_.tWPRE; 
-    write_to_precharge = config_.write_delay + config_.burst_len/2 + config_.tWR;
+    readp_to_act = config_.AL + config_.burst_cycle + config_.tRTP + config_.tRP;
+    
+    write_to_read_l = config_.write_delay + config_.tWTR_L;
+    write_to_read_s = config_.write_delay + config_.tWTR_S;
+    write_to_read_o = config_.write_delay + config_.burst_cycle + config_.tRTRS - config_.read_delay;
+    write_to_write_l = std::max(config_.burst_cycle, config_.tCCD_L);
+    write_to_write_s = std::max(config_.burst_cycle, config_.tCCD_S);
+    write_to_write_o = config_.burst_cycle + config_.tWPRE; 
+    write_to_precharge = config_.WL + config_.burst_cycle + config_.tWR;
 
     precharge_to_activate = config_.tRP;
     read_to_activate = read_to_precharge + precharge_to_activate;
@@ -37,7 +37,13 @@ Timing::Timing(const Config& config) :
     activate_to_activate_l = config_.tRRD_L;
     activate_to_activate_s = config_.tRRD_S;
     activate_to_precharge = config_.tRAS;
-    activate_to_read_write = config_.tRCD - config_.AL;
+    if (config_.protocol == "GDDR5" || config_.protocol == "GDDR5X"){
+        activate_to_read = config_.tRCDRD;
+        activate_to_write = config_.tRCDWR;   
+    } else {
+        activate_to_read = config_.tRCD - config_.AL;
+        activate_to_write = config_.tRCD - config_.AL;
+    }
     activate_to_refresh = config_.tRC;  // need to precharge before ref, so it's tRC
 
     // TODO the following ref timings need to be fixed
@@ -177,10 +183,10 @@ Timing::Timing(const Config& config) :
     same_bank[static_cast<int>(CommandType::ACTIVATE)] = std::list< std::pair<CommandType, unsigned int> >
     {
         { CommandType::ACTIVATE, activate_to_activate },
-        { CommandType::READ, activate_to_read_write },
-        { CommandType::WRITE, activate_to_read_write },
-        { CommandType::READ_PRECHARGE, activate_to_read_write },
-        { CommandType::WRITE_PRECHARGE, activate_to_read_write },
+        { CommandType::READ, activate_to_read },
+        { CommandType::WRITE, activate_to_write },
+        { CommandType::READ_PRECHARGE, activate_to_read },
+        { CommandType::WRITE_PRECHARGE, activate_to_write },
         { CommandType::PRECHARGE, activate_to_precharge },
     };
 
