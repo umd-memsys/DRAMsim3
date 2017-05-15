@@ -2,15 +2,30 @@
 #define __CONFIG_H
 
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace dramcore {
+
+enum class DRAMProtocol {
+    DDR3,
+    DDR4,
+    GDDR5,
+    GDDR5X,
+    LPDDR,
+    LPDDR3,
+    LPDDR4,
+    HBM2,
+    HMC,
+    SIZE
+};
 
 class Config {
 public:
     Config(std::string config_file);
 
     //DRAM physical structure
-    std::string protocol;
+    DRAMProtocol protocol;
     unsigned int channel_size;
     unsigned int channels;
     unsigned int ranks;
@@ -57,6 +72,7 @@ public:
     unsigned int write_delay;
 
     // GDDR5 
+    unsigned int t32AW;
     unsigned int tRCDRD;
     unsigned int tRCDWR;
 
@@ -75,7 +91,9 @@ public:
     unsigned int channel_width_, rank_width_, bankgroup_width_, 
         bank_width_, row_width_, column_width_, throwaway_bits;
 
+    bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
 private:
+    DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     void CalculateSize();
 };
 

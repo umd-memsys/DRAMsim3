@@ -8,7 +8,8 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
     timing_(timing),
     stats_(stats),
     bank_states_(config_.ranks, std::vector< std::vector<BankState*> >(config_.bankgroups, std::vector<BankState*>(config_.banks_per_group, NULL) ) ),
-    activation_times_(config_.ranks, std::vector<uint64_t>())
+    four_aw(config_.ranks, std::vector<uint64_t>()),
+    thirty_two_aw(config_.ranks, std::vector<uint64_t>())
 {
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto j = 0; j < config_.bankgroups; j++) {
@@ -58,8 +59,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
 bool ChannelState::IsReady(const Command& cmd, uint64_t clk) {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
-            if(ActivationConstraint(cmd.Rank(), clk))
-                return false; //TODO - Bad coding. Case statement is not supposed to be used like this
+            return ActivationWindowOk(cmd.Rank(), clk);
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
         case CommandType::WRITE:
@@ -229,24 +229,46 @@ void ChannelState::UpdateRefreshWaitingStatus(const Command& cmd, bool status) {
     return;
 }
 
-bool ChannelState::ActivationConstraint(int rank, uint64_t curr_time) {
-    if (!activation_times_[rank].empty()) {
-        if ( curr_time < activation_times_[rank][0]) {
-            if (activation_times_[rank].size() < 4 ){
-                return false;
-            } else {
-                return true;
-            }
-        } else {
-            activation_times_[rank].erase(activation_times_[rank].begin());
-            return false;
-        }
-    } else {
-        return false;
+bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) {
+    bool tfaw_ok = IsFAWReady(rank, curr_time);
+    if (config_.IsGDDR()) {
+        bool t32aw_ok = Is32AWReady(rank, curr_time);
+        return t32aw_ok && tfaw_ok;
     }
+    return tfaw_ok;
 }
 
 void ChannelState::UpdateActivationTimes(int rank, uint64_t curr_time) {
-    activation_times_[rank].push_back(curr_time + config_.tFAW);
+    four_aw[rank].push_back(curr_time + config_.tFAW);
+    if (config_.IsGDDR()) {
+        thirty_two_aw[rank].push_back(curr_time + config_.t32AW);
+    }
     return;
 }
+
+bool ChannelState::IsFAWReady(int rank, uint64_t curr_time) {
+    if (!four_aw[rank].empty()) {
+        if ( curr_time < four_aw[rank][0]) {
+            if (four_aw[rank].size() >= 4 ){
+                return false;
+            }
+        } else {
+            four_aw[rank].erase(four_aw[rank].begin());
+        }
+    } 
+    return true;
+}
+
+bool ChannelState::Is32AWReady(int rank, uint64_t curr_time) {
+    if (!thirty_two_aw[rank].empty()) {
+        if ( curr_time < thirty_two_aw[rank][0]) {
+            if (thirty_two_aw[rank].size() >= 32 ){
+                return false;
+            }
+        } else {
+            thirty_two_aw[rank].erase(thirty_two_aw[rank].begin());
+        }
+    } 
+    return true;
+}
+

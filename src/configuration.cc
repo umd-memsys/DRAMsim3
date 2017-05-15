@@ -15,7 +15,7 @@ Config::Config(std::string config_file)
     }
 
     // System/controller Parameters
-    protocol = reader.Get("dram_structure", "protocol", "DDR3");
+    protocol = GetDRAMProtocol(reader.Get("dram_structure", "protocol", "DDR3"));
     channel_size = static_cast<unsigned int>(reader.GetInteger("system", "channel_size", 1024));
     channels = static_cast<unsigned int>(reader.GetInteger("system", "channels", 1));
     bus_width = static_cast<unsigned int>(reader.GetInteger("system", "bus_width", 64));
@@ -25,6 +25,7 @@ Config::Config(std::string config_file)
     req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
 
     // DRAM organization
+    // TODO bankgroup can be disabled for GDDR5
     bankgroups = static_cast<unsigned int>(reader.GetInteger("dram_structure", "bankgroups", 2));
     banks_per_group = static_cast<unsigned int>(reader.GetInteger("dram_structure", "banks_per_group", 2));
     banks = bankgroups * banks_per_group;
@@ -75,9 +76,9 @@ Config::Config(std::string config_file)
     WL = AL + CWL;
 
     // Protocol specific timing
-    if (protocol == "GDDR5") {
+    if (protocol == DRAMProtocol::GDDR5) {
         burst_cycle = BL/4;
-    } else if (protocol == "GDDR5X") {
+    } else if (protocol == DRAMProtocol::GDDR5X) {
         burst_cycle = BL/8;
     } else {
         burst_cycle = BL/2;
@@ -120,6 +121,33 @@ Config::Config(std::string config_file)
 #endif
 
 }
+
+
+DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
+    std::vector<std::pair<std::string, DRAMProtocol>> protocol_pairs = {
+        {"DDR3", DRAMProtocol::DDR3},
+        {"DDR4", DRAMProtocol::DDR4},
+        {"GDDR5", DRAMProtocol::GDDR5},
+        {"GDDR5X", DRAMProtocol::GDDR5X},
+        {"LPDDR", DRAMProtocol::LPDDR},
+        {"LPDDR3", DRAMProtocol::LPDDR3},
+        {"LPDDR4", DRAMProtocol::LPDDR4},
+        {"HBM2", DRAMProtocol::HBM2},
+        {"HMC", DRAMProtocol::HMC}
+    };
+
+    for (auto pair_itr:protocol_pairs) {
+        if (pair_itr.first == protocol_str) {
+#ifdef DEBUG_OUTPUT
+    cout << "DRAM Procotol " << protocol_str << endl;
+#endif 
+            return pair_itr.second;
+        }
+    }
+    cout << "Unkwown/Unsupported DRAM Protocol: " << protocol_str << " Aborting!" << endl;
+    AbruptExit(__FILE__, __LINE__);
+}
+
 
 void Config::CalculateSize() {
     unsigned int devices_per_rank = bus_width / device_width;
