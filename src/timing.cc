@@ -12,7 +12,6 @@ Timing::Timing(const Config& config) :
     other_ranks(static_cast<int>(CommandType::SIZE)),
     same_rank(static_cast<int>(CommandType::SIZE))
 {
-    // TODO tCCD_S is used when BG is disabled, this needs to be corrected   
     read_to_read_l = std::max(config_.burst_cycle, config_.tCCD_L);
     read_to_read_s = std::max(config_.burst_cycle, config_.tCCD_S);
     read_to_read_o = config_.burst_cycle + config_.tRTRS;
@@ -56,6 +55,18 @@ Timing::Timing(const Config& config) :
 
     self_refresh_entry_to_exit = config_.tCKESR;
     self_refresh_exit = config_.tXS;
+
+    if (config_.bankgroups == 1) {  
+        // for GDDR5 bankgroup can be disabled, in that case 
+        // the value of tXXX_S should be used instead of tXXX_L 
+        // (because now the device is running at a lower freq)
+        // we overwrite the following values so that we don't have 
+        // to change the assignement of the vectors
+        read_to_read_l = std::max(config_.burst_cycle, config_.tCCD_S);
+        write_to_read_l = config_.write_delay + config_.tWTR_S;
+        write_to_write_l = std::max(config_.burst_cycle, config_.tCCD_S);
+        activate_to_activate_l = config_.tRRD_S;
+    }
 
     // command READ
     same_bank[static_cast<int>(CommandType::READ)] = std::list< std::pair<CommandType, unsigned int> >

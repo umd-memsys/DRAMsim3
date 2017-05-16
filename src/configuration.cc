@@ -25,7 +25,6 @@ Config::Config(std::string config_file)
     req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
 
     // DRAM organization
-    // TODO bankgroup can be disabled for GDDR5
     bool bankgroup_enable = reader.GetBoolean("dram_structure", "bankgroup_enable", true);
     bankgroups = static_cast<unsigned int>(reader.GetInteger("dram_structure", "bankgroups", 2));
     banks_per_group = static_cast<unsigned int>(reader.GetInteger("dram_structure", "banks_per_group", 2));
