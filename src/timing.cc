@@ -29,6 +29,7 @@ Timing::Timing(const Config& config) :
     write_to_precharge = config_.WL + config_.burst_cycle + config_.tWR;
 
     precharge_to_activate = config_.tRP;
+    precharge_to_precharge = config_.tPPD;
     read_to_activate = read_to_precharge + precharge_to_activate;
     write_to_activate = write_to_precharge + precharge_to_activate;
 
@@ -221,6 +222,19 @@ Timing::Timing(const Config& config) :
         { CommandType::REFRESH_BANK, precharge_to_activate },
         { CommandType::SELF_REFRESH_ENTER, precharge_to_activate }
     };
+
+    // for those who need tPPD
+    if (config_.IsGDDR() or config_.protocol == DRAMProtocol::LPDDR4 ) {
+        other_banks_same_bankgroup[static_cast<int>(CommandType::PRECHARGE)] = std::list< std::pair<CommandType, unsigned int> >
+        {
+            { CommandType::PRECHARGE, precharge_to_precharge },
+        };
+
+        other_bankgroups_same_rank[static_cast<int>(CommandType::PRECHARGE)] = std::list< std::pair<CommandType, unsigned int> >
+        {
+            { CommandType::PRECHARGE, precharge_to_precharge },
+        };
+    }
 
     //command REFRESH_BANK
     same_rank[static_cast<int>(CommandType::REFRESH_BANK)] = std::list< std::pair<CommandType, unsigned int> >

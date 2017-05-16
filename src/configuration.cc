@@ -71,7 +71,11 @@ Config::Config(std::string config_file)
     tRPRE = static_cast<unsigned int>(reader.GetInteger("timing", "tRPRE", 1));
     tWPRE = static_cast<unsigned int>(reader.GetInteger("timing", "tWPRE", 1));
 
+    // LPDDR4 and GDDR5
+    tPPD = static_cast<unsigned int>(reader.GetInteger("timing", "tPPD", 0));
+
     // GDDR5 only 
+    t32AW = static_cast<unsigned int>(reader.GetInteger("timing", "t32AW", 330));
     tRCDRD = static_cast<unsigned int>(reader.GetInteger("timing", "tRCDRD", 24));
     tRCDWR = static_cast<unsigned int>(reader.GetInteger("timing", "tRCDWR", 20));
 
@@ -79,7 +83,7 @@ Config::Config(std::string config_file)
     RL = AL + CL;
     WL = AL + CWL;
 
-    // Protocol specific timing
+    // set burst cycle according to protocol
     if (protocol == DRAMProtocol::GDDR5) {
         burst_cycle = BL/4;
     } else if (protocol == DRAMProtocol::GDDR5X) {
@@ -90,8 +94,6 @@ Config::Config(std::string config_file)
 
     read_delay = RL + burst_cycle;
     write_delay = WL + burst_cycle;
-
-    activation_window_depth = static_cast<unsigned int>(reader.GetInteger("timing", "activation_window_depth", 4));    
 
     // Other Parameters
     validation_output_file = reader.Get("other", "validation_output", "");

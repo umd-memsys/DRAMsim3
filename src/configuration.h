@@ -71,12 +71,12 @@ public:
     unsigned int read_delay;
     unsigned int write_delay;
 
+    // LPDDR4 and GDDR5
+    unsigned int tPPD;
     // GDDR5 
     unsigned int t32AW;
     unsigned int tRCDRD;
     unsigned int tRCDWR;
-
-    unsigned int activation_window_depth = 4;
 
     std::string address_mapping;
     std::string queue_structure;

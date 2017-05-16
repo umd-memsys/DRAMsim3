@@ -35,6 +35,7 @@ class Timing {
         unsigned int write_to_precharge;
 
         unsigned int precharge_to_activate;
+        unsigned int precharge_to_precharge;
         unsigned int read_to_activate;
         unsigned int write_to_activate;
 
