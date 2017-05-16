@@ -56,7 +56,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     }
 }
 
-bool ChannelState::IsReady(const Command& cmd, uint64_t clk) {
+bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
             return ActivationWindowOk(cmd.Rank(), clk);
@@ -229,7 +229,7 @@ void ChannelState::UpdateRefreshWaitingStatus(const Command& cmd, bool status) {
     return;
 }
 
-bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) {
+bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) const {
     bool tfaw_ok = IsFAWReady(rank, curr_time);
     if (config_.IsGDDR()) {
         bool t32aw_ok = Is32AWReady(rank, curr_time);
@@ -239,34 +239,32 @@ bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) {
 }
 
 void ChannelState::UpdateActivationTimes(int rank, uint64_t curr_time) {
+    if (!four_aw[rank].empty() && curr_time >= four_aw[rank][0]) {
+        four_aw[rank].erase(four_aw[rank].begin());
+    }
     four_aw[rank].push_back(curr_time + config_.tFAW);
     if (config_.IsGDDR()) {
+        if (!thirty_two_aw[rank].empty() && curr_time >= thirty_two_aw[rank][0]) {
+            thirty_two_aw[rank].erase(thirty_two_aw[rank].begin());
+        }
         thirty_two_aw[rank].push_back(curr_time + config_.t32AW);
     }
     return;
 }
 
-bool ChannelState::IsFAWReady(int rank, uint64_t curr_time) {
+bool ChannelState::IsFAWReady(int rank, uint64_t curr_time) const {
     if (!four_aw[rank].empty()) {
-        if ( curr_time < four_aw[rank][0]) {
-            if (four_aw[rank].size() >= 4 ){
-                return false;
-            }
-        } else {
-            four_aw[rank].erase(four_aw[rank].begin());
-        }
+        if ( curr_time < four_aw[rank][0] && four_aw[rank].size() >= 4) {
+            return false;
+        } 
     } 
     return true;
 }
 
-bool ChannelState::Is32AWReady(int rank, uint64_t curr_time) {
+bool ChannelState::Is32AWReady(int rank, uint64_t curr_time) const {
     if (!thirty_two_aw[rank].empty()) {
-        if ( curr_time < thirty_two_aw[rank][0]) {
-            if (thirty_two_aw[rank].size() >= 32 ){
-                return false;
-            }
-        } else {
-            thirty_two_aw[rank].erase(thirty_two_aw[rank].begin());
+        if ( curr_time < thirty_two_aw[rank][0] && thirty_two_aw[rank].size() >= 32) {
+            return false;
         }
     } 
     return true;

@@ -12,14 +12,14 @@ namespace dramcore {
 
 class Refresh {
     public:
-        Refresh(const Config &config, ChannelState &channel_state, CommandQueue &cmd_queue,
+        Refresh(const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue,
                         Statistics &stats);
         std::list<Request*> refresh_q_; // Queue of refresh commands
         void ClockTick();
         Command GetRefreshOrAssociatedCommand(std::list<Request*>::iterator refresh_itr);
     private:
         const Config& config_;
-        ChannelState& channel_state_;
+        const ChannelState& channel_state_;
         CommandQueue& cmd_queue_;
         Statistics& stats_;
         uint64_t clk_;

@@ -14,17 +14,15 @@ class ChannelState {
     public:
         ChannelState(const Config &config, const Timing &timing, Statistics &stats);
         Command GetRequiredCommand(const Command& cmd) const;
-        bool IsReady(const Command& cmd, uint64_t clk);
+        bool IsReady(const Command& cmd, uint64_t clk) const;
         void UpdateState(const Command& cmd);
         void UpdateTiming(const Command& cmd, uint64_t clk);
         void IssueCommand(const Command& cmd, uint64_t clk);
         void UpdateRefreshWaitingStatus(const Command& cmd, bool status);
-        bool ActivationWindowOk(int rank, uint64_t curr_time);
+        bool ActivationWindowOk(int rank, uint64_t curr_time) const;
         void UpdateActivationTimes(int rank, uint64_t curr_time);
         bool IsRefreshWaiting(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->IsRefreshWaiting(); }
         bool IsRowOpen(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->IsRowOpen(); }
-        bool IsFAWReady(int rank, uint64_t curr_time);
-        bool Is32AWReady(int rank, uint64_t curr_time);
         int OpenRow(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->OpenRow(); }
         int RowHitCount(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->RowHitCount(); };
     private:
@@ -37,6 +35,8 @@ class ChannelState {
         std::vector< std::vector<uint64_t> > four_aw;
         std::vector< std::vector<uint64_t> > thirty_two_aw;
 
+        bool IsFAWReady(int rank, uint64_t curr_time) const;
+        bool Is32AWReady(int rank, uint64_t curr_time) const;
         //Update timing of the bank the command corresponds to
         void UpdateSameBankTiming(const Address& addr, const std::list<std::pair<CommandType, unsigned int> > &cmd_timing_list, uint64_t clk);
 

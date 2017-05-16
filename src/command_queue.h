@@ -13,7 +13,7 @@ namespace dramcore {
 
 class CommandQueue {
 public:
-    CommandQueue(const Config &config, ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback);
+    CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback);
     Command GetCommandToIssue();
     Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
     Command AggressivePrecharge();
@@ -25,7 +25,7 @@ public:
     std::list<Request*> issued_req_; //TODO - Here or in the controller or main?
 private:
     const Config& config_;
-    ChannelState& channel_state_;
+    const ChannelState& channel_state_;
     Statistics& stats_;
     int next_rank_, next_bankgroup_, next_bank_;
     std::vector< std::vector< std::vector< std::list<Request*> > > > req_q_per_bank_;
