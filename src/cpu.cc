@@ -16,10 +16,10 @@ void RandomCPU::ClockTick()
     // With random row buffer hits
     // And insert them into the controller
     
-    if (rand() % 4 != 0) {  // issue a request every 4 cycles
-        clk_++;
-        return;
-    }
+    // if (rand() % 4 != 0) {  // issue a request every 4 cycles
+    //     clk_++;
+    //     return;
+    // }
 
     int hex_addr;
     bool is_write;

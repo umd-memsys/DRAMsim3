@@ -37,7 +37,7 @@ Timing::Timing(const Config& config) :
     activate_to_activate_l = config_.tRRD_L;
     activate_to_activate_s = config_.tRRD_S;
     activate_to_precharge = config_.tRAS;
-    if (config_.IsGDDR()){
+    if (config_.IsGDDR() || config_.IsHBM()){
         activate_to_read = config_.tRCDRD;
         activate_to_write = config_.tRCDWR;   
     } else {

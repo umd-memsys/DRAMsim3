@@ -15,6 +15,7 @@ enum class DRAMProtocol {
     LPDDR,
     LPDDR3,
     LPDDR4,
+    HBM,
     HBM2,
     HMC,
     SIZE
@@ -92,6 +93,7 @@ public:
         bank_width_, row_width_, column_width_, throwaway_bits;
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
+    bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}
 private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     void CalculateSize();

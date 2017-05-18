@@ -36,7 +36,7 @@ Config::Config(std::string config_file)
     rows = static_cast<unsigned int>(reader.GetInteger("dram_structure", "rows", 1 << 16));
     columns = static_cast<unsigned int>(reader.GetInteger("dram_structure", "columns", 1 << 10));
     device_width = static_cast<unsigned int>(reader.GetInteger("dram_structure", "device_width", 8));
-    BL = static_cast<unsigned int>(reader.GetInteger("dram_structure", "BL", 8)); //tBL
+    BL = static_cast<unsigned int>(reader.GetInteger("dram_structure", "BL", 8)); 
 
     // calculate rank and re-calculate channel_size
     CalculateSize();
@@ -138,6 +138,7 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
         {"LPDDR", DRAMProtocol::LPDDR},
         {"LPDDR3", DRAMProtocol::LPDDR3},
         {"LPDDR4", DRAMProtocol::LPDDR4},
+        {"HBM", DRAMProtocol::HBM},
         {"HBM2", DRAMProtocol::HBM2},
         {"HMC", DRAMProtocol::HMC}
     };
