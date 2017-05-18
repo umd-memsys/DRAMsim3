@@ -11,6 +11,12 @@
 
 namespace dramcore {
 
+enum class QueueStructure {
+    PER_RANK,
+    PER_BANK,
+    SIZE
+};
+
 class CommandQueue {
 public:
     CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback);
@@ -24,14 +30,15 @@ public:
     uint64_t clk_;
     std::list<Request*> issued_req_; //TODO - Here or in the controller or main?
 private:
+    QueueStructure queue_structure_;
     const Config& config_;
     const ChannelState& channel_state_;
     Statistics& stats_;
-    int next_rank_, next_bankgroup_, next_bank_;
-    std::vector< std::vector< std::vector< std::list<Request*> > > > req_q_per_bank_;
-    std::vector< std::list<Request*> > req_q_per_rank_;
+    int next_rank_, next_bankgroup_, next_bank_, next_queue_index_;
+    std::vector<std::list<Request*>> queues_;
 
     void IterateNext();
+    int GetQueueIndex(int rank, int bankgroup, int bank);
 };
 
 }
