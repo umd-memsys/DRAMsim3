@@ -46,18 +46,28 @@ void Controller::ClockTick() {
         }
     }
 
-    auto cmd = cmd_queue_.GetCommandToIssue();
+    auto cmd = cmd_queue_.GetCommandToIssue(false);
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
-    }
-    if (config_.IsHBM()) {  // if it's HBM, get another command if possible
-        auto second_cmd = cmd_queue_.GetCommandToIssue();
-        if (second_cmd.IsValid()) {
-            if (second_cmd.IsReadWrite() ^ cmd.IsReadWrite()) {
+
+        // it's only meaningful to check if there can be
+        // another command to be issued when the first one is valid
+        // also when the first one is Read/Write the second one cannot be another
+        // Read/Write because the timing constraint will not satisfy
+        if (config_.IsHBM()) {
+            auto second_cmd = Command();
+            if (cmd.IsReadWrite()) {
+                second_cmd = cmd_queue_.GetCommandToIssue(false);
+            } else {
+                second_cmd = cmd_queue_.GetCommandToIssue(true);
+            }
+            
+            if (second_cmd.IsValid()) {
                 channel_state_.IssueCommand(second_cmd, clk_);
             }
         }
     }
+
     /* //TODO Make- Aggressive precharing a knob
     else {
         //Look for closing open banks if any. (Aggressive precharing)

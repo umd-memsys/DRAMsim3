@@ -20,7 +20,7 @@ enum class QueueStructure {
 class CommandQueue {
 public:
     CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback);
-    Command GetCommandToIssue();
+    Command GetCommandToIssue(bool need_cas_cmd);
     Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
     Command AggressivePrecharge();
     std::function<void(uint64_t)>& callback_;
