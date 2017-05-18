@@ -32,18 +32,15 @@ CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_sta
 }
 
 Command CommandQueue::GetCommandToIssue() {
-    int start_queue_index = next_queue_index_;
-    bool cmd_issued = false;
-    while (!cmd_issued) {
-        auto cmd = GetCommandToIssueFromQueue(queues_[next_queue_index_]);
+    auto cmd = Command();
+    for (unsigned i = 0; i < queues_.size(); i++) {
+        cmd = GetCommandToIssueFromQueue(queues_[next_queue_index_]);
         IterateNext();
         if (cmd.IsValid()) {
             return cmd;
         }
-        if (start_queue_index == next_queue_index_) {
-            return Command();
-        }
     }
+    return cmd;
 }
 
 Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
