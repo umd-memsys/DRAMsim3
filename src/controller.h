@@ -22,6 +22,7 @@ public:
 private:
     uint64_t clk_;
     bool val_output_enable;
+    const Config& config_;
     std::ofstream val_output_;
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
