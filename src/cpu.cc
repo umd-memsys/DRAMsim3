@@ -24,17 +24,13 @@ void RandomCPU::ClockTick()
     int hex_addr;
     bool is_write;
     bool issue_row_hit = (rand() % 5 == 0);  // every 5 reqs get a row hit
-
     if (issue_row_hit || (!get_next_)) { 
         hex_addr = last_addr_;  // use same address as last request to guarantee row hit
     } else {
         hex_addr = rand();
     }
-
-    is_write = rand() % 3 == 0 ? true: false;  // R/W ratio 2:1
-
+    is_write = (rand() % 3 == 0);  // R/W ratio 2:1
     bool is_inserted = memory_system_.InsertReq(req_id_, hex_addr, is_write);
-
     if (is_inserted) {
         req_id_++;
         get_next_ = true;
@@ -42,7 +38,6 @@ void RandomCPU::ClockTick()
         last_addr_ = hex_addr;  // failed to insert, keep the address
         get_next_ = false;
     }
-
     clk_++;
     return;
 }
