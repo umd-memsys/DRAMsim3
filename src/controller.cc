@@ -14,6 +14,10 @@ Controller::Controller(int channel, const Config &config, const Timing &timing, 
 {
 }
 
+Controller::~Controller() {
+    val_output_.close(); //TODO - Where is this opened? Why is this closed here
+}
+
 void Controller::ClockTick() {
     clk_++;
     cmd_queue_.clk_++;
@@ -65,17 +69,3 @@ bool Controller::InsertReq(Request* req) {
     return cmd_queue_.InsertReq(req);
 }
 
-Controller::~Controller() {
-    val_output_.close();
-}
-
-// This function can be used by autoconf AC_CHECK_LIB since
-// apparently it can't detect C++ functions.
-// Basically just an entry in the symbol table
-extern "C"
-{
-  void libdramcore_is_present(void)
-  {
-	;
-  }
-}

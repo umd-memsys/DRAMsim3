@@ -62,6 +62,7 @@ class Command {
         bool IsValid() { return cmd_type_ != CommandType::SIZE; }
         bool IsRefresh() { return cmd_type_ == CommandType::REFRESH || cmd_type_ == CommandType::REFRESH_BANK; }
         bool IsRead() { return cmd_type_ == CommandType::READ || cmd_type_ == CommandType ::READ_PRECHARGE; }
+        bool IsWrite() { return cmd_type_ == CommandType ::WRITE || cmd_type_ == CommandType ::WRITE_PRECHARGE; }
         bool IsReadWrite() const { return cmd_type_ == CommandType::READ || cmd_type_ == CommandType::READ_PRECHARGE ||
                                           cmd_type_ == CommandType::WRITE || cmd_type_ == CommandType::WRITE_PRECHARGE; }
         CommandType cmd_type_;
@@ -75,7 +76,7 @@ class Command {
         int Column() const { return addr_.column_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
-        void print(std::ofstream& val_file);
+        void print(std::ofstream& val_file); //TODO - Remove?
 };
 
 
