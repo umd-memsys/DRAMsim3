@@ -62,6 +62,7 @@ class Command {
         bool IsValid() { return cmd_type_ != CommandType::SIZE; }
         bool IsRefresh() { return cmd_type_ == CommandType::REFRESH || cmd_type_ == CommandType::REFRESH_BANK; }
         bool IsRead() { return cmd_type_ == CommandType::READ || cmd_type_ == CommandType ::READ_PRECHARGE; }
+        bool IsWrite() { return cmd_type_ == CommandType ::WRITE || cmd_type_ == CommandType ::WRITE_PRECHARGE; }
         bool IsReadWrite() const { return cmd_type_ == CommandType::READ || cmd_type_ == CommandType::READ_PRECHARGE ||
                                           cmd_type_ == CommandType::WRITE || cmd_type_ == CommandType::WRITE_PRECHARGE; }
         CommandType cmd_type_;
@@ -75,17 +76,24 @@ class Command {
         int Column() const { return addr_.column_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
-        void print(std::ofstream& val_file);
+        void print(std::ofstream& val_file); //TODO - Remove?
 };
 
 
 class Request {
     public:
+        //TODO - These constructors are terrible. Fix them ASAP. More so Now!
         Request(CommandType cmd_type, const Address& addr) :
                 cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(0), exit_time_(0), id_(-1) {}
 
+        Request(CommandType cmd_type, uint64_t hex_addr, const Config& config) :
+                cmd_(Command(cmd_type, AddressMapping(hex_addr, config))), hex_addr_(hex_addr), arrival_time_(0), exit_time_(0), id_(-1) {}
+
         Request(CommandType cmd_type, const Address& addr, uint64_t arrival_time, int64_t id) :
             cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
+
+        Request(CommandType cmd_type, uint64_t hex_addr, const Config& config, uint64_t arrival_time, int64_t id) :
+                cmd_(Command(cmd_type, AddressMapping(hex_addr, config))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
 
         Command cmd_;
         uint64_t hex_addr_;

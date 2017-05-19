@@ -15,11 +15,11 @@ class Controller {
 public:
     Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)>& callback_);
     ~Controller();
-    void ClockTick();
+    virtual void ClockTick();
     bool InsertReq(Request* req);
     std::function<void(uint64_t)>& callback_;
     int channel_;
-private:
+protected:
     uint64_t clk_;
     bool val_output_enable;
     const Config& config_;
@@ -27,6 +27,14 @@ private:
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;
+};
+
+
+class HBMController : public Controller {
+public:
+    HBMController(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)>& callback_)
+    : Controller(channel, config, timing, stats, callback_) {}
+    void ClockTick();
 };
 
 }

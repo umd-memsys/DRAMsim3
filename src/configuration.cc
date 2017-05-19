@@ -159,12 +159,32 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
 void Config::CalculateSize() {
     unsigned int devices_per_rank = bus_width / device_width;
 
-    // shift 20 bits first so that we won't have an overflow problem...
-    unsigned int megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
-    unsigned int megs_per_rank = megs_per_bank * banks * devices_per_rank;
+    // The calculation for different protocols are different,
+    // Some take into account of the prefetch/burst length in columns some don't
+    // So instead of hard coding it into the ini files, 
+    // calculating them here would be a better option
+    unsigned int megs_per_bank, megs_per_rank; 
+    
+    if (IsGDDR()) {
+        // For GDDR5(x), each column access gives you device_width * BL bits 
+        megs_per_bank = ((rows * columns * BL) >> 20)  * device_width / 8;
+        megs_per_rank = megs_per_bank * banks * devices_per_rank;
+    } else if (IsHBM()) {
+        // Similar to GDDR5(x), but HBM has both BL2 and BL4, and only 1 device_width, 
+        // meaning it will have different prefetch length and burst length
+        // so we will use the prefetch length of 2 here
+        megs_per_bank = ((rows * columns * 2) >> 20)  * device_width / 8;
+        megs_per_rank = megs_per_bank * banks * devices_per_rank;
+    } else {
+        // shift 20 bits first so that we won't have an overflow problem...
+        megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
+        megs_per_rank = megs_per_bank * banks * devices_per_rank;
+    }
+    
+    
 #ifdef DEBUG_OUTPUT
-    cout << "megs per bank " << megs_per_bank << endl;
-    cout << "megs per rank " << megs_per_rank << endl;
+    cout << "Meg Bytes per bank " << megs_per_bank << endl;
+    cout << "Meg Bytes per rank " << megs_per_rank << endl;
 #endif 
     if (megs_per_rank > channel_size) {
         std::cout<< "WARNING: Cannot create memory system of size " << channel_size 

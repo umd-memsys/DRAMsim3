@@ -192,17 +192,20 @@ std::list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
 }
 
 void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>::iterator req_itr) {
+    //Put the requests into a new buffer. They will be returned to the CPU after the read/write latency
     auto req = *req_itr;
     if( req->cmd_.IsRead()) {
-        //Put the read requests into a new buffer. They will be returned to the CPU after the read latency
         req->exit_time_ = clk_ + config_.read_delay;
-        issued_req_.splice(issued_req_.end(), queue, req_itr);
         stats_.numb_read_reqs_issued++;
     }
-    else {
+    else if(req->cmd_.IsWrite()){
         req->exit_time_ = clk_ + config_.write_delay;
-        issued_req_.splice(issued_req_.end(), queue, req_itr);
         stats_.numb_write_reqs_issued++;
     }
+    else {
+        cerr << "Unknown request type\n" << endl;
+        AbruptExit(__FILE__, __LINE__);
+    }
+    issued_req_.splice(issued_req_.end(), queue, req_itr);
     return;
 }

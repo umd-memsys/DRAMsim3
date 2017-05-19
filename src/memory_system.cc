@@ -7,20 +7,35 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     callback_(callback)
 {
     ptr_config_ = new Config(config_file);
-    //auto config = *ptr_config_;
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();
-    ctrls_.resize((*ptr_config_).channels);
-    for(auto i = 0; i < (*ptr_config_).channels; i++) {
-        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
+    ctrls_.resize(ptr_config_->channels);
+    for(auto i = 0; i < ptr_config_->channels; i++) {
+        if (ptr_config_->IsHBM()) {
+            ctrls_[i] = new HBMController(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
+        } else {
+            ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);            
+        }
     }
+}
+
+MemorySystem::~MemorySystem() {
+    for(auto i = 0; i < ptr_config_->channels; i++) {
+        delete(ctrls_[i]);
+    }
+    delete(ptr_stats_);
+    delete(ptr_timing_);
+    delete(ptr_config_);
 }
 
 bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
+    Request* req = new Request(cmd_type, hex_addr, *ptr_config_, clk_, id_);
+    /*
     Address addr = AddressMapping(hex_addr, *ptr_config_);
     Request* req = new Request(cmd_type, addr);
+     */
 
     // Some CPU simulators might not model the backpressure because queues are full.
     // An approximate way of addressing this scenario is to buffer all such requests here in the DRAM simulator and then
@@ -61,4 +76,16 @@ void MemorySystem::PrintStats() {
     cout << *ptr_stats_;
     cout << "numb_buffered_requests=" << numb_buffered_requests << endl;
     return;
+}
+
+
+// This function can be used by autoconf AC_CHECK_LIB since
+// apparently it can't detect C++ functions.
+// Basically just an entry in the symbol table
+extern "C"
+{
+void libdramcore_is_present(void)
+{
+    ;
+}
 }
