@@ -196,8 +196,5 @@ void Config::CalculateSize() {
         ranks = channel_size / megs_per_rank;
         channel_size = ranks * megs_per_rank;  // reset this in case users inputs a weird number...
     }
-#ifdef DEBUG_OUTPUT
-    cout << "num ranks " << ;
-#endif 
     return;
 }
