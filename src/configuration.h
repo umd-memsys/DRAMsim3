@@ -87,6 +87,9 @@ public:
     std::string validation_output_file;
 
     unsigned int epoch_period;
+    std::string stats_file;
+    std::string cummulative_stats_file;
+    std::string epoch_stats_file;
 
     //Computed parameters
     unsigned int channel_width_, rank_width_, bankgroup_width_, 

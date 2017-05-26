@@ -26,6 +26,7 @@ private:
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;
+    Statistics& stats_;
 };
 
 }

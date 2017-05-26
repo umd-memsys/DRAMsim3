@@ -10,7 +10,8 @@ Controller::Controller(int channel, const Config &config, const Timing &timing, 
     clk_(0),
     channel_state_(config, timing, stats),
     cmd_queue_(config, channel_state_, stats, callback_), //TODO - Isn't it really a request_queue. Why call it command_queue?
-    refresh_(config, channel_state_, cmd_queue_, stats)
+    refresh_(config, channel_state_, cmd_queue_, stats),
+    stats_(stats)
 {
 }
 
@@ -27,6 +28,7 @@ void Controller::ClockTick() {
         auto issued_req = *req_itr;
         if(clk_ > issued_req->exit_time_) {
             //Return request to cpu
+            stats_.access_latency.AddValue(clk_ - issued_req->arrival_time_);
             callback_(issued_req->hex_addr_);
             delete(issued_req);
             cmd_queue_.issued_req_.erase(req_itr);

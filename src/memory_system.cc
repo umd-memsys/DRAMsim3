@@ -4,7 +4,8 @@ using namespace std;
 using namespace dramcore;
 
 MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> callback) :
-    callback_(callback)
+    callback_(callback),
+    clk_(0)
 {
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
@@ -13,6 +14,9 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     for(auto i = 0; i < ptr_config_->channels; i++) {
         ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
     }
+    stats_file_.open(ptr_config_->stats_file);
+    cummulative_stats_file_.open(ptr_config_->cummulative_stats_file);
+    epoch_stats_file_.open(ptr_config_->epoch_stats_file);
 }
 
 MemorySystem::~MemorySystem() {
@@ -22,6 +26,9 @@ MemorySystem::~MemorySystem() {
     delete(ptr_stats_);
     delete(ptr_timing_);
     delete(ptr_config_);
+    stats_file_.close();
+    cummulative_stats_file_.close();
+    epoch_stats_file_.close();
 }
 
 bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
@@ -42,13 +49,14 @@ bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) 
     if((*ptr_config_).req_buffering_enabled && !is_insertable) {
         buffer_q_.push_back(req);
         is_insertable = true;
-        numb_buffered_requests++;
+        ptr_stats_->numb_buffered_requests++;
     }
     return is_insertable;
 }
 
 void MemorySystem::ClockTick() {
     clk_++;
+    ptr_stats_->dramcycles++;
     for( auto ctrl : ctrls_)
         ctrl->ClockTick();
 
@@ -58,19 +66,42 @@ void MemorySystem::ClockTick() {
             auto req = *req_itr;
             if(ctrls_[req->Channel()]->InsertReq(req)) {
                 buffer_q_.erase(req_itr);
-                break;  // either break or set req_itr to the return value of erase() 
+                break;  // either break or set req_itr to the return value of erase()
             }
         }
+    }
+
+    if( clk_ % ptr_config_->epoch_period == 0) {
+        PrintIntermediateStats();
+        ptr_stats_->UpdateEpoch();
     }
     return;
 }
 
+void MemorySystem::PrintIntermediateStats() {
+    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+    cummulative_stats_file_ << "Cummulative stats at clock = " << clk_ << endl;
+    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+    ptr_stats_->PrintStats(cummulative_stats_file_);
+    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+
+    epoch_stats_file_ << "-----------------------------------------------------" << endl;
+    epoch_stats_file_ << "Epoch stats from clock = " << clk_ - ptr_config_->epoch_period << " to " << clk_<< endl;
+    epoch_stats_file_ << "-----------------------------------------------------" << endl;
+    ptr_stats_->PrintEpochStats(epoch_stats_file_);
+    epoch_stats_file_ << "-----------------------------------------------------" << endl;
+    return;
+}
+
+
 void MemorySystem::PrintStats() {
     cout << "-----------------------------------------------------" << endl;
-    cout << "Printing Statistics -- " << endl;
+    cout << "Printing final stats -- " << endl;
     cout << "-----------------------------------------------------" << endl;
     cout << *ptr_stats_;
-    cout << "numb_buffered_requests=" << numb_buffered_requests << endl;
+    cout << "-----------------------------------------------------" << endl;
+    cout << "The stats are also written to the file " << "dramcore.out" << endl;
+    ptr_stats_->PrintStats(stats_file_);
     return;
 }
 
