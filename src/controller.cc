@@ -50,9 +50,18 @@ void Controller::ClockTick() {
         }
     }
 
-    auto cmd = cmd_queue_.GetCommandToIssue(false);
+    auto cmd = cmd_queue_.GetCommandToIssue();
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
+        
+        if (config_.IsHBM()){
+            auto second_cmd = cmd_queue_.GetCommandToIssue();
+            if (second_cmd.IsValid()) {
+                if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {
+                    channel_state_.IssueCommand(second_cmd, clk_);
+                }
+            }
+        }
     }
 
     /* //TODO Make- Aggressive precharing a knob
@@ -69,57 +78,4 @@ void Controller::ClockTick() {
 
 bool Controller::InsertReq(Request* req) {
     return cmd_queue_.InsertReq(req);
-}
-
-
-void HBMController::ClockTick() {
-    clk_++;
-    cmd_queue_.clk_++;
-
-    //Return already issued read requests back to the CPU
-    for( auto req_itr = cmd_queue_.issued_req_.begin(); req_itr !=  cmd_queue_.issued_req_.end(); req_itr++) {
-        auto issued_req = *req_itr;
-        if(clk_ > issued_req->exit_time_) {
-            //Return request to cpu
-            callback_(issued_req->hex_addr_);
-            delete(issued_req);
-            cmd_queue_.issued_req_.erase(req_itr);
-            break; // Returning one request per cycle
-        }
-    }
-
-    //Refresh command is queued
-    refresh_.ClockTick();
-    if( !refresh_.refresh_q_.empty()) {
-        auto refresh_itr = refresh_.refresh_q_.begin(); //TODO - Or chose which refresh request in the queue to prioritize to execute
-        channel_state_.UpdateRefreshWaitingStatus((*refresh_itr)->cmd_, true); //TODO - Why is this updated each time? Not smart.
-        auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
-        if(cmd.IsValid()) {
-            channel_state_.IssueCommand(cmd, clk_);
-            if(cmd.IsRefresh()) {
-                channel_state_.UpdateRefreshWaitingStatus(cmd, false);
-            }
-            return;
-        }
-    }
-
-    auto cmd = cmd_queue_.GetCommandToIssue(false);
-    if(cmd.IsValid()) {
-        channel_state_.IssueCommand(cmd, clk_);
-
-        // it's only meaningful to check if there can be
-        // another command to be issued when the first one is valid
-        // also when the first one is Read/Write the second one cannot be another
-        // Read/Write because the timing constraint will not satisfy
-        auto second_cmd = Command();
-        if (cmd.IsReadWrite()) {
-            second_cmd = cmd_queue_.GetCommandToIssue(false);
-        } else {
-            second_cmd = cmd_queue_.GetCommandToIssue(true);
-        }
-        
-        if (second_cmd.IsValid()) {
-            channel_state_.IssueCommand(second_cmd, clk_);
-        }
-    }
 }

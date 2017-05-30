@@ -31,20 +31,12 @@ CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_sta
 
 }
 
-Command CommandQueue::GetCommandToIssue(bool need_cas_cmd) {
+Command CommandQueue::GetCommandToIssue() {
     for (unsigned i = 0; i < queues_.size(); i++) {
         auto cmd = GetCommandToIssueFromQueue(queues_[next_queue_index_]);
         IterateNext();
         if (cmd.IsValid()) {
-            if (need_cas_cmd) {
-                if (cmd.IsReadWrite()) {
-                    return cmd;
-                } else {
-                    continue;
-                }
-            } else {
-                return cmd;
-            }
+            return cmd;
         }
     }
     return Command();

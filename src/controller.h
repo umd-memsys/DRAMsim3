@@ -29,13 +29,5 @@ protected:
     Refresh refresh_;
 };
 
-
-class HBMController : public Controller {
-public:
-    HBMController(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)>& callback_)
-    : Controller(channel, config, timing, stats, callback_) {}
-    void ClockTick();
-};
-
 }
 #endif

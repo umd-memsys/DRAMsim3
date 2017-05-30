@@ -11,11 +11,7 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     ptr_stats_ = new Statistics();
     ctrls_.resize(ptr_config_->channels);
     for(auto i = 0; i < ptr_config_->channels; i++) {
-        if (ptr_config_->IsHBM()) {
-            ctrls_[i] = new HBMController(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
-        } else {
-            ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);            
-        }
+        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);            
     }
 }
 
