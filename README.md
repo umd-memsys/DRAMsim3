@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.com/dhiraj113/dramcore.svg?token=xHbe7A99ENsj18UyEG7m&branch=master)](https://travis-ci.com/dhiraj113/dramcore)
+
+
 # dramcore
 Model the timing paramaters and memory controller behaviour for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, HBM.
 

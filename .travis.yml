@@ -1,0 +1,22 @@
+dist: trusty
+#sudo: required
+sudo: false
+
+language: cpp
+
+compiler:
+ - gcc
+ - clang
+
+#addons:
+#  apt:
+#    packages:
+#      - gcc-4.9
+#      - clang-3.5
+#      - cmake
+
+script:
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make -j4
