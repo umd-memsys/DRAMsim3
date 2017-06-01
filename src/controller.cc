@@ -61,6 +61,10 @@ void Controller::ClockTick() {
             if (second_cmd.IsValid()) {
                 if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {
                     channel_state_.IssueCommand(second_cmd, clk_);
+                    stats_.hbm_dual_command_issue_cycles++;
+                }
+                if(!cmd.IsReadWrite() && !second_cmd.IsReadWrite()) {
+                    stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
                 }
             }
         }

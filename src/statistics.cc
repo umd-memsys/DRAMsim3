@@ -12,7 +12,7 @@ CounterStat::CounterStat(std::string name, std::string desc):
 {}
 
 void CounterStat::Print(std::ostream& where) const {
-    where << fmt::format("{:<30}{:^5}{:>10}{:>10}{}", name_, " = ", count_, " # ", description_) << endl;
+    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", count_, " # ", description_) << endl;
     return;
 }
 
@@ -23,7 +23,7 @@ void CounterStat::UpdateEpoch() {
 
 void CounterStat::PrintEpoch(std::ostream& where) const {
     //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
-    where << fmt::format("{:<30}{:^5}{:>10}{:>10}{}", name_, " = ", count_ - last_epoch_count_, " # ", description_) << endl;
+    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", count_ - last_epoch_count_, " # ", description_) << endl;
     return;
 }
 
@@ -76,17 +76,17 @@ void HistogramStat::AddValue(int val) {
 
 void HistogramStat::Print(std::ostream& where) const {
     auto bin_width = (end_ - start_)/numb_bins_;
-    where << fmt::format("{:<30}{:^5}{:>10}{:>10}{}", name_, " = ", " ", " # ", description_) << endl;
+    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", " ", " # ", description_) << endl;
     auto bin_str = fmt::format("[ < {} ]", start_);
-    where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", neg_outlier_count_) << endl;
+    where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", neg_outlier_count_) << endl;
     for(auto i = 0; i < numb_bins_; i++) {
         auto bin_start = start_ + i*bin_width;
         auto bin_end = start_ + (i+1)*bin_width - 1;
         auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", bin_count_[i]) << endl;
+        where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", bin_count_[i]) << endl;
     }
     bin_str = fmt::format("[ > {} ]", end_);
-    where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", pos_outlier_count_) << endl;
+    where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", pos_outlier_count_) << endl;
     return;
 }
 
@@ -102,17 +102,17 @@ void HistogramStat::UpdateEpoch() {
 void HistogramStat::PrintEpoch(std::ostream& where) const {
     //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
     auto bin_width = (end_ - start_)/numb_bins_;
-    where << fmt::format("{:<30}{:^5}{:>10}{:>10}{}", name_, " = ", " ", " # ", description_) << endl;
+    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", " ", " # ", description_) << endl;
     auto bin_str = fmt::format("[ < {} ]", start_);
-    where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", neg_outlier_count_ - last_epoch_neg_outlier_count_) << endl;
+    where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", neg_outlier_count_ - last_epoch_neg_outlier_count_) << endl;
     for(auto i = 0; i < numb_bins_; i++) {
         auto bin_start = start_ + i*bin_width;
         auto bin_end = start_ + (i+1)*bin_width - 1;
         auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", bin_count_[i] - last_epoch_bin_count_[i]) << endl;
+        where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", bin_count_[i] - last_epoch_bin_count_[i]) << endl;
     }
     bin_str = fmt::format("[ > {} ]", end_);
-    where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", pos_outlier_count_ - last_epoch_pos_outlier_count_) << endl;
+    where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", pos_outlier_count_ - last_epoch_pos_outlier_count_) << endl;
     return;
 }
 
@@ -161,6 +161,8 @@ Statistics::Statistics():
     dramcycles = CounterStat("Cycles", "Total number of DRAM execution cycles");
     access_latency = HistogramStat(0, 80, 10, "access_latency", "Histogram of access latencies");
     numb_buffered_requests = CounterStat("numb_buffered_requests", "Number of buffered requests because queues were full");
+    hbm_dual_command_issue_cycles = CounterStat("hbm_dual_command_issue_cycles", "Number of cycles in which two commands were issued");
+    hbm_dual_non_rw_cmd_attempt_cycles = CounterStat("hbm_dual_non_rw_cmd_attempt_cycles", "Number of cycles during which an opportunity to issue a read/write is possibly missed");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -172,6 +174,8 @@ Statistics::Statistics():
     stats_list.push_back(&dramcycles);
     stats_list.push_back(&access_latency);
     stats_list.push_back(&numb_buffered_requests);
+    stats_list.push_back(&hbm_dual_command_issue_cycles);
+    stats_list.push_back(&hbm_dual_non_rw_cmd_attempt_cycles);
 }
 
 

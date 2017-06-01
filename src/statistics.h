@@ -80,6 +80,9 @@ public:
     class HistogramStat access_latency;
     class CounterStat numb_buffered_requests;
 
+    class CounterStat hbm_dual_command_issue_cycles;
+    class CounterStat hbm_dual_non_rw_cmd_attempt_cycles;
+
     std::list<class BaseStat*> stats_list;
 
     void PrintStats(std::ostream& where) const;
