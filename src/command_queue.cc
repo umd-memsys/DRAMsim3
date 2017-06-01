@@ -32,15 +32,14 @@ CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_sta
 }
 
 Command CommandQueue::GetCommandToIssue() {
-    auto cmd = Command();
     for (unsigned i = 0; i < queues_.size(); i++) {
-        cmd = GetCommandToIssueFromQueue(queues_[next_queue_index_]);
+        auto cmd = GetCommandToIssueFromQueue(queues_[next_queue_index_]);
         IterateNext();
         if (cmd.IsValid()) {
             return cmd;
         }
     }
-    return cmd;
+    return Command();
 }
 
 Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
@@ -71,7 +70,7 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
                     // 1. There are no prior requests to the same bank in the queue (and)
                     // 1. There are no pending row hits to the open row in the bank (or)
                     // 2. There are pending row hits to the open row but the max allowed cap for row hits has been exceeded
-
+                    
                     bool prior_requests_to_bank_exist = false;
                     for (auto prior_itr = queue.begin(); prior_itr != req_itr; prior_itr++) {
                         auto prior_req = *prior_itr;

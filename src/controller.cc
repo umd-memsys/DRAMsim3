@@ -7,6 +7,7 @@ using namespace dramcore;
 Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)>& callback) :
     callback_(callback),
     channel_(channel),
+    config_(config),
     clk_(0),
     channel_state_(config, timing, stats),
     cmd_queue_(config, channel_state_, stats, callback_), //TODO - Isn't it really a request_queue. Why call it command_queue?
@@ -50,11 +51,21 @@ void Controller::ClockTick() {
             return;
         }
     }
-    //Read write queues
+
     auto cmd = cmd_queue_.GetCommandToIssue();
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
+        
+        if (config_.IsHBM()){
+            auto second_cmd = cmd_queue_.GetCommandToIssue();
+            if (second_cmd.IsValid()) {
+                if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {
+                    channel_state_.IssueCommand(second_cmd, clk_);
+                }
+            }
+        }
     }
+
     /* //TODO Make- Aggressive precharing a knob
     else {
         //Look for closing open banks if any. (Aggressive precharing)
@@ -70,4 +81,3 @@ void Controller::ClockTick() {
 bool Controller::InsertReq(Request* req) {
     return cmd_queue_.InsertReq(req);
 }
-

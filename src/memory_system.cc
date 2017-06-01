@@ -40,6 +40,15 @@ MemorySystem::~MemorySystem() {
     epoch_stats_file_.close();
 }
 
+MemorySystem::~MemorySystem() {
+    for(auto i = 0; i < ptr_config_->channels; i++) {
+        delete(ctrls_[i]);
+    }
+    delete(ptr_stats_);
+    delete(ptr_timing_);
+    delete(ptr_config_);
+}
+
 bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
