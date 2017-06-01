@@ -16,6 +16,9 @@ public:
     virtual void Print(std::ostream& where) const = 0;
     virtual void UpdateEpoch() = 0;
     virtual void PrintEpoch(std::ostream& where) const = 0;
+    virtual void PrintCSVHeader(std::ostream& where) const = 0;
+    virtual void PrintCSVFormat(std::ostream& where) const = 0;
+    virtual void PrintEpochCSVFormat(std::ostream& where) const = 0;
     friend std::ostream& operator<<(std::ostream& os, const BaseStat& basestat) { basestat.Print(os); return os;}
 protected:
     std::string name_;
@@ -34,6 +37,9 @@ public:
     void Print(std::ostream& where) const;
     void UpdateEpoch();
     void PrintEpoch(std::ostream& where) const;
+    void PrintCSVHeader(std::ostream& where) const;
+    void PrintCSVFormat(std::ostream& where) const;
+    void PrintEpochCSVFormat(std::ostream& where) const;
 private:
     unsigned int count_;
     unsigned int last_epoch_count_;
@@ -48,6 +54,9 @@ public:
     void Print(std::ostream& where) const;
     void UpdateEpoch();
     void PrintEpoch(std::ostream& where) const;
+    void PrintCSVHeader(std::ostream& where) const;
+    void PrintCSVFormat(std::ostream& where) const;
+    void PrintEpochCSVFormat(std::ostream& where) const;
 private:
     int start_;
     int end_;
@@ -76,6 +85,9 @@ public:
     void PrintStats(std::ostream& where) const;
     void UpdateEpoch();
     void PrintEpochStats(std::ostream& where) const;
+    void PrintStatsCSVHeader(std::ostream& where) const;
+    void PrintStatsCSVFormat(std::ostream& where) const;
+    void PrintEpochStatsCSVFormat(std::ostream& where) const;
 
     friend std::ostream& operator<<(std::ostream& os, Statistics& stats);
 };

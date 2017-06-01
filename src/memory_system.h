@@ -31,9 +31,14 @@ private:
     Timing* ptr_timing_;
     Statistics* ptr_stats_;
     std::list<Request*> buffer_q_;
+
+    //Stats output files
     std::ofstream stats_file_;
     std::ofstream cummulative_stats_file_;
     std::ofstream epoch_stats_file_;
+    std::ofstream stats_file_csv_;
+    std::ofstream cummulative_stats_file_csv_;
+    std::ofstream epoch_stats_file_csv_;
 };
 
 }

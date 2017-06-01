@@ -98,9 +98,12 @@ Config::Config(std::string config_file)
     // Other Parameters
     validation_output_file = reader.Get("other", "validation_output", "");
     epoch_period = static_cast<unsigned int>(reader.GetInteger("other", "epoch_period", 100000));
-    stats_file = reader.Get("other", "stats_file", "dramcore.stats");
-    cummulative_stats_file = reader.Get("other", "cummulative_stats_file", "dramcore_cummulative.stats");
-    epoch_stats_file = reader.Get("other", "epoch_stats_file", "dramcore_epoch.stats");
+    stats_file = reader.Get("other", "stats_file", "dramcore_stats.txt");
+    cummulative_stats_file = reader.Get("other", "cummulative_stats_file", "dramcore_cummulative_stats.txt");
+    epoch_stats_file = reader.Get("other", "epoch_stats_file", "dramcore_epoch_stats.txt");
+    stats_file_csv = reader.Get("other", "stats_file", "dramcore_stats.csv");
+    cummulative_stats_file_csv = reader.Get("other", "cummulative_stats_file", "dramcore_cummulative_stats.csv");
+    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", "dramcore_epoch_stats.csv");
 
     channel_width_ = LogBase2(channels);
     rank_width_ = LogBase2(ranks);

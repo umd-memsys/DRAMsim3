@@ -14,9 +14,18 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     for(auto i = 0; i < ptr_config_->channels; i++) {
         ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
     }
+
+    //Stats output files
     stats_file_.open(ptr_config_->stats_file);
     cummulative_stats_file_.open(ptr_config_->cummulative_stats_file);
     epoch_stats_file_.open(ptr_config_->epoch_stats_file);
+    stats_file_csv_.open(ptr_config_->stats_file_csv);
+    cummulative_stats_file_csv_.open(ptr_config_->cummulative_stats_file_csv);
+    epoch_stats_file_csv_.open(ptr_config_->epoch_stats_file_csv);
+
+    ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
+    ptr_stats_->PrintStatsCSVHeader(cummulative_stats_file_csv_);
+    ptr_stats_->PrintStatsCSVHeader(epoch_stats_file_csv_);
 }
 
 MemorySystem::~MemorySystem() {
@@ -90,6 +99,9 @@ void MemorySystem::PrintIntermediateStats() {
     epoch_stats_file_ << "-----------------------------------------------------" << endl;
     ptr_stats_->PrintEpochStats(epoch_stats_file_);
     epoch_stats_file_ << "-----------------------------------------------------" << endl;
+
+    ptr_stats_->PrintStatsCSVFormat(cummulative_stats_file_csv_);
+    ptr_stats_->PrintEpochStatsCSVFormat(epoch_stats_file_csv_);
     return;
 }
 
@@ -102,6 +114,7 @@ void MemorySystem::PrintStats() {
     cout << "-----------------------------------------------------" << endl;
     cout << "The stats are also written to the file " << "dramcore.out" << endl;
     ptr_stats_->PrintStats(stats_file_);
+    ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
     return;
 }
 

@@ -90,6 +90,9 @@ public:
     std::string stats_file;
     std::string cummulative_stats_file;
     std::string epoch_stats_file;
+    std::string stats_file_csv;
+    std::string cummulative_stats_file_csv;
+    std::string epoch_stats_file_csv;
 
     //Computed parameters
     unsigned int channel_width_, rank_width_, bankgroup_width_, 

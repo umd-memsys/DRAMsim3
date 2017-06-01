@@ -13,7 +13,7 @@ CounterStat::CounterStat(std::string name, std::string desc):
 
 void CounterStat::Print(std::ostream& where) const {
     where << fmt::format("{:<30}{:^5}{:>10}{:>10}{}", name_, " = ", count_, " # ", description_) << endl;
-	return;
+    return;
 }
 
 void CounterStat::UpdateEpoch() {
@@ -24,7 +24,22 @@ void CounterStat::UpdateEpoch() {
 void CounterStat::PrintEpoch(std::ostream& where) const {
     //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
     where << fmt::format("{:<30}{:^5}{:>10}{:>10}{}", name_, " = ", count_ - last_epoch_count_, " # ", description_) << endl;
-	return;
+    return;
+}
+
+void CounterStat::PrintCSVHeader(std::ostream& where) const {
+    where << fmt::format("{},", name_);
+    return;
+}
+
+void CounterStat::PrintCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", count_ );
+    return;
+}
+
+void CounterStat::PrintEpochCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", count_ - last_epoch_count_);
+    return;
 }
 
 HistogramStat::HistogramStat(int start, int end, unsigned int numb_bins, std::string name, std::string desc):
@@ -68,7 +83,7 @@ void HistogramStat::Print(std::ostream& where) const {
         auto bin_start = start_ + i*bin_width;
         auto bin_end = start_ + (i+1)*bin_width - 1;
         auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", bin_count_[i]) << endl;;
+        where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", bin_count_[i]) << endl;
     }
     bin_str = fmt::format("[ > {} ]", end_);
     where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", pos_outlier_count_) << endl;
@@ -87,7 +102,7 @@ void HistogramStat::UpdateEpoch() {
 void HistogramStat::PrintEpoch(std::ostream& where) const {
     //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
     auto bin_width = (end_ - start_)/numb_bins_;
-    where << fmt::format("{:<30}{:^5}{:>10}{:>10}{}", name_, " = ", " ", " # ", description_) << endl;;
+    where << fmt::format("{:<30}{:^5}{:>10}{:>10}{}", name_, " = ", " ", " # ", description_) << endl;
     auto bin_str = fmt::format("[ < {} ]", start_);
     where << fmt::format("{:^30}{:^5}{:>10}", bin_str, " = ", neg_outlier_count_ - last_epoch_neg_outlier_count_) << endl;
     for(auto i = 0; i < numb_bins_; i++) {
@@ -102,6 +117,36 @@ void HistogramStat::PrintEpoch(std::ostream& where) const {
 }
 
 
+void HistogramStat::PrintCSVHeader(std::ostream& where) const {
+    auto bin_width = (end_ - start_)/numb_bins_;
+    where << fmt::format("{}[<{}],", name_, start_);
+    for(auto i = 0; i < numb_bins_; i++) {
+        auto bin_start = start_ + i*bin_width;
+        auto bin_end = start_ + (i+1)*bin_width - 1;
+        where << fmt::format("{}[{}-{}],", name_, bin_start, bin_end);
+    }
+    where << fmt::format("{}[>{}],", name_, end_);
+    return;
+}
+
+void HistogramStat::PrintCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", neg_outlier_count_);
+    for(auto i = 0; i < numb_bins_; i++) {
+        where << fmt::format("{},", bin_count_[i]);
+    }
+    where << fmt::format("{},", pos_outlier_count_);
+    return;
+}
+
+
+void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", neg_outlier_count_ - last_epoch_neg_outlier_count_);
+    for(auto i = 0; i < numb_bins_; i++) {
+        where << fmt::format("{},", bin_count_[i] - last_epoch_bin_count_[i]);
+    }
+    where << fmt::format("{},", pos_outlier_count_ - last_epoch_pos_outlier_count_);
+    return;
+}
 Statistics::Statistics():
     stats_list()
 {
@@ -144,10 +189,35 @@ void Statistics::UpdateEpoch() {
     return;
 }
 
-void Statistics::PrintEpochStats(std::ostream &where) const {
+void Statistics::PrintEpochStats(std::ostream& where) const {
     for(auto stat : stats_list) {
         stat->PrintEpoch(where);
     }
+    return;
+}
+
+
+void Statistics::PrintStatsCSVHeader(std::ostream& where) const {
+    for(auto stat : stats_list) {
+        stat->PrintCSVHeader(where);
+    }
+    where << endl;
+    return;
+}
+
+void Statistics::PrintStatsCSVFormat(std::ostream& where) const {
+    for(auto stat : stats_list) {
+        stat->PrintCSVFormat(where);
+    }
+    where << endl;
+    return;
+}
+
+void Statistics::PrintEpochStatsCSVFormat(std::ostream& where) const {
+    for(auto stat : stats_list) {
+        stat->PrintEpochCSVFormat(where);
+    }
+    where << endl;
     return;
 }
 
