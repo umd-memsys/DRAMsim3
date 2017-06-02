@@ -1,4 +1,5 @@
 #include "channel_state.h"
+#include "../ext/fmt/src/format.h"
 
 using namespace std;
 using namespace dramcore;
@@ -25,7 +26,7 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
     }
 }
 
-Command ChannelState::GetRequiredCommand(const Command& cmd) const { 
+Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     switch(cmd.cmd_type_) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
@@ -53,6 +54,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
             return cmd;
         default:
             AbruptExit(__FILE__, __LINE__);
+            return Command();
     }
 }
 
@@ -81,6 +83,7 @@ bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
         }
         default:
             AbruptExit(__FILE__, __LINE__);
+            return true;
     }
 }
 
@@ -143,14 +146,14 @@ void ChannelState::UpdateTiming(const Command& cmd, uint64_t clk) {
     return ;
 }
 
-void ChannelState::UpdateSameBankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
+void ChannelState::UpdateSameBankTiming(const Address& addr, const std::list< std::pair<CommandType, uint32_t> >& cmd_timing_list, uint64_t clk) {
     for(auto cmd_timing : cmd_timing_list ) {
         bank_states_[addr.rank_][addr.bankgroup_][addr.bank_]->UpdateTiming(cmd_timing.first, clk + cmd_timing.second);
     }
     return;
 }
 
-void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
+void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, const std::list< std::pair<CommandType, uint32_t> >& cmd_timing_list, uint64_t clk) {
     for(auto k = 0; k < config_.banks_per_group; k++) {
         if( k != addr.bank_) {
             for(auto cmd_timing : cmd_timing_list ) {
@@ -161,7 +164,7 @@ void ChannelState::UpdateOtherBanksSameBankgroupTiming(const Address& addr, cons
     return;
 }
 
-void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
+void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, uint32_t> >& cmd_timing_list, uint64_t clk) {
     for(auto j = 0; j < config_.bankgroups; j++) {
         if(j != addr.bankgroup_) {
             for(auto k = 0; k < config_.banks_per_group; k++) {
@@ -174,7 +177,7 @@ void ChannelState::UpdateOtherBankgroupsSameRankTiming(const Address& addr, cons
     return;
 }
 
-void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
+void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< std::pair<CommandType, uint32_t> >& cmd_timing_list, uint64_t clk) {
     for(auto i = 0; i < config_.ranks; i++) {
         if(i != addr.rank_) {
             for(auto j = 0; j < config_.bankgroups; j++) {
@@ -189,7 +192,7 @@ void ChannelState::UpdateOtherRanksTiming(const Address& addr, const std::list< 
     return;
 }
 
-void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, unsigned int> >& cmd_timing_list, uint64_t clk) {
+void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< std::pair<CommandType, uint32_t> >& cmd_timing_list, uint64_t clk) {
     for(auto j = 0; j < config_.bankgroups; j++) {
         for(auto k = 0; k < config_.banks_per_group; k++) {
             for(auto cmd_timing : cmd_timing_list ) {
@@ -201,7 +204,6 @@ void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< st
 }
 
 void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
-    // cout << "Command Issue at clk = " << clk << " - "<< cmd << endl;
     #ifdef DEBUG_OUTPUT
         cout << left << setw(8) << clk << " " << cmd << endl;
     #endif  //DEBUG_OUTPUT
@@ -210,6 +212,7 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
     }
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
+    UpdateCommandIssueStats(cmd);
     return;
 }
 
@@ -270,3 +273,25 @@ bool ChannelState::Is32AWReady(int rank, uint64_t curr_time) const {
     return true;
 }
 
+void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
+    switch(cmd.cmd_type_) {
+        case CommandType::READ:
+            stats_.numb_read_cmds_issued++;
+            break;
+        case CommandType::WRITE:
+            stats_.numb_write_cmds_issued++;
+            break;
+        case CommandType::ACTIVATE:
+            stats_.numb_activate_cmds_issued++;
+            break;
+        case CommandType::PRECHARGE:
+            stats_.numb_precharge_cmds_issued++;
+            break;
+        case CommandType::REFRESH:
+            stats_.numb_refresh_cmds_issued++;
+            break;
+        default:
+            AbruptExit(__FILE__, __LINE__);
+    }
+    return;
+}

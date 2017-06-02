@@ -34,7 +34,7 @@ dramcore
 dramcoretest
 dramcore.dSYM
 *.log
-build
+build*
 googletest
 cmake-build*
 release

@@ -42,7 +42,7 @@ void CounterStat::PrintEpochCSVFormat(std::ostream& where) const {
     return;
 }
 
-HistogramStat::HistogramStat(int start, int end, unsigned int numb_bins, std::string name, std::string desc):
+HistogramStat::HistogramStat(int start, int end, uint32_t numb_bins, std::string name, std::string desc):
     BaseStat(name, desc),
     start_(start),
     end_(end),
@@ -163,6 +163,12 @@ Statistics::Statistics():
     numb_buffered_requests = CounterStat("numb_buffered_requests", "Number of buffered requests because queues were full");
     hbm_dual_command_issue_cycles = CounterStat("hbm_dual_command_issue_cycles", "Number of cycles in which two commands were issued");
     hbm_dual_non_rw_cmd_attempt_cycles = CounterStat("hbm_dual_non_rw_cmd_attempt_cycles", "Number of cycles during which an opportunity to issue a read/write is possibly missed");
+    numb_read_cmds_issued = CounterStat("numb_read_cmds_issued", "Number of read commands issued");
+    numb_write_cmds_issued = CounterStat("numb_write_cmds_issued", "Number of write commands issued");
+    numb_activate_cmds_issued = CounterStat("numb_activate_cmds_issued", "Number of activate commands issued");
+    numb_precharge_cmds_issued = CounterStat("numb_precharge_cmds_issued", "Number of precharge commands issued");
+    numb_refresh_cmds_issued = CounterStat("numb_refresh_cmds_issued", "Number of refresh commands issued");
+    numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -176,6 +182,12 @@ Statistics::Statistics():
     stats_list.push_back(&numb_buffered_requests);
     stats_list.push_back(&hbm_dual_command_issue_cycles);
     stats_list.push_back(&hbm_dual_non_rw_cmd_attempt_cycles);
+    stats_list.push_back(&numb_read_cmds_issued);
+    stats_list.push_back(&numb_write_cmds_issued);
+    stats_list.push_back(&numb_activate_cmds_issued);
+    stats_list.push_back(&numb_precharge_cmds_issued);
+    stats_list.push_back(&numb_refresh_cmds_issued);
+    stats_list.push_back(&numb_rw_rowhits_pending_refresh);
 }
 
 

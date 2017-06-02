@@ -23,15 +23,14 @@ int main(int argc, const char **argv)
 
     MemorySystem memory_system(config_file, callback_func);
 
-    TraceBasedCPU* trace_cpu; //TODO - Define CPU class and use inheritance
-    RandomCPU* random_cpu;
+    CPU* cpu;
     if(enable_trace_cpu)
-        trace_cpu = new TraceBasedCPU(memory_system, trace_file);
+        cpu = new TraceBasedCPU(memory_system, trace_file);
     else
-        random_cpu = new RandomCPU(memory_system);
+        cpu = new RandomCPU(memory_system);
 
     for(uint64_t clk = 0; clk < cycles; clk++) {
-        enable_trace_cpu ? trace_cpu->ClockTick() : random_cpu->ClockTick();
+        cpu->ClockTick();
         memory_system.ClockTick();
     }
 

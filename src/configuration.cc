@@ -16,27 +16,27 @@ Config::Config(std::string config_file)
 
     // System/controller Parameters
     protocol = GetDRAMProtocol(reader.Get("dram_structure", "protocol", "DDR3"));
-    channel_size = static_cast<unsigned int>(reader.GetInteger("system", "channel_size", 1024));
-    channels = static_cast<unsigned int>(reader.GetInteger("system", "channels", 1));
-    bus_width = static_cast<unsigned int>(reader.GetInteger("system", "bus_width", 64));
+    channel_size = static_cast<uint32_t>(reader.GetInteger("system", "channel_size", 1024));
+    channels = static_cast<uint32_t>(reader.GetInteger("system", "channels", 1));
+    bus_width = static_cast<uint32_t>(reader.GetInteger("system", "bus_width", 64));
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
-    queue_size = static_cast<unsigned int>(reader.GetInteger("system", "queue_size", 16));
+    queue_size = static_cast<uint32_t>(reader.GetInteger("system", "queue_size", 16));
     req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
 
     // DRAM organization
     bool bankgroup_enable = reader.GetBoolean("dram_structure", "bankgroup_enable", true);
-    bankgroups = static_cast<unsigned int>(reader.GetInteger("dram_structure", "bankgroups", 2));
-    banks_per_group = static_cast<unsigned int>(reader.GetInteger("dram_structure", "banks_per_group", 2));
+    bankgroups = static_cast<uint32_t>(reader.GetInteger("dram_structure", "bankgroups", 2));
+    banks_per_group = static_cast<uint32_t>(reader.GetInteger("dram_structure", "banks_per_group", 2));
     if (!bankgroup_enable) {  // aggregating all banks to one group
         banks_per_group *= bankgroups;
         bankgroups = 1;
     }
     banks = bankgroups * banks_per_group;
-    rows = static_cast<unsigned int>(reader.GetInteger("dram_structure", "rows", 1 << 16));
-    columns = static_cast<unsigned int>(reader.GetInteger("dram_structure", "columns", 1 << 10));
-    device_width = static_cast<unsigned int>(reader.GetInteger("dram_structure", "device_width", 8));
-    BL = static_cast<unsigned int>(reader.GetInteger("dram_structure", "BL", 8)); 
+    rows = static_cast<uint32_t>(reader.GetInteger("dram_structure", "rows", 1 << 16));
+    columns = static_cast<uint32_t>(reader.GetInteger("dram_structure", "columns", 1 << 10));
+    device_width = static_cast<uint32_t>(reader.GetInteger("dram_structure", "device_width", 8));
+    BL = static_cast<uint32_t>(reader.GetInteger("dram_structure", "BL", 8));
 
     // calculate rank and re-calculate channel_size
     CalculateSize();
@@ -44,40 +44,40 @@ Config::Config(std::string config_file)
     // Timing Parameters
     // TODO there is no need to keep all of these variables, they should just be temporary
     // ultimately we only need cmd to cmd Timing instead of these     
-    AL = static_cast<unsigned int>(reader.GetInteger("timing", "AL", 0));
-    CL = static_cast<unsigned int>(reader.GetInteger("timing", "CL", 12));
-    CWL = static_cast<unsigned int>(reader.GetInteger("timing", "CWL", 12));
-    tCCD_L = static_cast<unsigned int>(reader.GetInteger("timing", "tCCD_L", 6));
-    tCCD_S = static_cast<unsigned int>(reader.GetInteger("timing", "tCCD_S", 4));
-    tRTRS = static_cast<unsigned int>(reader.GetInteger("timing", "tRTRS", 2));
-    tRTP = static_cast<unsigned int>(reader.GetInteger("timing", "tRTP", 5));
-    tWTR_L = static_cast<unsigned int>(reader.GetInteger("timing", "tWTR_L", 5));
-    tWTR_S = static_cast<unsigned int>(reader.GetInteger("timing", "tWTR_S", 5));
-    tWR = static_cast<unsigned int>(reader.GetInteger("timing", "tWR", 10));
-    tRP = static_cast<unsigned int>(reader.GetInteger("timing", "tRP", 10));
-    tRRD_L = static_cast<unsigned int>(reader.GetInteger("timing", "tRRD_L", 4));
-    tRRD_S = static_cast<unsigned int>(reader.GetInteger("timing", "tRRD_S", 4));
-    tRAS = static_cast<unsigned int>(reader.GetInteger("timing", "tRAS", 24));
-    tRCD = static_cast<unsigned int>(reader.GetInteger("timing", "tRCD", 10));
-    tRFC = static_cast<unsigned int>(reader.GetInteger("timing", "tRFC", 74));
+    AL = static_cast<uint32_t>(reader.GetInteger("timing", "AL", 0));
+    CL = static_cast<uint32_t>(reader.GetInteger("timing", "CL", 12));
+    CWL = static_cast<uint32_t>(reader.GetInteger("timing", "CWL", 12));
+    tCCD_L = static_cast<uint32_t>(reader.GetInteger("timing", "tCCD_L", 6));
+    tCCD_S = static_cast<uint32_t>(reader.GetInteger("timing", "tCCD_S", 4));
+    tRTRS = static_cast<uint32_t>(reader.GetInteger("timing", "tRTRS", 2));
+    tRTP = static_cast<uint32_t>(reader.GetInteger("timing", "tRTP", 5));
+    tWTR_L = static_cast<uint32_t>(reader.GetInteger("timing", "tWTR_L", 5));
+    tWTR_S = static_cast<uint32_t>(reader.GetInteger("timing", "tWTR_S", 5));
+    tWR = static_cast<uint32_t>(reader.GetInteger("timing", "tWR", 10));
+    tRP = static_cast<uint32_t>(reader.GetInteger("timing", "tRP", 10));
+    tRRD_L = static_cast<uint32_t>(reader.GetInteger("timing", "tRRD_L", 4));
+    tRRD_S = static_cast<uint32_t>(reader.GetInteger("timing", "tRRD_S", 4));
+    tRAS = static_cast<uint32_t>(reader.GetInteger("timing", "tRAS", 24));
+    tRCD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCD", 10));
+    tRFC = static_cast<uint32_t>(reader.GetInteger("timing", "tRFC", 74));
     tRC = tRAS + tRP;
-    tCKESR = static_cast<unsigned int>(reader.GetInteger("timing", "tCKESR", 50));
-    tXS = static_cast<unsigned int>(reader.GetInteger("timing", "tXS", 10));
-    tRFCb = static_cast<unsigned int>(reader.GetInteger("timing", "tRFCb", 20));
-    tRREFD = static_cast<unsigned int>(reader.GetInteger("timing", "tRREFD", 5));
-    tREFI = static_cast<unsigned int>(reader.GetInteger("timing", "tREFI", 7800));
-    tREFIb = static_cast<unsigned int>(reader.GetInteger("timing", "tREFIb", 1950));
-    tFAW = static_cast<unsigned int>(reader.GetInteger("timing", "tFAW", 50));
-    tRPRE = static_cast<unsigned int>(reader.GetInteger("timing", "tRPRE", 1));
-    tWPRE = static_cast<unsigned int>(reader.GetInteger("timing", "tWPRE", 1));
+    tCKESR = static_cast<uint32_t>(reader.GetInteger("timing", "tCKESR", 50));
+    tXS = static_cast<uint32_t>(reader.GetInteger("timing", "tXS", 10));
+    tRFCb = static_cast<uint32_t>(reader.GetInteger("timing", "tRFCb", 20));
+    tRREFD = static_cast<uint32_t>(reader.GetInteger("timing", "tRREFD", 5));
+    tREFI = static_cast<uint32_t>(reader.GetInteger("timing", "tREFI", 7800));
+    tREFIb = static_cast<uint32_t>(reader.GetInteger("timing", "tREFIb", 1950));
+    tFAW = static_cast<uint32_t>(reader.GetInteger("timing", "tFAW", 50));
+    tRPRE = static_cast<uint32_t>(reader.GetInteger("timing", "tRPRE", 1));
+    tWPRE = static_cast<uint32_t>(reader.GetInteger("timing", "tWPRE", 1));
 
     // LPDDR4 and GDDR5
-    tPPD = static_cast<unsigned int>(reader.GetInteger("timing", "tPPD", 0));
+    tPPD = static_cast<uint32_t>(reader.GetInteger("timing", "tPPD", 0));
 
     // GDDR5 only 
-    t32AW = static_cast<unsigned int>(reader.GetInteger("timing", "t32AW", 330));
-    tRCDRD = static_cast<unsigned int>(reader.GetInteger("timing", "tRCDRD", 24));
-    tRCDWR = static_cast<unsigned int>(reader.GetInteger("timing", "tRCDWR", 20));
+    t32AW = static_cast<uint32_t>(reader.GetInteger("timing", "t32AW", 330));
+    tRCDRD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDRD", 24));
+    tRCDWR = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDWR", 20));
 
 
     RL = AL + CL;
@@ -97,7 +97,7 @@ Config::Config(std::string config_file)
 
     // Other Parameters
     validation_output_file = reader.Get("other", "validation_output", "");
-    epoch_period = static_cast<unsigned int>(reader.GetInteger("other", "epoch_period", 100000));
+    epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
     stats_file = reader.Get("other", "stats_file", "dramcore_stats.txt");
     cummulative_stats_file = reader.Get("other", "cummulative_stats_file", "dramcore_cummulative_stats.txt");
     epoch_stats_file = reader.Get("other", "epoch_stats_file", "dramcore_epoch_stats.txt");
@@ -111,8 +111,8 @@ Config::Config(std::string config_file)
     bank_width_ = LogBase2(banks_per_group);
     row_width_ = LogBase2(rows);
     column_width_ = LogBase2(columns);
-    unsigned int bytes_offset = LogBase2(bus_width / 8);
-    unsigned int transaction_size = bus_width / 8 * BL;  // transaction size in bytes
+    uint32_t bytes_offset = LogBase2(bus_width / 8);
+    uint32_t transaction_size = bus_width / 8 * BL;  // transaction size in bytes
 
     // for each address given, because we're transimitting trascation_size bytes per transcation
     // therefore there will be throwaway_bits not used in the address
@@ -136,7 +136,7 @@ Config::Config(std::string config_file)
 
 
 DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
-    std::vector<std::pair<std::string, DRAMProtocol>> protocol_pairs = {
+    std::map<std::string, DRAMProtocol> protocol_pairs = {
         {"DDR3", DRAMProtocol::DDR3},
         {"DDR4", DRAMProtocol::DDR4},
         {"GDDR5", DRAMProtocol::GDDR5},
@@ -149,27 +149,26 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
         {"HMC", DRAMProtocol::HMC}
     };
 
-    for (auto pair_itr:protocol_pairs) {
-        if (pair_itr.first == protocol_str) {
+    if(protocol_pairs.find(protocol_str) == protocol_pairs.end()) {
+        cout << "Unkwown/Unsupported DRAM Protocol: " << protocol_str << " Aborting!" << endl;
+        AbruptExit(__FILE__, __LINE__);
+    }
+
 #ifdef DEBUG_OUTPUT
     cout << "DRAM Procotol " << protocol_str << endl;
 #endif 
-            return pair_itr.second;
-        }
-    }
-    cout << "Unkwown/Unsupported DRAM Protocol: " << protocol_str << " Aborting!" << endl;
-    AbruptExit(__FILE__, __LINE__);
+    return protocol_pairs[protocol_str];
 }
 
 
 void Config::CalculateSize() {
-    unsigned int devices_per_rank = bus_width / device_width;
+    uint32_t devices_per_rank = bus_width / device_width;
 
     // The calculation for different protocols are different,
     // Some take into account of the prefetch/burst length in columns some don't
     // So instead of hard coding it into the ini files, 
     // calculating them here would be a better option
-    unsigned int megs_per_bank, megs_per_rank; 
+    uint32_t megs_per_bank, megs_per_rank;
     
     if (IsGDDR()) {
         // For GDDR5(x), each column access gives you device_width * BL bits 

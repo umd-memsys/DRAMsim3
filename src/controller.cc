@@ -6,12 +6,12 @@ using namespace dramcore;
 
 Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)>& callback) :
     callback_(callback),
-    channel_(channel),
-    config_(config),
+    channel_id_(channel),
     clk_(0),
+    config_(config),
     channel_state_(config, timing, stats),
     cmd_queue_(config, channel_state_, stats, callback_), //TODO - Isn't it really a request_queue. Why call it command_queue?
-    refresh_(config, channel_state_, cmd_queue_, stats),
+    refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
     stats_(stats)
 {
 }

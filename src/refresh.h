@@ -11,35 +11,35 @@
 namespace dramcore {
 
 class Refresh {
-    public:
-        Refresh(const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue,
-                        Statistics &stats);
-        std::list<Request*> refresh_q_; // Queue of refresh commands
-        void ClockTick();
-        Command GetRefreshOrAssociatedCommand(std::list<Request*>::iterator refresh_itr);
-    private:
-        const Config& config_;
-        const ChannelState& channel_state_;
-        CommandQueue& cmd_queue_;
-        Statistics& stats_;
-        uint64_t clk_;
-        
-        //Keep track of the last time when a refresh command was issued to this bank 
-        std::vector< std::vector< std::vector<uint64_t> > > last_bank_refresh_; //TODO - Wouldn't it be better to move this to bankstate?
+public:
+    Refresh(const uint32_t channel_id, const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue, Statistics &stats);
+    std::list<Request*> refresh_q_; // Queue of refresh commands
+    void ClockTick();
+    Command GetRefreshOrAssociatedCommand(std::list<Request*>::iterator refresh_itr);
+private:
+    uint64_t clk_;
+    uint32_t channel_id_;
+    const Config& config_;
+    const ChannelState& channel_state_;
+    CommandQueue& cmd_queue_;
+    Statistics& stats_;
 
-        //Last time when a refresh command was issued to the entire rank
-        //Also updated when an epoch of bank level refreshed is done as well
-        std::vector<uint64_t> last_rank_refresh_;
+    //Keep track of the last time when a refresh command was issued to this bank
+    std::vector< std::vector< std::vector<uint64_t> > > last_bank_refresh_; //TODO - Wouldn't it be better to move this to bankstate?
 
-        int next_rank_;
+    //Last time when a refresh command was issued to the entire rank
+    //Also updated when an epoch of bank level refreshed is done as well
+    std::vector<uint64_t> last_rank_refresh_;
 
-        void InsertRefresh();
+    int next_rank_;
 
-        void IterateNext();
+    void InsertRefresh();
 
-        bool ReadWritesToFinish(int rank, int bankgroup, int bank);
-        Command GetReadWritesToOpenRow(int rank, int bankgroup, int bank);
-        
+    void IterateNext();
+
+    bool ReadWritesToFinish(int rank, int bankgroup, int bank);
+    Command GetReadWritesToOpenRow(uint32_t rank, uint32_t bankgroup, uint32_t bank);
+
 };
 
 }

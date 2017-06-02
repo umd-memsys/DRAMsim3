@@ -1,6 +1,7 @@
 #include <vector>
 #include <iomanip>
 #include "common.h"
+#include "../ext/fmt/src/format.h"
 
 
 using namespace std;
@@ -21,9 +22,8 @@ ostream& operator<<(ostream& os, const Command& cmd) {
         "self_refresh_exit",
         "WRONG"
     };
-    os << setw(12) << command_string[static_cast<int>(cmd.cmd_type_)] << " " << cmd.Channel() << " " 
-        << cmd.Rank() << " " << cmd.Bankgroup() << " " << cmd.Bank() << " " 
-        << hex << "0x" << setw(6) << cmd.Row() << " 0x" << cmd.Column() << dec;
+    os << fmt::format("{:<12} {:>3} {:>3} {:>3} {:>3} {:>#8x} {:>#8x}", command_string[static_cast<int>(cmd.cmd_type_)],
+                      cmd.Channel(), cmd.Rank(), cmd.Bankgroup(), cmd.Bank(), cmd.Row(), cmd.Column());
     return os;
 }
 
@@ -43,8 +43,8 @@ ostream& operator<<(ostream& os, const Access& access) {
 
 Address AddressMapping(uint64_t hex_addr, const Config& config) {
     //Implement address mapping functionality
-    unsigned int pos = config.throwaway_bits;
-    unsigned int channel, rank, bank, bankgroup, row, column;
+    uint32_t pos = config.throwaway_bits;
+    uint32_t channel = 0, rank = 0, bank = 0, bankgroup = 0, row = 0, column = 0;
     //There could be as many as 6! = 720 different address mappings!
     if(config.address_mapping == "chrarocobabg") {  // channel:rank:row:column:bank:bankgroup
         bankgroup = ModuloWidth(hex_addr, config.bankgroup_width_, pos);
@@ -144,16 +144,16 @@ Address AddressMapping(uint64_t hex_addr, const Config& config) {
     return Address(channel, rank, bankgroup, bank, row, column);
 }
 
-unsigned int ModuloWidth(uint64_t addr, unsigned int bit_width, unsigned int pos) {
+uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
     addr >>= pos;
     auto store = addr;
     addr >>= bit_width;
     addr <<= bit_width;
-    return static_cast<unsigned int>(store ^ addr);
+    return static_cast<uint32_t>(store ^ addr);
 }
 
-unsigned int LogBase2(unsigned int power_of_two) {
-    unsigned int i = 0;
+uint32_t LogBase2(uint32_t power_of_two) {
+    uint32_t i = 0;
     while( power_of_two > 1) {
         power_of_two /= 2;
         i++;

@@ -27,66 +27,66 @@ public:
 
     //DRAM physical structure
     DRAMProtocol protocol;
-    unsigned int channel_size;
-    unsigned int channels;
-    unsigned int ranks;
-    unsigned int banks;
-    unsigned int bankgroups;
-    unsigned int banks_per_group;
-    unsigned int rows;
-    unsigned int columns;
-    unsigned int device_width;
-    unsigned int bus_width;
-    unsigned int BL;
+    uint32_t channel_size;
+    uint32_t channels;
+    uint32_t ranks;
+    uint32_t banks;
+    uint32_t bankgroups;
+    uint32_t banks_per_group;
+    uint32_t rows;
+    uint32_t columns;
+    uint32_t device_width;
+    uint32_t bus_width;
+    uint32_t BL;
 
     //Generic DRAM timing parameters
-    unsigned int burst_cycle;   // seperate BL with timing since fot GDDRx it's not BL/2
-    unsigned int AL;
-    unsigned int CL;
-    unsigned int CWL;
-    unsigned int RL;
-    unsigned int WL;
-    unsigned int tCCD_L;
-    unsigned int tCCD_S;
-    unsigned int tRTRS;
-    unsigned int tRTP;
-    unsigned int tWTR_L;
-    unsigned int tWTR_S;
-    unsigned int tWR;
-    unsigned int tRP;
-    unsigned int tRRD_L;
-    unsigned int tRRD_S;
-    unsigned int tRAS;
-    unsigned int tRCD;
-    unsigned int tRFC;
-    unsigned int tRC;
-    unsigned int tCKESR;
-    unsigned int tXS;
-    unsigned int tRFCb;
-    unsigned int tRREFD;
-    unsigned int tREFI;
-    unsigned int tREFIb;
-    unsigned int tFAW;
-    unsigned int tRPRE;  // read preamble and write preamble are important
-    unsigned int tWPRE; 
-    unsigned int read_delay;
-    unsigned int write_delay;
+    uint32_t burst_cycle;   // seperate BL with timing since fot GDDRx it's not BL/2
+    uint32_t AL;
+    uint32_t CL;
+    uint32_t CWL;
+    uint32_t RL;
+    uint32_t WL;
+    uint32_t tCCD_L;
+    uint32_t tCCD_S;
+    uint32_t tRTRS;
+    uint32_t tRTP;
+    uint32_t tWTR_L;
+    uint32_t tWTR_S;
+    uint32_t tWR;
+    uint32_t tRP;
+    uint32_t tRRD_L;
+    uint32_t tRRD_S;
+    uint32_t tRAS;
+    uint32_t tRCD;
+    uint32_t tRFC;
+    uint32_t tRC;
+    uint32_t tCKESR;
+    uint32_t tXS;
+    uint32_t tRFCb;
+    uint32_t tRREFD;
+    uint32_t tREFI;
+    uint32_t tREFIb;
+    uint32_t tFAW;
+    uint32_t tRPRE;  // read preamble and write preamble are important
+    uint32_t tWPRE;
+    uint32_t read_delay;
+    uint32_t write_delay;
 
     // LPDDR4 and GDDR5
-    unsigned int tPPD;
+    uint32_t tPPD;
     // GDDR5 
-    unsigned int t32AW;
-    unsigned int tRCDRD;
-    unsigned int tRCDWR;
+    uint32_t t32AW;
+    uint32_t tRCDRD;
+    uint32_t tRCDWR;
 
     std::string address_mapping;
     std::string queue_structure;
-    unsigned int queue_size;
+    uint32_t queue_size;
     bool req_buffering_enabled;
 
     std::string validation_output_file;
 
-    unsigned int epoch_period;
+    uint32_t epoch_period;
     std::string stats_file;
     std::string cummulative_stats_file;
     std::string epoch_stats_file;
@@ -95,7 +95,7 @@ public:
     std::string epoch_stats_file_csv;
 
     //Computed parameters
-    unsigned int channel_width_, rank_width_, bankgroup_width_, 
+    uint32_t channel_width_, rank_width_, bankgroup_width_,
         bank_width_, row_width_, column_width_, throwaway_bits;
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}

@@ -1,4 +1,5 @@
 #include "memory_system.h"
+#include "../ext/fmt/src/format.h"
 
 using namespace std;
 using namespace dramcore;
@@ -26,6 +27,8 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(cummulative_stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(epoch_stats_file_csv_);
+
+    address_trace_.open("address.trace");
 }
 
 MemorySystem::~MemorySystem() {
@@ -41,9 +44,15 @@ MemorySystem::~MemorySystem() {
     stats_file_csv_.close();
     cummulative_stats_file_csv_.close();
     epoch_stats_file_csv_.close();
+    address_trace_.close();
 }
 
 bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
+    //Record trace - Record address trace for debugging or other purposes
+#ifdef GENERATE_TRACE
+    address_trace_ << fmt::format("{:#x} {} {}\n", hex_addr, is_write ? "WRITE" : "READ", clk_);
+#endif
+
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
     Request* req = new Request(cmd_type, hex_addr, *ptr_config_, clk_, id_);
@@ -63,6 +72,7 @@ bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) 
         is_insertable = true;
         ptr_stats_->numb_buffered_requests++;
     }
+
     return is_insertable;
 }
 
