@@ -102,7 +102,20 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     // the first layer of xbar will be num_links * 4 (4 for quadrants)
     // the second layer will be a 1:8 xbar
     // (each quadrant has 8 vaults and each quadrant can access any ohter quadrant)
+    link_req_queues_.reserve(ptr_config_->num_links);
+    link_resp_queues_.reserve(ptr_config_->num_links);
+    for (unsigned i = 0; i < ptr_config_->num_links; i++) {
+        link_req_queues_.push_back(std::vector<HMCRequest*>());
+        link_resp_queues_.push_back(std::vector<HMCRequest*>());
+    }
 
+    // don't want to hard coding it but there are 4 quads so it's kind of fixed
+    xbar_req_queues_.reserve(4);
+    xbar_resp_queues_.reserve(4);
+    for (unsigned i = 0; i < 4; i++) {
+        xbar_req_queues_.push_back(std::vector<HMCRequest*>());
+        xbar_resp_queues_.push_back(std::vector<HMCRequest*>());
+    }
 
     //Stats output files
     stats_file_.open(ptr_config_->stats_file);

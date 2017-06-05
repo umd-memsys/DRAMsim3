@@ -87,7 +87,13 @@ private:
     uint64_t id_;
     Timing* ptr_timing_;
     Statistics* ptr_stats_;
-    std::vector<HMCRequest> buffer_q_;
+
+    // these are essentially input/output buffers for xbars
+    std::vector<std::vector<HMCRequest*>> link_req_queues_;
+    std::vector<std::vector<HMCRequest*>> link_resp_queues_;
+    std::vector<std::vector<HMCRequest*>> xbar_req_queues_;
+    std::vector<std::vector<HMCRequest*>> xbar_resp_queues_;
+    
 
     //Stats output files
     std::ofstream stats_file_;

@@ -79,6 +79,14 @@ public:
     unsigned int tRCDRD;
     unsigned int tRCDWR;
 
+    // HMC 
+    unsigned int num_links;
+    unsigned int num_dies;
+    unsigned int link_width;
+    unsigned int link_speed;
+    unsigned int num_vaults;
+    unsigned int block_size;  // block size in bytes
+
     std::string address_mapping;
     std::string queue_structure;
     unsigned int queue_size;
@@ -100,6 +108,7 @@ public:
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
     bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}
+    bool IsHMC() const {return (protocol == DRAMProtocol::HMC);}
 private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     void CalculateSize();
