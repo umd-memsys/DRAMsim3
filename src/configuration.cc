@@ -45,7 +45,8 @@ Config::Config(std::string config_file)
         // there is a 12.5 we will just use 12 or 13 to simplify coding...
         link_speed = static_cast<unsigned int>(reader.GetInteger("hmc", "link_speed", 30));
         block_size = static_cast<unsigned int>(reader.GetInteger("hmc", "block_size", 32));
-
+        xbar_queue_depth = static_cast<unsigned int>(reader.GetInteger("hmc", "xbar_queue_depth", 16));
+        
         // sanity checks 
         if (num_links !=2 || num_links != 4) {
             cerr << "HMC can only have 2 or 4 links!" << endl;

@@ -86,6 +86,7 @@ public:
     unsigned int link_speed;
     unsigned int num_vaults;
     unsigned int block_size;  // block size in bytes
+    unsigned int xbar_queue_depth;
 
     std::string address_mapping;
     std::string queue_structure;
