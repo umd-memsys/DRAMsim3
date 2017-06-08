@@ -24,6 +24,7 @@ set(SOURCES
         src/configuration.cc
         src/controller.cc
         src/cpu.cc
+        src/hmc.cc
         src/refresh.cc
         src/statistics.cc
         src/timing.cc
