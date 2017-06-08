@@ -2,22 +2,25 @@
 #define __HMC_H
 
 #include <functional>
+#include <map>
 #include "common.h"
+#include "controller.h"
 #include "configuration.h"
+#include "statistics.h"
+#include "timing.h"
 
 
 namespace dramcore {
-
 
 enum class HMCReqType {
     RD,
     WR,
     P_WR,
-    2ADD8,
+    ADD8,  // 2ADD8, cannot name it like that...
     ADD16,
     P_2ADD8,
     P_ADD16,
-    2ADDS8R,
+    ADDS8R,  // 2ADD8, cannot name it like that...
     ADDS16R,
     INC8,
     P_INC8,
@@ -58,23 +61,31 @@ public:
     HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr2, int operand_len);
     uint64_t req_id_;
     HMCReqType type;
-    uint64_t operand_1,
-    uint64_t operand_2,
+    uint64_t operand_1, operand_2;
     int src_link;
     int dest_quad;
     int dest_vault;
     int operand_len_;
     int flits;
+    // we squash response fields here
     HMCRespType resp_type;
     int resp_flits;
 };
 
-class HMCLink {
-public:
-    HMCLink(const Config &config, std::function<void(uint64_t)>& callback);
-    std::function<void(uint64_t req_id)> callback_;
-private:
 
+class HMCResponse {
+public:
+    uint64_t resp_id;
+    HMCRespType type;
+    int src_link;
+    int dest_quad;
+    int resp_flits;
+    HMCResponse(uint64_t id, HMCRespType resp_type, int link, int quad, int num_flits):
+        resp_id(id),
+        type(resp_type),
+        src_link(link),
+        dest_quad(quad),
+        resp_flits(num_flits) {}
 };
 
 
@@ -88,9 +99,13 @@ public:
     void ClockTick();
     void DRAMClockTick();
     bool InsertReq(HMCRequest* req);
+    void PrintStats();
+    std::function<void(uint64_t req_id)> callback_;
+    std::vector<Controller*> vaults_;
     Config* ptr_config_;
+
 private:
-    uint64_t logic_clk_;
+    uint64_t logic_clk_, dram_clk_;
     uint64_t logic_counter_, dram_counter_;
     int logic_time_inc_, dram_time_inc_;
     uint64_t time_lcm_;
@@ -100,18 +115,21 @@ private:
 
     void SetClockRatio();
     bool RunDRAMClock();
-    std::vector<int> BuildAgeQueue(std::vector<int> age_counter);
+    void LinkCallback(uint64_t req_id);
+    std::vector<int> BuildAgeQueue(std::vector<int>& age_counter);
     void XbarArbitrate();
+    inline void IterateNextLink();
 
     int next_link_;
     int links_;
     int queue_depth_;
 
+    std::map<uint64_t, HMCResponse*> resp_lookup_table;
     // these are essentially input/output buffers for xbars
     std::vector<std::vector<HMCRequest*>> link_req_queues_;
-    std::vector<std::vector<HMCRequest*>> link_resp_queues_;
+    std::vector<std::vector<HMCResponse*>> link_resp_queues_;
     std::vector<std::vector<HMCRequest*>> quad_req_queues_;
-    std::vector<std::vector<HMCRequest*>> quad_resp_queues_;
+    std::vector<std::vector<HMCResponse*>> quad_resp_queues_;
 
     // input/output busy indicators, since each packet could be several
     // flits, as long as this != 0 then they're busy 
@@ -120,8 +138,6 @@ private:
     // used for arbitration
     std::vector<int> link_age_counter;
     std::vector<int> quad_age_counter = {0, 0, 0, 0};
-    
-    inline void IterateNextLink();
 
     //Stats output files
     std::ofstream stats_file_;

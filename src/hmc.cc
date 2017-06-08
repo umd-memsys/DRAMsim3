@@ -3,29 +3,33 @@
 using namespace std;
 using namespace dramcore;
 
-HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr2, int operand_len):
+uint64_t gcd(uint64_t x, uint64_t y);
+uint64_t lcm(uint64_t x, uint64_t y);
+
+HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr_2, int operand_len):
     req_id_(req_id),
     type(req_type),
     operand_1(hex_addr_1),
     operand_2(hex_addr_2)
 {
+    // TODO do address translation
     switch (req_type) {
         case HMCReqType::RD:
             flits = 1;
             resp_type = HMCRespType::RD_RS;
-            resp_flits = operand_len >> 4 + 1;
+            resp_flits = (operand_len >> 4) + 1;
             break;
         case HMCReqType::WR:
-            flits = operand_len >> 4 + 1;
+            flits = (operand_len >> 4) + 1;
             resp_type = HMCRespType::WR_RS;
             resp_flits = 1;
             break;
         case HMCReqType::P_WR:
-            flits = operand_len >> 4 + 1;
+            flits = (operand_len >> 4) + 1;
             resp_type = HMCRespType::NONE;
             resp_flits = 0;
             break;
-        case HMCReqType::2ADD8:
+        case HMCReqType::ADD8:
         case HMCReqType::ADD16:
             flits = 2;
             resp_type = HMCRespType::WR_RS;
@@ -37,7 +41,7 @@ HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1
             resp_type = HMCRespType::NONE;
             resp_flits = 0;
             break;
-        case HMCReqType::2ADDS8R:
+        case HMCReqType::ADDS8R:
         case HMCReqType::ADDS16R:
             flits = 2;
             resp_type = HMCRespType::RD_RS;
@@ -93,13 +97,16 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     callback_(callback),
     logic_clk_(0),
     dram_clk_(0),
-    insert_counter_(0)
+    next_link_(0)
 {
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();
 
     // setting up clock
+    SetClockRatio();
+
+    // TODO set up vault and their callbacks to LinkCallback
 
     // initialize vaults and crossbar
     // the first layer of xbar will be num_links * 4 (4 for quadrants)
@@ -109,9 +116,9 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     links_ = ptr_config_->num_links;
     link_req_queues_.reserve(links_);
     link_resp_queues_.reserve(links_);
-    for (int i = 0; i < links; i++) {
+    for (int i = 0; i < links_; i++) {
         link_req_queues_.push_back(std::vector<HMCRequest*>());
-        link_resp_queues_.push_back(std::vector<HMCRequest*>());
+        link_resp_queues_.push_back(std::vector<HMCResponse*>());
     }
 
     // don't want to hard coding it but there are 4 quads so it's kind of fixed
@@ -119,7 +126,7 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     quad_resp_queues_.reserve(4);
     for (int i = 0; i < 4; i++) {
         quad_req_queues_.push_back(std::vector<HMCRequest*>());
-        quad_resp_queues_.push_back(std::vector<HMCRequest*>());
+        quad_resp_queues_.push_back(std::vector<HMCResponse*>());
     }
 
     link_busy.reserve(links_);
@@ -171,10 +178,12 @@ void HMCSystem::SetClockRatio() {
     logic_time_inc_ = logic_speed / freq_gcd;
     dram_time_inc_ = dram_speed / freq_gcd;
     time_lcm_ = lcm(logic_time_inc_, dram_time_inc_);
+
 #ifdef DEBUG_OUTPUT
     cout << "HMC Logic clock speed " << logic_speed << endl;
     cout << "HMC DRAM clock speed " << dram_speed << endl;
 #endif
+
     return;
 }
 
@@ -182,7 +191,7 @@ inline void HMCSystem::IterateNextLink() {
     // determinining which link a request goes to has great impact on performance
     // round robin , we can implement other schemes here later such as random
     // but there're only at most 4 links so I suspect it would make a difference
-    next_link_ = (next_link_ + 1) % links;
+    next_link_ = (next_link_ + 1) % links_;
     return;
 }
 
@@ -194,6 +203,8 @@ bool HMCSystem::InsertReq(HMCRequest* req) {
     if (link_req_queues_[next_link_].size() < queue_depth_) {
         req->src_link = next_link_;
         link_req_queues_[next_link_].push_back(req);
+        HMCResponse *resp = new HMCResponse(req->req_id_, req->resp_type, next_link_, req->dest_quad, req->resp_flits);
+        resp_lookup_table[resp->resp_id] = resp;
         IterateNextLink();
         return true;
     } else {  // link buffer full, try other links
@@ -222,21 +233,31 @@ void HMCSystem::ClockTick() {
     // for both requests and responses. 
     // so 2 layers just sounds about right
 
+    // 0. return responses to CPU
+    for (int i =0; i < links_; i++) {
+        if (!link_resp_queues_[i].empty()) {
+            HMCResponse* resp = link_resp_queues_[i].front();
+            callback_(resp->resp_id);
+            delete(resp);
+            link_resp_queues_[i].erase(link_resp_queues_[i].begin());
+        }
+    }
+
     // 1. run DRAM clock if needed
     if (RunDRAMClock()) {
         DRAMClockTick();
     }
 
     // 2. drain xbar on both directions
-    for (auto i:link_busy) {
-        if (*i > 0) {
-            *i --;
+    for (auto&& i:link_busy) {
+        if (i > 0) {
+            i --;
         }
     }
 
-    for (auto i:quad_busy) {
-        if (*i > 0) {
-            *i --;
+    for (auto&& i:quad_busy) {
+        if (i > 0) {
+            i --;
         }
     }
 
@@ -255,12 +276,12 @@ void HMCSystem::XbarArbitrate() {
     // drain requests from link to quad buffers
     std::vector<int> age_queue = BuildAgeQueue(link_age_counter);
     while (!age_queue.empty()) {
-        int src_link = age_queue.pop_back();
+        int src_link = age_queue.back();
         int dest_quad = link_req_queues_[src_link].front()->dest_quad;
         if (quad_req_queues_[dest_quad].size() < queue_depth_ && 
             quad_busy[dest_quad] == 0) {
-            HMCRequest *req = link_req_queues_.front();
-            link_req_queues_.erase(link_req_queues_.begin());
+            HMCRequest *req = link_req_queues_[src_link].front();
+            link_req_queues_[src_link].erase(link_req_queues_[src_link].begin());
             quad_req_queues_[dest_quad].push_back(req);
             quad_busy[dest_quad] = req->flits;
             link_age_counter[src_link] = 0;
@@ -273,15 +294,15 @@ void HMCSystem::XbarArbitrate() {
     // drain responses from quad to link buffers
     age_queue = BuildAgeQueue(quad_age_counter);
     while (!age_queue.empty()) {
-        int src_quad = age_queue.pop_back();
+        int src_quad = age_queue.back();
         int dest_link = quad_resp_queues_[src_quad].front()->src_link;
         if (link_resp_queues_[dest_link].size() < queue_depth_ && 
             link_busy[dest_link] == 0) {
-            HMCRequest *resp = quad_resp_queues_.front();
-            quad_resp_queues_.erase(quad_resp_queues_.begin());
-            link_resp_queues_[dest_link].push_back(req);
-            link_busy[dest_link] = req->flits;
-            quad_age_counter[src_squd] = 0;
+            HMCResponse *resp = quad_resp_queues_[src_quad].front();
+            quad_resp_queues_[src_quad].erase(quad_resp_queues_[src_quad].begin());
+            link_resp_queues_[dest_link].push_back(resp);
+            link_busy[dest_link] = resp->resp_flits;
+            quad_age_counter[src_quad] = 0;
         } else {  // stalled this cycle, update age counter 
             quad_age_counter[src_quad] ++;
         }
@@ -289,18 +310,18 @@ void HMCSystem::XbarArbitrate() {
     age_queue.clear();
 }
 
-std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int> &age_counter) {
+std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int>& age_counter) {
     // return a vector of indices sorted from largest to smallest
     // meaning that the oldest age link/quad should be processed first
     std::vector<int> age_queue;
-    int queue_len = age_counter.size()
+    int queue_len = age_counter.size();
     age_queue.reserve(queue_len);
     for (int i = 0; i < queue_len; i++) {
         if (age_counter[i] > 0) {
             bool is_inserted = false;
-            for (auto age_ptr:age_queue) {
-                if (age_counter[i] > *age_ptr) {
-                    age_queue.insert(age_ptr, i);
+            for (auto it = age_queue.begin(); it != age_queue.end(); it++) {
+                if (age_counter[i] > *it) {
+                    age_queue.insert(it, i);
                     is_inserted = true;
                     break;
                 }
@@ -315,20 +336,9 @@ std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int> &age_counter) {
 
 void HMCSystem::DRAMClockTick() {
     dram_clk_ ++;
+    return;
 }
 
-HMCSystem::~HMCSystem() {
-    
-    delete(ptr_stats_);
-    delete(ptr_timing_);
-    delete(ptr_config_);
-    stats_file_.close();
-    cummulative_stats_file_.close();
-    epoch_stats_file_.close();
-    stats_file_csv_.close();
-    cummulative_stats_file_csv_.close();
-    epoch_stats_file_csv_.close();
-}
 
 bool HMCSystem::RunDRAMClock() {
     dram_counter_ += dram_time_inc_;
@@ -344,6 +354,48 @@ bool HMCSystem::RunDRAMClock() {
         dram_counter_ %= time_lcm_;
     }
     return result;
+}
+
+
+void HMCSystem::LinkCallback(uint64_t req_id) {
+    // the vaults cannot directly talk to the CPU so this callback 
+    // will be passed to the vaults and is responsible to 
+    // put the responses back to response queues
+    
+    // remove from lookup table
+    HMCResponse *resp = resp_lookup_table[req_id];
+    resp_lookup_table.erase(req_id);
+    // put it in xbar
+    quad_resp_queues_[resp->dest_quad].push_back(resp);
+}
+
+
+HMCSystem::~HMCSystem() {
+    for (auto i = 0; i < ptr_config_->channels; i++) {
+        delete(vaults_[i]);
+    }
+    delete(ptr_stats_);
+    delete(ptr_timing_);
+    delete(ptr_config_);
+    stats_file_.close();
+    cummulative_stats_file_.close();
+    epoch_stats_file_.close();
+    stats_file_csv_.close();
+    cummulative_stats_file_csv_.close();
+    epoch_stats_file_csv_.close();
+}
+
+
+void HMCSystem::PrintStats() {
+    cout << "-----------------------------------------------------" << endl;
+    cout << "Printing final stats -- " << endl;
+    cout << "-----------------------------------------------------" << endl;
+    cout << *ptr_stats_;
+    cout << "-----------------------------------------------------" << endl;
+    cout << "The stats are also written to the file " << "dramcore.out" << endl;
+    ptr_stats_->PrintStats(stats_file_);
+    ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
+    return;
 }
 
 // the following 2 functions for domain crossing...

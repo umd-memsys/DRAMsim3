@@ -241,7 +241,7 @@ void Config::CalculateSize() {
     } else if (IsHMC()) {
         // nothing talks about the prefetch in HMC DRAM in the spec
         // so we will just go with it...
-        megs_per_bank = ((rows * columns) >> 20) * device_width / 8
+        megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
         megs_per_rank = megs_per_bank * banks * devices_per_rank;
     } else {
         // shift 20 bits first so that we won't have an overflow problem...
