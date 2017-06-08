@@ -233,7 +233,9 @@ void HMCSystem::ClockTick() {
     // for both requests and responses. 
     // so 2 layers just sounds about right
 
+
     // 0. return responses to CPU
+    // TODO check delay in xbar 
     for (int i =0; i < links_; i++) {
         if (!link_resp_queues_[i].empty()) {
             HMCResponse* resp = link_resp_queues_[i].front();
@@ -248,7 +250,15 @@ void HMCSystem::ClockTick() {
         DRAMClockTick();
     }
 
-    // 2. drain xbar on both directions
+    // 2. drain quad request queue to vaults
+    for (int i = 0; i < 4; i++) {
+        if (!quad_req_queues_[i].empty()) {
+            // TODO check delay in xbar 
+            // TODO translate HMCRequest to DRAM Request...
+        }
+    }
+
+    // 3.a step xbar
     for (auto&& i:link_busy) {
         if (i > 0) {
             i --;
@@ -261,7 +271,7 @@ void HMCSystem::ClockTick() {
         }
     }
 
-    // 3. xbar arbitrate using age/FIFO arbitration
+    // 3.b xbar arbitrate using age/FIFO arbitration
     // What is set/updated here:
     // - link_busy, quad_busy indicators
     // - link req, resp queues, quad req, resp queues 
@@ -335,6 +345,7 @@ std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int>& age_counter) {
 }
 
 void HMCSystem::DRAMClockTick() {
+    // TODO: step all vault controllers
     dram_clk_ ++;
     return;
 }
