@@ -6,56 +6,78 @@ using namespace dramcore;
 uint64_t gcd(uint64_t x, uint64_t y);
 uint64_t lcm(uint64_t x, uint64_t y);
 
-HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr_2, int operand_len):
-    req_id_(req_id),
+HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr_2):
+    req_id(req_id),
     type(req_type),
     operand_1(hex_addr_1),
     operand_2(hex_addr_2)
 {
     // TODO do address translation
     switch (req_type) {
-        case HMCReqType::RD:
+        case HMCReqType::RD16:
+        case HMCReqType::RD32:
+        case HMCReqType::RD48:
+        case HMCReqType::RD64:
+        case HMCReqType::RD80:
+        case HMCReqType::RD96:
+        case HMCReqType::RD112:
+        case HMCReqType::RD128:
+        case HMCReqType::RD256:
             flits = 1;
-            resp_type = HMCRespType::RD_RS;
-            resp_flits = (operand_len >> 4) + 1;
             break;
-        case HMCReqType::WR:
-            flits = (operand_len >> 4) + 1;
-            resp_type = HMCRespType::WR_RS;
-            resp_flits = 1;
+        case HMCReqType::WR16:
+        case HMCReqType::P_WR16:
+            flits = 2;
             break;
-        case HMCReqType::P_WR:
-            flits = (operand_len >> 4) + 1;
-            resp_type = HMCRespType::NONE;
-            resp_flits = 0;
+        case HMCReqType::WR32:
+        case HMCReqType::P_WR32:
+            flits = 3;
+            break;
+        case HMCReqType::WR48:
+        case HMCReqType::P_WR48:
+            flits = 4;
+            break;
+        case HMCReqType::WR64:
+        case HMCReqType::P_WR64:
+            flits = 5;
+            break;
+        case HMCReqType::WR80:
+        case HMCReqType::P_WR80:
+            flits = 6;
+            break;
+        case HMCReqType::WR96:
+        case HMCReqType::P_WR96:
+            flits = 7;
+            break;
+        case HMCReqType::WR112:
+        case HMCReqType::P_WR112:
+            flits = 8;
+            break;
+        case HMCReqType::WR128:
+        case HMCReqType::P_WR128:
+            flits = 9;
+            break;
+        case HMCReqType::WR256:
+        case HMCReqType::P_WR256:
+            flits = 17;
             break;
         case HMCReqType::ADD8:
         case HMCReqType::ADD16:
             flits = 2;
-            resp_type = HMCRespType::WR_RS;
-            resp_flits = 1;
             break;
         case HMCReqType::P_2ADD8:
         case HMCReqType::P_ADD16:
             flits = 2;
-            resp_type = HMCRespType::NONE;
-            resp_flits = 0;
             break;
         case HMCReqType::ADDS8R:
         case HMCReqType::ADDS16R:
             flits = 2;
-            resp_type = HMCRespType::RD_RS;
-            resp_flits = 2;
             break;
         case HMCReqType::INC8:
             flits = 1;
-            resp_type = HMCRespType::WR_RS;
-            resp_flits = 1;
             break;
         case HMCReqType::P_INC8:
             flits = 1;
-            resp_type = HMCRespType::NONE;
-            resp_flits = 0;
             break;
         case HMCReqType::XOR16:
         case HMCReqType::OR16:
@@ -66,31 +88,144 @@ HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1
         case HMCReqType::CASLT:
         case HMCReqType::CASEQ:
             flits = 2;
-            resp_type = HMCRespType::RD_RS;
-            resp_flits = 2;
             break;
         case HMCReqType::EQ:
         case HMCReqType::BWR:
             flits = 2;
-            resp_type = HMCRespType::WR_RS;
-            resp_flits = 1;
             break;
         case HMCReqType::P_BWR:
             flits = 2;
-            resp_type = HMCRespType::NONE;
-            resp_flits = 0;
             break;
         case HMCReqType::BWR8R:
         case HMCReqType::SWAP16:
             flits = 2;
-            resp_type = HMCRespType::RD_RS;
-            resp_flits = 2;
             break;
         default:
             AbruptExit(__FILE__, __LINE__);
             break;
     }
 }
+
+
+ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int src_quad):
+        resp_id(id),
+        link(dest_link),
+        quad(src_quad)
+    {   
+        switch(req_type) {
+            case HMCReqType::RD16:
+                type = HMCRespType::RD_RS;
+                flits = 2;
+                break;
+            case HMCReqType::RD32:
+                type = HMCRespType::RD_RS;
+                flits = 3;
+                break;
+            case HMCReqType::RD48:
+                type = HMCRespType::RD_RS;
+                flits = 4;
+                break;
+            case HMCReqType::RD64:
+                type = HMCRespType::RD_RS;
+                flits = 5;
+                break;
+            case HMCReqType::RD80:
+                type = HMCRespType::RD_RS;
+                flits = 6;
+                break;
+            case HMCReqType::RD96:
+                type = HMCRespType::RD_RS;
+                flits = 7;
+                break;
+            case HMCReqType::RD112:
+                type = HMCRespType::RD_RS;
+                flits = 8;
+                break;
+            case HMCReqType::RD128:
+                type = HMCRespType::RD_RS;
+                flits = 9;
+                break;
+            case HMCReqType::RD256:
+                type = HMCRespType::RD_RS;
+                flits = 17;
+                break;
+            case HMCReqType::WR16:
+            case HMCReqType::WR32:
+            case HMCReqType::WR48:
+            case HMCReqType::WR64:
+            case HMCReqType::WR80:
+            case HMCReqType::WR96:
+            case HMCReqType::WR112:
+            case HMCReqType::WR128:
+            case HMCReqType::WR256:
+                type = HMCRespType::WR_RS;
+                flits = 1;
+                break;
+            case HMCReqType::P_WR16:
+            case HMCReqType::P_WR32:
+            case HMCReqType::P_WR48:
+            case HMCReqType::P_WR64:
+            case HMCReqType::P_WR80:
+            case HMCReqType::P_WR96:
+            case HMCReqType::P_WR112:
+            case HMCReqType::P_WR128:
+            case HMCReqType::P_WR256:
+                type = HMCRespType::NONE;
+                flits = 0;
+                break;
+            case HMCReqType::ADD8:
+            case HMCReqType::ADD16:
+                type = HMCRespType::WR_RS;
+                flits = 1;
+                break;
+            case HMCReqType::P_2ADD8:
+            case HMCReqType::P_ADD16:
+                type = HMCRespType::NONE;
+                flits = 0;
+                break;
+            case HMCReqType::ADDS8R:
+            case HMCReqType::ADDS16R:
+                type = HMCRespType::RD_RS;
+                flits = 2;
+                break;
+            case HMCReqType::INC8:
+                type = HMCRespType::WR_RS;
+                flits = 1;
+                break;
+            case HMCReqType::P_INC8:
+                type = HMCRespType::NONE;
+                flits = 0;
+                break;
+            case HMCReqType::XOR16:
+            case HMCReqType::OR16:
+            case HMCReqType::NOR16:
+            case HMCReqType::AND16:
+            case HMCReqType::NAND16:
+            case HMCReqType::CASGT:
+            case HMCReqType::CASLT:
+            case HMCReqType::CASEQ:
+                type = HMCRespType::RD_RS;
+                flits = 2;
+                break;
+            case HMCReqType::EQ:
+            case HMCReqType::BWR:
+                type = HMCRespType::WR_RS;
+                flits = 1;
+                break;
+            case HMCReqType::P_BWR:
+                type = HMCRespType::NONE;
+                flits = 0;
+                break;
+            case HMCReqType::BWR8R:
+            case HMCReqType::SWAP16: 
+                type = HMCRespType::RD_RS;
+                flits = 2;
+                break;
+            default:
+                AbruptExit(__FILE__, __LINE__);
+                break;
+        }
+    }
 
 
 HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t)> callback):
@@ -201,9 +336,9 @@ bool HMCSystem::InsertReq(HMCRequest* req) {
     // then you have to call this function multiple times in 1 cycle
     // TODO put a cap limit on how many times you can call this function per cycle
     if (link_req_queues_[next_link_].size() < queue_depth_) {
-        req->src_link = next_link_;
+        req->link = next_link_;
         link_req_queues_[next_link_].push_back(req);
-        HMCResponse *resp = new HMCResponse(req->req_id_, req->resp_type, next_link_, req->dest_quad, req->resp_flits);
+        HMCResponse *resp = new HMCResponse(req->req_id, req->type, next_link_, req->quad);
         resp_lookup_table[resp->resp_id] = resp;
         IterateNextLink();
         return true;
@@ -224,6 +359,7 @@ bool HMCSystem::InsertReq(HMCRequest* req) {
         return found;
     }
 }
+
 
 void HMCSystem::ClockTick() {
     // I just need to note this somewhere:
@@ -281,13 +417,14 @@ void HMCSystem::ClockTick() {
     logic_clk_ ++;
 }
 
+
 void HMCSystem::XbarArbitrate() {
     // arbitrage based on age / FIFO 
     // drain requests from link to quad buffers
     std::vector<int> age_queue = BuildAgeQueue(link_age_counter);
     while (!age_queue.empty()) {
-        int src_link = age_queue.back();
-        int dest_quad = link_req_queues_[src_link].front()->dest_quad;
+        int src_link = age_queue.front();
+        int dest_quad = link_req_queues_[src_link].front()->quad;
         if (quad_req_queues_[dest_quad].size() < queue_depth_ && 
             quad_busy[dest_quad] == 0) {
             HMCRequest *req = link_req_queues_[src_link].front();
@@ -304,14 +441,14 @@ void HMCSystem::XbarArbitrate() {
     // drain responses from quad to link buffers
     age_queue = BuildAgeQueue(quad_age_counter);
     while (!age_queue.empty()) {
-        int src_quad = age_queue.back();
-        int dest_link = quad_resp_queues_[src_quad].front()->src_link;
+        int src_quad = age_queue.front();
+        int dest_link = quad_resp_queues_[src_quad].front()->link;
         if (link_resp_queues_[dest_link].size() < queue_depth_ && 
             link_busy[dest_link] == 0) {
             HMCResponse *resp = quad_resp_queues_[src_quad].front();
             quad_resp_queues_[src_quad].erase(quad_resp_queues_[src_quad].begin());
             link_resp_queues_[dest_link].push_back(resp);
-            link_busy[dest_link] = resp->resp_flits;
+            link_busy[dest_link] = resp->flits;
             quad_age_counter[src_quad] = 0;
         } else {  // stalled this cycle, update age counter 
             quad_age_counter[src_quad] ++;
@@ -321,7 +458,7 @@ void HMCSystem::XbarArbitrate() {
 }
 
 std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int>& age_counter) {
-    // return a vector of indices sorted from largest to smallest
+    // return a vector of indices sorted in decending order
     // meaning that the oldest age link/quad should be processed first
     std::vector<int> age_queue;
     int queue_len = age_counter.size();
@@ -377,7 +514,7 @@ void HMCSystem::LinkCallback(uint64_t req_id) {
     HMCResponse *resp = resp_lookup_table[req_id];
     resp_lookup_table.erase(req_id);
     // put it in xbar
-    quad_resp_queues_[resp->dest_quad].push_back(resp);
+    quad_resp_queues_[resp->quad].push_back(resp);
 }
 
 

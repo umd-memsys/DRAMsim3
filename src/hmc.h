@@ -13,9 +13,33 @@
 namespace dramcore {
 
 enum class HMCReqType {
-    RD,
-    WR,
-    P_WR,
+    RD16,
+    RD32,
+    RD48,
+    RD64,
+    RD80,
+    RD96,
+    RD112,
+    RD128,
+    RD256,
+    WR16,
+    WR32,
+    WR48,
+    WR64,
+    WR80,
+    WR96,
+    WR112,
+    WR128,
+    WR256,
+    P_WR16,
+    P_WR32,
+    P_WR48,
+    P_WR64,
+    P_WR80,
+    P_WR96,
+    P_WR112,
+    P_WR128,
+    P_WR256,
     ADD8,  // 2ADD8, cannot name it like that...
     ADD16,
     P_2ADD8,
@@ -58,14 +82,14 @@ enum class HMCLinkType {
 
 class HMCRequest {
 public:
-    HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr2, int operand_len);
-    uint64_t req_id_;
+    HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr2);
+    uint64_t req_id;
     HMCReqType type;
     uint64_t operand_1, operand_2;
-    int src_link;
-    int dest_quad;
-    int dest_vault;
-    int operand_len_;
+    int link;
+    int quad;
+    int vault;
+    int operand_len;
     int flits;
     // we squash response fields here
     HMCRespType resp_type;
@@ -75,17 +99,12 @@ public:
 
 class HMCResponse {
 public:
+    HMCResponse(uint64_t id, HMCReqType reqtype, int dest_link, int src_quad);
     uint64_t resp_id;
     HMCRespType type;
-    int src_link;
-    int dest_quad;
-    int resp_flits;
-    HMCResponse(uint64_t id, HMCRespType resp_type, int link, int quad, int num_flits):
-        resp_id(id),
-        type(resp_type),
-        src_link(link),
-        dest_quad(quad),
-        resp_flits(num_flits) {}
+    int link;
+    int quad;
+    int flits;
 };
 
 
