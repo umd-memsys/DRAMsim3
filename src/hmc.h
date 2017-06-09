@@ -53,10 +53,14 @@ enum class HMCReqType {
     NOR16,
     AND16,
     NAND16,
-    CASGT,
-    CASLT,
-    CASEQ,
-    EQ,
+    CASGT8,
+    CASGT16,
+    CASLT8,
+    CASLT16,
+    CASEQ8,
+    CASZERO16,
+    EQ8,
+    EQ16,
     BWR,
     P_BWR,
     BWR8R,
@@ -89,11 +93,9 @@ public:
     int link;
     int quad;
     int vault;
-    int operand_len;
     int flits;
-    // we squash response fields here
-    HMCRespType resp_type;
-    int resp_flits;
+    // this exit_time is the time to exit xbar to vaults
+    uint64_t exit_time;
 };
 
 
@@ -105,6 +107,8 @@ public:
     int link;
     int quad;
     int flits;
+    // this exit_time is the time to exit xbar to cpu
+    uint64_t exit_time;
 };
 
 
@@ -117,7 +121,8 @@ public:
     // slow dram time units to faster logic units...
     void ClockTick();
     void DRAMClockTick();
-    bool InsertReq(HMCRequest* req);
+    bool InsertReq(HMCRequest* req, int link);
+    bool InsertReqToAllLinks(HMCRequest* req);
     void PrintStats();
     std::function<void(uint64_t req_id)> callback_;
     std::vector<Controller*> vaults_;
@@ -134,6 +139,7 @@ private:
 
     void SetClockRatio();
     bool RunDRAMClock();
+    Request* TransToDRAMReq(HMCRequest *req); 
     void LinkCallback(uint64_t req_id);
     std::vector<int> BuildAgeQueue(std::vector<int>& age_counter);
     void XbarArbitrate();
