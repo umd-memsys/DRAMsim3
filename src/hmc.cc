@@ -249,8 +249,12 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     // setting up clock
     SetClockRatio();
 
+    vault_callback_ = std::bind(&HMCSystem::VaultCallback, this, std::placeholders::_1);
     // TODO set up vault and their callbacks to LinkCallback
-
+    vaults_.reserve(32);
+    for (int i = 0; i < 32; i++) {
+        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, vault_callback_));
+    }
     // initialize vaults and crossbar
     // the first layer of xbar will be num_links * 4 (4 for quadrants)
     // the second layer will be a 1:8 xbar
@@ -625,7 +629,7 @@ Request* HMCSystem::TransToDRAMReq(HMCRequest *req) {
     }
 }
 
-void HMCSystem::LinkCallback(uint64_t req_id) {
+void HMCSystem::VaultCallback(uint64_t req_id) {
     // the vaults cannot directly talk to the CPU so this callback 
     // will be passed to the vaults and is responsible to 
     // put the responses back to response queues

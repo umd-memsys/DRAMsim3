@@ -136,11 +136,12 @@ private:
     uint64_t id_;
     Timing* ptr_timing_;
     Statistics* ptr_stats_;
+    std::function<void(uint64_t)> vault_callback_;
 
     void SetClockRatio();
     bool RunDRAMClock();
     Request* TransToDRAMReq(HMCRequest *req); 
-    void LinkCallback(uint64_t req_id);
+    void VaultCallback(uint64_t req_id);
     std::vector<int> BuildAgeQueue(std::vector<int>& age_counter);
     void XbarArbitrate();
     inline void IterateNextLink();
