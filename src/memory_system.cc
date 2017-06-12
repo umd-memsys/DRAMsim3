@@ -9,6 +9,7 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     clk_(0)
 {
     ptr_config_ = new Config(config_file);
+    // SetAddressMapping(*ptr_config_);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();
     ctrls_.resize(ptr_config_->channels);
@@ -55,7 +56,7 @@ bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) 
 
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
-    Request* req = new Request(cmd_type, hex_addr, *ptr_config_, clk_, id_);
+    Request* req = new Request(cmd_type, hex_addr, clk_, id_);
     /*
     Address addr = AddressMapping(hex_addr, *ptr_config_);
     Request* req = new Request(cmd_type, addr);

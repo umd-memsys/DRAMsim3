@@ -4,8 +4,9 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <functional>
 #include <stdint.h>
-#include "configuration.h"
+#include <vector>
 
 namespace dramcore {
 
@@ -26,7 +27,8 @@ class Address {
 };
 
 uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos);
-Address AddressMapping(uint64_t hex_addr, const Config& config);
+extern std::function<Address(uint64_t)> AddressMapping;
+// void SetAddressMapping(Config* config);
 uint32_t LogBase2(uint32_t power_of_two);
 void AbruptExit(const std::string& file, int line);
 void callback_func(uint64_t req_id);
@@ -86,14 +88,14 @@ class Request {
         Request(CommandType cmd_type, const Address& addr) :
                 cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(0), exit_time_(0), id_(-1) {}
 
-        Request(CommandType cmd_type, uint64_t hex_addr, const Config& config) :
-                cmd_(Command(cmd_type, AddressMapping(hex_addr, config))), hex_addr_(hex_addr), arrival_time_(0), exit_time_(0), id_(-1) {}
+        Request(CommandType cmd_type, uint64_t hex_addr) :
+                cmd_(Command(cmd_type, AddressMapping(hex_addr))), hex_addr_(hex_addr), arrival_time_(0), exit_time_(0), id_(-1) {}
 
         Request(CommandType cmd_type, const Address& addr, uint64_t arrival_time, int64_t id) :
             cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
 
-        Request(CommandType cmd_type, uint64_t hex_addr, const Config& config, uint64_t arrival_time, int64_t id) :
-                cmd_(Command(cmd_type, AddressMapping(hex_addr, config))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
+        Request(CommandType cmd_type, uint64_t hex_addr, uint64_t arrival_time, int64_t id) :
+                cmd_(Command(cmd_type, AddressMapping(hex_addr))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
 
         Command cmd_;
         uint64_t hex_addr_;

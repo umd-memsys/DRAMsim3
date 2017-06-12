@@ -5,6 +5,8 @@
 using namespace std;
 using namespace dramcore;
 
+std::function<Address(uint64_t)> dramcore::AddressMapping;
+
 Config::Config(std::string config_file)
 {
     INIReader reader(config_file);
@@ -105,12 +107,12 @@ Config::Config(std::string config_file)
     cummulative_stats_file_csv = reader.Get("other", "cummulative_stats_file", "dramcore_cummulative_stats.csv");
     epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", "dramcore_epoch_stats.csv");
 
-    channel_width_ = LogBase2(channels);
-    rank_width_ = LogBase2(ranks);
-    bankgroup_width_ = LogBase2(bankgroups);
-    bank_width_ = LogBase2(banks_per_group);
-    row_width_ = LogBase2(rows);
-    column_width_ = LogBase2(columns);
+    channel_width = LogBase2(channels);
+    rank_width = LogBase2(ranks);
+    bankgroup_width = LogBase2(bankgroups);
+    bank_width = LogBase2(banks_per_group);
+    row_width = LogBase2(rows);
+    column_width = LogBase2(columns);
     uint32_t bytes_offset = LogBase2(bus_width / 8);
     uint32_t transaction_size = bus_width / 8 * BL;  // transaction size in bytes
 
@@ -120,16 +122,18 @@ Config::Config(std::string config_file)
     // (same as column auto increment)
     // so effectively only column_width_ -(throwaway_bits - bytes_offset) will be used in column addressing
     throwaway_bits = LogBase2(transaction_size);
-    column_width_ -= (throwaway_bits - bytes_offset);
+    column_width -= (throwaway_bits - bytes_offset);
+
+    SetAddressMapping();
 
 #ifdef DEBUG_OUTPUT
     cout << "Address bits:" << endl;
-    cout << setw(10) << "Channel " << channel_width_ << endl;
-    cout << setw(10) << "Rank " << rank_width_ << endl;
-    cout << setw(10) << "Bankgroup " << bankgroup_width_ << endl;
-    cout << setw(10) << "Bank " << bank_width_ << endl;
-    cout << setw(10) << "Row " << row_width_ << endl;
-    cout << setw(10) << "Column " << column_width_ << endl;
+    cout << setw(10) << "Channel " << channel_width << endl;
+    cout << setw(10) << "Rank " << rank_width << endl;
+    cout << setw(10) << "Bankgroup " << bankgroup_width << endl;
+    cout << setw(10) << "Bank " << bank_width << endl;
+    cout << setw(10) << "Row " << row_width << endl;
+    cout << setw(10) << "Column " << column_width << endl;
 #endif
 
 }
@@ -202,4 +206,59 @@ void Config::CalculateSize() {
         channel_size = ranks * megs_per_rank;  // reset this in case users inputs a weird number...
     }
     return;
+}
+
+void Config::SetAddressMapping() {
+    std::vector<std::string> fields;
+    
+    // has to strictly follow the order of chan, rank, bg, bank, row, col
+    int field_pos[] = {0, 0, 0, 0, 0, 0};
+    int field_widths[] = {0, 0, 0, 0, 0, 0};
+
+    if (address_mapping.size() != 12) {
+        cerr << "Unknown address mapping (6 fields each 2 chars required)" << endl;
+        AbruptExit(__FILE__, __LINE__);
+    }
+
+    int pos = throwaway_bits;
+    // get address mapping position fields from config
+    // assume each field has 2 chars
+    for (int i = 0; i < address_mapping.size(); i += 2) {
+        // MSB to LSB
+        std::string token = address_mapping.substr(i, 2);
+        if (token == "ch") {
+            field_pos[0] = pos;
+            field_widths[0] = channel_width;
+        } else if (token == "ra") {
+            field_pos[1] = pos;
+            field_widths[1] = rank_width;
+        } else if (token == "bg") {
+            field_pos[2] = pos;
+            field_widths[2] = bankgroup_width;
+        } else if (token == "ba") {
+            field_pos[3] = pos;
+            field_widths[3] = bank_width;
+        } else if (token == "ro") {
+            field_pos[4] = pos;
+            field_widths[4] = row_width;
+        } else if (token == "co") {
+            field_pos[5] = pos;
+            field_widths[5] = column_width;
+        } else {
+            cerr << "Unrecognized field: " << token << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        pos += field_widths[i];
+    }
+
+    AddressMapping = [field_pos, field_widths](uint64_t hex_addr) {
+        uint32_t channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0, column = 0;
+        channel = ModuloWidth(hex_addr, field_widths[0], field_pos[0]);
+        rank = ModuloWidth(hex_addr, field_widths[1], field_pos[1]);
+        bankgroup = ModuloWidth(hex_addr, field_widths[2], field_pos[2]);
+        bank = ModuloWidth(hex_addr, field_widths[3], field_pos[3]);
+        row = ModuloWidth(hex_addr, field_widths[4], field_pos[4]);
+        column = ModuloWidth(hex_addr, field_widths[5], field_pos[5]);
+        return Address(channel, rank, bankgroup, bank, row, column);
+    };
 }

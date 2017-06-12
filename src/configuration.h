@@ -4,8 +4,11 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "common.h"
 
 namespace dramcore {
+
+extern std::function<Address(uint64_t)> AddressMapping;
 
 enum class DRAMProtocol {
     DDR3,
@@ -95,14 +98,15 @@ public:
     std::string epoch_stats_file_csv;
 
     //Computed parameters
-    uint32_t channel_width_, rank_width_, bankgroup_width_,
-        bank_width_, row_width_, column_width_, throwaway_bits;
+    uint32_t channel_width, rank_width, bankgroup_width,
+        bank_width, row_width, column_width, throwaway_bits;
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
     bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}
 private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     void CalculateSize();
+    void SetAddressMapping();
 };
 
 }
