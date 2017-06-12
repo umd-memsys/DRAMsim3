@@ -86,10 +86,10 @@ enum class HMCLinkType {
 
 class HMCRequest {
 public:
-    HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr2);
+    HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr);
     uint64_t req_id;
     HMCReqType type;
-    uint64_t operand_1, operand_2;
+    uint64_t mem_operand;
     int link;
     int quad;
     int vault;

@@ -69,11 +69,9 @@ Config::Config(std::string config_file)
             cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
-        // there is no BL in HMC spec but I believe a block is a BL
-        // given the way the it describes in p.34 of HMC gen 2 specs
-        // which would wrap the access within the block if the address exceeds
-        // the block alignment
-        BL = block_size / 16;  
+        // each col access fetches 32B of data, and the DRAM is organized as 
+        // 1M * 16B per bank, so the BL is 2
+        BL = 2;  
         // vaults are basically channels here 
         num_vaults = 32;
         channels = num_vaults;  

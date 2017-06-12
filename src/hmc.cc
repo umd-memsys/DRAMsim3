@@ -6,11 +6,10 @@ using namespace dramcore;
 uint64_t gcd(uint64_t x, uint64_t y);
 uint64_t lcm(uint64_t x, uint64_t y);
 
-HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr_1, uint64_t hex_addr_2):
+HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr):
     req_id(req_id),
     type(req_type),
-    operand_1(hex_addr_1),
-    operand_2(hex_addr_2)
+    mem_operand(hex_addr)
 {
     // TODO do address translation
     switch (req_type) {
@@ -250,7 +249,6 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     SetClockRatio();
 
     vault_callback_ = std::bind(&HMCSystem::VaultCallback, this, std::placeholders::_1);
-    // TODO set up vault and their callbacks to LinkCallback
     vaults_.reserve(32);
     for (int i = 0; i < 32; i++) {
         vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, vault_callback_));
@@ -513,7 +511,9 @@ std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int>& age_counter) {
 }
 
 void HMCSystem::DRAMClockTick() {
-    // TODO: step all vault controllers
+    for (auto vault:vaults_) {
+        vault->ClockTick();
+    }
     dram_clk_ ++;
     return;
 }
@@ -545,14 +545,18 @@ Request* HMCSystem::TransToDRAMReq(HMCRequest *req) {
         // several consective requests 
         case HMCReqType::RD16:
         case HMCReqType::RD32:
+            // only 1 request is needed, RD16 will be chopped
+            break;
         case HMCReqType::RD48:
         case HMCReqType::RD64:
+            break;
         case HMCReqType::RD80:
         case HMCReqType::RD96:
+            break;
         case HMCReqType::RD112:
         case HMCReqType::RD128:
+            break;
         case HMCReqType::RD256:
-            // Just a read req
             break;
         case HMCReqType::WR16:
         case HMCReqType::WR32:
