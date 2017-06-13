@@ -209,8 +209,6 @@ void Config::CalculateSize() {
 }
 
 void Config::SetAddressMapping() {
-    std::vector<std::string> fields;
-    
     // has to strictly follow the order of chan, rank, bg, bank, row, col
     int field_pos[] = {0, 0, 0, 0, 0, 0};
     int field_widths[] = {0, 0, 0, 0, 0, 0};
@@ -220,35 +218,46 @@ void Config::SetAddressMapping() {
         AbruptExit(__FILE__, __LINE__);
     }
 
-    int pos = throwaway_bits;
     // get address mapping position fields from config
-    // assume each field has 2 chars
+    // each field must be 2 chars
+    std::vector<std::string> fields;
     for (int i = 0; i < address_mapping.size(); i += 2) {
-        // MSB to LSB
         std::string token = address_mapping.substr(i, 2);
-        if (token == "ch") {
+        fields.push_back(token);
+    }
+
+    int pos = throwaway_bits;
+    for (int i = fields.size() - 1; i >=0 ; i--) {
+        // do this in reverse order so that it matches the 
+        // sequence of the input string
+        if (fields[i] == "ch") {
             field_pos[0] = pos;
             field_widths[0] = channel_width;
-        } else if (token == "ra") {
+            pos += channel_width;
+        } else if (fields[i] == "ra") {
             field_pos[1] = pos;
             field_widths[1] = rank_width;
-        } else if (token == "bg") {
+            pos += rank_width;
+        } else if (fields[i] == "bg") {
             field_pos[2] = pos;
             field_widths[2] = bankgroup_width;
-        } else if (token == "ba") {
+            pos += bankgroup_width;
+        } else if (fields[i] == "ba") {
             field_pos[3] = pos;
             field_widths[3] = bank_width;
-        } else if (token == "ro") {
+            pos += bank_width;
+        } else if (fields[i] == "ro") {
             field_pos[4] = pos;
             field_widths[4] = row_width;
-        } else if (token == "co") {
+            pos += row_width;
+        } else if (fields[i] == "co") {
             field_pos[5] = pos;
             field_widths[5] = column_width;
+            pos += column_width;
         } else {
-            cerr << "Unrecognized field: " << token << endl;
+            cerr << "Unrecognized field: " << fields[i] << endl;
             AbruptExit(__FILE__, __LINE__);
         }
-        pos += field_widths[i];
     }
 
     AddressMapping = [field_pos, field_widths](uint64_t hex_addr) {
