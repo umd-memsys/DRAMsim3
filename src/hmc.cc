@@ -110,10 +110,11 @@ HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr):
 }
 
 
- HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int src_quad):
+HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int src_quad):
         resp_id(id),
         link(dest_link),
-        quad(src_quad)
+        quad(src_quad),
+        completed_flits(1)  // initialzed to 1 for header + tail
     {   
         switch(req_type) {
             case HMCReqType::RD16:
@@ -630,6 +631,8 @@ Request* HMCSystem::TransToDRAMReq(HMCRequest *req) {
             // swap imm operand and mem operand 
             // read and then write
             break;
+        default:
+            break;
     }
 }
 
@@ -638,11 +641,16 @@ void HMCSystem::VaultCallback(uint64_t req_id) {
     // will be passed to the vaults and is responsible to 
     // put the responses back to response queues
     
-    // remove from lookup table
+    // a packet could contain multiple transactions from DRAM
+    // and in this case each DRAM transaction provides 2 flits of data
     HMCResponse *resp = resp_lookup_table[req_id];
-    resp_lookup_table.erase(req_id);
-    // put it in xbar
-    quad_resp_queues_[resp->quad].push_back(resp);
+    resp->completed_flits += 2;
+    if (resp->completed_flits >= resp->flits) {
+        // all data from dram received, put packet in xbar and return
+        resp_lookup_table.erase(req_id);
+        // put it in xbar
+        quad_resp_queues_[resp->quad].push_back(resp);
+    }
 }
 
 
