@@ -417,7 +417,9 @@ void HMCSystem::ClockTick() {
         if (!quad_req_queues_[i].empty()) {
             HMCRequest *req = quad_req_queues_[i].front();
             if (req->exit_time >= logic_clk_) {
-                Request *dram_req = TransToDRAMReq(req);
+                InsertReqToDRAM(req);
+                delete(req);
+                quad_req_queues_[i].erase(quad_req_queues_[i].begin());
             }
         }
     }
@@ -537,7 +539,8 @@ bool HMCSystem::RunDRAMClock() {
 }
 
 
-Request* HMCSystem::TransToDRAMReq(HMCRequest *req) {
+void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
+    Request *dram_req;
     switch(req->type) {
         // TODO: For read/write, we need to know 
         // what's the actual BL, it's highly unlikely 
@@ -547,20 +550,49 @@ Request* HMCSystem::TransToDRAMReq(HMCRequest *req) {
         case HMCReqType::RD16:
         case HMCReqType::RD32:
             // only 1 request is needed, RD16 will be chopped
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
+            vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::RD48:
         case HMCReqType::RD64:
+            dram_req = new Request(CommandType::READ, req->mem_operand);
+            vaults_[req->vault]->InsertReq(dram_req);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand + 32);
+            vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::RD80:
         case HMCReqType::RD96:
+            for (int i = 0; i < 2; i++) {
+                dram_req = new Request(CommandType::READ, req->mem_operand + (i << 5));
+                vaults_[req->vault]->InsertReq(dram_req);
+            }
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand + 32);
+            vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::RD112:
         case HMCReqType::RD128:
+            for (int i = 0; i < 3; i++) {
+                dram_req = new Request(CommandType::READ, req->mem_operand + (i << 5));
+                vaults_[req->vault]->InsertReq(dram_req);
+            }
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand + 32);
+            vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::RD256:
+            for (int i = 0; i < 7; i++) {
+                dram_req = new Request(CommandType::READ, req->mem_operand + (i << 5));
+                vaults_[req->vault]->InsertReq(dram_req);
+            }
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand + 32);
+            vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::WR16:
         case HMCReqType::WR32:
+        case HMCReqType::P_WR16:
+        case HMCReqType::P_WR32:
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
+            vaults_[req->vault]->InsertReq(dram_req);
+            break;
         case HMCReqType::WR48:
         case HMCReqType::WR64:
         case HMCReqType::WR80:
@@ -568,8 +600,6 @@ Request* HMCSystem::TransToDRAMReq(HMCRequest *req) {
         case HMCReqType::WR112:
         case HMCReqType::WR128:
         case HMCReqType::WR256:
-        case HMCReqType::P_WR16:
-        case HMCReqType::P_WR32:
         case HMCReqType::P_WR48:
         case HMCReqType::P_WR64:
         case HMCReqType::P_WR80:
@@ -620,7 +650,7 @@ Request* HMCSystem::TransToDRAMReq(HMCRequest *req) {
         // For EQ ops, only a READ is issued, no WRITE
         case HMCReqType::EQ8:
         case HMCReqType::EQ16:
-            
+            break;
         case HMCReqType::BWR:
         case HMCReqType::P_BWR:
             // bit write, 8 Byte mask, 8 Byte value

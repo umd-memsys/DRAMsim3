@@ -1,13 +1,8 @@
 #ifndef __HMC_H
 #define __HMC_H
 
-#include <functional>
 #include <map>
-#include "common.h"
-#include "controller.h"
-#include "configuration.h"
-#include "statistics.h"
-#include "timing.h"
+#include "memory_system.h"
 
 
 namespace dramcore {
@@ -113,7 +108,7 @@ public:
 };
 
 
-class HMCSystem {
+class HMCSystem : public BaseMemorySystem {
 public:
     HMCSystem(const std::string &config_file, std::function<void(uint64_t)> callback);
     ~HMCSystem();
@@ -134,14 +129,11 @@ private:
     uint64_t logic_counter_, dram_counter_;
     int logic_time_inc_, dram_time_inc_;
     uint64_t time_lcm_;
-    uint64_t id_;
-    Timing* ptr_timing_;
-    Statistics* ptr_stats_;
     std::function<void(uint64_t)> vault_callback_;
 
     void SetClockRatio();
     bool RunDRAMClock();
-    Request* TransToDRAMReq(HMCRequest *req); 
+    void InsertReqToDRAM(HMCRequest *req); 
     void VaultCallback(uint64_t req_id);
     std::vector<int> BuildAgeQueue(std::vector<int>& age_counter);
     void XbarArbitrate();
@@ -166,13 +158,6 @@ private:
     std::vector<int> link_age_counter;
     std::vector<int> quad_age_counter = {0, 0, 0, 0};
 
-    //Stats output files
-    std::ofstream stats_file_;
-    std::ofstream cummulative_stats_file_;
-    std::ofstream epoch_stats_file_;
-    std::ofstream stats_file_csv_;
-    std::ofstream cummulative_stats_file_csv_;
-    std::ofstream epoch_stats_file_csv_;
 };
 
 

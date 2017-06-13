@@ -240,8 +240,8 @@ void Config::CalculateSize() {
         megs_per_bank = ((rows * columns * 2) >> 20)  * device_width / 8;
         megs_per_rank = megs_per_bank * banks * devices_per_rank;
     } else if (IsHMC()) {
-        // nothing talks about the prefetch in HMC DRAM in the spec
-        // so we will just go with it...
+        // similar to HBM, HMC is 2n prefetch, but that column address is still
+        // column-accessable, so we don't multiply anything... so far..
         megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
         megs_per_rank = megs_per_bank * banks * devices_per_rank;
     } else {
