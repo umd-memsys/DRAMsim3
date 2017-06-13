@@ -3,12 +3,13 @@
 using namespace std;
 using namespace dramcore;
 
-Refresh::Refresh(const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue, Statistics &stats) :
+Refresh::Refresh(const uint32_t channel_id, const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue, Statistics &stats) :
+    clk_(0),
+    channel_id_(channel_id),
     config_(config),
     channel_state_(channel_state),
     cmd_queue_(cmd_queue),
     stats_(stats),
-    clk_(0),
     last_bank_refresh_(config_.ranks, std::vector< vector<uint64_t>>(config_.bankgroups, vector<uint64_t>(config_.banks_per_group, 0))),
     last_rank_refresh_(config_.ranks, 0),
     next_rank_(0)
@@ -22,7 +23,7 @@ void Refresh::ClockTick() {
 
 void Refresh::InsertRefresh() {
     if( clk_ % (config_.tREFI/config_.ranks) == 0) {
-        auto addr = Address(); addr.rank_ = next_rank_;
+        auto addr = Address(); addr.channel_ = channel_id_; addr.rank_ = next_rank_;
         refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
         IterateNext();
     }
@@ -65,16 +66,17 @@ bool Refresh::ReadWritesToFinish(int rank, int bankgroup, int bank) {
     return channel_state_.IsRowOpen(rank, bankgroup, bank) && channel_state_.RowHitCount(rank, bankgroup, bank) == 0;
 }
 
-Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup, int bank) {
+Command Refresh::GetReadWritesToOpenRow(uint32_t rank, uint32_t bankgroup, uint32_t bank) {
     auto& queue = cmd_queue_.GetQueue(rank, bankgroup, bank);
     for(auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
         auto req = *req_itr;
-        //If the req beuint64_ts to the same bank which is being checked if it is okay for refresh
+        //If the req belongs to the same bank which is being checked if it is okay for refresh
         //Necessary for PER_RANK queues
         if(req->Rank() == rank && req->Bankgroup() == bankgroup && req->Bank() == bank) {
             Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
             if (channel_state_.IsReady(cmd, clk_)) {
                 cmd_queue_.IssueRequest(queue, req_itr);
+                stats_.numb_rw_rowhits_pending_refresh++;
                 return cmd;
             }
         }

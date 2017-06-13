@@ -41,15 +41,15 @@ public:
     void PrintCSVFormat(std::ostream& where) const;
     void PrintEpochCSVFormat(std::ostream& where) const;
 private:
-    unsigned int count_;
-    unsigned int last_epoch_count_;
+    uint64_t count_;
+    uint64_t last_epoch_count_;
 };
 
 
 class HistogramStat : public BaseStat {
 public:
     HistogramStat():BaseStat() {}
-    HistogramStat(int start, int end, unsigned int numb_bins, std::string name, std::string desc);
+    HistogramStat(int start, int end, uint32_t numb_bins, std::string name, std::string desc);
     void AddValue(int val);
     void Print(std::ostream& where) const;
     void UpdateEpoch();
@@ -60,9 +60,9 @@ public:
 private:
     int start_;
     int end_;
-    unsigned int numb_bins_;
-    std::vector<int> bin_count_, last_epoch_bin_count_;
-    int neg_outlier_count_, pos_outlier_count_, last_epoch_neg_outlier_count_, last_epoch_pos_outlier_count_;
+    uint32_t numb_bins_;
+    std::vector<uint64_t> bin_count_, last_epoch_bin_count_;
+    uint64_t neg_outlier_count_, pos_outlier_count_, last_epoch_neg_outlier_count_, last_epoch_pos_outlier_count_;
 };
 
 class Statistics {
@@ -82,6 +82,14 @@ public:
 
     class CounterStat hbm_dual_command_issue_cycles;
     class CounterStat hbm_dual_non_rw_cmd_attempt_cycles;
+
+    class CounterStat numb_read_cmds_issued;
+    class CounterStat numb_write_cmds_issued;
+    class CounterStat numb_activate_cmds_issued;
+    class CounterStat numb_precharge_cmds_issued;
+    class CounterStat numb_refresh_cmds_issued;
+
+    class CounterStat numb_rw_rowhits_pending_refresh;
 
     std::list<class BaseStat*> stats_list;
 

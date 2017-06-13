@@ -10,33 +10,32 @@
 
 namespace dramcore {
 
-class RandomCPU {
+class CPU {
+public:
+    CPU(MemorySystem& memory_system);
+    virtual void ClockTick() = 0;
+protected:
+    MemorySystem& memory_system_;
+    uint64_t clk_;
+};
+
+class RandomCPU : public CPU {
 public:
     RandomCPU(MemorySystem& memory_system);
     void ClockTick();
 private:
-    MemorySystem& memory_system_;
-    const Config& config_;
-    uint64_t clk_;
     uint64_t last_addr_;
     bool get_next_ = true;
-    int req_id_ = 0;
 };
 
-class TraceBasedCPU {
+class TraceBasedCPU : public CPU {
 public:
     TraceBasedCPU(MemorySystem& memory_system, std::string trace_file);
     void ClockTick();
 private:
-    MemorySystem& memory_system_;
-    const Config& config_;
-    uint64_t clk_;
     std::ifstream trace_file_;
-    Request* req_;
+    Access access_;
     bool get_next_ = true;
-    int req_id_ = 0;
-
-    Request* FormRequest(const Access& access);
 };
 
 }

@@ -15,10 +15,10 @@ class Controller {
 public:
     Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)>& callback_);
     ~Controller();
-    virtual void ClockTick();
+    void ClockTick();
     bool InsertReq(Request* req);
     std::function<void(uint64_t)>& callback_;
-    int channel_;
+    int channel_id_;
 protected:
     uint64_t clk_;
     bool val_output_enable;

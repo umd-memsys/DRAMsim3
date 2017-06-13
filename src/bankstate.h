@@ -41,7 +41,7 @@ class BankState {
 
         //Currently open row
         //Applicable only if the bank is in OPEN state
-        int open_row_;
+        uint32_t open_row_;
 
         //Maximum allowed row hits to a bank before aggressively precharing it
         //To prevent starvation and allow fairness

@@ -125,6 +125,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
         case CommandType::PRECHARGE:
         default:
             AbruptExit(__FILE__, __LINE__);
+            return CommandType::SIZE;
     }
 }
 

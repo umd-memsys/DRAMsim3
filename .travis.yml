@@ -3,9 +3,10 @@ dist: trusty
 sudo: false
 
 language: cpp
+warnings_are_errors: true
 
 compiler:
- - gcc
+# - gcc
  - clang
 
 #addons:
