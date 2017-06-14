@@ -143,7 +143,8 @@ private:
     int links_;
     int queue_depth_;
 
-    std::map<uint64_t, HMCResponse*> resp_lookup_table;
+    // had to use a multimap because the controller callback return hex addr instead of unique id
+    std::multimap<uint64_t, HMCResponse*> resp_lookup_table;
     // these are essentially input/output buffers for xbars
     std::vector<std::vector<HMCRequest*>> link_req_queues_;
     std::vector<std::vector<HMCResponse*>> link_resp_queues_;

@@ -400,8 +400,8 @@ bool HMCSystem::InsertReqToLink(HMCRequest* req, int link) {
     if (link_req_queues_[link].size() < queue_depth_) {
         req->link = link;
         link_req_queues_[link].push_back(req);
-        HMCResponse *resp = new HMCResponse(req->req_id, req->type, link, req->quad);
-        resp_lookup_table[resp->resp_id] = resp;
+        HMCResponse *resp = new HMCResponse(req->mem_operand, req->type, link, req->quad);
+        resp_lookup_table.insert(std::pair<uint64_t, HMCResponse*>(resp->resp_id, resp));
         link_age_counter[link] = 1;
         return true;
     } else {
@@ -724,11 +724,12 @@ void HMCSystem::VaultCallback(uint64_t req_id) {
     
     // a packet could contain multiple transactions from DRAM
     // and in this case each DRAM transaction provides 2 flits of data
-    HMCResponse *resp = resp_lookup_table[req_id];
+    auto it = resp_lookup_table.find(req_id);
+    HMCResponse *resp = it->second;
     resp->completed_flits += 2;
     if (resp->completed_flits >= resp->flits) {
         // all data from dram received, put packet in xbar and return
-        resp_lookup_table.erase(req_id);
+        resp_lookup_table.erase(it);
         // put it in xbar
         quad_resp_queues_[resp->quad].push_back(resp);
     }
