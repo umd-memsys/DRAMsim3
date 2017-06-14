@@ -12,6 +12,9 @@ HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr):
     mem_operand(hex_addr)
 {
     // TODO do address translation
+    Address addr = AddressMapping(mem_operand);
+    vault = addr.channel_;
+    quad = vault >> 3;  // 
     switch (req_type) {
         case HMCReqType::RD16:
         case HMCReqType::RD32:
@@ -342,46 +345,92 @@ inline void HMCSystem::IterateNextLink() {
 }
 
 
-bool HMCSystem::InsertReq(HMCRequest* req, int link) {
+bool HMCSystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
+    // to be compatible with other protocol we have this interface
+    // when using this intreface the size of each transaction will be block_size
+    HMCReqType req_type;
+    if (is_write) {
+        switch(ptr_config_->block_size) {
+            case 32:
+                req_type = HMCReqType::WR32;
+                break;
+            case 64:
+                req_type = HMCReqType::WR32;
+                break;
+            case 128:
+                req_type = HMCReqType::WR32;
+                break;
+            case 256:
+                req_type = HMCReqType::WR32;
+                break;
+            default:
+                AbruptExit(__FILE__, __LINE__);
+                break;
+        }
+    } else {
+        switch(ptr_config_->block_size) {
+            case 32:
+                req_type = HMCReqType::RD32;
+                break;
+            case 64:
+                req_type = HMCReqType::RD32;
+                break;
+            case 128:
+                req_type = HMCReqType::RD32;
+                break;
+            case 256:
+                req_type = HMCReqType::RD32;
+                break;
+            default:
+                AbruptExit(__FILE__, __LINE__);
+                break;
+        }
+    }
+    HMCRequest* req = new HMCRequest(req_id, req_type, hex_addr);
+    return InsertHMCReq(req);
+}
+
+
+bool HMCSystem::InsertReqToLink(HMCRequest* req, int link) {
+    // These things need to happen when an HMC request is inserted to a link:
+    // 1. check if link queue full
+    // 2. set link field in the request packet
+    // 3. create corresponding response
+    // 4. increment link_age_counter so that arbitrate logic works
     if (link_req_queues_[link].size() < queue_depth_) {
         req->link = link;
         link_req_queues_[link].push_back(req);
         HMCResponse *resp = new HMCResponse(req->req_id, req->type, link, req->quad);
         resp_lookup_table[resp->resp_id] = resp;
+        link_age_counter[link] = 1;
         return true;
     } else {
         return false;
     }
 }
 
-
-bool HMCSystem::InsertReqToAllLinks(HMCRequest* req) {
+// kk if we're using a different interface then it won't get called... wtf...
+bool HMCSystem::InsertHMCReq(HMCRequest* req) {
     // most CPU models does not support simultaneous insertions
     // if you want to actually simulate the multi-link feature
     // then you have to call this function multiple times in 1 cycle
     // TODO put a cap limit on how many times you can call this function per cycle
-    if (link_req_queues_[next_link_].size() < queue_depth_) {
-        req->link = next_link_;
-        link_req_queues_[next_link_].push_back(req);
-        HMCResponse *resp = new HMCResponse(req->req_id, req->type, next_link_, req->quad);
-        resp_lookup_table[resp->resp_id] = resp;
-        IterateNextLink();
-        return true;
-    } else {  // link buffer full, try other links
-        bool found = false;
+    bool is_inserted = InsertReqToLink(req, next_link_);
+    if (!is_inserted) {
         int start_link = next_link_;
         IterateNextLink();
         while (start_link != next_link_) {
-            if (link_req_queues_[next_link_].size() < queue_depth_) {
-                link_req_queues_[next_link_].push_back(req);
-                found = true;
+            if (InsertReqToLink(req, next_link_)) {
                 IterateNextLink();
-                break;
+                return true;
             } else {
                 IterateNextLink();
             }
         }
-        return found;
+        return false;
+    } else {
+        IterateNextLink();
+        return true;
     }
 }
 
@@ -466,6 +515,7 @@ void HMCSystem::XbarArbitrate() {
         } else {  // stalled this cycle, update age counter 
             link_age_counter[src_link] ++;
         }
+        age_queue.erase(age_queue.begin());
     }
     age_queue.clear();
 
@@ -485,6 +535,7 @@ void HMCSystem::XbarArbitrate() {
         } else {  // stalled this cycle, update age counter 
             quad_age_counter[src_quad] ++;
         }
+        age_queue.erase(age_queue.begin());
     }
     age_queue.clear();
 }

@@ -117,8 +117,10 @@ public:
     // slow dram time units to faster logic units...
     void ClockTick();
     void DRAMClockTick();
-    bool InsertReq(HMCRequest* req, int link);
-    bool InsertReqToAllLinks(HMCRequest* req);
+    // had to have 3 insert interfaces cuz HMC is so different...
+    bool InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write);
+    bool InsertReqToLink(HMCRequest* req, int link);
+    bool InsertHMCReq(HMCRequest* req);
     void PrintStats();
 
 private:

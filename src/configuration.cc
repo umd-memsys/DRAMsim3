@@ -50,24 +50,24 @@ Config::Config(std::string config_file)
         xbar_queue_depth = static_cast<unsigned int>(reader.GetInteger("hmc", "xbar_queue_depth", 16));
         
         // sanity checks 
-        if (num_links !=2 || num_links != 4) {
+        if (num_links !=2 && num_links != 4) {
             cerr << "HMC can only have 2 or 4 links!" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
-        if (num_dies != 4 || num_dies != 8) {
+        if (num_dies != 4 && num_dies != 8) {
             cerr << "HMC can only have 4/8 layers of dies!" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
-        if (link_width != 4 || link_width != 8 || link_width != 16) {
+        if (link_width != 4 && link_width != 8 && link_width != 16) {
             cerr << "HMC link width can only be 4 (quater), 8 (half) or 16 (full)!" << endl;
             AbruptExit(__FILE__, __LINE__);
         } 
-        if (link_speed != 15 || link_speed != 25 || link_speed != 28 || 
-            link_speed != 30 || link_speed != 12 or link_speed != 13) {
+        if (link_speed != 15 && link_speed != 25 && link_speed != 28 && 
+            link_speed != 30 && link_speed != 12 && link_speed != 13) {
             cerr << "HMC speed options: 12/13, 15, 25, 28, 30" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
-        if (block_size != 32 || block_size != 64 || block_size != 128 || block_size != 256) {
+        if (block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {
             cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
