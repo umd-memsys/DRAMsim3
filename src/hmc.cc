@@ -11,10 +11,9 @@ HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr):
     type(req_type),
     mem_operand(hex_addr)
 {
-    // TODO do address translation
     Address addr = AddressMapping(mem_operand);
     vault = addr.channel_;
-    quad = vault >> 3;  // 
+    quad = vault >> 3;
     switch (req_type) {
         case HMCReqType::RD16:
         case HMCReqType::RD32:
@@ -355,13 +354,13 @@ bool HMCSystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
                 req_type = HMCReqType::WR32;
                 break;
             case 64:
-                req_type = HMCReqType::WR32;
+                req_type = HMCReqType::WR64;
                 break;
             case 128:
-                req_type = HMCReqType::WR32;
+                req_type = HMCReqType::WR128;
                 break;
             case 256:
-                req_type = HMCReqType::WR32;
+                req_type = HMCReqType::WR256;
                 break;
             default:
                 AbruptExit(__FILE__, __LINE__);
@@ -373,13 +372,13 @@ bool HMCSystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
                 req_type = HMCReqType::RD32;
                 break;
             case 64:
-                req_type = HMCReqType::RD32;
+                req_type = HMCReqType::RD64;
                 break;
             case 128:
-                req_type = HMCReqType::RD32;
+                req_type = HMCReqType::RD128;
                 break;
             case 256:
-                req_type = HMCReqType::RD32;
+                req_type = HMCReqType::RD256;
                 break;
             default:
                 AbruptExit(__FILE__, __LINE__);
@@ -594,13 +593,12 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
     Request *dram_req;
     switch(req->type) {
         // TODO: For read/write, we need to know 
-        // what's the actual BL, it's highly unlikely 
-        // that they have variable BL for each request
-        // so it's very likely that they break a long request into 
-        // several consective requests 
+        // what's the actual BL, and what's its relation to block_size
+        // For now we will just insert requests to same address because they'll be on the 
+        // same row so it's basically no difference
         case HMCReqType::RD16:
         case HMCReqType::RD32:
-            // only 1 request is needed, RD16 will be chopped
+            // only 1 request is needed, RD16 will be chopped, similar for 48, 80...
             dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
@@ -608,33 +606,33 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::RD64:
             dram_req = new Request(CommandType::READ, req->mem_operand);
             vaults_[req->vault]->InsertReq(dram_req);
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand + 32);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand );
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::RD80:
         case HMCReqType::RD96:
             for (int i = 0; i < 2; i++) {
-                dram_req = new Request(CommandType::READ, req->mem_operand + (i << 5));
+                dram_req = new Request(CommandType::READ, req->mem_operand);
                 vaults_[req->vault]->InsertReq(dram_req);
             }
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand + 32);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::RD112:
         case HMCReqType::RD128:
             for (int i = 0; i < 3; i++) {
-                dram_req = new Request(CommandType::READ, req->mem_operand + (i << 5));
+                dram_req = new Request(CommandType::READ, req->mem_operand);
                 vaults_[req->vault]->InsertReq(dram_req);
             }
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand + 32);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::RD256:
             for (int i = 0; i < 7; i++) {
-                dram_req = new Request(CommandType::READ, req->mem_operand + (i << 5));
+                dram_req = new Request(CommandType::READ, req->mem_operand);
                 vaults_[req->vault]->InsertReq(dram_req);
             }
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand + 32);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::WR16:
@@ -646,19 +644,43 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
             break;
         case HMCReqType::WR48:
         case HMCReqType::WR64:
-        case HMCReqType::WR80:
-        case HMCReqType::WR96:
-        case HMCReqType::WR112:
-        case HMCReqType::WR128:
-        case HMCReqType::WR256:
         case HMCReqType::P_WR48:
         case HMCReqType::P_WR64:
+            dram_req = new Request(CommandType::WRITE, req->mem_operand);
+            vaults_[req->vault]->InsertReq(dram_req);
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
+            vaults_[req->vault]->InsertReq(dram_req);
+            break;
+        case HMCReqType::WR80:
+        case HMCReqType::WR96:
         case HMCReqType::P_WR80:
         case HMCReqType::P_WR96:
+            for (int i = 0; i < 2; i++) {
+                dram_req = new Request(CommandType::WRITE, req->mem_operand);
+                vaults_[req->vault]->InsertReq(dram_req);
+            }
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
+            vaults_[req->vault]->InsertReq(dram_req);
+            break;
+        case HMCReqType::WR112:
+        case HMCReqType::WR128:
         case HMCReqType::P_WR112:
         case HMCReqType::P_WR128:
+            for (int i = 0; i < 3; i++) {
+                dram_req = new Request(CommandType::WRITE, req->mem_operand);
+                vaults_[req->vault]->InsertReq(dram_req);
+            }
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
+            vaults_[req->vault]->InsertReq(dram_req);
+            break;
+        case HMCReqType::WR256:
         case HMCReqType::P_WR256:
-            // Just a write req
+            for (int i = 0; i < 7; i++) {
+                dram_req = new Request(CommandType::WRITE, req->mem_operand);
+                vaults_[req->vault]->InsertReq(dram_req);
+            }
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
+            vaults_[req->vault]->InsertReq(dram_req);
             break;
         // TODO real question here is, if an atomic operantion 
         // generate a read and a write request, 

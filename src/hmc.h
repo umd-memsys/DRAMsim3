@@ -71,7 +71,7 @@ enum class HMCRespType {
     SIZE
 };
 
-
+// for future use
 enum class HMCLinkType {
     HOST_TO_DEV,
     DEV_TO_DEV,
