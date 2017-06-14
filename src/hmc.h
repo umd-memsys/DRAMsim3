@@ -120,15 +120,13 @@ public:
     bool InsertReq(HMCRequest* req, int link);
     bool InsertReqToAllLinks(HMCRequest* req);
     void PrintStats();
-    std::function<void(uint64_t req_id)> callback_;
-    std::vector<Controller*> vaults_;
-    Config* ptr_config_;
 
 private:
     uint64_t logic_clk_, dram_clk_;
     uint64_t logic_counter_, dram_counter_;
     int logic_time_inc_, dram_time_inc_;
     uint64_t time_lcm_;
+    std::vector<Controller*> vaults_;
     std::function<void(uint64_t)> vault_callback_;
 
     void SetClockRatio();

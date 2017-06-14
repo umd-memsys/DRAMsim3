@@ -5,8 +5,7 @@ using namespace std;
 using namespace dramcore;
 
 MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> callback) :
-    callback_(callback),
-    clk_(0)
+    BaseMemorySystem(callback)
 {
     ptr_config_ = new Config(config_file);
     // SetAddressMapping(*ptr_config_);

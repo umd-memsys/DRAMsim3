@@ -237,7 +237,7 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
 
 
 HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t)> callback):
-    callback_(callback),
+    BaseMemorySystem(callback),
     logic_clk_(0),
     dram_clk_(0),
     next_link_(0)
