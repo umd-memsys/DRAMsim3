@@ -786,18 +786,6 @@ HMCSystem::~HMCSystem() {
 }
 
 
-void HMCSystem::PrintStats() {
-    cout << "-----------------------------------------------------" << endl;
-    cout << "Printing final stats -- " << endl;
-    cout << "-----------------------------------------------------" << endl;
-    cout << *ptr_stats_;
-    cout << "-----------------------------------------------------" << endl;
-    cout << "The stats are also written to the file " << "dramcore.out" << endl;
-    ptr_stats_->PrintStats(stats_file_);
-    ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
-    return;
-}
-
 // the following 2 functions for domain crossing...
 uint64_t gcd(uint64_t x, uint64_t y) {
    if(x < y)

@@ -119,7 +119,7 @@ void MemorySystem::PrintIntermediateStats() {
 }
 
 
-void MemorySystem::PrintStats() {
+void BaseMemorySystem::PrintStats() {
     cout << "-----------------------------------------------------" << endl;
     cout << "Printing final stats -- " << endl;
     cout << "-----------------------------------------------------" << endl;

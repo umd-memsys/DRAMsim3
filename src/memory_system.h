@@ -16,10 +16,10 @@ namespace dramcore {
 class BaseMemorySystem {
 public:
     BaseMemorySystem(std::function<void(uint64_t)> callback) :callback_(callback), clk_(0) {} 
-    virtual bool InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {}
+    virtual bool InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {return true;}
     virtual void ClockTick() {}
     virtual void PrintIntermediateStats() {}
-    virtual void PrintStats() {}
+    virtual void PrintStats();
     std::function<void(uint64_t req_id)> callback_;
     std::vector<Controller*> ctrls_;
     Config* ptr_config_;
@@ -48,7 +48,6 @@ public:
     bool InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write);
     void ClockTick();
     void PrintIntermediateStats();
-    void PrintStats();
 
 private:
     std::list<Request*> buffer_q_;

@@ -121,7 +121,6 @@ public:
     bool InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write);
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
-    void PrintStats();
 
 private:
     uint64_t logic_clk_, dram_clk_;
