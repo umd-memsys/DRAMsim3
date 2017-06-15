@@ -102,7 +102,7 @@ public:
     int link;
     int quad;
     int flits;
-    int completed_flits;
+    int dram_reqs_needed;
     // this exit_time is the time to exit xbar to cpu
     uint64_t exit_time;
 };

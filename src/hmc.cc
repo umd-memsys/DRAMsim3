@@ -115,8 +115,7 @@ HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr):
 HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int src_quad):
         resp_id(id),
         link(dest_link),
-        quad(src_quad),
-        completed_flits(1)  // initialzed to 1 for header + tail
+        quad(src_quad)
     {   
         switch(req_type) {
             case HMCReqType::RD16:
@@ -234,6 +233,19 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
             default:
                 AbruptExit(__FILE__, __LINE__);
                 break;
+        }
+        // set number of DRAM requests needed per packet
+        int type_num = static_cast<int>(req_type);
+        if (req_type >= HMCReqType::RD16 && req_type <= HMCReqType::RD256) {
+            dram_reqs_needed = flits/2;
+        } else if (req_type >= HMCReqType::WR16 && req_type <= HMCReqType::WR128) { // write
+            dram_reqs_needed = (type_num - static_cast<int>(HMCReqType::WR16)) / 2 + 1;
+        } else if (req_type == HMCReqType::WR256 || req_type == HMCReqType::P_WR256) {
+            dram_reqs_needed = 8;
+        } else if (req_type >= HMCReqType::P_WR16 && req_type <= HMCReqType::P_WR128) {
+            dram_reqs_needed = (type_num - static_cast<int>(HMCReqType::P_WR16)) / 2 + 1;
+        } else {  // atomic... oh well...
+            dram_reqs_needed = 1;
         }
     }
 
@@ -748,8 +760,8 @@ void HMCSystem::VaultCallback(uint64_t req_id) {
     // and in this case each DRAM transaction provides 2 flits of data
     auto it = resp_lookup_table.find(req_id);
     HMCResponse *resp = it->second;
-    resp->completed_flits += 2;
-    if (resp->completed_flits >= resp->flits) {
+    resp->dram_reqs_needed -= 1;
+    if (resp->dram_reqs_needed <= 0) {
         // all data from dram received, put packet in xbar and return
         resp_lookup_table.erase(it);
         // put it in xbar
