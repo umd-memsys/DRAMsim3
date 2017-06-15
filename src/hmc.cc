@@ -234,19 +234,7 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
                 AbruptExit(__FILE__, __LINE__);
                 break;
         }
-        // set number of DRAM requests needed per packet
-        int type_num = static_cast<int>(req_type);
-        if (req_type >= HMCReqType::RD16 && req_type <= HMCReqType::RD256) {
-            dram_reqs_needed = flits/2;
-        } else if (req_type >= HMCReqType::WR16 && req_type <= HMCReqType::WR128) { // write
-            dram_reqs_needed = (type_num - static_cast<int>(HMCReqType::WR16)) / 2 + 1;
-        } else if (req_type == HMCReqType::WR256 || req_type == HMCReqType::P_WR256) {
-            dram_reqs_needed = 8;
-        } else if (req_type >= HMCReqType::P_WR16 && req_type <= HMCReqType::P_WR128) {
-            dram_reqs_needed = (type_num - static_cast<int>(HMCReqType::P_WR16)) / 2 + 1;
-        } else {  // atomic... oh well...
-            dram_reqs_needed = 1;
-        }
+        return;
     }
 
 
@@ -604,46 +592,17 @@ bool HMCSystem::RunDRAMClock() {
 void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
     Request *dram_req;
     switch(req->type) {
-        // TODO: For read/write, we need to know 
-        // what's the actual BL, and what's its relation to block_size
-        // For now we will just insert requests to same address because they'll be on the 
-        // same row so it's basically no difference
         case HMCReqType::RD16:
         case HMCReqType::RD32:
-            // only 1 request is needed, RD16 will be chopped, similar for 48, 80...
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            break;
         case HMCReqType::RD48:
         case HMCReqType::RD64:
-            dram_req = new Request(CommandType::READ, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand );
-            vaults_[req->vault]->InsertReq(dram_req);
-            break;
         case HMCReqType::RD80:
         case HMCReqType::RD96:
-            for (int i = 0; i < 2; i++) {
-                dram_req = new Request(CommandType::READ, req->mem_operand);
-                vaults_[req->vault]->InsertReq(dram_req);
-            }
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            break;
         case HMCReqType::RD112:
         case HMCReqType::RD128:
-            for (int i = 0; i < 3; i++) {
-                dram_req = new Request(CommandType::READ, req->mem_operand);
-                vaults_[req->vault]->InsertReq(dram_req);
-            }
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            break;
         case HMCReqType::RD256:
-            for (int i = 0; i < 7; i++) {
-                dram_req = new Request(CommandType::READ, req->mem_operand);
-                vaults_[req->vault]->InsertReq(dram_req);
-            }
+            // only 1 request is needed, if the request length is shorter than block_size
+            // it will be chopped and therefore results in a waste of bandwidth
             dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
@@ -651,46 +610,20 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::WR32:
         case HMCReqType::P_WR16:
         case HMCReqType::P_WR32:
-            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            break;
         case HMCReqType::WR48:
         case HMCReqType::WR64:
         case HMCReqType::P_WR48:
         case HMCReqType::P_WR64:
-            dram_req = new Request(CommandType::WRITE, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            break;
         case HMCReqType::WR80:
         case HMCReqType::WR96:
         case HMCReqType::P_WR80:
         case HMCReqType::P_WR96:
-            for (int i = 0; i < 2; i++) {
-                dram_req = new Request(CommandType::WRITE, req->mem_operand);
-                vaults_[req->vault]->InsertReq(dram_req);
-            }
-            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            break;
         case HMCReqType::WR112:
         case HMCReqType::WR128:
         case HMCReqType::P_WR112:
         case HMCReqType::P_WR128:
-            for (int i = 0; i < 3; i++) {
-                dram_req = new Request(CommandType::WRITE, req->mem_operand);
-                vaults_[req->vault]->InsertReq(dram_req);
-            }
-            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
-            vaults_[req->vault]->InsertReq(dram_req);
-            break;
         case HMCReqType::WR256:
         case HMCReqType::P_WR256:
-            for (int i = 0; i < 7; i++) {
-                dram_req = new Request(CommandType::WRITE, req->mem_operand);
-                vaults_[req->vault]->InsertReq(dram_req);
-            }
             dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
@@ -749,6 +682,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         default:
             break;
     }
+    return;
 }
 
 void HMCSystem::VaultCallback(uint64_t req_id) {
@@ -756,17 +690,13 @@ void HMCSystem::VaultCallback(uint64_t req_id) {
     // will be passed to the vaults and is responsible to 
     // put the responses back to response queues
     
-    // a packet could contain multiple transactions from DRAM
-    // and in this case each DRAM transaction provides 2 flits of data
     auto it = resp_lookup_table.find(req_id);
     HMCResponse *resp = it->second;
-    resp->dram_reqs_needed -= 1;
-    if (resp->dram_reqs_needed <= 0) {
-        // all data from dram received, put packet in xbar and return
-        resp_lookup_table.erase(it);
-        // put it in xbar
-        quad_resp_queues_[resp->quad].push_back(resp);
-    }
+    // all data from dram received, put packet in xbar and return
+    resp_lookup_table.erase(it);
+    // put it in xbar
+    quad_resp_queues_[resp->quad].push_back(resp);
+    return;
 }
 
 

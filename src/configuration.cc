@@ -71,19 +71,19 @@ Config::Config(std::string config_file)
             cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
-        // each col access fetches 32B of data, and the DRAM is organized as 
-        // 1M * 16B per bank, so the BL is 2
-        BL = 2;  
+        
+        // the BL for is determined by max block_size, which 
+        BL = block_size / 32;  
         // vaults are basically channels here 
         num_vaults = 32;
         channels = num_vaults;  
 
         // A lot of the following parameters are not configurable 
         // according to the spec, so we just set them here
-        rows = 16384;
-        columns = 64;
-        device_width = 128;  // spec says 1M * 16B per bank, exactly like HBM
-        bus_width = 128;
+        rows = 65536;
+        columns = 16;
+        device_width = 256;  // 16B access granularity, but with 2n prefetch you get 2 columns, which is 32B
+        bus_width = 256;
         if (num_dies == 4) {
             banks = 8;  // NOTE this is banks per vault 
             channel_size = 128;

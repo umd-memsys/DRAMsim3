@@ -1,6 +1,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include <cassert>
 #include <string>
 #include <utility>
 #include <vector>
