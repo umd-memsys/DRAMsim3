@@ -61,7 +61,8 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
 bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
-            return ActivationWindowOk(cmd.Rank(), clk);
+            if(!ActivationWindowOk(cmd.Rank(), clk))
+                return false; //TODO - Bad coding. Case statement is not supposed to be used like this
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
         case CommandType::WRITE:
@@ -234,20 +235,22 @@ void ChannelState::UpdateRefreshWaitingStatus(const Command& cmd, bool status) {
 
 bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) const {
     bool tfaw_ok = IsFAWReady(rank, curr_time);
-    if (config_.IsGDDR()) {
-        bool t32aw_ok = Is32AWReady(rank, curr_time);
-        return t32aw_ok && tfaw_ok;
+    if(config_.IsGDDR()) {
+        if(!tfaw_ok)
+            return false;
+        else
+            return Is32AWReady(rank, curr_time);
     }
     return tfaw_ok;
 }
 
 void ChannelState::UpdateActivationTimes(int rank, uint64_t curr_time) {
-    if (!four_aw[rank].empty() && curr_time >= four_aw[rank][0]) {
+    if(!four_aw[rank].empty() && curr_time >= four_aw[rank][0]) {
         four_aw[rank].erase(four_aw[rank].begin());
     }
     four_aw[rank].push_back(curr_time + config_.tFAW);
-    if (config_.IsGDDR()) {
-        if (!thirty_two_aw[rank].empty() && curr_time >= thirty_two_aw[rank][0]) {
+    if(config_.IsGDDR()) {
+        if(!thirty_two_aw[rank].empty() && curr_time >= thirty_two_aw[rank][0]) {
             thirty_two_aw[rank].erase(thirty_two_aw[rank].begin());
         }
         thirty_two_aw[rank].push_back(curr_time + config_.t32AW);
@@ -256,8 +259,8 @@ void ChannelState::UpdateActivationTimes(int rank, uint64_t curr_time) {
 }
 
 bool ChannelState::IsFAWReady(int rank, uint64_t curr_time) const {
-    if (!four_aw[rank].empty()) {
-        if ( curr_time < four_aw[rank][0] && four_aw[rank].size() >= 4) {
+    if(!four_aw[rank].empty()) {
+        if( curr_time < four_aw[rank][0] && four_aw[rank].size() >= 4) {
             return false;
         } 
     } 
@@ -265,7 +268,7 @@ bool ChannelState::IsFAWReady(int rank, uint64_t curr_time) const {
 }
 
 bool ChannelState::Is32AWReady(int rank, uint64_t curr_time) const {
-    if (!thirty_two_aw[rank].empty()) {
+    if(!thirty_two_aw[rank].empty()) {
         if ( curr_time < thirty_two_aw[rank][0] && thirty_two_aw[rank].size() >= 32) {
             return false;
         }
