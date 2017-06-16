@@ -230,6 +230,9 @@ void ChannelState::UpdateRefreshWaitingStatus(const Command& cmd, bool status) {
             bank_states_[cmd.Rank()][cmd.Bankgroup()][k]->UpdateRefreshWaitingStatus(status);
         }
     }
+    else {
+        AbruptExit(__FILE__, __LINE__);
+    }
     return;
 }
 
@@ -292,6 +295,9 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
             break;
         case CommandType::REFRESH:
             stats_.numb_refresh_cmds_issued++;
+            break;
+        case CommandType::REFRESH_BANK:
+            stats_.numb_refresh_bank_cmds_issued++;
             break;
         default:
             AbruptExit(__FILE__, __LINE__);

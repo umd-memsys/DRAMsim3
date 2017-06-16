@@ -12,8 +12,26 @@ Refresh::Refresh(const uint32_t channel_id, const Config &config, const ChannelS
     stats_(stats),
     last_bank_refresh_(config_.ranks, std::vector< vector<uint64_t>>(config_.bankgroups, vector<uint64_t>(config_.banks_per_group, 0))),
     last_rank_refresh_(config_.ranks, 0),
-    next_rank_(0)
-{}
+    next_rank_(0),
+    next_bankgroup_(0),
+    next_bank_(0)
+{
+    if(config.refresh_strategy == "RANK_LEVEL_SIMULTANEOUS") {
+        refresh_strategy_ = RefreshStrategy::RANK_LEVEL_SIMULTANEOUS;
+    }
+    else if(config.refresh_strategy == "RANK_LEVEL_STAGGERED") {
+        refresh_strategy_ = RefreshStrategy::RANK_LEVEL_STAGGERED;
+    }
+    else if(config.refresh_strategy == "BANK_LEVEL_SIMULTANEOUS") {
+        refresh_strategy_ = RefreshStrategy ::BANK_LEVEL_SIMULTANEOUS;
+    }
+    else if(config.refresh_strategy == "BANK_LEVEL_STAGGERED") {
+        refresh_strategy_ = RefreshStrategy::BANK_LEVEL_STAGGERED;
+    }
+    else {
+        AbruptExit(__FILE__, __LINE__);
+    }
+}
 
 void Refresh::ClockTick() {
     clk_++;
@@ -22,12 +40,57 @@ void Refresh::ClockTick() {
 }
 
 void Refresh::InsertRefresh() {
-    if( clk_ % (config_.tREFI/config_.ranks) == 0) {
-        auto addr = Address(); addr.channel_ = channel_id_; addr.rank_ = next_rank_;
-        refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
-        IterateNext();
+    switch(refresh_strategy_) {
+        case RefreshStrategy::RANK_LEVEL_SIMULTANEOUS: // //Simultaneous all rank refresh
+            if (clk_ % config_.tREFI == 0) {
+                for (auto i = 0; i < config_.ranks; i++) {
+                    auto addr = Address();
+                    addr.channel_ = channel_id_;
+                    addr.rank_ = i;
+                    refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
+                }
+            }
+            return;
+        case RefreshStrategy::RANK_LEVEL_STAGGERED: //Staggered all rank refresh
+            if (clk_ % (config_.tREFI / config_.ranks) == 0) {
+                auto addr = Address();
+                addr.channel_ = channel_id_;
+                addr.rank_ = next_rank_;
+                refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
+                IterateNext();
+            }
+            return;
+        case RefreshStrategy::BANK_LEVEL_SIMULTANEOUS: //rank level staggered but bank level simultaneous per bank refresh
+            if (clk_ % (config_.tREFI / config_.ranks) == 0) {
+                for (auto k = 0; k < config_.banks_per_group; k++) {
+                    for (auto j = 0; j < config_.bankgroups; j++) {
+                        auto addr = Address();
+                        addr.channel_ = channel_id_;
+                        addr.rank_ = next_rank_;
+                        addr.bankgroup_ = j;
+                        addr.bank_ = k;
+                        refresh_q_.push_back(new Request(CommandType::REFRESH_BANK, addr));
+                    }
+                }
+                IterateNext();
+            }
+            return;
+        case RefreshStrategy::BANK_LEVEL_STAGGERED: //Fully staggered per bank refresh
+            // if (clk_ % (config_.tREFI / config_.ranks) == 0) { //TODO - tREFI needs to a multiple of numb_ranks
+            if (clk_ % config_.tREFIb == 0) {
+                auto addr = Address();
+                addr.channel_ = channel_id_;
+                addr.rank_ = next_rank_;
+                addr.bankgroup_ = next_bankgroup_;
+                addr.bank_ = next_bank_;
+                refresh_q_.push_back(new Request(CommandType::REFRESH_BANK, addr));
+                IterateNext();
+            }
+            return;
+        default:
+            AbruptExit(__FILE__, __LINE__);
+            return;
     }
-    return;
 }
 
 Command Refresh::GetRefreshOrAssociatedCommand(list<Request*>::iterator refresh_itr) {
@@ -86,6 +149,23 @@ Command Refresh::GetReadWritesToOpenRow(uint32_t rank, uint32_t bankgroup, uint3
 
 
 inline void Refresh::IterateNext() {
-    next_rank_ = (next_rank_ + 1) % config_.ranks;
-    return;
+    switch(refresh_strategy_) {
+        case RefreshStrategy::RANK_LEVEL_STAGGERED:
+        case RefreshStrategy::BANK_LEVEL_SIMULTANEOUS:
+            next_rank_ = (next_rank_ + 1) % config_.ranks;
+            return;
+        case RefreshStrategy::BANK_LEVEL_STAGGERED:
+            // Note - the order issuing bank refresh commands is static and non-configurable as per JEDEC standard
+            next_bankgroup_ = (next_bankgroup_ + 1) % config_.bankgroups;
+            if (next_bankgroup_ == 0) {
+                next_bank_ = (next_bank_ + 1) % config_.banks_per_group;
+                if (next_bank_ == 0) {
+                    next_rank_ = (next_rank_ + 1) % config_.ranks;
+                }
+            }
+            return;
+        default:
+            AbruptExit(__FILE__, __LINE__);
+            return;
+    }
 }

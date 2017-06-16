@@ -24,7 +24,7 @@ void Controller::ClockTick() {
     clk_++;
     cmd_queue_.clk_++;
 
-    //Return already issued read requests back to the CPU
+    //Return already issued read/write requests back to the CPU
     for( auto req_itr = cmd_queue_.issued_req_.begin(); req_itr !=  cmd_queue_.issued_req_.end(); req_itr++) {
         auto issued_req = *req_itr;
         if(clk_ > issued_req->exit_time_) {
@@ -33,7 +33,7 @@ void Controller::ClockTick() {
             callback_(issued_req->hex_addr_);
             delete(issued_req);
             cmd_queue_.issued_req_.erase(req_itr);
-            break; // Returning one request per cycle
+            break; // Returning one request per cycle. TODO - Make this a knob?
         }
     }
 
@@ -41,14 +41,18 @@ void Controller::ClockTick() {
     refresh_.ClockTick();
     if( !refresh_.refresh_q_.empty()) {
         auto refresh_itr = refresh_.refresh_q_.begin(); //TODO - Or chose which refresh request in the queue to prioritize to execute
-        channel_state_.UpdateRefreshWaitingStatus((*refresh_itr)->cmd_, true); //TODO - Why is this updated each time? Not smart.
+        if(channel_state_.need_to_update_refresh_waiting_status_) {
+            channel_state_.need_to_update_refresh_waiting_status_ = false;
+            channel_state_.UpdateRefreshWaitingStatus((*refresh_itr)->cmd_, true);
+        }
         auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
         if(cmd.IsValid()) {
             channel_state_.IssueCommand(cmd, clk_);
             if(cmd.IsRefresh()) {
+                channel_state_.need_to_update_refresh_waiting_status_ = true;
                 channel_state_.UpdateRefreshWaitingStatus(cmd, false);
             }
-            return;
+            return; //TODO - What about HBM dual command issue?
         }
     }
 
@@ -56,7 +60,7 @@ void Controller::ClockTick() {
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
         
-        if (config_.IsHBM()){
+        if (config_.IsHBM()){ //TODO - Current implementation doesn't do dual command issue during refresh
             auto second_cmd = cmd_queue_.GetCommandToIssue();
             if (second_cmd.IsValid()) {
                 if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {

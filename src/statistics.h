@@ -88,6 +88,7 @@ public:
     class CounterStat numb_activate_cmds_issued;
     class CounterStat numb_precharge_cmds_issued;
     class CounterStat numb_refresh_cmds_issued;
+    class CounterStat numb_refresh_bank_cmds_issued;
 
     class CounterStat numb_rw_rowhits_pending_refresh;
 
