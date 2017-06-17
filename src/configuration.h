@@ -84,8 +84,10 @@ public:
 
     std::string address_mapping;
     std::string queue_structure;
-    std::string refresh_strategy;
     uint32_t queue_size;
+    std::string refresh_strategy;
+    uint32_t idle_cycles_for_self_refresh;
+    bool aggressive_precharging_enabled;
     bool req_buffering_enabled;
 
     std::string validation_output_file;
@@ -100,7 +102,6 @@ public:
 
     //Computed parameters
     uint32_t channel_width, rank_width, bankgroup_width, bank_width, row_width, column_width, throwaway_bits;
-    uint32_t numb_banks;
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
     bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}

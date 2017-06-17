@@ -19,7 +19,7 @@ enum class QueueStructure {
 
 class CommandQueue {
 public:
-    CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback);
+    CommandQueue(uint32_t channel_id, const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)> &callback);
     Command GetCommandToIssue();
     Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
     Command AggressivePrecharge();
@@ -29,6 +29,8 @@ public:
     std::list<Request*>& GetQueue(int rank, int bankgroup, int bank);
     uint64_t clk_;
     std::list<Request*> issued_req_; //TODO - Here or in the controller or main?
+    std::vector<bool> rank_queues_empty;
+    std::vector<uint64_t > rank_queues_empty_from_time_;
 private:
     QueueStructure queue_structure_;
     const Config& config_;
@@ -36,6 +38,7 @@ private:
     Statistics& stats_;
     int next_rank_, next_bankgroup_, next_bank_, next_queue_index_;
     std::vector<std::list<Request*>> queues_;
+    uint32_t channel_id_;
 
     void IterateNext();
     int GetQueueIndex(int rank, int bankgroup, int bank);

@@ -4,19 +4,22 @@
 using namespace std;
 using namespace dramcore;
 
-CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)>& callback) :
+CommandQueue::CommandQueue(uint32_t channel_id, const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)> &callback) :
     callback_(callback),
     clk_(0),
+    rank_queues_empty(vector<bool>(config.ranks, true)),
+    rank_queues_empty_from_time_(std::vector<uint64_t >(config.ranks, 0)),
     config_(config),
     channel_state_(channel_state),
     stats_(stats),
     next_rank_(0),
     next_bankgroup_(0),
     next_bank_(0),
-    next_queue_index_(0)
+    next_queue_index_(0),
+    channel_id_(channel_id)
 {
     int num_queues = 0;
-    if (config_.queue_structure == "PER_BANK") {
+    if (config_.queue_structure == "PER_BANK") { //TODO - @shawn - Make code consistent w.r.t order of PER_RANK, PER_BANK, put condition in else as well with AbruptExit()
         queue_structure_ = QueueStructure::PER_BANK;
         num_queues = config_.banks;
     } else {
@@ -125,7 +128,7 @@ Command CommandQueue::AggressivePrecharge() {
                         }
                         if(!pending_row_hits_exist) {
                             stats_.numb_aggressive_precharges++;
-                            return Command(CommandType::PRECHARGE, Address(-1, i, j, k, -1, -1));
+                            return Command(CommandType::PRECHARGE, Address(channel_id_, i, j, k, -1, -1));
                         }
                     }
                 }
@@ -136,15 +139,15 @@ Command CommandQueue::AggressivePrecharge() {
 }
 
 bool CommandQueue::InsertReq(Request* req) {
-    int rank = req->Rank();
-    int bankgroup = req->Bankgroup();
-    int bank = req->Bank();
-
-    std::list<Request*>& queue = GetQueue(rank, bankgroup, bank);
+    std::list<Request*>& queue = GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
     if (queue.size() < config_.queue_size) {
         queue.push_back(req);
+        if(rank_queues_empty[req->Rank()]) {
+            rank_queues_empty[req->Rank()] = false;
+        }
         return true;
-    } else {
+    }
+    else {
         return false;
     }
 }
@@ -199,5 +202,34 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>:
         AbruptExit(__FILE__, __LINE__);
     }
     issued_req_.splice(issued_req_.end(), queue, req_itr);
+
+    //Update rank queues emptyness
+    if(queue.empty() && !rank_queues_empty[req->Rank()]) {
+        if (queue_structure_ == QueueStructure::PER_RANK) {
+            rank_queues_empty[req->Rank()] = true;
+            rank_queues_empty_from_time_[req->Rank()] = clk_;
+        }
+        else if (queue_structure_ == QueueStructure::PER_BANK) {
+            auto empty = true;
+            for(auto j = 0; j < config_.bankgroups; j++) {
+                for(auto k = 0; k < config_.banks_per_group; k++) {
+                    auto& bank_queue = GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
+                    if(!bank_queue.empty()) {
+                        empty = false;
+                        break;
+                    }
+                }
+                if(!empty)
+                    break; // Achieving multi-loop break
+            }
+            if(empty) {
+                rank_queues_empty[req->Rank()] = true;
+                rank_queues_empty_from_time_[req->Rank()] = clk_;
+            }
+        }
+        else {
+            AbruptExit(__FILE__, __LINE__);
+        }
+    }
     return;
 }

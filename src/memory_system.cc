@@ -126,7 +126,7 @@ void MemorySystem::PrintStats() {
     cout << "-----------------------------------------------------" << endl;
     cout << *ptr_stats_;
     cout << "-----------------------------------------------------" << endl;
-    cout << "The stats are also written to the file " << "dramcore.out" << endl;
+    cout << "The stats are also written to the file " << "dramcore_stats.txt" << endl;
     ptr_stats_->PrintStats(stats_file_);
     ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
     return;

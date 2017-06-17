@@ -18,11 +18,11 @@ ostream& operator<<(ostream& os, const Command& cmd) {
         "precharge",
         "refresh_bank",  // verilog model doesn't distinguish bank/rank refresh 
         "refresh",
-        "self_refresh",
+        "self_refresh_enter",
         "self_refresh_exit",
         "WRONG"
     };
-    os << fmt::format("{:<12} {:>3} {:>3} {:>3} {:>3} {:>#8x} {:>#8x}", command_string[static_cast<int>(cmd.cmd_type_)],
+    os << fmt::format("{:<20} {:>3} {:>3} {:>3} {:>3} {:>#8x} {:>#8x}", command_string[static_cast<int>(cmd.cmd_type_)],
                       cmd.Channel(), cmd.Rank(), cmd.Bankgroup(), cmd.Bank(), cmd.Row(), cmd.Column());
     return os;
 }

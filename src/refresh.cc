@@ -44,32 +44,38 @@ void Refresh::InsertRefresh() {
         case RefreshStrategy::RANK_LEVEL_SIMULTANEOUS: // //Simultaneous all rank refresh
             if (clk_ % config_.tREFI == 0) {
                 for (auto i = 0; i < config_.ranks; i++) {
-                    auto addr = Address();
-                    addr.channel_ = channel_id_;
-                    addr.rank_ = i;
-                    refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
+                    if(!channel_state_.rank_in_self_refresh_mode_[i]) {
+                        auto addr = Address();
+                        addr.channel_ = channel_id_;
+                        addr.rank_ = i;
+                        refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
+                    }
                 }
             }
             return;
         case RefreshStrategy::RANK_LEVEL_STAGGERED: //Staggered all rank refresh
             if (clk_ % (config_.tREFI / config_.ranks) == 0) {
-                auto addr = Address();
-                addr.channel_ = channel_id_;
-                addr.rank_ = next_rank_;
-                refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
+                if(!channel_state_.rank_in_self_refresh_mode_[next_rank_]) {
+                    auto addr = Address();
+                    addr.channel_ = channel_id_;
+                    addr.rank_ = next_rank_;
+                    refresh_q_.push_back(new Request(CommandType::REFRESH, addr));
+                }
                 IterateNext();
             }
             return;
         case RefreshStrategy::BANK_LEVEL_SIMULTANEOUS: //rank level staggered but bank level simultaneous per bank refresh
             if (clk_ % (config_.tREFI / config_.ranks) == 0) {
-                for (auto k = 0; k < config_.banks_per_group; k++) {
-                    for (auto j = 0; j < config_.bankgroups; j++) {
-                        auto addr = Address();
-                        addr.channel_ = channel_id_;
-                        addr.rank_ = next_rank_;
-                        addr.bankgroup_ = j;
-                        addr.bank_ = k;
-                        refresh_q_.push_back(new Request(CommandType::REFRESH_BANK, addr));
+                if(!channel_state_.rank_in_self_refresh_mode_[next_rank_]) {
+                    for (auto k = 0; k < config_.banks_per_group; k++) {
+                        for (auto j = 0; j < config_.bankgroups; j++) {
+                            auto addr = Address();
+                            addr.channel_ = channel_id_;
+                            addr.rank_ = next_rank_;
+                            addr.bankgroup_ = j;
+                            addr.bank_ = k;
+                            refresh_q_.push_back(new Request(CommandType::REFRESH_BANK, addr));
+                        }
                     }
                 }
                 IterateNext();
@@ -78,12 +84,14 @@ void Refresh::InsertRefresh() {
         case RefreshStrategy::BANK_LEVEL_STAGGERED: //Fully staggered per bank refresh
             // if (clk_ % (config_.tREFI / config_.ranks) == 0) { //TODO - tREFI needs to a multiple of numb_ranks
             if (clk_ % config_.tREFIb == 0) {
-                auto addr = Address();
-                addr.channel_ = channel_id_;
-                addr.rank_ = next_rank_;
-                addr.bankgroup_ = next_bankgroup_;
-                addr.bank_ = next_bank_;
-                refresh_q_.push_back(new Request(CommandType::REFRESH_BANK, addr));
+                if(!channel_state_.rank_in_self_refresh_mode_[next_rank_]) {
+                    auto addr = Address();
+                    addr.channel_ = channel_id_;
+                    addr.rank_ = next_rank_;
+                    addr.bankgroup_ = next_bankgroup_;
+                    addr.bank_ = next_bank_;
+                    refresh_q_.push_back(new Request(CommandType::REFRESH_BANK, addr));
+                }
                 IterateNext();
             }
             return;

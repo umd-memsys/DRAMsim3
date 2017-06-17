@@ -5,6 +5,8 @@ using namespace std;
 using namespace dramcore;
 
 ChannelState::ChannelState(const Config &config, const Timing &timing, Statistics &stats) :
+    need_to_update_refresh_waiting_status_(true),
+    rank_in_self_refresh_mode_(std::vector<bool>(config.ranks, false)),
     config_(config),
     timing_(timing),
     stats_(stats),
@@ -111,6 +113,17 @@ void ChannelState::UpdateState(const Command& cmd) {
         default:
             AbruptExit(__FILE__, __LINE__);
     }
+    switch(cmd.cmd_type_) {
+        case CommandType::SELF_REFRESH_ENTER:
+            rank_in_self_refresh_mode_[cmd.Rank()] = true;
+            break;
+        case CommandType::SELF_REFRESH_EXIT:
+            rank_in_self_refresh_mode_[cmd.Rank()] = false;
+            break;
+        default:
+            break;
+    }
+    return;
 }
 
 void ChannelState::UpdateTiming(const Command& cmd, uint64_t clk) {
@@ -298,6 +311,12 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
             break;
         case CommandType::REFRESH_BANK:
             stats_.numb_refresh_bank_cmds_issued++;
+            break;
+        case CommandType::SELF_REFRESH_ENTER:
+            stats_.numb_self_refresh_enter_cmds_issued++;
+            break;
+        case CommandType::SELF_REFRESH_EXIT:
+            stats_.numb_self_refresh_exit_cmds_issued++;
             break;
         default:
             AbruptExit(__FILE__, __LINE__);
