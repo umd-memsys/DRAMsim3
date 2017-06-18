@@ -24,7 +24,7 @@ void RandomCPU::ClockTick() {
         last_addr_ = rand();
     }
     bool is_write = (rand() % 3 == 0);  // R/W ratio 2:1
-    get_next_ = memory_system_.InsertReq(0, last_addr_, is_write);
+    get_next_ = memory_system_.InsertReq(last_addr_, is_write);
     return;
 }
 
@@ -46,7 +46,7 @@ void TraceBasedCPU::ClockTick() {
             trace_file_ >> access_;
         }
         if(access_.time_ <= clk_) {
-            if(memory_system_.InsertReq(0, access_.hex_addr_, access_.access_type_ == "WRITE")) {
+            if(memory_system_.InsertReq(access_.hex_addr_, access_.access_type_ == "WRITE")) {
                 get_next_ = true;
             }
         }

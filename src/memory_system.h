@@ -17,7 +17,7 @@ class MemorySystem {
 public:
     MemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
     ~MemorySystem();
-    bool InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write);
+    bool InsertReq(uint64_t hex_addr, bool is_write);
     void ClockTick();
     void PrintIntermediateStats();
     void PrintStats();

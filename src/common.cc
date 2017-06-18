@@ -30,7 +30,7 @@ ostream& operator<<(ostream& os, const Command& cmd) {
 ostream& operator<<(ostream& os, const Request& req) {
     os << "(" << req.arrival_time_ << "," << req.exit_time_ << "," << req.id_ << ")" << " " << req.cmd_;
     return os;
-}
+} //TODO - Unused code. Remove?
 
 istream& operator>>(istream& is, Access& access) {
     is >> hex >> access.hex_addr_ >> access.access_type_ >> dec >> access.time_;
@@ -64,11 +64,10 @@ void AbruptExit(const std::string& file, int line) {
     exit(-1);
 }
 
-//Dummy callback function for use when the simulator is not integrated with SST or other frontend feeders
-void callback_func(uint64_t req_id) {
-#ifdef DEBUG_OUTPUT
-        //TODO - set correct request id
-//    cout << "Request with id = " << req_id << " is returned" << endl;
+//Dummy callback function for use when the simulator is not integrated with zsim,SST or other frontend feeders
+void callback_func(uint64_t addr) {
+#ifdef LOG_REQUESTS
+    cout << "Request with address = " << addr << " is returned" << endl;
 #endif
     return;
 }
