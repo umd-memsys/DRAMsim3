@@ -24,13 +24,16 @@ Config::Config(std::string config_file)
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
     queue_size = static_cast<uint32_t>(reader.GetInteger("system", "queue_size", 16));
+    refresh_strategy = reader.Get("system", "refresh_strategy", "RANK_LEVEL_STAGGERED");
+    idle_cycles_for_self_refresh = static_cast<uint32_t>(reader.GetInteger("system", "idle_cycles_for_self_refresh", 1000));
+    aggressive_precharging_enabled = reader.GetBoolean("system", "aggressive_precharging_enabled", false);
     req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
 
     // DRAM organization
     bool bankgroup_enable = reader.GetBoolean("dram_structure", "bankgroup_enable", true);
     bankgroups = static_cast<uint32_t>(reader.GetInteger("dram_structure", "bankgroups", 2));
     banks_per_group = static_cast<uint32_t>(reader.GetInteger("dram_structure", "banks_per_group", 2));
-    if (!bankgroup_enable) {  // aggregating all banks to one group
+    if (!bankgroup_enable) {  // aggregating all banks to one group //TODO - @shawn - Why is this required?
         banks_per_group *= bankgroups;
         bankgroups = 1;
     }
@@ -63,8 +66,8 @@ Config::Config(std::string config_file)
     tRCD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCD", 10));
     tRFC = static_cast<uint32_t>(reader.GetInteger("timing", "tRFC", 74));
     tRC = tRAS + tRP;
-    tCKESR = static_cast<uint32_t>(reader.GetInteger("timing", "tCKESR", 50));
-    tXS = static_cast<uint32_t>(reader.GetInteger("timing", "tXS", 10));
+    tCKESR = static_cast<uint32_t>(reader.GetInteger("timing", "tCKESR", 500)); //TODO - @shawn - Value missing from all config files
+    tXS = tRFC + static_cast<uint32_t>(reader.GetInteger("timing", "tXS", 10)); //TODO - Ambiguity
     tRFCb = static_cast<uint32_t>(reader.GetInteger("timing", "tRFCb", 20));
     tRREFD = static_cast<uint32_t>(reader.GetInteger("timing", "tRREFD", 5));
     tREFI = static_cast<uint32_t>(reader.GetInteger("timing", "tREFI", 7800));

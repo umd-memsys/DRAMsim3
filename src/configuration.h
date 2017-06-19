@@ -8,7 +8,7 @@
 
 namespace dramcore {
 
-extern std::function<Address(uint64_t)> AddressMapping;
+extern std::function<Address(uint64_t)> AddressMapping; //TODO - @shawn - Fix duplicate declaration. Is global really necessary?
 
 enum class DRAMProtocol {
     DDR3,
@@ -85,6 +85,9 @@ public:
     std::string address_mapping;
     std::string queue_structure;
     uint32_t queue_size;
+    std::string refresh_strategy;
+    uint32_t idle_cycles_for_self_refresh;
+    bool aggressive_precharging_enabled;
     bool req_buffering_enabled;
 
     std::string validation_output_file;
@@ -98,8 +101,7 @@ public:
     std::string epoch_stats_file_csv;
 
     //Computed parameters
-    uint32_t channel_width, rank_width, bankgroup_width,
-        bank_width, row_width, column_width, throwaway_bits;
+    uint32_t channel_width, rank_width, bankgroup_width, bank_width, row_width, column_width, throwaway_bits;
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
     bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}

@@ -184,6 +184,7 @@ void BankState::UpdateState(const Command& cmd) {
             switch(cmd.cmd_type_) {
                 case CommandType::SELF_REFRESH_EXIT:
                     state_ = State::CLOSED;
+                    break;
                 case CommandType::READ:
                 case CommandType::WRITE:
                 case CommandType::READ_PRECHARGE:
@@ -196,6 +197,7 @@ void BankState::UpdateState(const Command& cmd) {
                 default:
                     AbruptExit(__FILE__, __LINE__);
             }
+            break;
         default:
             AbruptExit(__FILE__, __LINE__);
     }

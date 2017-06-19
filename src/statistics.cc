@@ -168,6 +168,9 @@ Statistics::Statistics():
     numb_activate_cmds_issued = CounterStat("numb_activate_cmds_issued", "Number of activate commands issued");
     numb_precharge_cmds_issued = CounterStat("numb_precharge_cmds_issued", "Number of precharge commands issued");
     numb_refresh_cmds_issued = CounterStat("numb_refresh_cmds_issued", "Number of refresh commands issued");
+    numb_refresh_bank_cmds_issued = CounterStat("numb_refresh_bank_cmds_issued", "Number of refresh bank commands issued");
+    numb_self_refresh_enter_cmds_issued = CounterStat("numb_self_refresh_enter_cmds_issued", "Number of self-refresh mode enter commands issued");
+    numb_self_refresh_exit_cmds_issued = CounterStat("numb_self_refresh_exit_cmds_issued", "Number of self-refresh mode exit commands issued");
     numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
 
     stats_list.push_back(&numb_read_reqs_issued);
@@ -187,6 +190,9 @@ Statistics::Statistics():
     stats_list.push_back(&numb_activate_cmds_issued);
     stats_list.push_back(&numb_precharge_cmds_issued);
     stats_list.push_back(&numb_refresh_cmds_issued);
+    stats_list.push_back(&numb_refresh_bank_cmds_issued);
+    stats_list.push_back(&numb_self_refresh_enter_cmds_issued);
+    stats_list.push_back(&numb_self_refresh_exit_cmds_issued);
     stats_list.push_back(&numb_rw_rowhits_pending_refresh);
 }
 

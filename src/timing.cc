@@ -277,6 +277,7 @@ Timing::Timing(const Config& config) :
     {
         { CommandType::ACTIVATE, self_refresh_exit },
         { CommandType::REFRESH, self_refresh_exit },
+        { CommandType::REFRESH_BANK, self_refresh_exit },
         { CommandType::SELF_REFRESH_ENTER, self_refresh_exit }
     };
 }
