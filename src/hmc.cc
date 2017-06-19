@@ -247,6 +247,12 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();
 
+    // sanity check, this constructor should only be intialized using HMC
+    if (!ptr_config_->IsHMC()) {
+        cerr << "Initialzed an HMC system without an HMC config file!" << endl;
+        AbruptExit(__FILE__, __LINE__);
+    }
+
     // setting up clock
     SetClockRatio();
 

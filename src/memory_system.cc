@@ -8,9 +8,14 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     BaseMemorySystem(callback)
 {
     ptr_config_ = new Config(config_file);
-    // SetAddressMapping(*ptr_config_);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();
+
+    if (ptr_config_->IsHMC()) {
+        cerr << "Initialzed a memory system with an HMC config file!" << endl;
+        AbruptExit(__FILE__, __LINE__);
+    }
+
     ctrls_.resize(ptr_config_->channels);
     for(auto i = 0; i < ptr_config_->channels; i++) {
         ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);

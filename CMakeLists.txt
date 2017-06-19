@@ -46,9 +46,6 @@ add_executable(dramcoremain src/main.cc)
 target_link_libraries(dramcoremain dramcore)
 #set_target_properties(dramcore PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(hmcmain src/hmc_main.cc)
-target_link_libraries(hmcmain dramcore)
-
 add_executable(dramcoretest ${SOURCES_TEST})
 target_link_libraries(dramcoretest dramcore)
 #set_target_properties(dramcoretest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
