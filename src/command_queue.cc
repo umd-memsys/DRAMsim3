@@ -18,7 +18,7 @@ CommandQueue::CommandQueue(const Config &config, const ChannelState &channel_sta
     int num_queues = 0;
     if (config_.queue_structure == "PER_BANK") {
         queue_structure_ = QueueStructure::PER_BANK;
-        num_queues = config_.banks;
+        num_queues = config_.banks * config_.ranks;
     } else {
         queue_structure_ = QueueStructure::PER_RANK;
         num_queues = config_.ranks;
