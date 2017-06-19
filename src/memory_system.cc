@@ -55,7 +55,7 @@ bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
 
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
-    Request* req = new Request(cmd_type, hex_addr, clk_);
+    Request* req = new Request(cmd_type, hex_addr, clk_, id_);
 
     // Some CPU simulators might not model the backpressure because queues are full.
     // An approximate way of addressing this scenario is to buffer all such requests here in the DRAM simulator and then

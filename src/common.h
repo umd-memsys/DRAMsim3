@@ -88,13 +88,14 @@ class Request {
         Request(CommandType cmd_type, const Address& addr) :
                 cmd_(Command(cmd_type, addr)), hex_addr_(-1), arrival_time_(-1), exit_time_(-1) {}
         //For read/write requets
-        Request(CommandType cmd_type, uint64_t hex_addr, uint64_t arrival_time) :
-                cmd_(Command(cmd_type, AddressMapping(hex_addr))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(-1) {}
+        Request(CommandType cmd_type, uint64_t hex_addr, uint64_t arrival_time, int64_t id) :
+                cmd_(Command(cmd_type, AddressMapping(hex_addr))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(-1), id_(id) {}
 
         Command cmd_;
         uint64_t hex_addr_;
         uint64_t arrival_time_;
         uint64_t exit_time_;
+        uint64_t id_;
 
         int32_t Channel() const { return cmd_.Channel(); }
         int32_t Rank() const { return cmd_.Rank(); }

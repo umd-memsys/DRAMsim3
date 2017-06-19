@@ -590,6 +590,7 @@ bool HMCSystem::RunDRAMClock() {
 
 void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
     Request *dram_req;
+    int64_t dummy_id = 0;  // TODO use a dummy id for Request constructor...
     switch(req->type) {
         case HMCReqType::RD16:
         case HMCReqType::RD32:
@@ -602,7 +603,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::RD256:
             // only 1 request is needed, if the request length is shorter than block_size
             // it will be chopped and therefore results in a waste of bandwidth
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, logic_clk_);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, logic_clk_, dummy_id);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::WR16:
@@ -623,7 +624,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::P_WR128:
         case HMCReqType::WR256:
         case HMCReqType::P_WR256:
-            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand, logic_clk_);
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand, logic_clk_, dummy_id);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         // TODO real question here is, if an atomic operantion 
