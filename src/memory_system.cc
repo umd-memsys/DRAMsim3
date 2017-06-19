@@ -47,7 +47,7 @@ MemorySystem::~MemorySystem() {
     address_trace_.close();
 }
 
-bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
+bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     //Record trace - Record address trace for debugging or other purposes
 #ifdef GENERATE_TRACE
     address_trace_ << fmt::format("{:#x} {} {}\n", hex_addr, is_write ? "WRITE" : "READ", clk_);
@@ -55,11 +55,7 @@ bool MemorySystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) 
 
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
-    Request* req = new Request(cmd_type, hex_addr, clk_, id_);
-    /*
-    Address addr = AddressMapping(hex_addr, *ptr_config_);
-    Request* req = new Request(cmd_type, addr);
-     */
+    Request* req = new Request(cmd_type, hex_addr, clk_);
 
     // Some CPU simulators might not model the backpressure because queues are full.
     // An approximate way of addressing this scenario is to buffer all such requests here in the DRAM simulator and then
@@ -125,7 +121,7 @@ void BaseMemorySystem::PrintStats() {
     cout << "-----------------------------------------------------" << endl;
     cout << *ptr_stats_;
     cout << "-----------------------------------------------------" << endl;
-    cout << "The stats are also written to the file " << "dramcore.out" << endl;
+    cout << "The stats are also written to the file " << "dramcore_stats.txt" << endl;
     ptr_stats_->PrintStats(stats_file_);
     ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
     return;

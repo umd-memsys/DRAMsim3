@@ -6,8 +6,7 @@ using namespace dramcore;
 uint64_t gcd(uint64_t x, uint64_t y);
 uint64_t lcm(uint64_t x, uint64_t y);
 
-HMCRequest::HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr):
-    req_id(req_id),
+HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr):
     type(req_type),
     mem_operand(hex_addr)
 {
@@ -344,7 +343,7 @@ inline void HMCSystem::IterateNextLink() {
 }
 
 
-bool HMCSystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
+bool HMCSystem::InsertReq(uint64_t hex_addr, bool is_write) {
     // to be compatible with other protocol we have this interface
     // when using this intreface the size of each transaction will be block_size
     HMCReqType req_type;
@@ -385,7 +384,7 @@ bool HMCSystem::InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write) {
                 break;
         }
     }
-    HMCRequest* req = new HMCRequest(req_id, req_type, hex_addr);
+    HMCRequest* req = new HMCRequest(req_type, hex_addr);
     return InsertHMCReq(req);
 }
 
@@ -408,7 +407,7 @@ bool HMCSystem::InsertReqToLink(HMCRequest* req, int link) {
     }
 }
 
-// kk if we're using a different interface then it won't get called... wtf...
+
 bool HMCSystem::InsertHMCReq(HMCRequest* req) {
     // most CPU models does not support simultaneous insertions
     // if you want to actually simulate the multi-link feature
@@ -603,7 +602,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::RD256:
             // only 1 request is needed, if the request length is shorter than block_size
             // it will be chopped and therefore results in a waste of bandwidth
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, logic_clk_);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::WR16:
@@ -624,7 +623,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::P_WR128:
         case HMCReqType::WR256:
         case HMCReqType::P_WR256:
-            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand);
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand, logic_clk_);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         // TODO real question here is, if an atomic operantion 
@@ -686,6 +685,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
 }
 
 void HMCSystem::VaultCallback(uint64_t req_id) {
+    // we will use hex addr as the req_id and use a multimap to lookup the requests
     // the vaults cannot directly talk to the CPU so this callback 
     // will be passed to the vaults and is responsible to 
     // put the responses back to response queues

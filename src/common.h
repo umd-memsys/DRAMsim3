@@ -84,24 +84,17 @@ class Command {
 
 class Request {
     public:
-        //TODO - These constructors are terrible. Fix them ASAP. More so Now!
+        // For refresh requests
         Request(CommandType cmd_type, const Address& addr) :
-                cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(0), exit_time_(0), id_(-1) {}
-
-        Request(CommandType cmd_type, uint64_t hex_addr) :
-                cmd_(Command(cmd_type, AddressMapping(hex_addr))), hex_addr_(hex_addr), arrival_time_(0), exit_time_(0), id_(-1) {}
-
-        Request(CommandType cmd_type, const Address& addr, uint64_t arrival_time, int64_t id) :
-            cmd_(Command(cmd_type, addr)), hex_addr_(0), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
-
-        Request(CommandType cmd_type, uint64_t hex_addr, uint64_t arrival_time, int64_t id) :
-                cmd_(Command(cmd_type, AddressMapping(hex_addr))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(0), id_(id) {}
+                cmd_(Command(cmd_type, addr)), hex_addr_(-1), arrival_time_(-1), exit_time_(-1) {}
+        //For read/write requets
+        Request(CommandType cmd_type, uint64_t hex_addr, uint64_t arrival_time) :
+                cmd_(Command(cmd_type, AddressMapping(hex_addr))), hex_addr_(hex_addr), arrival_time_(arrival_time), exit_time_(-1) {}
 
         Command cmd_;
         uint64_t hex_addr_;
         uint64_t arrival_time_;
         uint64_t exit_time_;
-        int64_t id_ = 0;
 
         int32_t Channel() const { return cmd_.Channel(); }
         int32_t Rank() const { return cmd_.Rank(); }

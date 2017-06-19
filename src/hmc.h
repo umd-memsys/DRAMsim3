@@ -81,8 +81,7 @@ enum class HMCLinkType {
 
 class HMCRequest {
 public:
-    HMCRequest(uint64_t req_id, HMCReqType req_type, uint64_t hex_addr);
-    uint64_t req_id;
+    HMCRequest(HMCReqType req_type, uint64_t hex_addr);
     HMCReqType type;
     uint64_t mem_operand;
     int link;
@@ -117,7 +116,7 @@ public:
     void ClockTick();
     void DRAMClockTick();
     // had to have 3 insert interfaces cuz HMC is so different...
-    bool InsertReq(uint64_t req_id, uint64_t hex_addr, bool is_write);
+    bool InsertReq(uint64_t hex_addr, bool is_write);
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
 

@@ -25,6 +25,9 @@ public:
     bool IsRowOpen(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->IsRowOpen(); }
     uint32_t OpenRow(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->OpenRow(); }
     int RowHitCount(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->RowHitCount(); };
+
+    bool need_to_update_refresh_waiting_status_ = true;
+    std::vector<bool> rank_in_self_refresh_mode_;
 private:
     const Config& config_;
     const Timing& timing_;

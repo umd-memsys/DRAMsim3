@@ -10,6 +10,14 @@
 
 namespace dramcore {
 
+enum class RefreshStrategy {
+    RANK_LEVEL_SIMULTANEOUS, //impractical due to high power requirement
+    RANK_LEVEL_STAGGERED,
+    BANK_LEVEL_SIMULTANEOUS,
+    BANK_LEVEL_STAGGERED,
+    UNKNOWN
+};
+
 class Refresh {
 public:
     Refresh(const uint32_t channel_id, const Config &config, const ChannelState &channel_state, CommandQueue &cmd_queue, Statistics &stats);
@@ -24,6 +32,8 @@ private:
     CommandQueue& cmd_queue_;
     Statistics& stats_;
 
+    RefreshStrategy refresh_strategy_;
+
     //Keep track of the last time when a refresh command was issued to this bank
     std::vector< std::vector< std::vector<uint64_t> > > last_bank_refresh_; //TODO - Wouldn't it be better to move this to bankstate?
 
@@ -31,7 +41,7 @@ private:
     //Also updated when an epoch of bank level refreshed is done as well
     std::vector<uint64_t> last_rank_refresh_;
 
-    int next_rank_;
+    int next_rank_, next_bankgroup_, next_bank_;
 
     void InsertRefresh();
 
