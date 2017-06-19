@@ -25,6 +25,7 @@ Config::Config(std::string config_file)
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
     queue_size = static_cast<uint32_t>(reader.GetInteger("system", "queue_size", 16));
     refresh_strategy = reader.Get("system", "refresh_strategy", "RANK_LEVEL_STAGGERED");
+    enable_self_refresh = reader.GetBoolean("system", "enable_self_refresh", false);
     idle_cycles_for_self_refresh = static_cast<uint32_t>(reader.GetInteger("system", "idle_cycles_for_self_refresh", 1000));
     aggressive_precharging_enabled = reader.GetBoolean("system", "aggressive_precharging_enabled", false);
     req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);

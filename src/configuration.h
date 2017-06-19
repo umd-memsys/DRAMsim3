@@ -84,6 +84,7 @@ public:
     std::string queue_structure;
     uint32_t queue_size;
     std::string refresh_strategy;
+    bool enable_self_refresh;
     uint32_t idle_cycles_for_self_refresh;
     bool aggressive_precharging_enabled;
     bool req_buffering_enabled;

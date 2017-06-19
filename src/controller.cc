@@ -38,27 +38,31 @@ void Controller::ClockTick() {
     }
 
     //Move idle ranks into self-refresh mode to save power
-    for( auto i = 0; i < config_.ranks; i++) {
-        //update rank idleness
-        if( cmd_queue_.rank_queues_empty[i] &&
-            clk_ - cmd_queue_.rank_queues_empty_from_time_[i] >= config_.idle_cycles_for_self_refresh &&
-            !channel_state_.rank_in_self_refresh_mode_[i])
-        {
-            auto addr = Address(); addr.channel_ = channel_id_; addr.rank_ = i;
-            auto self_refresh_enter_cmd = Command(CommandType::SELF_REFRESH_ENTER, addr);
-            auto cmd = channel_state_.GetRequiredCommand(self_refresh_enter_cmd);
-            if(channel_state_.IsReady(cmd, clk_))
-                if(cmd.cmd_type_ == CommandType::SELF_REFRESH_ENTER) {
-                    //clear refresh requests from the queue for the rank that is about to go into self-refresh mode
-                    for(auto refresh_req_iter = refresh_.refresh_q_.begin(); refresh_req_iter != refresh_.refresh_q_.end(); refresh_req_iter++) {
-                        auto refresh_req = *refresh_req_iter;
-                        if(refresh_req->Rank() == cmd.Rank()) {
-                            delete(refresh_req);
-                            refresh_.refresh_q_.erase(refresh_req_iter);
+    if(config_.enable_self_refresh) {
+        for (auto i = 0; i < config_.ranks; i++) {
+            //update rank idleness
+            if (cmd_queue_.rank_queues_empty[i] &&
+                clk_ - cmd_queue_.rank_queues_empty_from_time_[i] >= config_.idle_cycles_for_self_refresh &&
+                !channel_state_.rank_in_self_refresh_mode_[i]) {
+                auto addr = Address();
+                addr.channel_ = channel_id_;
+                addr.rank_ = i;
+                auto self_refresh_enter_cmd = Command(CommandType::SELF_REFRESH_ENTER, addr);
+                auto cmd = channel_state_.GetRequiredCommand(self_refresh_enter_cmd);
+                if (channel_state_.IsReady(cmd, clk_))
+                    if (cmd.cmd_type_ == CommandType::SELF_REFRESH_ENTER) {
+                        //clear refresh requests from the queue for the rank that is about to go into self-refresh mode
+                        for (auto refresh_req_iter = refresh_.refresh_q_.begin();
+                             refresh_req_iter != refresh_.refresh_q_.end(); refresh_req_iter++) {
+                            auto refresh_req = *refresh_req_iter;
+                            if (refresh_req->Rank() == cmd.Rank()) {
+                                delete (refresh_req);
+                                refresh_.refresh_q_.erase(refresh_req_iter);
+                            }
                         }
                     }
-                }
-            channel_state_.IssueCommand(cmd, clk_);
+                channel_state_.IssueCommand(cmd, clk_);
+            }
         }
     }
 

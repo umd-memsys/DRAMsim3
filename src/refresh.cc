@@ -41,7 +41,7 @@ void Refresh::ClockTick() {
 
 void Refresh::InsertRefresh() {
     switch(refresh_strategy_) {
-        case RefreshStrategy::RANK_LEVEL_SIMULTANEOUS: // //Simultaneous all rank refresh
+        case RefreshStrategy::RANK_LEVEL_SIMULTANEOUS: // Simultaneous all rank refresh
             if (clk_ % config_.tREFI == 0) {
                 for (auto i = 0; i < config_.ranks; i++) {
                     if(!channel_state_.rank_in_self_refresh_mode_[i]) {
@@ -53,7 +53,7 @@ void Refresh::InsertRefresh() {
                 }
             }
             return;
-        case RefreshStrategy::RANK_LEVEL_STAGGERED: //Staggered all rank refresh
+        case RefreshStrategy::RANK_LEVEL_STAGGERED: // Staggered all rank refresh
             if (clk_ % (config_.tREFI / config_.ranks) == 0) {
                 if(!channel_state_.rank_in_self_refresh_mode_[next_rank_]) {
                     auto addr = Address();
@@ -64,7 +64,7 @@ void Refresh::InsertRefresh() {
                 IterateNext();
             }
             return;
-        case RefreshStrategy::BANK_LEVEL_SIMULTANEOUS: //rank level staggered but bank level simultaneous per bank refresh
+        case RefreshStrategy::BANK_LEVEL_SIMULTANEOUS: // rank level staggered but bank level simultaneous per bank refresh
             if (clk_ % (config_.tREFI / config_.ranks) == 0) {
                 if(!channel_state_.rank_in_self_refresh_mode_[next_rank_]) {
                     for (auto k = 0; k < config_.banks_per_group; k++) {
@@ -81,7 +81,7 @@ void Refresh::InsertRefresh() {
                 IterateNext();
             }
             return;
-        case RefreshStrategy::BANK_LEVEL_STAGGERED: //Fully staggered per bank refresh
+        case RefreshStrategy::BANK_LEVEL_STAGGERED: // Fully staggered per bank refresh
             // if (clk_ % (config_.tREFI / config_.ranks) == 0) { //TODO - tREFI needs to a multiple of numb_ranks
             if (clk_ % config_.tREFIb == 0) {
                 if(!channel_state_.rank_in_self_refresh_mode_[next_rank_]) {
