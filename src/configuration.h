@@ -8,8 +8,6 @@
 
 namespace dramcore {
 
-extern std::function<Address(uint64_t)> AddressMapping; //TODO - @shawn - Fix duplicate declaration. Is global really necessary?
-
 enum class DRAMProtocol {
     DDR3,
     DDR4,
