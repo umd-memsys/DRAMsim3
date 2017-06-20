@@ -75,8 +75,10 @@ Config::Config(std::string config_file)
             AbruptExit(__FILE__, __LINE__);
         }
         
-        // the BL for is determined by max block_size, which 
-        BL = block_size / 32;  
+        // the BL for is determined by max block_size, which is a multiple of 32B
+        // each "device" transfer 32b per half cycle, i.e. 8B per cycle
+        // therefore BL is 4 for 32B block size
+        BL = block_size * 8 / 32;  
         // vaults are basically channels here 
         num_vaults = 32;
         channels = num_vaults;  
@@ -85,8 +87,11 @@ Config::Config(std::string config_file)
         // according to the spec, so we just set them here
         rows = 65536;
         columns = 16;
-        device_width = 256;  // 16B access granularity, but with 2n prefetch you get 2 columns, which is 32B
-        bus_width = 256;
+        // TODO column access granularity(16B) != device width (4B), oooooooooops
+        // meaning that for each column access, 
+        // and the (min) block size is 32, which is exactly BL = 8, and BL can be up to 64... really?
+        device_width = 32; 
+        bus_width = 32;
         if (num_dies == 4) {
             banks = 8;  // NOTE this is banks per vault 
             channel_size = 128;
@@ -243,9 +248,8 @@ void Config::CalculateSize() {
         megs_per_bank = ((rows * columns * 2) >> 20)  * device_width / 8;
         megs_per_rank = megs_per_bank * banks * devices_per_rank;
     } else if (IsHMC()) {
-        // similar to HBM, HMC is 2n prefetch, but that column address is still
-        // column-accessable, so we don't multiply anything... so far..
-        megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
+        // had to hard code here since it has nothing to do with the width
+        megs_per_bank = (rows * 256) >> 20 ;  // 256B page size
         megs_per_rank = megs_per_bank * banks * devices_per_rank;
     } else {
         // shift 20 bits first so that we won't have an overflow problem...
