@@ -65,9 +65,9 @@ Config::Config(std::string config_file)
             cerr << "HMC link width can only be 4 (quater), 8 (half) or 16 (full)!" << endl;
             AbruptExit(__FILE__, __LINE__);
         } 
-        if (link_speed != 15 && link_speed != 25 && link_speed != 28 && 
-            link_speed != 30 && link_speed != 12 && link_speed != 13) {
-            cerr << "HMC speed options: 12/13, 15, 25, 28, 30" << endl;
+        if (link_speed != 15000 && link_speed != 25000 && link_speed != 28000 && 
+            link_speed != 30000 && link_speed != 12500 ) {
+            cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
         if (block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {

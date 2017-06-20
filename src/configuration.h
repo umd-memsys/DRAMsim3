@@ -82,13 +82,13 @@ public:
     uint32_t tRCDWR;
 
     // HMC 
-    unsigned int num_links;
-    unsigned int num_dies;
-    unsigned int link_width;
-    unsigned int link_speed;
-    unsigned int num_vaults;
-    unsigned int block_size;  // block size in bytes
-    unsigned int xbar_queue_depth;
+    uint32_t num_links;
+    uint32_t num_dies;
+    uint32_t link_width;
+    uint32_t link_speed;
+    uint32_t num_vaults;
+    uint32_t block_size;  // block size in bytes
+    uint32_t xbar_queue_depth;
 
     std::string address_mapping;
     std::string queue_structure;

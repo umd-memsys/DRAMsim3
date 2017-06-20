@@ -314,19 +314,16 @@ void HMCSystem::SetClockRatio() {
     // so the logic only needs to run at 30/8=3.25GHz
     // which is approximately 5.2x speed of the DRAM
     // all speed in MHz to avoid using floats
-    float link_speed;
-    uint64_t dram_speed = 625;
+    uint32_t dram_speed = 1250;
+    uint32_t link_speed = ptr_config_->link_speed; 
 
-    // cast link speed to float
-    if (ptr_config_->link_speed == 12 || ptr_config_->link_speed == 13) {
-        link_speed = 1250.0;
-    } else {
-        link_speed = static_cast<float>(ptr_config_->link_speed) * 1000.0;
-    }
+    // 128 bits per flit, this is to calculate logic speed
+    // e.g. if it takes 8 link cycles to transfer a flit
+    // the logic has to be running in similar speed so that 
+    // the logic or the link don't have to wait for each other
+    uint32_t cycles_per_flit = 128 / ptr_config_->link_width;  //8, 16, or 32
+    uint32_t logic_speed = link_speed / cycles_per_flit; 
 
-    // 128 bits per flit
-    float cycles_per_flit = static_cast<float>(128 / ptr_config_->link_width);
-    uint64_t logic_speed = static_cast<int>(link_speed/cycles_per_flit);
     int freq_gcd = gcd(dram_speed, logic_speed);
     logic_time_inc_ = logic_speed / freq_gcd;
     dram_time_inc_ = dram_speed / freq_gcd;
@@ -368,6 +365,7 @@ bool HMCSystem::InsertReq(uint64_t hex_addr, bool is_write) {
                 req_type = HMCReqType::WR256;
                 break;
             default:
+                req_type = HMCReqType::SIZE;
                 AbruptExit(__FILE__, __LINE__);
                 break;
         }
@@ -386,6 +384,7 @@ bool HMCSystem::InsertReq(uint64_t hex_addr, bool is_write) {
                 req_type = HMCReqType::RD256;
                 break;
             default:
+                req_type = HMCReqType::SIZE;
                 AbruptExit(__FILE__, __LINE__);
                 break;
         }
