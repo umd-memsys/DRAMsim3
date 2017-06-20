@@ -46,16 +46,17 @@ Timing::Timing(const Config& config) :
     }
     activate_to_refresh = config_.tRC;  // need to precharge before ref, so it's tRC
 
-    // TODO the following ref timings need to be fixed
-    refresh_to_refresh = config_.tRREFD;
-    refresh_to_activate = refresh_to_refresh;
+    // TODO: deal with different refresh rate
+    refresh_to_refresh = config_.tREFI;  // refresh intervals (per rank level)
+    refresh_to_activate = config_.tRFC;  // tRFC is defined as ref to act
+    refresh_to_activate_bank = config_.tRFCb;
 
-    refresh_cycle = config_.tRFC;
-
-    refresh_cycle_bank = config_.tRFCb;
 
     self_refresh_entry_to_exit = config_.tCKESR;
     self_refresh_exit = config_.tXS;
+    powerdown_to_exit = config_.tCKE;
+    powerdown_exit = config_.tXP;
+
 
     if (config_.bankgroups == 1) {  
         // for GDDR5 bankgroup can be disabled, in that case 
@@ -239,10 +240,10 @@ Timing::Timing(const Config& config) :
     //command REFRESH_BANK
     same_rank[static_cast<int>(CommandType::REFRESH_BANK)] = std::list< std::pair<CommandType, uint32_t> >
     {
-        { CommandType::ACTIVATE, refresh_cycle_bank },
-        { CommandType::REFRESH,  refresh_cycle_bank },
-        { CommandType::REFRESH_BANK, refresh_cycle_bank },
-        { CommandType::SELF_REFRESH_ENTER, refresh_cycle_bank }
+        { CommandType::ACTIVATE, refresh_to_activate_bank },
+        { CommandType::REFRESH,  refresh_to_activate_bank },
+        { CommandType::REFRESH_BANK, refresh_to_activate_bank },
+        { CommandType::SELF_REFRESH_ENTER, refresh_to_activate_bank }
     };
 
     other_banks_same_bankgroup[static_cast<int>(CommandType::REFRESH_BANK)] = std::list< std::pair<CommandType, uint32_t> >
@@ -261,12 +262,13 @@ Timing::Timing(const Config& config) :
     //command REFRESH
     same_rank[static_cast<int>(CommandType::REFRESH)] = std::list< std::pair<CommandType, uint32_t> >
     {
-        { CommandType::ACTIVATE, refresh_cycle },
-        { CommandType::REFRESH,  refresh_cycle },
-        { CommandType::SELF_REFRESH_ENTER, refresh_cycle }
+        { CommandType::ACTIVATE, refresh_to_activate },
+        { CommandType::REFRESH,  refresh_to_activate },
+        { CommandType::SELF_REFRESH_ENTER, refresh_to_activate }
     };
 
     //command SELF_REFRESH_ENTER
+    // TODO: add power down commands
     same_rank[static_cast<int>(CommandType::SELF_REFRESH_ENTER)] = std::list< std::pair<CommandType, uint32_t> >
     {
         { CommandType::SELF_REFRESH_EXIT,  self_refresh_entry_to_exit}

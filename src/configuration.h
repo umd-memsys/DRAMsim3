@@ -61,8 +61,12 @@ public:
     uint32_t tRCD;
     uint32_t tRFC;
     uint32_t tRC;
+    // tCKSRE and tCKSRX are only useful for changing clock freq after entering SRE mode
+    // we are not doing that, so tCKESR is sufficient
+    uint32_t tCKE;
     uint32_t tCKESR;
     uint32_t tXS;
+    uint32_t tXP;
     uint32_t tRFCb;
     uint32_t tRREFD;
     uint32_t tREFI;

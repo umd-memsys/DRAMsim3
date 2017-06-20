@@ -67,8 +67,10 @@ Config::Config(std::string config_file)
     tRCD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCD", 10));
     tRFC = static_cast<uint32_t>(reader.GetInteger("timing", "tRFC", 74));
     tRC = tRAS + tRP;
-    tCKESR = static_cast<uint32_t>(reader.GetInteger("timing", "tCKESR", 500)); //TODO - @shawn - Value missing from all config files
-    tXS = tRFC + static_cast<uint32_t>(reader.GetInteger("timing", "tXS", 10)); //TODO - Ambiguity
+    tCKE = static_cast<uint32_t>(reader.GetInteger("timing", "tCKE", 6));
+    tCKESR = static_cast<uint32_t>(reader.GetInteger("timing", "tCKESR", 12));
+    tXS = static_cast<uint32_t>(reader.GetInteger("timing", "tXS", 432)); 
+    tXP = static_cast<uint32_t>(reader.GetInteger("timing", "tXP", 8));
     tRFCb = static_cast<uint32_t>(reader.GetInteger("timing", "tRFCb", 20));
     tRREFD = static_cast<uint32_t>(reader.GetInteger("timing", "tRREFD", 5));
     tREFI = static_cast<uint32_t>(reader.GetInteger("timing", "tREFI", 7800));

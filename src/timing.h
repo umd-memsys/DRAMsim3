@@ -48,13 +48,12 @@ class Timing {
         uint32_t activate_to_refresh;
         uint32_t refresh_to_refresh;
         uint32_t refresh_to_activate;
-
-        uint32_t refresh_cycle;
-
-        uint32_t refresh_cycle_bank;
+        uint32_t refresh_to_activate_bank;
 
         uint32_t self_refresh_entry_to_exit;
         uint32_t self_refresh_exit;
+        uint32_t powerdown_to_exit;
+        uint32_t powerdown_exit;
 
 };
 
