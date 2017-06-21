@@ -129,7 +129,6 @@ private:
     std::function<void(uint64_t)> vault_callback_;
 
     void SetClockRatio();
-    bool RunDRAMClock();
     void InsertReqToDRAM(HMCRequest *req); 
     void VaultCallback(uint64_t req_id);
     std::vector<int> BuildAgeQueue(std::vector<int>& age_counter);
@@ -139,6 +138,7 @@ private:
     int next_link_;
     int links_;
     int queue_depth_;
+    int clock_ratio;
 
     // had to use a multimap because the controller callback return hex addr instead of unique id
     std::multimap<uint64_t, HMCResponse*> resp_lookup_table;

@@ -321,18 +321,24 @@ void HMCSystem::SetClockRatio() {
     // e.g. if it takes 8 link cycles to transfer a flit
     // the logic has to be running in similar speed so that 
     // the logic or the link don't have to wait for each other
-    uint32_t cycles_per_flit = 128 / ptr_config_->link_width;  //8, 16, or 32
-    uint32_t logic_speed = link_speed / cycles_per_flit; 
+    uint32_t cycles_per_flit = 128 / ptr_config_->link_width;  //Unit interval per flit: 8, 16, or 32
+    uint32_t logic_speed_needed = link_speed / cycles_per_flit; 
 
-    int freq_gcd = gcd(dram_speed, logic_speed);
-    logic_time_inc_ = logic_speed / freq_gcd;
-    dram_time_inc_ = dram_speed / freq_gcd;
-    time_lcm_ = lcm(logic_time_inc_, dram_time_inc_);
-
-#ifdef DEBUG_OUTPUT
-    cout << "HMC Logic clock speed " << logic_speed << endl;
+    // To simply setups, we limit the logic clock to 3 options: 1.25GHz, 2.5GHz, and 3.75GHz
+    // which are multiples of DRAM clock (1.25GHz), making simulation easier
+    // experiments show 3.75GHz is sufficient for even 30Gbps links
+    if (logic_speed_needed >= 25) {
+        clock_ratio_ = 3;
+    } else if (link_speed >= 15 && link_speed < 25 ) {
+        clock_ratio_ = 2;
+    } else {
+        clock_ratio_ = 1;
+    }
+    
+// #ifdef DEBUG_OUTPUT
+    cout << "HMC Logic clock speed " << dram_speed * freq_ratio << endl;
     cout << "HMC DRAM clock speed " << dram_speed << endl;
-#endif
+// #endif
 
     return;
 }
@@ -460,7 +466,7 @@ void HMCSystem::ClockTick() {
     }
 
     // 1. run DRAM clock if needed
-    if (RunDRAMClock()) {
+    if (logic_clk_ % clock_ratio_ == 0) {
         DRAMClockTick();
     }
 
@@ -533,7 +539,7 @@ void HMCSystem::XbarArbitrate() {
             quad_resp_queues_[src_quad].erase(quad_resp_queues_[src_quad].begin());
             link_resp_queues_[dest_link].push_back(resp);
             link_busy[dest_link] = resp->flits;
-            resp->exit_time = logic_clk_ + resp->flits;
+            resp->exit_time = logic_clk_ + resp->flits; 
             quad_age_counter[src_quad] = 0;
         } else {  // stalled this cycle, update age counter 
             quad_age_counter[src_quad] ++;
@@ -573,23 +579,6 @@ void HMCSystem::DRAMClockTick() {
     }
     dram_clk_ ++;
     return;
-}
-
-
-bool HMCSystem::RunDRAMClock() {
-    dram_counter_ += dram_time_inc_;
-    bool result;
-    if (logic_counter_ < dram_counter_) {
-        logic_counter_ += logic_time_inc_;
-        result = true;
-    } else {
-        result = false;
-    }
-    if (logic_counter_ > time_lcm_ && dram_counter_ > time_lcm_) {
-        logic_counter_ %= time_lcm_;
-        dram_counter_ %= time_lcm_;
-    }
-    return result;
 }
 
 
