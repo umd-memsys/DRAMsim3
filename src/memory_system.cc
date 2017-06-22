@@ -4,22 +4,12 @@
 using namespace std;
 using namespace dramcore;
 
-MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> callback) :
-    BaseMemorySystem(callback)
+BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback) :
+    callback_(callback), clk_(0)
 {
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics();
-
-    if (ptr_config_->IsHMC()) {
-        cerr << "Initialzed a memory system with an HMC config file!" << endl;
-        AbruptExit(__FILE__, __LINE__);
-    }
-
-    ctrls_.resize(ptr_config_->channels);
-    for(auto i = 0; i < ptr_config_->channels; i++) {
-        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
-    }
 
     //Stats output files
     stats_file_.open(ptr_config_->stats_file);
@@ -32,24 +22,76 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(cummulative_stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(epoch_stats_file_csv_);
-
+#ifdef GENERATE_TRACE
     address_trace_.open("address.trace");
+#endif
 }
 
-MemorySystem::~MemorySystem() {
-    for(auto i = 0; i < ptr_config_->channels; i++) {
-        delete(ctrls_[i]);
-    }
+BaseMemorySystem::~BaseMemorySystem() {
     delete(ptr_stats_);
     delete(ptr_timing_);
     delete(ptr_config_);
+
     stats_file_.close();
     cummulative_stats_file_.close();
     epoch_stats_file_.close();
     stats_file_csv_.close();
     cummulative_stats_file_csv_.close();
     epoch_stats_file_csv_.close();
+#ifdef GENERATE_TRACE
     address_trace_.close();
+#endif
+}
+
+void BaseMemorySystem::PrintIntermediateStats() {
+    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+    cummulative_stats_file_ << "Cummulative stats at clock = " << clk_ << endl;
+    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+    ptr_stats_->PrintStats(cummulative_stats_file_);
+    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+
+    epoch_stats_file_ << "-----------------------------------------------------" << endl;
+    epoch_stats_file_ << "Epoch stats from clock = " << clk_ - ptr_config_->epoch_period << " to " << clk_<< endl;
+    epoch_stats_file_ << "-----------------------------------------------------" << endl;
+    ptr_stats_->PrintEpochStats(epoch_stats_file_);
+    epoch_stats_file_ << "-----------------------------------------------------" << endl;
+
+    ptr_stats_->PrintStatsCSVFormat(cummulative_stats_file_csv_);
+    ptr_stats_->PrintEpochStatsCSVFormat(epoch_stats_file_csv_);
+    return;
+}
+
+
+void BaseMemorySystem::PrintStats() {
+    cout << "-----------------------------------------------------" << endl;
+    cout << "Printing final stats -- " << endl;
+    cout << "-----------------------------------------------------" << endl;
+    cout << *ptr_stats_;
+    cout << "-----------------------------------------------------" << endl;
+    cout << "The stats are also written to the file " << "dramcore_stats.txt" << endl;
+    ptr_stats_->PrintStats(stats_file_);
+    ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
+    return;
+}
+
+MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> callback) :
+    BaseMemorySystem(config_file, callback)
+{
+    if (ptr_config_->IsHMC()) {
+        cerr << "Initialzed a memory system with an HMC config file!" << endl;
+        AbruptExit(__FILE__, __LINE__);
+    }
+
+    ctrls_.resize(ptr_config_->channels);
+    for(auto i = 0; i < ptr_config_->channels; i++) {
+        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
+    }
+}
+
+MemorySystem::~MemorySystem() {
+    for(auto i = 0; i < ptr_config_->channels; i++) {
+        delete(ctrls_[i]);
+    }
 }
 
 bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
@@ -98,37 +140,6 @@ void MemorySystem::ClockTick() {
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch();
     }
-    return;
-}
-
-void MemorySystem::PrintIntermediateStats() {
-    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
-    cummulative_stats_file_ << "Cummulative stats at clock = " << clk_ << endl;
-    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
-    ptr_stats_->PrintStats(cummulative_stats_file_);
-    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
-
-    epoch_stats_file_ << "-----------------------------------------------------" << endl;
-    epoch_stats_file_ << "Epoch stats from clock = " << clk_ - ptr_config_->epoch_period << " to " << clk_<< endl;
-    epoch_stats_file_ << "-----------------------------------------------------" << endl;
-    ptr_stats_->PrintEpochStats(epoch_stats_file_);
-    epoch_stats_file_ << "-----------------------------------------------------" << endl;
-
-    ptr_stats_->PrintStatsCSVFormat(cummulative_stats_file_csv_);
-    ptr_stats_->PrintEpochStatsCSVFormat(epoch_stats_file_csv_);
-    return;
-}
-
-
-void BaseMemorySystem::PrintStats() {
-    cout << "-----------------------------------------------------" << endl;
-    cout << "Printing final stats -- " << endl;
-    cout << "-----------------------------------------------------" << endl;
-    cout << *ptr_stats_;
-    cout << "-----------------------------------------------------" << endl;
-    cout << "The stats are also written to the file " << "dramcore_stats.txt" << endl;
-    ptr_stats_->PrintStats(stats_file_);
-    ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
     return;
 }
 

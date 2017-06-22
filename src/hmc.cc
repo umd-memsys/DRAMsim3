@@ -238,7 +238,7 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
 
 
 HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t)> callback):
-    BaseMemorySystem(callback),
+    BaseMemorySystem(config_file, callback),
     ref_tick_(0),
     logic_clk_(0),
     dram_clk_(0),
@@ -289,18 +289,6 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
         link_busy.push_back(0);
         link_age_counter.push_back(0);
     }
-
-    //Stats output files
-    stats_file_.open(ptr_config_->stats_file);
-    cummulative_stats_file_.open(ptr_config_->cummulative_stats_file);
-    epoch_stats_file_.open(ptr_config_->epoch_stats_file);
-    stats_file_csv_.open(ptr_config_->stats_file_csv);
-    cummulative_stats_file_csv_.open(ptr_config_->cummulative_stats_file_csv);
-    epoch_stats_file_csv_.open(ptr_config_->epoch_stats_file_csv);
-
-    ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
-    ptr_stats_->PrintStatsCSVHeader(cummulative_stats_file_csv_);
-    ptr_stats_->PrintStatsCSVHeader(epoch_stats_file_csv_);
 }
 
 void HMCSystem::SetClockRatio() {
@@ -716,15 +704,6 @@ HMCSystem::~HMCSystem() {
     for (auto i = 0; i < ptr_config_->channels; i++) {
         delete(vaults_[i]);
     }
-    delete(ptr_stats_);
-    delete(ptr_timing_);
-    delete(ptr_config_);
-    stats_file_.close();
-    cummulative_stats_file_.close();
-    epoch_stats_file_.close();
-    stats_file_csv_.close();
-    cummulative_stats_file_csv_.close();
-    epoch_stats_file_csv_.close();
 }
 
 

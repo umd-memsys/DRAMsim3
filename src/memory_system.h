@@ -15,10 +15,11 @@ namespace dramcore {
 
 class BaseMemorySystem {
 public:
-    BaseMemorySystem(std::function<void(uint64_t)> callback) :callback_(callback), clk_(0) {} 
-    virtual bool InsertReq(uint64_t hex_addr, bool is_write) {return true;}
-    virtual void ClockTick() {}
-    virtual void PrintIntermediateStats() {}
+    BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
+    ~BaseMemorySystem();
+    virtual bool InsertReq(uint64_t hex_addr, bool is_write) = 0;
+    virtual void ClockTick() = 0;
+    virtual void PrintIntermediateStats();
     virtual void PrintStats();
     std::function<void(uint64_t req_id)> callback_;
     std::vector<Controller*> ctrls_;
@@ -37,7 +38,9 @@ protected:
     std::ofstream stats_file_csv_;
     std::ofstream cummulative_stats_file_csv_;
     std::ofstream epoch_stats_file_csv_;
+#ifdef GENERATE_TRACE
     std::ofstream address_trace_;
+#endif
 };
 
 
@@ -47,8 +50,6 @@ public:
     ~MemorySystem();
     bool InsertReq(uint64_t hex_addr, bool is_write);
     void ClockTick();
-    void PrintIntermediateStats();
-
 private:
     std::list<Request*> buffer_q_;
 

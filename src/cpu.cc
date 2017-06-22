@@ -46,7 +46,7 @@ void StreamCPU::ClockTick() {
         bool inserted_a = memory_system_.InsertReq(addr_a_ + offset_, false);
         bool inserted_b = memory_system_.InsertReq(addr_b_ + offset_, false);
         bool inserted_c = memory_system_.InsertReq(addr_c_ + offset_, true);
-        offset += 8;
+        offset_ += 8;
         all_inserted_ = inserted_a && inserted_b && inserted_c;
     } else {
         if (all_inserted_) {
