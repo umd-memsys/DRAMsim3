@@ -28,6 +28,16 @@ private:
     bool get_next_ = true;
 };
 
+class StreamCPU : public CPU {
+public:
+    StreamCPU(BaseMemorySystem& memory_system);
+    void ClockTick();
+private:
+    uint64_t addr_a_, addr_b_, addr_c_, offset_ = 0;
+    const uint64_t array_size_ = 2 << 20;  // elements in array
+    bool next_location_ = true, next_element_ = true, all_inserted_ = false;
+};
+
 class TraceBasedCPU : public CPU {
 public:
     TraceBasedCPU(BaseMemorySystem& memory_system, std::string trace_file);
