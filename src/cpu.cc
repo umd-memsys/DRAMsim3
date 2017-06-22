@@ -4,12 +4,12 @@ using namespace std;
 using namespace dramcore;
 
 
-CPU::CPU(MemorySystem& memory_system) :
+CPU::CPU(BaseMemorySystem& memory_system) :
     memory_system_(memory_system),
     clk_(0)
 {}
 
-RandomCPU::RandomCPU(MemorySystem& memory_system) :
+RandomCPU::RandomCPU(BaseMemorySystem& memory_system) :
     CPU(memory_system)
 {}
 
@@ -28,7 +28,7 @@ void RandomCPU::ClockTick() {
     return;
 }
 
-TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system, std::string trace_file) :
+TraceBasedCPU::TraceBasedCPU(BaseMemorySystem& memory_system, std::string trace_file) :
     CPU(memory_system)
 {
     trace_file_.open(trace_file);

@@ -295,9 +295,11 @@ bool ChannelState::Is32AWReady(int rank, uint64_t curr_time) const {
 void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
     switch(cmd.cmd_type_) {
         case CommandType::READ:
+        case CommandType::READ_PRECHARGE:
             stats_.numb_read_cmds_issued++;
             break;
         case CommandType::WRITE:
+        case CommandType::WRITE_PRECHARGE:
             stats_.numb_write_cmds_issued++;
             break;
         case CommandType::ACTIVATE:

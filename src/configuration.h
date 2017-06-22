@@ -1,6 +1,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include <cassert>
 #include <string>
 #include <utility>
 #include <vector>
@@ -84,6 +85,15 @@ public:
     uint32_t tRCDRD;
     uint32_t tRCDWR;
 
+    // HMC 
+    uint32_t num_links;
+    uint32_t num_dies;
+    uint32_t link_width;
+    uint32_t link_speed;
+    uint32_t num_vaults;
+    uint32_t block_size;  // block size in bytes
+    uint32_t xbar_queue_depth;
+
     std::string address_mapping;
     std::string queue_structure;
     uint32_t queue_size;
@@ -108,6 +118,7 @@ public:
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
     bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}
+    bool IsHMC() const {return (protocol == DRAMProtocol::HMC);}
 private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     void CalculateSize();

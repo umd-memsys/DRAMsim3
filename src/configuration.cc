@@ -44,6 +44,66 @@ Config::Config(std::string config_file)
     device_width = static_cast<uint32_t>(reader.GetInteger("dram_structure", "device_width", 8));
     BL = static_cast<uint32_t>(reader.GetInteger("dram_structure", "BL", 8));
 
+    if (IsHMC()) {  // need to do sanity check and overwrite some values...
+        num_links = static_cast<unsigned int>(reader.GetInteger("hmc", "num_links", 4));
+        num_dies = static_cast<unsigned int>(reader.GetInteger("hmc", "num_dies", 8));
+        link_width = static_cast<unsigned int>(reader.GetInteger("hmc", "link_width", 16));
+        // there is a 12.5 we will just use 12 or 13 to simplify coding...
+        link_speed = static_cast<unsigned int>(reader.GetInteger("hmc", "link_speed", 30));
+        block_size = static_cast<unsigned int>(reader.GetInteger("hmc", "block_size", 32));
+        xbar_queue_depth = static_cast<unsigned int>(reader.GetInteger("hmc", "xbar_queue_depth", 16));
+        
+        // sanity checks 
+        if (num_links !=2 && num_links != 4) {
+            cerr << "HMC can only have 2 or 4 links!" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        if (num_dies != 4 && num_dies != 8) {
+            cerr << "HMC can only have 4/8 layers of dies!" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        if (link_width != 4 && link_width != 8 && link_width != 16) {
+            cerr << "HMC link width can only be 4 (quater), 8 (half) or 16 (full)!" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        } 
+        if (link_speed != 15000 && link_speed != 25000 && link_speed != 28000 && 
+            link_speed != 30000 && link_speed != 12500 ) {
+            cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        if (block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {
+            cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        
+        // the BL for is determined by max block_size, which is a multiple of 32B
+        // each "device" transfer 32b per half cycle, i.e. 8B per cycle
+        // therefore BL is 4 for 32B block size
+        BL = block_size * 8 / 32;  
+        // vaults are basically channels here 
+        num_vaults = 32;
+        channels = num_vaults;  
+
+        // A lot of the following parameters are not configurable 
+        // according to the spec, so we just set them here
+        rows = 65536;
+        columns = 16;
+        // TODO column access granularity(16B) != device width (4B), oooooooooops
+        // meaning that for each column access, 
+        // and the (min) block size is 32, which is exactly BL = 8, and BL can be up to 64... really?
+        device_width = 32; 
+        bus_width = 32;
+        if (num_dies == 4) {
+            banks = 8;  // NOTE this is banks per vault 
+            channel_size = 128;
+        } else {
+            banks = 16;
+            channel_size = 256;
+        }
+        bankgroups = 1;
+        banks_per_group = banks;
+    }
+    
     // calculate rank and re-calculate channel_size
     CalculateSize();
 
@@ -190,6 +250,10 @@ void Config::CalculateSize() {
         // so we will use the prefetch length of 2 here
         megs_per_bank = ((rows * columns * 2) >> 20)  * device_width / 8;
         megs_per_rank = megs_per_bank * banks * devices_per_rank;
+    } else if (IsHMC()) {
+        // had to hard code here since it has nothing to do with the width
+        megs_per_bank = (rows * 256) >> 20 ;  // 256B page size
+        megs_per_rank = megs_per_bank * banks * devices_per_rank;
     } else {
         // shift 20 bits first so that we won't have an overflow problem...
         megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
@@ -201,6 +265,7 @@ void Config::CalculateSize() {
     cout << "Meg Bytes per bank " << megs_per_bank << endl;
     cout << "Meg Bytes per rank " << megs_per_rank << endl;
 #endif 
+
     if (megs_per_rank > channel_size) {
         std::cout<< "WARNING: Cannot create memory system of size " << channel_size 
             << "MB with given device choice! Using default size " << megs_per_rank 
