@@ -37,6 +37,9 @@ It also creates `libdramcore.so` shared library in the parent directory.
 // Running random cpu with a config file
 dramcoremain -c ./../configs/dummy_config.ini -n 100000 
 
+// Running with HMC config file
+dramcoremain -c ./../configs/hmc_8GB_4Lx16.ini -n 100000 --hmc
+
 // Running trace cpu with a trace file and a config file
 dramcoremain -c ./../configs/dummy_config.ini -n 100000 --trace-cpu --trace-file ./../sample_trace.txt
 
