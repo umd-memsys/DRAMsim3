@@ -114,6 +114,8 @@ public:
     // we can unify them as one but then we'll have to convert all the 
     // slow dram time units to faster logic units...
     void ClockTick();
+    void LogicClockTickPre();
+    void LogicClockTickPost();
     void DRAMClockTick();
     // had to have 3 insert interfaces cuz HMC is so different...
     bool InsertReq(uint64_t hex_addr, bool is_write);
@@ -121,7 +123,7 @@ public:
     bool InsertHMCReq(HMCRequest* req);
 
 private:
-    uint64_t logic_clk_, dram_clk_;
+    uint64_t ref_tick_, logic_clk_, dram_clk_;
     uint64_t logic_counter_, dram_counter_;
     int logic_time_inc_, dram_time_inc_;
     uint64_t time_lcm_;
@@ -138,7 +140,9 @@ private:
     int next_link_;
     int links_;
     int queue_depth_;
-    int clock_ratio;
+    int dram_clk_ticks_;
+    int logic_clk_ticks_;
+    int clk_tick_product_;
 
     // had to use a multimap because the controller callback return hex addr instead of unique id
     std::multimap<uint64_t, HMCResponse*> resp_lookup_table;

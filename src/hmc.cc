@@ -239,6 +239,7 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
 
 HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t)> callback):
     BaseMemorySystem(callback),
+    ref_tick_(0),
     logic_clk_(0),
     dram_clk_(0),
     next_link_(0)
@@ -303,17 +304,6 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
 }
 
 void HMCSystem::SetClockRatio() {
-    // according to the spec, the each vault can go up to 10GB/s 
-    // so with 128b per transfer, it operates at 625MHz per cycle
-    // and perhaps not coincidentaly, each flit is 128b
-    // because xbar should process 1 flit per cycle
-    // so with how fast the link runs, we can determine the speed of the logic
-    // and therefore figure out the speed ratio of logci vs dram 
-    // e.g. if the link is 30Gbps with 16 lanes
-    // takes 8 cycles to transfer a flit on the link 
-    // so the logic only needs to run at 30/8=3.25GHz
-    // which is approximately 5.2x speed of the DRAM
-    // all speed in MHz to avoid using floats
     uint32_t dram_speed = 1250;
     uint32_t link_speed = ptr_config_->link_speed; 
 
@@ -324,20 +314,25 @@ void HMCSystem::SetClockRatio() {
     uint32_t cycles_per_flit = 128 / ptr_config_->link_width;  //Unit interval per flit: 8, 16, or 32
     uint32_t logic_speed_needed = link_speed / cycles_per_flit; 
 
-    // To simply setups, we limit the logic clock to 3 options: 1.25GHz, 2.5GHz, and 3.75GHz
-    // which are multiples of DRAM clock (1.25GHz), making simulation easier
-    // experiments show 3.75GHz is sufficient for even 30Gbps links
-    if (logic_speed_needed >= 25) {
-        clock_ratio_ = 3;
-    } else if (link_speed >= 15 && link_speed < 25 ) {
-        clock_ratio_ = 2;
-    } else {
-        clock_ratio_ = 1;
+    // In the ClockTick() we will use DRAM's 1250MHz as basic clock ticks
+    // because logic clock speed should vary to reflect link speed or link width
+    // so when hooked up to a cpu simulator, which may require a clock freq,
+    // give it the DRAM's constant 1250MHz would be a better solution
+    // we know HMC's ref clock is 125MHz, so by doing the following 
+    // we can get the clock tick ratio of DRAM and logic, e.g. when logic is 2500MHz
+    // then each DRAM clock tick will run 2 logic ticks
+    dram_clk_ticks_ = logic_speed_needed / 125;
+    logic_clk_ticks_ = dram_speed / 125;
+
+    if (dram_clk_ticks_ < 10) {
+        dram_clk_ticks_ = 10;  // better not slower than DRAM...
     }
+
+    clk_tick_product_ = dram_clk_ticks_ * logic_clk_ticks_;
     
 // #ifdef DEBUG_OUTPUT
-    cout << "HMC Logic clock speed " << dram_speed * freq_ratio << endl;
-    cout << "HMC DRAM clock speed " << dram_speed << endl;
+    cout << "HMC Logic clock speed " << dram_clk_ticks_ << endl;
+    cout << "HMC DRAM clock speed " << logic_clk_ticks_ << endl;
 // #endif
 
     return;
@@ -444,7 +439,7 @@ bool HMCSystem::InsertHMCReq(HMCRequest* req) {
 }
 
 
-void HMCSystem::ClockTick() {
+void HMCSystem::LogicClockTickPre() {
     // I just need to note this somewhere:
     // the links of HMC are full duplex, e.g. in full width links,
     // each link has 16 input lanes AND 16 output lanes 
@@ -452,8 +447,7 @@ void HMCSystem::ClockTick() {
     // for both requests and responses. 
     // so 2 layers just sounds about right
 
-
-    // 0. return responses to CPU
+    // return responses to CPU
     for (int i =0; i < links_; i++) {
         if (!link_resp_queues_[i].empty()) {
             HMCResponse* resp = link_resp_queues_[i].front();
@@ -464,13 +458,13 @@ void HMCSystem::ClockTick() {
             }
         }
     }
+    return;
+}
 
-    // 1. run DRAM clock if needed
-    if (logic_clk_ % clock_ratio_ == 0) {
-        DRAMClockTick();
-    }
+void HMCSystem::LogicClockTickPost() {
+    // This MUST happen after DRAMClockTick
 
-    // 2. drain quad request queue to vaults
+    // drain quad request queue to vaults
     for (int i = 0; i < 4; i++) {
         if (!quad_req_queues_[i].empty()) {
             HMCRequest *req = quad_req_queues_[i].front();
@@ -482,7 +476,7 @@ void HMCSystem::ClockTick() {
         }
     }
 
-    // 3.a step xbar
+    // step xbar flags
     for (auto&& i:link_busy) {
         if (i > 0) {
             i --;
@@ -495,14 +489,45 @@ void HMCSystem::ClockTick() {
         }
     }
 
-    // 3.b xbar arbitrate using age/FIFO arbitration
+    // xbar arbitrate using age/FIFO arbitration
     // What is set/updated here:
     // - link_busy, quad_busy indicators
     // - link req, resp queues, quad req, resp queues 
     // - age counter
     XbarArbitrate();
+    return;
+}
 
-    logic_clk_ ++;
+void HMCSystem::DRAMClockTick() {
+    for (auto vault:vaults_) {
+        vault->ClockTick();
+    }
+    dram_clk_ ++;
+    ptr_stats_->dramcycles ++;
+    return;
+}
+
+void HMCSystem::ClockTick() {
+    bool dram_ran = false;
+    for (int i = 0; i < dram_clk_ticks_; i++) {
+        if (ref_tick_ % logic_clk_ticks_ == 0) {
+            LogicClockTickPre();
+            if (ref_tick_ % clk_tick_product_ == 0) {
+                DRAMClockTick();
+                dram_ran = true;
+            }
+            LogicClockTickPost();
+            logic_clk_ ++;
+        }
+        ref_tick_ ++;
+    }
+
+    // in cases DRAM and logic both run at this cycle
+    // don't repeat
+    if (!dram_ran) {
+        DRAMClockTick();
+    }
+    return;
 }
 
 
@@ -573,14 +598,6 @@ std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int>& age_counter) {
     return age_queue;
 }
 
-void HMCSystem::DRAMClockTick() {
-    for (auto vault:vaults_) {
-        vault->ClockTick();
-    }
-    dram_clk_ ++;
-    return;
-}
-
 
 void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
     Request *dram_req;
@@ -597,7 +614,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::RD256:
             // only 1 request is needed, if the request length is shorter than block_size
             // it will be chopped and therefore results in a waste of bandwidth
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, logic_clk_, dummy_id);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, dram_clk_, dummy_id);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::WR16:
@@ -618,7 +635,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::P_WR128:
         case HMCReqType::WR256:
         case HMCReqType::P_WR256:
-            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand, logic_clk_, dummy_id);
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand, dram_clk_, dummy_id);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         // TODO real question here is, if an atomic operantion 
