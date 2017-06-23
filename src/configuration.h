@@ -119,6 +119,8 @@ public:
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
     bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}
     bool IsHMC() const {return (protocol == DRAMProtocol::HMC);}
+
+    uint32_t ideal_memory_latency;
 private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     void CalculateSize();

@@ -16,7 +16,7 @@ namespace dramcore {
 class BaseMemorySystem {
 public:
     BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
-    ~BaseMemorySystem();
+    virtual ~BaseMemorySystem();
     virtual bool InsertReq(uint64_t hex_addr, bool is_write) = 0;
     virtual void ClockTick() = 0;
     virtual void PrintIntermediateStats();
@@ -48,12 +48,28 @@ class MemorySystem : public BaseMemorySystem {
 public:
     MemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
     ~MemorySystem();
-    bool InsertReq(uint64_t hex_addr, bool is_write);
-    void ClockTick();
+    bool InsertReq(uint64_t hex_addr, bool is_write) override ;
+    void ClockTick() override ;
 private:
     std::list<Request*> buffer_q_;
 
 };
+
+
+// Model a memorysystem with an infinite bandwidth and a fixed latency (possibly zero)
+// To establish a baseline for what a 'good' memory standard can and cannot do for a given application
+class IdealMemorySystem : public BaseMemorySystem {
+public:
+    IdealMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
+    ~IdealMemorySystem();
+    bool InsertReq(uint64_t hex_addr, bool is_write) override ;
+    void ClockTick() override ;
+private:
+    uint32_t latency_;
+    std::list<Request*> infinite_buffer_q_;
+
+};
+
 
 }
 

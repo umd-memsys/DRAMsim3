@@ -22,7 +22,7 @@ protected:
 class RandomCPU : public CPU {
 public:
     RandomCPU(BaseMemorySystem& memory_system);
-    void ClockTick();
+    void ClockTick() override ;
 private:
     uint64_t last_addr_;
     bool get_next_ = true;
@@ -31,7 +31,7 @@ private:
 class StreamCPU : public CPU {
 public:
     StreamCPU(BaseMemorySystem& memory_system);
-    void ClockTick();
+    void ClockTick() override ;
 private:
     uint64_t addr_a_, addr_b_, addr_c_, offset_ = 0;
     const uint64_t array_size_ = 2 << 20;  // elements in array
@@ -41,7 +41,7 @@ private:
 class TraceBasedCPU : public CPU {
 public:
     TraceBasedCPU(BaseMemorySystem& memory_system, std::string trace_file);
-    void ClockTick();
+    void ClockTick() override ;
 private:
     std::ifstream trace_file_;
     Access access_;

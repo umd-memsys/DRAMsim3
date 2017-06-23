@@ -202,6 +202,8 @@ Config::Config(std::string config_file)
     cout << setw(10) << "Column " << column_width << endl;
 #endif
 
+    ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));
+
 }
 
 

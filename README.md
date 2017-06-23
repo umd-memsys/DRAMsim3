@@ -35,13 +35,18 @@ It also creates `libdramcore.so` shared library in the parent directory.
 
 ```
 // Running random cpu with a config file
-dramcoremain -c ./../configs/dummy_config.ini -n 100000 
-
-// Running with HMC config file
-dramcoremain -c ./../configs/hmc_8GB_4Lx16.ini -n 100000 --hmc
+dramcoremain -c ./../configs/dummy_config.ini --cpu-type random -n 100000 
 
 // Running trace cpu with a trace file and a config file
-dramcoremain -c ./../configs/dummy_config.ini -n 100000 --trace-cpu --trace-file ./../sample_trace.txt
+dramcoremain -c ./../configs/dummy_config.ini -n 100000 --cpu-type trace --trace-file ./../sample_trace.txt
+
+// Running HMC memory type with HMC config file
+dramcoremain -c ./../configs/hmc_8GB_4Lx16.ini --memory-type hmc -n 100000
+
+defaults:
+--cpu-type = random (options - random, trace, stream)
+--memory-type = default (options - default, hmc, ideal)
+-n = 100000
 
 # Run the dramcoretest executable (No actual tests are currently written :P)
 ./dramcoretest

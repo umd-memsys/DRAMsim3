@@ -11,11 +11,10 @@ int main(int argc, const char **argv)
 {
     args::ArgumentParser parser("DRAM Simulator.", "");
     args::HelpFlag help(parser, "help", "Display the help menu", {"h", "help"});
-    args::ValueFlag<uint64_t > numb_cycles_arg(parser, "numb_cycles", "Number of cycles to simulate", {'n', "numb-cycles"});
+    args::ValueFlag<uint64_t > numb_cycles_arg(parser, "numb_cycles", "Number of cycles to simulate", {'n', "numb-cycles"}, 100000);
     args::ValueFlag<std::string> config_arg(parser, "config", "The config file", {'c', "config-file"});
-    args::ValueFlag<std::string> cpu_arg(parser, "cpu-type", "Type of cpu (r)andom or s(tream)", {"cpu-type"});
-    args::Flag enable_trace_cpu_arg(parser, "trace cpu", "Enable trace cpu", {"trace-cpu"});
-    args::Flag is_hmc_arg(parser, "HMC system", "Set this flag ONLY if it is an HMC", {"hmc"});
+    args::ValueFlag<std::string> cpu_arg(parser, "cpu-type", "Type of cpu - random, trace, stream", {"cpu-type"}, "random");
+    args::ValueFlag<std::string> memory_type_arg(parser, "memory_type", "Type of memory system - default, hmc, ideal", {"memory-type"}, "default");
     args::ValueFlag<std::string> trace_file_arg(parser, "trace", "The trace file", {"trace-file"});
 
     try {
@@ -33,29 +32,40 @@ int main(int argc, const char **argv)
     }
 
     uint64_t cycles = args::get(numb_cycles_arg);
-    bool enable_trace_cpu = enable_trace_cpu_arg;
-    bool is_hmc = is_hmc_arg;
-    std::string config_file, trace_file, cpu_type;
+    std::string config_file, trace_file, cpu_type, memory_system_type;
     config_file = args::get(config_arg);
     trace_file = args::get(trace_file_arg);
     cpu_type = args::get(cpu_arg);
+    memory_system_type = args::get(memory_type_arg);
 
     BaseMemorySystem *memory_system;
-    if (is_hmc) {
-        memory_system = new HMCSystem(config_file, callback_func);
-    } else {
+    if(memory_system_type == "default") { //TODO - Better name than default?
         memory_system = new MemorySystem(config_file, callback_func);
+    }
+    else if(memory_system_type == "hmc") {
+        memory_system = new HMCMemorySystem(config_file, callback_func);
+    }
+    else if(memory_system_type == "ideal") {
+        memory_system = new IdealMemorySystem(config_file, callback_func);
+    }
+    else {
+        cout << "Unknown memory system type" << endl;
+        AbruptExit(__FILE__, __LINE__);
     }
 
     CPU* cpu;
-    if (enable_trace_cpu) {
+    if(cpu_type == "random") {
+        cpu = new RandomCPU(*memory_system);
+    }
+    else if(cpu_type == "trace") {
         cpu = new TraceBasedCPU(*memory_system, trace_file);
-    } else {
-        if (cpu_type == "s") {
-            cpu = new StreamCPU(*memory_system);
-        } else {
-            cpu = new RandomCPU(*memory_system);
-        }
+    }
+    else if(cpu_type == "stream") {
+        cpu = new StreamCPU(*memory_system);
+    }
+    else {
+        cout << "Unknown cpu type" << endl;
+        AbruptExit(__FILE__, __LINE__);
     }
         
     for(uint64_t clk = 0; clk < cycles; clk++) {

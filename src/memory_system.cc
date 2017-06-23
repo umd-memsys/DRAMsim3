@@ -5,7 +5,8 @@ using namespace std;
 using namespace dramcore;
 
 BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback) :
-    callback_(callback), clk_(0)
+    callback_(callback),
+    clk_(0)
 {
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
@@ -88,7 +89,8 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
     }
 }
 
-MemorySystem::~MemorySystem() {
+MemorySystem::~MemorySystem()
+{
     for(auto i = 0; i < ptr_config_->channels; i++) {
         delete(ctrls_[i]);
     }
@@ -143,6 +145,51 @@ void MemorySystem::ClockTick() {
     return;
 }
 
+
+IdealMemorySystem::IdealMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback):
+    BaseMemorySystem(config_file, callback),
+    latency_(ptr_config_->ideal_memory_latency)
+{
+
+}
+
+IdealMemorySystem::~IdealMemorySystem() {}
+
+bool IdealMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
+    CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
+    id_++;
+    Request* req = new Request(cmd_type, hex_addr, clk_, id_);
+    infinite_buffer_q_.push_back(req);
+    return true;
+}
+
+void IdealMemorySystem::ClockTick() {
+    clk_++;
+    ptr_stats_->dramcycles++;
+    for(auto req_itr = infinite_buffer_q_.begin(); req_itr != infinite_buffer_q_.end(); req_itr++) {
+        auto req = *req_itr;
+        if(clk_ - req->arrival_time_ >= latency_) {
+            if(req->cmd_.cmd_type_ == CommandType::READ) {
+                ptr_stats_->numb_read_reqs_issued++;
+            }
+            else if(req->cmd_.cmd_type_ == CommandType::WRITE) {
+                ptr_stats_->numb_write_reqs_issued++;
+            }
+            ptr_stats_->access_latency.AddValue(clk_ - req->arrival_time_);
+            callback_(req->hex_addr_);
+            delete(req);
+            infinite_buffer_q_.erase(req_itr++);
+        }
+        else
+            break; //Requests are always ordered w.r.t to their arrival times, so need to check beyond.
+    }
+
+    if( clk_ % ptr_config_->epoch_period == 0) {
+        PrintIntermediateStats();
+        ptr_stats_->UpdateEpoch();
+    }
+    return;
+}
 
 // This function can be used by autoconf AC_CHECK_LIB since
 // apparently it can't detect C++ functions.

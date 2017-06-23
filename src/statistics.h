@@ -34,12 +34,12 @@ public:
     CounterStat& operator++(int) { count_++; return *this; }
     CounterStat& operator--() { count_--; return *this; }
     CounterStat& operator--(int) { count_--; return *this; }
-    void Print(std::ostream& where) const;
-    void UpdateEpoch();
-    void PrintEpoch(std::ostream& where) const;
-    void PrintCSVHeader(std::ostream& where) const;
-    void PrintCSVFormat(std::ostream& where) const;
-    void PrintEpochCSVFormat(std::ostream& where) const;
+    void Print(std::ostream& where) const override ;
+    void UpdateEpoch() override ;
+    void PrintEpoch(std::ostream& where) const override ;
+    void PrintCSVHeader(std::ostream& where) const override ;
+    void PrintCSVFormat(std::ostream& where) const override ;
+    void PrintEpochCSVFormat(std::ostream& where) const override ;
 private:
     uint64_t count_;
     uint64_t last_epoch_count_;
@@ -51,12 +51,12 @@ public:
     HistogramStat():BaseStat() {}
     HistogramStat(int start, int end, uint32_t numb_bins, std::string name, std::string desc);
     void AddValue(int val);
-    void Print(std::ostream& where) const;
-    void UpdateEpoch();
-    void PrintEpoch(std::ostream& where) const;
-    void PrintCSVHeader(std::ostream& where) const;
-    void PrintCSVFormat(std::ostream& where) const;
-    void PrintEpochCSVFormat(std::ostream& where) const;
+    void Print(std::ostream& where) const override ;
+    void UpdateEpoch() override ;
+    void PrintEpoch(std::ostream& where) const override ;
+    void PrintCSVHeader(std::ostream& where) const override ;
+    void PrintCSVFormat(std::ostream& where) const override ;
+    void PrintEpochCSVFormat(std::ostream& where) const override ;
 private:
     int start_;
     int end_;

@@ -106,19 +106,19 @@ public:
 };
 
 
-class HMCSystem : public BaseMemorySystem {
+class HMCMemorySystem : public BaseMemorySystem {
 public:
-    HMCSystem(const std::string &config_file, std::function<void(uint64_t)> callback);
-    ~HMCSystem();
+    HMCMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
+    ~HMCMemorySystem();
     // assuming there are 2 clock domains one for logic die one for DRAM
     // we can unify them as one but then we'll have to convert all the 
     // slow dram time units to faster logic units...
-    void ClockTick();
+    void ClockTick() override ;
     void LogicClockTickPre();
     void LogicClockTickPost();
     void DRAMClockTick();
     // had to have 3 insert interfaces cuz HMC is so different...
-    bool InsertReq(uint64_t hex_addr, bool is_write);
+    bool InsertReq(uint64_t hex_addr, bool is_write) override ;
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
 

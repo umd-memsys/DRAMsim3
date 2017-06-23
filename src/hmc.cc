@@ -237,7 +237,7 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
     }
 
 
-HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t)> callback):
+HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback):
     BaseMemorySystem(config_file, callback),
     ref_tick_(0),
     logic_clk_(0),
@@ -257,7 +257,7 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     // setting up clock
     SetClockRatio();
 
-    vault_callback_ = std::bind(&HMCSystem::VaultCallback, this, std::placeholders::_1);
+    vault_callback_ = std::bind(&HMCMemorySystem::VaultCallback, this, std::placeholders::_1);
     vaults_.reserve(32);
     for (int i = 0; i < 32; i++) {
         vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, vault_callback_));
@@ -291,7 +291,7 @@ HMCSystem::HMCSystem(const std::string &config_file, std::function<void(uint64_t
     }
 }
 
-void HMCSystem::SetClockRatio() {
+void HMCMemorySystem::SetClockRatio() {
     uint32_t dram_speed = 1250;
     uint32_t link_speed = ptr_config_->link_speed; 
 
@@ -326,7 +326,7 @@ void HMCSystem::SetClockRatio() {
     return;
 }
 
-inline void HMCSystem::IterateNextLink() {
+inline void HMCMemorySystem::IterateNextLink() {
     // determinining which link a request goes to has great impact on performance
     // round robin , we can implement other schemes here later such as random
     // but there're only at most 4 links so I suspect it would make a difference
@@ -335,7 +335,7 @@ inline void HMCSystem::IterateNextLink() {
 }
 
 
-bool HMCSystem::InsertReq(uint64_t hex_addr, bool is_write) {
+bool HMCMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     // to be compatible with other protocol we have this interface
     // when using this intreface the size of each transaction will be block_size
     HMCReqType req_type;
@@ -383,7 +383,7 @@ bool HMCSystem::InsertReq(uint64_t hex_addr, bool is_write) {
 }
 
 
-bool HMCSystem::InsertReqToLink(HMCRequest* req, int link) {
+bool HMCMemorySystem::InsertReqToLink(HMCRequest* req, int link) {
     // These things need to happen when an HMC request is inserted to a link:
     // 1. check if link queue full
     // 2. set link field in the request packet
@@ -402,7 +402,7 @@ bool HMCSystem::InsertReqToLink(HMCRequest* req, int link) {
 }
 
 
-bool HMCSystem::InsertHMCReq(HMCRequest* req) {
+bool HMCMemorySystem::InsertHMCReq(HMCRequest* req) {
     // most CPU models does not support simultaneous insertions
     // if you want to actually simulate the multi-link feature
     // then you have to call this function multiple times in 1 cycle
@@ -427,7 +427,7 @@ bool HMCSystem::InsertHMCReq(HMCRequest* req) {
 }
 
 
-void HMCSystem::LogicClockTickPre() {
+void HMCMemorySystem::LogicClockTickPre() {
     // I just need to note this somewhere:
     // the links of HMC are full duplex, e.g. in full width links,
     // each link has 16 input lanes AND 16 output lanes 
@@ -449,7 +449,7 @@ void HMCSystem::LogicClockTickPre() {
     return;
 }
 
-void HMCSystem::LogicClockTickPost() {
+void HMCMemorySystem::LogicClockTickPost() {
     // This MUST happen after DRAMClockTick
 
     // drain quad request queue to vaults
@@ -486,7 +486,7 @@ void HMCSystem::LogicClockTickPost() {
     return;
 }
 
-void HMCSystem::DRAMClockTick() {
+void HMCMemorySystem::DRAMClockTick() {
     for (auto vault:vaults_) {
         vault->ClockTick();
     }
@@ -495,7 +495,7 @@ void HMCSystem::DRAMClockTick() {
     return;
 }
 
-void HMCSystem::ClockTick() {
+void HMCMemorySystem::ClockTick() {
     bool dram_ran = false;
     for (int i = 0; i < dram_clk_ticks_; i++) {
         if (ref_tick_ % logic_clk_ticks_ == 0) {
@@ -519,7 +519,7 @@ void HMCSystem::ClockTick() {
 }
 
 
-void HMCSystem::XbarArbitrate() {
+void HMCMemorySystem::XbarArbitrate() {
     // arbitrage based on age / FIFO 
     // drain requests from link to quad buffers
     std::vector<int> age_queue = BuildAgeQueue(link_age_counter);
@@ -562,7 +562,7 @@ void HMCSystem::XbarArbitrate() {
     age_queue.clear();
 }
 
-std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int>& age_counter) {
+std::vector<int> HMCMemorySystem::BuildAgeQueue(std::vector<int>& age_counter) {
     // return a vector of indices sorted in decending order
     // meaning that the oldest age link/quad should be processed first
     std::vector<int> age_queue;
@@ -587,7 +587,7 @@ std::vector<int> HMCSystem::BuildAgeQueue(std::vector<int>& age_counter) {
 }
 
 
-void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
+void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
     Request *dram_req;
     int64_t dummy_id = 0;  // TODO use a dummy id for Request constructor...
     switch(req->type) {
@@ -684,7 +684,7 @@ void HMCSystem::InsertReqToDRAM(HMCRequest *req) {
     return;
 }
 
-void HMCSystem::VaultCallback(uint64_t req_id) {
+void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // we will use hex addr as the req_id and use a multimap to lookup the requests
     // the vaults cannot directly talk to the CPU so this callback 
     // will be passed to the vaults and is responsible to 
@@ -700,7 +700,7 @@ void HMCSystem::VaultCallback(uint64_t req_id) {
 }
 
 
-HMCSystem::~HMCSystem() {
+HMCMemorySystem::~HMCMemorySystem() {
     for (auto i = 0; i < ptr_config_->channels; i++) {
         delete(vaults_[i]);
     }

@@ -32,7 +32,7 @@ void Controller::ClockTick() {
             stats_.access_latency.AddValue(clk_ - issued_req->arrival_time_);
             callback_(issued_req->hex_addr_);
             delete(issued_req);
-            cmd_queue_.issued_req_.erase(req_itr);
+            cmd_queue_.issued_req_.erase(req_itr++);
             break; // Returning one request per cycle. TODO - Make this a knob?
         }
     }
