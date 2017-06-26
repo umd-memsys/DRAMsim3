@@ -5,6 +5,14 @@ project(dramcore)
 add_subdirectory(ext/inih)
 add_subdirectory(ext/fmt)
 
+# self-defined flgas that help debugging
+# use cmake -DGENERATE_TRACE=ON or 1 to enbale this
+if (GENERATE_TRACE)
+        message("Adding GENERATE_TRACE definition...")
+        add_definitions(-DGENERATE_TRACE)
+endif (GENERATE_TRACE)
+
+
 set(EXTRA_CXX_FLAGS "-Wall -fPIC")
 set(EXTRA_CXX_FLAGS_DEBUG "-O0 -DDEBUG_OUTPUT")
 set(EXTRA_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
@@ -52,16 +60,4 @@ target_link_libraries(dramcoretest dramcore)
 
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 # set_target_properties(dramcore PROPERTIES DEBUG_POSTFIX "_d")
-
-# add validation flow here to make life easier...
-add_executable(validation EXCLUDE_FROM_ALL src/main.cc ${SOURCES})
-target_link_libraries(validation inih)
-set_target_properties(validation PROPERTIES OUTPUT_NAME dramcore-validate)  # reuse same output name
-# target_compile_definitions(validation PRIVATE -DVALIDATION)
-add_custom_command(TARGET validation
-                   POST_BUILD
-                   COMMAND ./dramcore-validate -c configs/ddr4_8G_x8_config.ini -n 10000
-                   # post processing scripts here...
-                   COMMAND rm dramcore-validate
-        )
 
