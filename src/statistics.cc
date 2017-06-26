@@ -42,6 +42,39 @@ void CounterStat::PrintEpochCSVFormat(std::ostream& where) const {
     return;
 }
 
+
+void EnergyStat::Print(std::ostream& where) const {
+    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", value_, " # ", description_) << endl;
+    return;
+}
+
+void EnergyStat::UpdateEpoch() {
+    last_epoch_value_ = value_;
+    return;
+}
+
+void EnergyStat::PrintEpoch(std::ostream& where) const {
+    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_ + "(power)", " = ", (value_ - last_epoch_value_)/epoch_len_, " # ", description_) << endl;
+    return;
+}
+
+void EnergyStat::PrintCSVHeader(std::ostream& where) const {
+    where << fmt::format("{},", name_);
+    return;
+}
+
+
+void EnergyStat::PrintCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", value_ );
+    return;
+}
+
+void EnergyStat::PrintEpochCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", value_ - last_epoch_value_);
+    return;
+}
+
+
 HistogramStat::HistogramStat(int start, int end, uint32_t numb_bins, std::string name, std::string desc):
     BaseStat(name, desc),
     start_(start),
@@ -172,6 +205,13 @@ Statistics::Statistics():
     numb_self_refresh_enter_cmds_issued = CounterStat("numb_self_refresh_enter_cmds_issued", "Number of self-refresh mode enter commands issued");
     numb_self_refresh_exit_cmds_issued = CounterStat("numb_self_refresh_exit_cmds_issued", "Number of self-refresh mode exit commands issued");
     numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
+    
+    // energy and power stats
+    act_energy = CounterStat("act_energy", "ACT energy");
+    pre_energy = CounterStat("pre_energy", "PRE energy");
+    read_energy = CounterStat("read_energy", "READ energy (not including IO)");
+    write_energy = CounterStat("write_energy", "WRITE energy (not including IO)");
+    ref_energy = CounterStat("ref_energy", "Refresh energy");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);

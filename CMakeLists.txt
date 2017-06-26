@@ -12,6 +12,11 @@ if (GENERATE_TRACE)
         add_definitions(-DGENERATE_TRACE)
 endif (GENERATE_TRACE)
 
+if (DEBUG_POWER)
+        message("Adding DEBUG_POWER definition...")
+        add_definitions(-DDEBUG_POWER)
+endif  (DEBUG_POWER)
+
 
 set(EXTRA_CXX_FLAGS "-Wall -fPIC")
 set(EXTRA_CXX_FLAGS_DEBUG "-O0 -DDEBUG_OUTPUT")

@@ -17,6 +17,7 @@ public:
     bool IsReady(const Command& cmd, uint64_t clk) const;
     void UpdateState(const Command& cmd);
     void UpdateTiming(const Command& cmd, uint64_t clk);
+    void UpdateEnergy(const Command& cmd, uint64_t clk);
     void IssueCommand(const Command& cmd, uint64_t clk);
     void UpdateRefreshWaitingStatus(const Command& cmd, bool status);
     bool ActivationWindowOk(int rank, uint64_t curr_time) const;

@@ -65,6 +65,26 @@ private:
     uint64_t neg_outlier_count_, pos_outlier_count_, last_epoch_neg_outlier_count_, last_epoch_pos_outlier_count_;
 };
 
+
+class EnergyStat : public BaseStat {
+public:
+    EnergyStat(double inc, std::string name, std::string desc);
+    void operator=(double value) {value_ = value; }
+    EnergyStat& operator++() {value_ += inc_; return *this; }
+    void Print(std::ostream& where) const override ;
+    void UpdateEpoch() override ;
+    void PrintEpoch(std::ostream& where) const override ;
+    void PrintCSVHeader(std::ostream& where) const override ;
+    void PrintCSVFormat(std::ostream& where) const override ;
+    void PrintEpochCSVFormat(std::ostream& where) const override ;
+private:
+    double value_;
+    double inc_;
+    double last_epoch_value_;
+    double epoch_len_;
+};
+
+
 class Statistics {
 public:
     Statistics();
@@ -94,6 +114,22 @@ public:
 
     class CounterStat numb_rw_rowhits_pending_refresh;
 
+    // energy and power stats
+    class CounterStat act_energy;
+    class CounterStat pre_energy;
+    class CounterStat read_energy;
+    class CounterStat write_energy;
+    class CounterStat ref_energy;    // rank ref
+    class CounterStat dq_energy;  // energy consumed by DQs
+    // the following are per bank based
+    class CounterStat refb_energy;  // bank refresh
+    class CounterStat act_stb_energy;  // active standby
+    class CounterStat pre_stb_energy;  // precharge standby
+    class CounterStat act_pd_energy;  // active powerdown energy
+    class CounterStat pre_pd_energy;  // precharge powerdown energy
+    class CounterStat sref_energy;  // self ref energy
+    class CounterStat cumulative_energy;
+    
     std::list<class BaseStat*> stats_list;
 
     void PrintStats(std::ostream& where) const;

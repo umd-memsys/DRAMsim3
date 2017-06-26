@@ -126,6 +126,10 @@ void ChannelState::UpdateState(const Command& cmd) {
     return;
 }
 
+void ChannelState::UpdateEnergy(const Command& cmd, uint64_t clk) {
+    
+}
+
 void ChannelState::UpdateTiming(const Command& cmd, uint64_t clk) {
     switch(cmd.cmd_type_) {
         case CommandType::ACTIVATE:
@@ -226,6 +230,7 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
     }
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
+    UpdateEnergy(cmd, clk);
     UpdateCommandIssueStats(cmd);
     return;
 }

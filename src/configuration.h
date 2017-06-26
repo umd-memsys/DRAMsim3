@@ -85,6 +85,18 @@ public:
     uint32_t tRCDRD;
     uint32_t tRCDWR;
 
+    // Power-related parameters
+    double VDD;  // had 
+    uint32_t IDD0;
+    uint32_t IDD2P;
+    uint32_t IDD2F;
+    uint32_t IDD3P;
+    uint32_t IDD3N;
+    uint32_t IDD4W;
+    uint32_t IDD4R;
+    uint32_t IDD5A;
+    uint32_t IOUT;
+    
     // HMC 
     uint32_t num_links;
     uint32_t num_dies;
