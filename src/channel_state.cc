@@ -12,7 +12,8 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
     stats_(stats),
     bank_states_(config_.ranks, std::vector< std::vector<BankState*> >(config_.bankgroups, std::vector<BankState*>(config_.banks_per_group, NULL) ) ),
     four_aw(config_.ranks, std::vector<uint64_t>()),
-    thirty_two_aw(config_.ranks, std::vector<uint64_t>())
+    thirty_two_aw(config_.ranks, std::vector<uint64_t>()),
+    is_selfrefresh_(config_.ranks, false)
 {
     for(auto i = 0; i < config_.ranks; i++) {
         for(auto j = 0; j < config_.bankgroups; j++) {
@@ -27,6 +28,20 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
         val_output_.open(config.validation_output_file, std::ofstream::out);
     }
 }
+
+int ChannelState::ActiveBanksInRank(int rank) const {
+    int count = 0;
+    for (unsigned j = 0; j < config_.bankgroups; j++) {
+        for (unsigned k = 0; k < config_.banks_per_group; k++) {
+            if (bank_states_[rank][j][k]->IsRowOpen()) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+
 
 Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     switch(cmd.cmd_type_) {
@@ -104,6 +119,7 @@ void ChannelState::UpdateState(const Command& cmd) {
         case CommandType::REFRESH:
         case CommandType::SELF_REFRESH_ENTER:
         case CommandType::SELF_REFRESH_EXIT:
+            is_selfrefresh_[cmd.Rank()] = (cmd.cmd_type_ == CommandType::SELF_REFRESH_ENTER ? true : false);
             for(auto j = 0; j < config_.bankgroups; j++) {
                 for(auto k = 0; k < config_.banks_per_group; k++) {
                     bank_states_[cmd.Rank()][j][k]->UpdateState(cmd);
@@ -124,10 +140,6 @@ void ChannelState::UpdateState(const Command& cmd) {
             break;
     }
     return;
-}
-
-void ChannelState::UpdateEnergy(const Command& cmd, uint64_t clk) {
-    
 }
 
 void ChannelState::UpdateTiming(const Command& cmd, uint64_t clk) {
@@ -230,7 +242,6 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
     }
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
-    UpdateEnergy(cmd, clk);
     UpdateCommandIssueStats(cmd);
     return;
 }
@@ -302,22 +313,27 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
             stats_.numb_read_cmds_issued++;
+            stats_.read_energy++;
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
             stats_.numb_write_cmds_issued++;
+            stats_.write_energy++;
             break;
         case CommandType::ACTIVATE:
             stats_.numb_activate_cmds_issued++;
+            stats_.act_energy++;
             break;
         case CommandType::PRECHARGE:
             stats_.numb_precharge_cmds_issued++;
             break;
         case CommandType::REFRESH:
             stats_.numb_refresh_cmds_issued++;
+            stats_.ref_energy++;
             break;
         case CommandType::REFRESH_BANK:
             stats_.numb_refresh_bank_cmds_issued++;
+            stats_.refb_energy++;
             break;
         case CommandType::SELF_REFRESH_ENTER:
             stats_.numb_self_refresh_enter_cmds_issued++;
@@ -330,3 +346,4 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
     }
     return;
 }
+

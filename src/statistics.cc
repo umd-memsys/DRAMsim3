@@ -42,6 +42,13 @@ void CounterStat::PrintEpochCSVFormat(std::ostream& where) const {
     return;
 }
 
+EnergyStat::EnergyStat(double inc, std::string name, std::string desc):
+    BaseStat(name, desc),
+    inc_(inc),
+    value_(0.0),
+    last_epoch_value_(0.0)
+{}
+    
 
 void EnergyStat::Print(std::ostream& where) const {
     where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", value_, " # ", description_) << endl;
@@ -54,7 +61,7 @@ void EnergyStat::UpdateEpoch() {
 }
 
 void EnergyStat::PrintEpoch(std::ostream& where) const {
-    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_ + "(power)", " = ", (value_ - last_epoch_value_)/epoch_len_, " # ", description_) << endl;
+    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_ + "(power)", " = ", (value_ - last_epoch_value_), " # ", description_) << endl;
     return;
 }
 
@@ -180,7 +187,8 @@ void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
     where << fmt::format("{},", pos_outlier_count_ - last_epoch_pos_outlier_count_);
     return;
 }
-Statistics::Statistics():
+
+Statistics::Statistics(const Config& config):
     stats_list()
 {
     //TODO - Should stats be global?
@@ -207,11 +215,17 @@ Statistics::Statistics():
     numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
     
     // energy and power stats
-    act_energy = CounterStat("act_energy", "ACT energy");
-    pre_energy = CounterStat("pre_energy", "PRE energy");
-    read_energy = CounterStat("read_energy", "READ energy (not including IO)");
-    write_energy = CounterStat("write_energy", "WRITE energy (not including IO)");
-    ref_energy = CounterStat("ref_energy", "Refresh energy");
+    act_energy = EnergyStat(config.act_energy_inc, "act_energy", "ACT energy");
+    read_energy = EnergyStat(config.read_energy_inc, "read_energy", "READ energy (not including IO)");
+    write_energy = EnergyStat(config.write_energy_inc, "write_energy", "WRITE energy (not including IO)");
+    ref_energy = EnergyStat(config.ref_energy_inc, "ref_energy", "Refresh energy");
+    refb_energy = EnergyStat(config.refb_energy_inc, "refb_energy", "Bank-Refresh energy");
+    act_stb_energy = EnergyStat(config.act_stb_energy_inc,"act_stb_energy", "Active standby energy");
+    pre_stb_energy = EnergyStat(config.pre_stb_energy_inc, "pre_stb_energy", "Precharge standby energy");
+    pre_pd_energy = EnergyStat(config.pre_pd_energy_inc, "pre_pd_energy", "Precharge powerdown energy");
+    sref_energy = EnergyStat(config.sref_energy_inc, "sref_energy", "Self-refresh energy");
+    // TODO: add the above to total energy
+    total_energy = EnergyStat(0., "total_energy", "Total energy");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -234,6 +248,15 @@ Statistics::Statistics():
     stats_list.push_back(&numb_self_refresh_enter_cmds_issued);
     stats_list.push_back(&numb_self_refresh_exit_cmds_issued);
     stats_list.push_back(&numb_rw_rowhits_pending_refresh);
+    stats_list.push_back(&act_energy);
+    stats_list.push_back(&read_energy);
+    stats_list.push_back(&write_energy);
+    stats_list.push_back(&ref_energy);
+    stats_list.push_back(&refb_energy);
+    stats_list.push_back(&act_stb_energy);
+    stats_list.push_back(&pre_stb_energy);
+    stats_list.push_back(&pre_pd_energy);
+    stats_list.push_back(&sref_energy);
 }
 
 

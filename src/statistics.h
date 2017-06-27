@@ -5,6 +5,7 @@
 #include <string>
 #include <list>
 #include <vector>
+#include "configuration.h"
 
 namespace dramcore {
 
@@ -68,9 +69,10 @@ private:
 
 class EnergyStat : public BaseStat {
 public:
+    EnergyStat():BaseStat() {};
     EnergyStat(double inc, std::string name, std::string desc);
     void operator=(double value) {value_ = value; }
-    EnergyStat& operator++() {value_ += inc_; return *this; }
+    EnergyStat& operator++(int) {value_ += inc_; return *this; }
     void Print(std::ostream& where) const override ;
     void UpdateEpoch() override ;
     void PrintEpoch(std::ostream& where) const override ;
@@ -81,13 +83,12 @@ private:
     double value_;
     double inc_;
     double last_epoch_value_;
-    double epoch_len_;
 };
 
 
 class Statistics {
 public:
-    Statistics();
+    Statistics(const Config& config);
     class CounterStat numb_read_reqs_issued;
     class CounterStat numb_write_reqs_issued;
     class CounterStat numb_row_hits;
@@ -115,20 +116,16 @@ public:
     class CounterStat numb_rw_rowhits_pending_refresh;
 
     // energy and power stats
-    class CounterStat act_energy;
-    class CounterStat pre_energy;
-    class CounterStat read_energy;
-    class CounterStat write_energy;
-    class CounterStat ref_energy;    // rank ref
-    class CounterStat dq_energy;  // energy consumed by DQs
-    // the following are per bank based
-    class CounterStat refb_energy;  // bank refresh
-    class CounterStat act_stb_energy;  // active standby
-    class CounterStat pre_stb_energy;  // precharge standby
-    class CounterStat act_pd_energy;  // active powerdown energy
-    class CounterStat pre_pd_energy;  // precharge powerdown energy
-    class CounterStat sref_energy;  // self ref energy
-    class CounterStat cumulative_energy;
+    class EnergyStat act_energy;
+    class EnergyStat read_energy;
+    class EnergyStat write_energy;
+    class EnergyStat ref_energy;    // rank ref
+    class EnergyStat refb_energy;  // bank refresh
+    class EnergyStat act_stb_energy;  // active standby
+    class EnergyStat pre_stb_energy;  // precharge standby
+    class EnergyStat pre_pd_energy;  // precharge powerdown energy
+    class EnergyStat sref_energy;  // self ref energy
+    class EnergyStat total_energy;
     
     std::list<class BaseStat*> stats_list;
 

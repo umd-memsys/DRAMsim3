@@ -163,6 +163,34 @@ Config::Config(std::string config_file)
     read_delay = RL + burst_cycle;
     write_delay = WL + burst_cycle;
 
+    // Power-related parameters
+    double VDD = reader.GetReal("power", "VDD", 1.5);
+    double IDD0 = reader.GetReal("power", "IDD0", 48);
+    double IDD2P = reader.GetReal("power", "IDD2P", 25);
+    double IDD2N = reader.GetReal("power", "IDD2N", 34);
+    double IDD3P = reader.GetReal("power", "IDD3P", 37);
+    double IDD3N = reader.GetReal("power", "IDD3N", 48);
+    double IDD4W = reader.GetReal("power", "IDD4W", 132);
+    double IDD4R = reader.GetReal("power", "IDD4R", 135);
+    double IDD5AB = reader.GetReal("power", "IDD5AB", 58);  // all-bank ref
+    double IDD5PB = reader.GetReal("power", "IDD5PB", 5);  // per-bank ref
+    double IDD6x = reader.GetReal("power", "IDD6x", 31);  // this changes with temp
+
+    // energy increments per command/cycle, calculated as voltage * current * time(in cycles)
+    // units are V * mA * Cycles and if we convert cycles to ns then it's exactly pJ in energy
+    // and because a command take effects on all devices per rank, also multiply that number
+    double devices = static_cast<double>(devices_per_rank);
+    act_energy_inc = VDD * (IDD0 * tRC - (IDD3N * tRAS + IDD2N * tRP)) * devices;
+    read_energy_inc = VDD * (IDD4R - IDD3N) * burst_cycle * devices;
+    write_energy_inc = VDD * (IDD4W - IDD3N) * burst_cycle * devices;
+    ref_energy_inc = VDD * (IDD5AB - IDD3N) * tRFC * devices;
+    refb_energy_inc = VDD * (IDD5PB - IDD3N) * tRFCb * devices;
+    // the following are added per cycle
+    act_stb_energy_inc = VDD * IDD3N * devices;
+    pre_stb_energy_inc = VDD * IDD2N * devices;
+    pre_pd_energy_inc = VDD * IDD2P * devices;
+    sref_energy_inc = VDD * IDD6x * devices;
+
     // Other Parameters
     validation_output_file = reader.Get("other", "validation_output", "");
     epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
@@ -234,7 +262,7 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
 
 
 void Config::CalculateSize() {
-    uint32_t devices_per_rank = bus_width / device_width;
+    devices_per_rank = bus_width / device_width;
 
     // The calculation for different protocols are different,
     // Some take into account of the prefetch/burst length in columns some don't

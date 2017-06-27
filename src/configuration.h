@@ -39,6 +39,7 @@ public:
     uint32_t columns;
     uint32_t device_width;
     uint32_t bus_width;
+    uint32_t devices_per_rank;
     uint32_t BL;
 
     //Generic DRAM timing parameters
@@ -85,17 +86,20 @@ public:
     uint32_t tRCDRD;
     uint32_t tRCDWR;
 
-    // Power-related parameters
-    double VDD;  // had 
-    uint32_t IDD0;
-    uint32_t IDD2P;
-    uint32_t IDD2F;
-    uint32_t IDD3P;
-    uint32_t IDD3N;
-    uint32_t IDD4W;
-    uint32_t IDD4R;
-    uint32_t IDD5A;
-    uint32_t IOUT;
+    
+
+    // pre calculated power parameters
+    double act_energy_inc;
+    double pre_energy_inc;
+    double read_energy_inc;
+    double write_energy_inc;
+    double ref_energy_inc;
+    double refb_energy_inc;
+    double act_stb_energy_inc;
+    double pre_stb_energy_inc;
+    double pre_pd_energy_inc;
+    double sref_energy_inc;
+
     
     // HMC 
     uint32_t num_links;

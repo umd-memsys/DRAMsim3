@@ -246,7 +246,7 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<v
 {
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
-    ptr_stats_ = new Statistics();
+    ptr_stats_ = new Statistics(*ptr_config_);
 
     // sanity check, this constructor should only be intialized using HMC
     if (!ptr_config_->IsHMC()) {
