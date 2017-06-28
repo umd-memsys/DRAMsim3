@@ -23,7 +23,7 @@ public:
     void UpdateActivationTimes(int rank, uint64_t curr_time);
     bool IsRefreshWaiting(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->IsRefreshWaiting(); }
     bool IsRowOpen(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->IsRowOpen(); }
-    int ActiveBanksInRank(int rank) const;
+    bool IsAllBankIdleInRank(int rank) const;
     bool IsRankSelfRefreshing(int rank) const {return is_selfrefresh_[rank]; }
     uint32_t OpenRow(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->OpenRow(); }
     int RowHitCount(int rank, int bankgroup, int bank) const { return bank_states_[rank][bankgroup][bank]->RowHitCount(); };

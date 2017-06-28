@@ -115,6 +115,8 @@ public:
 
     class CounterStat numb_rw_rowhits_pending_refresh;
 
+    class CounterStat all_bank_idle_cycles;
+    
     // energy and power stats
     class EnergyStat act_energy;
     class EnergyStat read_energy;

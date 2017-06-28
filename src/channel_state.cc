@@ -29,18 +29,17 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
     }
 }
 
-int ChannelState::ActiveBanksInRank(int rank) const {
-    int count = 0;
+
+bool ChannelState::IsAllBankIdleInRank(int rank) const {
     for (unsigned j = 0; j < config_.bankgroups; j++) {
         for (unsigned k = 0; k < config_.banks_per_group; k++) {
             if (bank_states_[rank][j][k]->IsRowOpen()) {
-                count++;
+                return false;
             }
         }
     }
-    return count;
+    return true;
 }
-
 
 
 Command ChannelState::GetRequiredCommand(const Command& cmd) const {

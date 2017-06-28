@@ -164,15 +164,15 @@ Config::Config(std::string config_file)
     write_delay = WL + burst_cycle;
 
     // Power-related parameters
-    double VDD = reader.GetReal("power", "VDD", 1.5);
+    double VDD = reader.GetReal("power", "VDD", 1.2);
     double IDD0 = reader.GetReal("power", "IDD0", 48);
     double IDD2P = reader.GetReal("power", "IDD2P", 25);
     double IDD2N = reader.GetReal("power", "IDD2N", 34);
     double IDD3P = reader.GetReal("power", "IDD3P", 37);
-    double IDD3N = reader.GetReal("power", "IDD3N", 48);
-    double IDD4W = reader.GetReal("power", "IDD4W", 132);
+    double IDD3N = reader.GetReal("power", "IDD3N", 43);
+    double IDD4W = reader.GetReal("power", "IDD4W", 123);
     double IDD4R = reader.GetReal("power", "IDD4R", 135);
-    double IDD5AB = reader.GetReal("power", "IDD5AB", 58);  // all-bank ref
+    double IDD5AB = reader.GetReal("power", "IDD5AB", 250);  // all-bank ref
     double IDD5PB = reader.GetReal("power", "IDD5PB", 5);  // per-bank ref
     double IDD6x = reader.GetReal("power", "IDD6x", 31);  // this changes with temp
 

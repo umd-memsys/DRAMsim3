@@ -114,20 +114,16 @@ void Controller::ClockTick() {
 
     // add background power, we have to cram all ranks and banks together now...
     // if we have rank states it would make life easier
-    int total_banks = config_.ranks * config_.banks;
     for (unsigned i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
             stats_.sref_energy++;
         } else {
-            int active_banks = channel_state_.ActiveBanksInRank(i);
-            int idle_banks = total_banks - active_banks;
-            while (active_banks > 0) {
-                stats_.act_stb_energy++;
-                active_banks--;
-            }
-            while (idle_banks > 0) {
+            bool all_idle = channel_state_.IsAllBankIdleInRank(i);
+            if (all_idle) {
+                stats_.all_bank_idle_cycles++;    
                 stats_.pre_stb_energy++;
-                idle_banks--;
+            } else {
+                stats_.act_stb_energy++;
             }
         }
     }
