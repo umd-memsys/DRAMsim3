@@ -66,6 +66,25 @@ class Command(object):
         elif self.cmd == "precharge":
             return "precharge(%d, %d);\n" % (self.bank, 0)
 
+    def get_drampower_str(self, config):
+        """
+        translate to generate command trace that DRAMPower can take as input
+        to validate power calculation, but 
+        we need to know the config in order to calculate bank number
+        """
+        str_map = {
+            "activate": "ACT",
+            "read": "RD",
+            "read_p": "RDA",
+            "write": "WR",
+            "write_p": "WRA",
+            "precharge": "PRE",
+            "refresh": "REF"
+        }
+        cmd_str = str_map[self.cmd]
+        bank_num = self.bankgroup * config["dram_structure"]["banks_per_group"] + self.bank
+        return "%d,%s,%d\n" % (self.clk, cmd_str, bank_num)
+
 
 def get_val(config, sec, opt):
     """
@@ -137,6 +156,8 @@ class DRAMValidation(object):
         else:
             self.script_out = ""
 
+        self.drampower_out = self.verilog_out[:-3] + ".power.trc"
+
         self.configs = get_config_dict(config_file_name)
 
         trace_in = open(trace_file_name, "r")
@@ -159,9 +180,18 @@ class DRAMValidation(object):
     def generate_verilog_bench(self, bench_name=""):
         pass
 
+    def generate_drampower_trace(self):
+        with open(self.drampower_out, "wb") as fp:
+            for cmd_str in self.commands:
+                cmd = Command(cmd_str)
+                fp.write(cmd.get_drampower_str(self.configs))
+        return
+
+
     def validation(self):
         self.generate_modelsim_script(self.script_out)
         self.generate_verilog_bench(self.verilog_out)
+        self.generate_drampower_trace()
 
 
 class DDR3Validation(DRAMValidation):
