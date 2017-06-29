@@ -142,6 +142,7 @@ void MemorySystem::ClockTick() {
     }
 
     if( clk_ % ptr_config_->epoch_period == 0) {
+        ptr_stats_->UpdatePreEpoch(clk_);
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }

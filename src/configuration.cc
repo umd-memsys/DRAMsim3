@@ -110,6 +110,7 @@ Config::Config(std::string config_file)
     // Timing Parameters
     // TODO there is no need to keep all of these variables, they should just be temporary
     // ultimately we only need cmd to cmd Timing instead of these     
+    tCK = reader.GetReal("timing", "tCK", 1.0);
     AL = static_cast<uint32_t>(reader.GetInteger("timing", "AL", 0));
     CL = static_cast<uint32_t>(reader.GetInteger("timing", "CL", 12));
     CWL = static_cast<uint32_t>(reader.GetInteger("timing", "CWL", 12));
@@ -208,14 +209,14 @@ Config::Config(std::string config_file)
     row_width = LogBase2(rows);
     column_width = LogBase2(columns);
     uint32_t bytes_offset = LogBase2(bus_width / 8);
-    uint32_t transaction_size = bus_width / 8 * BL;  // transaction size in bytes
+    request_size_bytes = bus_width / 8 * BL;  // transaction size in bytes
 
     // for each address given, because we're transimitting trascation_size bytes per transcation
     // therefore there will be throwaway_bits not used in the address
     // part of it is due to the bytes offset, the other part is the burst len 
     // (same as column auto increment)
     // so effectively only column_width_ -(throwaway_bits - bytes_offset) will be used in column addressing
-    throwaway_bits = LogBase2(transaction_size);
+    throwaway_bits = LogBase2(request_size_bytes);
     column_width -= (throwaway_bits - bytes_offset);
 
     SetAddressMapping();

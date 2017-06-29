@@ -59,8 +59,8 @@ void CounterStat::PrintEpochCSVFormat(std::ostream& where) const {
 DoubleStat::DoubleStat(double inc, std::string name, std::string desc):
     BaseStat(name, desc),
     value(0.0),
-    inc_(inc),
-    last_epoch_value_(0.0)
+    last_epoch_value(0.0),
+    inc_(inc)
 {}
     
 
@@ -70,12 +70,12 @@ void DoubleStat::Print(std::ostream& where) const {
 }
 
 void DoubleStat::UpdateEpoch() {
-    last_epoch_value_ = value;
+    last_epoch_value = value;
     return;
 }
 
 void DoubleStat::PrintEpoch(std::ostream& where) const {
-    PrintNameValueDesc(where, name_, value - last_epoch_value_, description_);
+    PrintNameValueDesc(where, name_, value - last_epoch_value, description_);
     return;
 }
 
@@ -91,7 +91,40 @@ void DoubleStat::PrintCSVFormat(std::ostream& where) const {
 }
 
 void DoubleStat::PrintEpochCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", value - last_epoch_value_);
+    where << fmt::format("{},", value - last_epoch_value);
+    return;
+}
+
+NonCumulativeStat::NonCumulativeStat(std::string name, std::string desc):
+    BaseStat(name, desc)
+{}
+
+void NonCumulativeStat::Print(std::ostream& where) const {
+    PrintNameValueDesc(where, name_, value, description_);
+    return;
+}
+
+
+void NonCumulativeStat::UpdateEpoch() {}
+
+void NonCumulativeStat::PrintEpoch(std::ostream& where) const {
+    PrintNameValueDesc(where, name_, value, description_);
+    return;
+}
+
+void NonCumulativeStat::PrintCSVHeader(std::ostream& where) const {
+    where << fmt::format("{},", name_);
+    return;
+}
+
+
+void NonCumulativeStat::PrintCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", value );
+    return;
+}
+
+void NonCumulativeStat::PrintEpochCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", value);
     return;
 }
 
@@ -203,8 +236,9 @@ void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
 }
 
 Statistics::Statistics(const Config& config):
+    stats_list(),
     config_(config),
-    stats_list()
+    last_clk_(0.0)
 {
     //TODO - Should stats be global?
     numb_read_reqs_issued = CounterStat("numb_read_reqs_issued", "Number of read requests issued");
@@ -240,7 +274,8 @@ Statistics::Statistics(const Config& config):
     pre_pd_energy = DoubleStat(config_.pre_pd_energy_inc, "pre_pd_energy", "Precharge powerdown energy");
     sref_energy = DoubleStat(config_.sref_energy_inc, "sref_energy", "Self-refresh energy");
     total_energy = DoubleStat(0.0, "total_energy", "(pJ) Total energy consumed");
-    average_power = DoubleStat(0.0, "average_power", "(mW) Average Power for all devices");
+    average_power = NonCumulativeStat ("average_power", "(mW) Average Power for all devices");
+    average_bandwidth = NonCumulativeStat("average_bandwidth", "(GB/s) Average Aggregated Bandwidths");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -275,8 +310,23 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&sref_energy);
     stats_list.push_back(&total_energy);
     stats_list.push_back(&average_power);
+    stats_list.push_back(&average_bandwidth);
 }
 
+
+void Statistics::UpdatePreEpoch(uint64_t clk) {
+    // this is used to calculate the stats that are dependent on other stats before each epoch print
+    // like total energy, power, bandwith
+    total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
+                   ref_energy.value + refb_energy.value + act_stb_energy.value + \
+                   pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
+    average_power.value = (total_energy.value - total_energy.last_epoch_value) / static_cast<double>(clk - last_clk_);
+    uint64_t reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count() - \
+                           numb_read_reqs_issued.LastCount() - numb_write_reqs_issued.LastCount();
+    double gb_transfereed = static_cast<double>(reqs_issued) * config_.request_size_bytes;
+    double ns_passed = static_cast<double>(clk - last_clk_) * config_.tCK;
+    average_bandwidth.value = gb_transfereed / ns_passed;
+}
 
 void Statistics::PrintStats(std::ostream &where) const {
     for(auto stat : stats_list) {
@@ -290,10 +340,11 @@ void Statistics::UpdateEpoch(uint64_t clk) {
         stat->UpdateEpoch();
     }
     last_clk_ = clk;
-    total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
-                   ref_energy.value + refb_energy.value + act_stb_energy.value + \
-                   pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
-    average_power.value = total_energy.value / last_clk_;
+    // override the value after each update so that in the last epoch 
+    // we get the overall value of these non-cumulatve stats
+    average_bandwidth.value = static_cast<double>(numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count()) * \
+                              config_.request_size_bytes / static_cast<double>(last_clk_) / config_.tCK;
+    average_power.value = total_energy.value / static_cast<double>(last_clk_);
     return;
 }
 

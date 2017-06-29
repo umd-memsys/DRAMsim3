@@ -43,6 +43,7 @@ public:
     uint32_t BL;
 
     //Generic DRAM timing parameters
+    double tCK;
     uint32_t burst_cycle;   // seperate BL with timing since fot GDDRx it's not BL/2
     uint32_t AL;
     uint32_t CL;
@@ -130,6 +131,7 @@ public:
     std::string epoch_stats_file_csv;
 
     //Computed parameters
+    uint32_t request_size_bytes;
     uint32_t channel_width, rank_width, bankgroup_width, bank_width, row_width, column_width, throwaway_bits;
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}

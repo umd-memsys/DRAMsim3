@@ -31,6 +31,8 @@ public:
     CounterStat():BaseStat() {}
     CounterStat(std::string name, std::string desc);
     void operator=(int count) { count_ = count; }
+    uint64_t Count() { return count_; }
+    uint64_t LastCount() { return last_epoch_count_; }
     CounterStat& operator++() { count_++; return *this; }
     CounterStat& operator++(int) { count_++; return *this; }
     CounterStat& operator--() { count_--; return *this; }
@@ -80,9 +82,25 @@ public:
     void PrintCSVFormat(std::ostream& where) const override ;
     void PrintEpochCSVFormat(std::ostream& where) const override ;
     double value;
+    double last_epoch_value;
 private:
     double inc_;
-    double last_epoch_value_;
+};
+
+
+class NonCumulativeStat : public BaseStat {
+    // each epoch only print the value within this epoch 
+    // and so is the final print
+public:
+    NonCumulativeStat() : BaseStat() {};
+    NonCumulativeStat(std::string name, std::string desc);
+    void Print(std::ostream& where) const override ;
+    void UpdateEpoch() override ;
+    void PrintEpoch(std::ostream& where) const override ;
+    void PrintCSVHeader(std::ostream& where) const override ;
+    void PrintCSVFormat(std::ostream& where) const override ;
+    void PrintEpochCSVFormat(std::ostream& where) const override ;
+    double value;
 };
 
 
@@ -128,12 +146,15 @@ public:
     class DoubleStat pre_pd_energy;  // precharge powerdown energy
     class DoubleStat sref_energy;  // self ref energy
     class DoubleStat total_energy;
-    class DoubleStat average_power;
+    class NonCumulativeStat average_power;
+
+    class NonCumulativeStat average_bandwidth;
     
     std::list<class BaseStat*> stats_list;
 
     void PrintStats(std::ostream& where) const;
     void UpdateEpoch(uint64_t clk);
+    void UpdatePreEpoch(uint64_t clk);
     void PrintEpochStats(std::ostream& where) const;
     void PrintStatsCSVHeader(std::ostream& where) const;
     void PrintStatsCSVFormat(std::ostream& where) const;
