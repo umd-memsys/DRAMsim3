@@ -5,6 +5,21 @@
 using namespace std;
 using namespace dramcore;
 
+template<class T>
+void PrintNameValue(std::ostream& where, std::string name, T value) {
+    where << fmt::format("{:^40}{:^5}{:>12}", name, " = ", value) << endl;
+    return;
+}
+
+template<class T>
+void PrintNameValueDesc(std::ostream& where, std::string name, T value, 
+                        std::string description) {
+    // not making this a class method because we need to calculate 
+    // power & bw later, which are not BaseStat members 
+    where << fmt::format("{:<40}{:^5}{:>12}{:>8}{}", name, " = ", value, " # ", description) << endl;
+    return;
+}
+
 CounterStat::CounterStat(std::string name, std::string desc):
     BaseStat(name, desc),
     count_(0),
@@ -12,7 +27,7 @@ CounterStat::CounterStat(std::string name, std::string desc):
 {}
 
 void CounterStat::Print(std::ostream& where) const {
-    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", count_, " # ", description_) << endl;
+    PrintNameValueDesc(where, name_, count_, description_);
     return;
 }
 
@@ -22,8 +37,7 @@ void CounterStat::UpdateEpoch() {
 }
 
 void CounterStat::PrintEpoch(std::ostream& where) const {
-    //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
-    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", count_ - last_epoch_count_, " # ", description_) << endl;
+    PrintNameValueDesc(where, name_, count_ - last_epoch_count_, description_);
     return;
 }
 
@@ -42,42 +56,42 @@ void CounterStat::PrintEpochCSVFormat(std::ostream& where) const {
     return;
 }
 
-EnergyStat::EnergyStat(double inc, std::string name, std::string desc):
+DoubleStat::DoubleStat(double inc, std::string name, std::string desc):
     BaseStat(name, desc),
+    value(0.0),
     inc_(inc),
-    value_(0.0),
     last_epoch_value_(0.0)
 {}
     
 
-void EnergyStat::Print(std::ostream& where) const {
-    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", value_, " # ", description_) << endl;
+void DoubleStat::Print(std::ostream& where) const {
+    PrintNameValueDesc(where, name_, value, description_);
     return;
 }
 
-void EnergyStat::UpdateEpoch() {
-    last_epoch_value_ = value_;
+void DoubleStat::UpdateEpoch() {
+    last_epoch_value_ = value;
     return;
 }
 
-void EnergyStat::PrintEpoch(std::ostream& where) const {
-    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_ + "(power)", " = ", (value_ - last_epoch_value_), " # ", description_) << endl;
+void DoubleStat::PrintEpoch(std::ostream& where) const {
+    PrintNameValueDesc(where, name_, value - last_epoch_value_, description_);
     return;
 }
 
-void EnergyStat::PrintCSVHeader(std::ostream& where) const {
+void DoubleStat::PrintCSVHeader(std::ostream& where) const {
     where << fmt::format("{},", name_);
     return;
 }
 
 
-void EnergyStat::PrintCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", value_ );
+void DoubleStat::PrintCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", value );
     return;
 }
 
-void EnergyStat::PrintEpochCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", value_ - last_epoch_value_);
+void DoubleStat::PrintEpochCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", value - last_epoch_value_);
     return;
 }
 
@@ -116,17 +130,17 @@ void HistogramStat::AddValue(int val) {
 
 void HistogramStat::Print(std::ostream& where) const {
     auto bin_width = (end_ - start_)/numb_bins_;
-    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", " ", " # ", description_) << endl;
+    PrintNameValueDesc(where, name_, " ", description_);
     auto bin_str = fmt::format("[ < {} ]", start_);
-    where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", neg_outlier_count_) << endl;
+    PrintNameValue(where, bin_str, neg_outlier_count_);
     for(auto i = 0; i < numb_bins_; i++) {
         auto bin_start = start_ + i*bin_width;
         auto bin_end = start_ + (i+1)*bin_width - 1;
         auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", bin_count_[i]) << endl;
+        PrintNameValue(where, bin_str, bin_count_[i]);
     }
     bin_str = fmt::format("[ > {} ]", end_);
-    where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", pos_outlier_count_) << endl;
+    PrintNameValue(where, bin_str, pos_outlier_count_);
     return;
 }
 
@@ -142,17 +156,17 @@ void HistogramStat::UpdateEpoch() {
 void HistogramStat::PrintEpoch(std::ostream& where) const {
     //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
     auto bin_width = (end_ - start_)/numb_bins_;
-    where << fmt::format("{:<40}{:^5}{:>10}{:>10}{}", name_, " = ", " ", " # ", description_) << endl;
+    PrintNameValueDesc(where, name_, " ", description_);
     auto bin_str = fmt::format("[ < {} ]", start_);
-    where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", neg_outlier_count_ - last_epoch_neg_outlier_count_) << endl;
+    PrintNameValue(where, bin_str, neg_outlier_count_ - last_epoch_neg_outlier_count_);
     for(auto i = 0; i < numb_bins_; i++) {
         auto bin_start = start_ + i*bin_width;
         auto bin_end = start_ + (i+1)*bin_width - 1;
         auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", bin_count_[i] - last_epoch_bin_count_[i]) << endl;
+        PrintNameValue(where, bin_str, bin_count_[i] - last_epoch_bin_count_[i]);
     }
     bin_str = fmt::format("[ > {} ]", end_);
-    where << fmt::format("{:^40}{:^5}{:>10}", bin_str, " = ", pos_outlier_count_ - last_epoch_pos_outlier_count_) << endl;
+    PrintNameValue(where, bin_str, pos_outlier_count_ - last_epoch_pos_outlier_count_);
     return;
 }
 
@@ -189,6 +203,7 @@ void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
 }
 
 Statistics::Statistics(const Config& config):
+    config_(config),
     stats_list()
 {
     //TODO - Should stats be global?
@@ -215,17 +230,17 @@ Statistics::Statistics(const Config& config):
     numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
     all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all banks are idle");
     // energy and power stats
-    act_energy = EnergyStat(config.act_energy_inc, "act_energy", "ACT energy");
-    read_energy = EnergyStat(config.read_energy_inc, "read_energy", "READ energy (not including IO)");
-    write_energy = EnergyStat(config.write_energy_inc, "write_energy", "WRITE energy (not including IO)");
-    ref_energy = EnergyStat(config.ref_energy_inc, "ref_energy", "Refresh energy");
-    refb_energy = EnergyStat(config.refb_energy_inc, "refb_energy", "Bank-Refresh energy");
-    act_stb_energy = EnergyStat(config.act_stb_energy_inc,"act_stb_energy", "Active standby energy");
-    pre_stb_energy = EnergyStat(config.pre_stb_energy_inc, "pre_stb_energy", "Precharge standby energy");
-    pre_pd_energy = EnergyStat(config.pre_pd_energy_inc, "pre_pd_energy", "Precharge powerdown energy");
-    sref_energy = EnergyStat(config.sref_energy_inc, "sref_energy", "Self-refresh energy");
-    // TODO: add the above to total energy
-    total_energy = EnergyStat(0., "total_energy", "Total energy");
+    act_energy = DoubleStat(config_.act_energy_inc, "act_energy", "ACT energy");
+    read_energy = DoubleStat(config_.read_energy_inc, "read_energy", "READ energy (not including IO)");
+    write_energy = DoubleStat(config_.write_energy_inc, "write_energy", "WRITE energy (not including IO)");
+    ref_energy = DoubleStat(config_.ref_energy_inc, "ref_energy", "Refresh energy");
+    refb_energy = DoubleStat(config_.refb_energy_inc, "refb_energy", "Bank-Refresh energy");
+    act_stb_energy = DoubleStat(config_.act_stb_energy_inc,"act_stb_energy", "Active standby energy");
+    pre_stb_energy = DoubleStat(config_.pre_stb_energy_inc, "pre_stb_energy", "Precharge standby energy");
+    pre_pd_energy = DoubleStat(config_.pre_pd_energy_inc, "pre_pd_energy", "Precharge powerdown energy");
+    sref_energy = DoubleStat(config_.sref_energy_inc, "sref_energy", "Self-refresh energy");
+    total_energy = DoubleStat(0.0, "total_energy", "(pJ) Total energy consumed");
+    average_power = DoubleStat(0.0, "average_power", "(mW) Average Power for all devices");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -258,6 +273,8 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&pre_stb_energy);
     stats_list.push_back(&pre_pd_energy);
     stats_list.push_back(&sref_energy);
+    stats_list.push_back(&total_energy);
+    stats_list.push_back(&average_power);
 }
 
 
@@ -265,13 +282,18 @@ void Statistics::PrintStats(std::ostream &where) const {
     for(auto stat : stats_list) {
         stat->Print(where);
     }
-    return;
 }
 
-void Statistics::UpdateEpoch() {
+void Statistics::UpdateEpoch(uint64_t clk) {
+    // get clk information so that we can calculate power, bandwidth, etc.
     for(auto stat : stats_list) {
         stat->UpdateEpoch();
     }
+    last_clk_ = clk;
+    total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
+                   ref_energy.value + refb_energy.value + act_stb_energy.value + \
+                   pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
+    average_power.value = total_energy.value / last_clk_;
     return;
 }
 

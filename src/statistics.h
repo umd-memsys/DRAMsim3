@@ -67,20 +67,20 @@ private:
 };
 
 
-class EnergyStat : public BaseStat {
+class DoubleStat : public BaseStat {
 public:
-    EnergyStat():BaseStat() {};
-    EnergyStat(double inc, std::string name, std::string desc);
-    void operator=(double value) {value_ = value; }
-    EnergyStat& operator++(int) {value_ += inc_; return *this; }
+    DoubleStat():BaseStat() {};
+    DoubleStat(double inc, std::string name, std::string desc);
+    void operator=(double new_value) {value = new_value; }
+    DoubleStat& operator++(int) {value += inc_; return *this; }
     void Print(std::ostream& where) const override ;
     void UpdateEpoch() override ;
     void PrintEpoch(std::ostream& where) const override ;
     void PrintCSVHeader(std::ostream& where) const override ;
     void PrintCSVFormat(std::ostream& where) const override ;
     void PrintEpochCSVFormat(std::ostream& where) const override ;
+    double value;
 private:
-    double value_;
     double inc_;
     double last_epoch_value_;
 };
@@ -118,27 +118,31 @@ public:
     class CounterStat all_bank_idle_cycles;
     
     // energy and power stats
-    class EnergyStat act_energy;
-    class EnergyStat read_energy;
-    class EnergyStat write_energy;
-    class EnergyStat ref_energy;    // rank ref
-    class EnergyStat refb_energy;  // bank refresh
-    class EnergyStat act_stb_energy;  // active standby
-    class EnergyStat pre_stb_energy;  // precharge standby
-    class EnergyStat pre_pd_energy;  // precharge powerdown energy
-    class EnergyStat sref_energy;  // self ref energy
-    class EnergyStat total_energy;
+    class DoubleStat act_energy;
+    class DoubleStat read_energy;
+    class DoubleStat write_energy;
+    class DoubleStat ref_energy;    // rank ref
+    class DoubleStat refb_energy;  // bank refresh
+    class DoubleStat act_stb_energy;  // active standby
+    class DoubleStat pre_stb_energy;  // precharge standby
+    class DoubleStat pre_pd_energy;  // precharge powerdown energy
+    class DoubleStat sref_energy;  // self ref energy
+    class DoubleStat total_energy;
+    class DoubleStat average_power;
     
     std::list<class BaseStat*> stats_list;
 
     void PrintStats(std::ostream& where) const;
-    void UpdateEpoch();
+    void UpdateEpoch(uint64_t clk);
     void PrintEpochStats(std::ostream& where) const;
     void PrintStatsCSVHeader(std::ostream& where) const;
     void PrintStatsCSVFormat(std::ostream& where) const;
     void PrintEpochStatsCSVFormat(std::ostream& where) const;
 
     friend std::ostream& operator<<(std::ostream& os, Statistics& stats);
+private:
+    const Config& config_;
+    uint64_t last_clk_;
 };
 
 }

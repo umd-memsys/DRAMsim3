@@ -64,6 +64,9 @@ void BaseMemorySystem::PrintIntermediateStats() {
 
 
 void BaseMemorySystem::PrintStats() {
+    if ( clk_ % ptr_config_->epoch_period != 0 ) {
+        ptr_stats_->UpdateEpoch(clk_);
+    }
     cout << "-----------------------------------------------------" << endl;
     cout << "Printing final stats -- " << endl;
     cout << "-----------------------------------------------------" << endl;
@@ -140,7 +143,7 @@ void MemorySystem::ClockTick() {
 
     if( clk_ % ptr_config_->epoch_period == 0) {
         PrintIntermediateStats();
-        ptr_stats_->UpdateEpoch();
+        ptr_stats_->UpdateEpoch(clk_);
     }
     return;
 }
@@ -186,7 +189,7 @@ void IdealMemorySystem::ClockTick() {
 
     if( clk_ % ptr_config_->epoch_period == 0) {
         PrintIntermediateStats();
-        ptr_stats_->UpdateEpoch();
+        ptr_stats_->UpdateEpoch(clk_);
     }
     return;
 }
