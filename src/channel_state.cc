@@ -22,11 +22,13 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
             }
         }
     }
-    if (!config.validation_output_file.empty()) {
-        cout << "Validation Command Trace write to "<< config.validation_output_file << endl;
-        val_output_enable = true;
-        val_output_.open(config.validation_output_file, std::ofstream::out);
-    }
+
+#ifdef VALIDATION_OUTPUT
+    std::string validation_output_file = config.output_prefix + "-cmd.trc"
+    cout << "Validation Command Trace write to "<< validation_output_file << endl;
+    val_output_.open(validation_output_file, std::ofstream::out);
+#endif // VALIDATION_OUTPUT
+
 }
 
 
@@ -233,12 +235,12 @@ void ChannelState::UpdateSameRankTiming(const Address& addr, const std::list< st
 }
 
 void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
-    #ifdef DEBUG_OUTPUT
-        cout << left << setw(8) << clk << " " << cmd << endl;
-    #endif  //DEBUG_OUTPUT
-    if (val_output_enable) {
-        val_output_ << left << setw(8) << clk << " " << cmd <<std::endl;
-    }
+#ifdef DEBUG_OUTPUT
+    cout << left << setw(8) << clk << " " << cmd << endl;
+#endif  //DEBUG_OUTPUT
+#ifdef VALIDATION_OUTPUT
+    val_output_ << left << setw(8) << clk << " " << cmd <<std::endl;
+#endif // VALIDATION_OUTPUT
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
     UpdateCommandIssueStats(cmd);

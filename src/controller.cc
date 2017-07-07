@@ -16,9 +16,6 @@ Controller::Controller(int channel, const Config &config, const Timing &timing, 
 {
 }
 
-Controller::~Controller() {
-    val_output_.close(); //TODO - Where is this opened? Why is this closed here
-}
 
 void Controller::ClockTick() {
     clk_++;

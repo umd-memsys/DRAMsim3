@@ -134,7 +134,6 @@ Config::Config(std::string config_file)
     tXS = static_cast<uint32_t>(reader.GetInteger("timing", "tXS", 432)); 
     tXP = static_cast<uint32_t>(reader.GetInteger("timing", "tXP", 8));
     tRFCb = static_cast<uint32_t>(reader.GetInteger("timing", "tRFCb", 20));
-    tRREFD = static_cast<uint32_t>(reader.GetInteger("timing", "tRREFD", 5));
     tREFI = static_cast<uint32_t>(reader.GetInteger("timing", "tREFI", 7800));
     tREFIb = static_cast<uint32_t>(reader.GetInteger("timing", "tREFIb", 1950));
     tFAW = static_cast<uint32_t>(reader.GetInteger("timing", "tFAW", 50));
@@ -194,14 +193,16 @@ Config::Config(std::string config_file)
     sref_energy_inc = VDD * IDD6x * devices;
 
     // Other Parameters
-    validation_output_file = reader.Get("other", "validation_output", "");
+    // give a prefix instead of specify the output name one by one... 
+    // this would allow outputing to a directory and you can always override these values
+    output_prefix = reader.Get("other", "output_prefix", "dramsim3-output-");
     epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
-    stats_file = reader.Get("other", "stats_file", "dramcore_stats.txt");
-    cummulative_stats_file = reader.Get("other", "cummulative_stats_file", "dramcore_cummulative_stats.txt");
-    epoch_stats_file = reader.Get("other", "epoch_stats_file", "dramcore_epoch_stats.txt");
-    stats_file_csv = reader.Get("other", "stats_file", "dramcore_stats.csv");
-    cummulative_stats_file_csv = reader.Get("other", "cummulative_stats_file", "dramcore_cummulative_stats.csv");
-    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", "dramcore_epoch_stats.csv");
+    stats_file = reader.Get("other", "stats_file", output_prefix + "stats.txt");
+    cummulative_stats_file = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative-stats.txt");
+    epoch_stats_file = reader.Get("other", "epoch_stats_file", output_prefix + "epoch-stats.txt");
+    stats_file_csv = reader.Get("other", "stats_file", output_prefix + "stats.csv");
+    cummulative_stats_file_csv = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative_stats.csv");
+    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", output_prefix + "epoch-stats.csv");
 
     channel_width = LogBase2(channels);
     rank_width = LogBase2(ranks);

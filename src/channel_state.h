@@ -33,8 +33,9 @@ public:
 private:
     const Config& config_;
     const Timing& timing_;
-    bool val_output_enable;
+#ifdef VALIDATION_OUTPUT
     std::ofstream val_output_;
+#endif
     Statistics& stats_;
     std::vector< std::vector< std::vector<BankState*> > > bank_states_;
     std::vector< std::vector<uint64_t> > four_aw;

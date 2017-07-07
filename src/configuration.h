@@ -71,7 +71,6 @@ public:
     uint32_t tXS;
     uint32_t tXP;
     uint32_t tRFCb;
-    uint32_t tRREFD;
     uint32_t tREFI;
     uint32_t tREFIb;
     uint32_t tFAW;
@@ -120,7 +119,7 @@ public:
     bool aggressive_precharging_enabled;
     bool req_buffering_enabled;
 
-    std::string validation_output_file;
+    std::string output_prefix;
 
     uint32_t epoch_period;
     std::string stats_file;
