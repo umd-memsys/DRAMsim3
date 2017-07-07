@@ -37,6 +37,27 @@ void Controller::ClockTick() {
         }
     }
 
+    // add background power, we have to cram all ranks and banks together now...
+    // if we have rank states it would make life easier
+    for (unsigned i = 0; i < config_.ranks; i++) {
+        if (channel_state_.IsRankSelfRefreshing(i)) {
+            stats_.sref_energy++;
+        } else {
+            bool all_idle = channel_state_.IsAllBankIdleInRank(i);
+            if (all_idle) {
+#ifdef DEBUG_POWER
+                stats_.all_bank_idle_cycles++;
+#endif // DEBUG_POWER
+                stats_.pre_stb_energy++;
+            } else {
+#ifdef DEBUG_POWER
+                stats_.active_cycles++;
+#endif // DEBUG_POWER
+                stats_.act_stb_energy++;
+            }
+        }
+    }
+
     //Move idle ranks into self-refresh mode to save power
     if(config_.enable_self_refresh) {
         for (auto i = 0; i < config_.ranks; i++) {
@@ -112,21 +133,7 @@ void Controller::ClockTick() {
         }
     }
 
-    // add background power, we have to cram all ranks and banks together now...
-    // if we have rank states it would make life easier
-    for (unsigned i = 0; i < config_.ranks; i++) {
-        if (channel_state_.IsRankSelfRefreshing(i)) {
-            stats_.sref_energy++;
-        } else {
-            bool all_idle = channel_state_.IsAllBankIdleInRank(i);
-            if (all_idle) {
-                stats_.all_bank_idle_cycles++;    
-                stats_.pre_stb_energy++;
-            } else {
-                stats_.act_stb_energy++;
-            }
-        }
-    }
+    
 }
 
 bool Controller::InsertReq(Request* req) {

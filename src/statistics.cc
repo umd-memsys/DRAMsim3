@@ -262,7 +262,10 @@ Statistics::Statistics(const Config& config):
     numb_self_refresh_enter_cmds_issued = CounterStat("numb_self_refresh_enter_cmds_issued", "Number of self-refresh mode enter commands issued");
     numb_self_refresh_exit_cmds_issued = CounterStat("numb_self_refresh_exit_cmds_issued", "Number of self-refresh mode exit commands issued");
     numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
+#ifdef DEBUG_POWER
     all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all banks are idle");
+    active_cycles = CounterStat("rank active cycles", "Number of cycles the rank ramins active");
+#endif // DEBUG_POWER
     // energy and power stats
     act_energy = DoubleStat(config_.act_energy_inc, "act_energy", "ACT energy");
     read_energy = DoubleStat(config_.read_energy_inc, "read_energy", "READ energy (not including IO)");
@@ -298,7 +301,10 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&numb_self_refresh_enter_cmds_issued);
     stats_list.push_back(&numb_self_refresh_exit_cmds_issued);
     stats_list.push_back(&numb_rw_rowhits_pending_refresh);
+#ifdef DEBUG_POWER
     stats_list.push_back(&all_bank_idle_cycles);
+    stats_list.push_back(&active_cycles);
+#endif // DEBUG_POWER
     stats_list.push_back(&act_energy);
     stats_list.push_back(&read_energy);
     stats_list.push_back(&write_energy);

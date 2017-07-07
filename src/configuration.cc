@@ -31,10 +31,11 @@ Config::Config(std::string config_file)
     req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
 
     // DRAM organization
-    bool bankgroup_enable = reader.GetBoolean("dram_structure", "bankgroup_enable", true);
     bankgroups = static_cast<uint32_t>(reader.GetInteger("dram_structure", "bankgroups", 2));
     banks_per_group = static_cast<uint32_t>(reader.GetInteger("dram_structure", "banks_per_group", 2));
-    if (!bankgroup_enable) {  // aggregating all banks to one group //TODO - @shawn - Why is this required?
+    bool bankgroup_enable = reader.GetBoolean("dram_structure", "bankgroup_enable", true);
+    // GDDR5 can chose to enable/disable bankgroups
+    if (!bankgroup_enable) {  // aggregating all banks to one group 
         banks_per_group *= bankgroups;
         bankgroups = 1;
     }

@@ -133,7 +133,10 @@ public:
 
     class CounterStat numb_rw_rowhits_pending_refresh;
 
+#ifdef DEBUG_POWER
+    class CounterStat active_cycles;
     class CounterStat all_bank_idle_cycles;
+#endif // DEBUG_POWER
     
     // energy and power stats
     class DoubleStat act_energy;
