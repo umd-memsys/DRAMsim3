@@ -12,31 +12,32 @@ Timing::Timing(const Config& config) :
     other_ranks(static_cast<int>(CommandType::SIZE)),
     same_rank(static_cast<int>(CommandType::SIZE))
 {
-    read_to_read_l = std::max(config_.burst_cycle, config_.tCCD_L);
-    read_to_read_s = std::max(config_.burst_cycle, config_.tCCD_S);
-    read_to_read_o = config_.burst_cycle + config_.tRTRS;
-    read_to_write = config_.RL + config_.burst_cycle - config_.WL + config_.tRPRE + config_.tRTRS;  // refer page 94 of DDR4 spec
-    read_to_write_o = config_.read_delay + config_.burst_cycle + config_.tRTRS - config_.write_delay;
-    read_to_precharge = config_.AL + config_.tRTP;
-    readp_to_act = config_.AL + config_.burst_cycle + config_.tRTP + config_.tRP;
+    uint32_t read_to_read_l = std::max(config_.burst_cycle, config_.tCCD_L);
+    uint32_t read_to_read_s = std::max(config_.burst_cycle, config_.tCCD_S);
+    uint32_t read_to_read_o = config_.burst_cycle + config_.tRTRS;
+    uint32_t read_to_write = config_.RL + config_.burst_cycle - config_.WL + config_.tRPRE + config_.tRTRS;  // refer page 94 of DDR4 spec
+    uint32_t read_to_write_o = config_.read_delay + config_.burst_cycle + config_.tRTRS - config_.write_delay;
+    uint32_t read_to_precharge = config_.AL + config_.tRTP;
+    uint32_t readp_to_act = config_.AL + config_.burst_cycle + config_.tRTP + config_.tRP;
     
-    write_to_read_l = config_.write_delay + config_.tWTR_L;
-    write_to_read_s = config_.write_delay + config_.tWTR_S;
-    write_to_read_o = config_.write_delay + config_.burst_cycle + config_.tRTRS - config_.read_delay;
-    write_to_write_l = std::max(config_.burst_cycle, config_.tCCD_L);
-    write_to_write_s = std::max(config_.burst_cycle, config_.tCCD_S);
-    write_to_write_o = config_.burst_cycle + config_.tWPRE; 
-    write_to_precharge = config_.WL + config_.burst_cycle + config_.tWR;
+    uint32_t write_to_read_l = config_.write_delay + config_.tWTR_L;
+    uint32_t write_to_read_s = config_.write_delay + config_.tWTR_S;
+    uint32_t write_to_read_o = config_.write_delay + config_.burst_cycle + config_.tRTRS - config_.read_delay;
+    uint32_t write_to_write_l = std::max(config_.burst_cycle, config_.tCCD_L);
+    uint32_t write_to_write_s = std::max(config_.burst_cycle, config_.tCCD_S);
+    uint32_t write_to_write_o = config_.burst_cycle + config_.tWPRE; 
+    uint32_t write_to_precharge = config_.WL + config_.burst_cycle + config_.tWR;
 
-    precharge_to_activate = config_.tRP;
-    precharge_to_precharge = config_.tPPD;
-    read_to_activate = read_to_precharge + precharge_to_activate;
-    write_to_activate = write_to_precharge + precharge_to_activate;
+    uint32_t precharge_to_activate = config_.tRP;
+    uint32_t precharge_to_precharge = config_.tPPD;
+    uint32_t read_to_activate = read_to_precharge + precharge_to_activate;
+    uint32_t write_to_activate = write_to_precharge + precharge_to_activate;
 
-    activate_to_activate = config_.tRC;
-    activate_to_activate_l = config_.tRRD_L;
-    activate_to_activate_s = config_.tRRD_S;
-    activate_to_precharge = config_.tRAS;
+    uint32_t activate_to_activate = config_.tRC;
+    uint32_t activate_to_activate_l = config_.tRRD_L;
+    uint32_t activate_to_activate_s = config_.tRRD_S;
+    uint32_t activate_to_precharge = config_.tRAS;
+    uint32_t activate_to_read, activate_to_write;
     if (config_.IsGDDR() || config_.IsHBM()){
         activate_to_read = config_.tRCDRD;
         activate_to_write = config_.tRCDWR;   
@@ -44,18 +45,18 @@ Timing::Timing(const Config& config) :
         activate_to_read = config_.tRCD - config_.AL;
         activate_to_write = config_.tRCD - config_.AL;
     }
-    activate_to_refresh = config_.tRC;  // need to precharge before ref, so it's tRC
+    uint32_t activate_to_refresh = config_.tRC;  // need to precharge before ref, so it's tRC
 
     // TODO: deal with different refresh rate
-    refresh_to_refresh = config_.tREFI;  // refresh intervals (per rank level)
-    refresh_to_activate = config_.tRFC;  // tRFC is defined as ref to act
-    refresh_to_activate_bank = config_.tRFCb;
+    uint32_t refresh_to_refresh = config_.tREFI;  // refresh intervals (per rank level)
+    uint32_t refresh_to_activate = config_.tRFC;  // tRFC is defined as ref to act
+    uint32_t refresh_to_activate_bank = config_.tRFCb;
 
 
-    self_refresh_entry_to_exit = config_.tCKESR;
-    self_refresh_exit = config_.tXS;
-    powerdown_to_exit = config_.tCKE;
-    powerdown_exit = config_.tXP;
+    uint32_t self_refresh_entry_to_exit = config_.tCKESR;
+    uint32_t self_refresh_exit = config_.tXS;
+    uint32_t powerdown_to_exit = config_.tCKE;
+    uint32_t powerdown_exit = config_.tXP;
 
 
     if (config_.bankgroups == 1) {  
