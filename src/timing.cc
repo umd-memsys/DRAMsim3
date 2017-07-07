@@ -5,70 +5,69 @@ using namespace std;
 using namespace dramcore;
 
 Timing::Timing(const Config& config) :
-    config_(config),
     same_bank(static_cast<int>(CommandType::SIZE)),
     other_banks_same_bankgroup(static_cast<int>(CommandType::SIZE)),
     other_bankgroups_same_rank(static_cast<int>(CommandType::SIZE)),
     other_ranks(static_cast<int>(CommandType::SIZE)),
     same_rank(static_cast<int>(CommandType::SIZE))
 {
-    uint32_t read_to_read_l = std::max(config_.burst_cycle, config_.tCCD_L);
-    uint32_t read_to_read_s = std::max(config_.burst_cycle, config_.tCCD_S);
-    uint32_t read_to_read_o = config_.burst_cycle + config_.tRTRS;
-    uint32_t read_to_write = config_.RL + config_.burst_cycle - config_.WL + config_.tRPRE + config_.tRTRS;  // refer page 94 of DDR4 spec
-    uint32_t read_to_write_o = config_.read_delay + config_.burst_cycle + config_.tRTRS - config_.write_delay;
-    uint32_t read_to_precharge = config_.AL + config_.tRTP;
-    uint32_t readp_to_act = config_.AL + config_.burst_cycle + config_.tRTP + config_.tRP;
+    uint32_t read_to_read_l = std::max(config.burst_cycle, config.tCCD_L);
+    uint32_t read_to_read_s = std::max(config.burst_cycle, config.tCCD_S);
+    uint32_t read_to_read_o = config.burst_cycle + config.tRTRS;
+    uint32_t read_to_write = config.RL + config.burst_cycle - config.WL + config.tRPRE + config.tRTRS;  // refer page 94 of DDR4 spec
+    uint32_t read_to_write_o = config.read_delay + config.burst_cycle + config.tRTRS - config.write_delay;
+    uint32_t read_to_precharge = config.AL + config.tRTP;
+    uint32_t readp_to_act = config.AL + config.burst_cycle + config.tRTP + config.tRP;
     
-    uint32_t write_to_read_l = config_.write_delay + config_.tWTR_L;
-    uint32_t write_to_read_s = config_.write_delay + config_.tWTR_S;
-    uint32_t write_to_read_o = config_.write_delay + config_.burst_cycle + config_.tRTRS - config_.read_delay;
-    uint32_t write_to_write_l = std::max(config_.burst_cycle, config_.tCCD_L);
-    uint32_t write_to_write_s = std::max(config_.burst_cycle, config_.tCCD_S);
-    uint32_t write_to_write_o = config_.burst_cycle + config_.tWPRE; 
-    uint32_t write_to_precharge = config_.WL + config_.burst_cycle + config_.tWR;
+    uint32_t write_to_read_l = config.write_delay + config.tWTR_L;
+    uint32_t write_to_read_s = config.write_delay + config.tWTR_S;
+    uint32_t write_to_read_o = config.write_delay + config.burst_cycle + config.tRTRS - config.read_delay;
+    uint32_t write_to_write_l = std::max(config.burst_cycle, config.tCCD_L);
+    uint32_t write_to_write_s = std::max(config.burst_cycle, config.tCCD_S);
+    uint32_t write_to_write_o = config.burst_cycle + config.tWPRE; 
+    uint32_t write_to_precharge = config.WL + config.burst_cycle + config.tWR;
 
-    uint32_t precharge_to_activate = config_.tRP;
-    uint32_t precharge_to_precharge = config_.tPPD;
+    uint32_t precharge_to_activate = config.tRP;
+    uint32_t precharge_to_precharge = config.tPPD;
     uint32_t read_to_activate = read_to_precharge + precharge_to_activate;
     uint32_t write_to_activate = write_to_precharge + precharge_to_activate;
 
-    uint32_t activate_to_activate = config_.tRC;
-    uint32_t activate_to_activate_l = config_.tRRD_L;
-    uint32_t activate_to_activate_s = config_.tRRD_S;
-    uint32_t activate_to_precharge = config_.tRAS;
+    uint32_t activate_to_activate = config.tRC;
+    uint32_t activate_to_activate_l = config.tRRD_L;
+    uint32_t activate_to_activate_s = config.tRRD_S;
+    uint32_t activate_to_precharge = config.tRAS;
     uint32_t activate_to_read, activate_to_write;
-    if (config_.IsGDDR() || config_.IsHBM()){
-        activate_to_read = config_.tRCDRD;
-        activate_to_write = config_.tRCDWR;   
+    if (config.IsGDDR() || config.IsHBM()){
+        activate_to_read = config.tRCDRD;
+        activate_to_write = config.tRCDWR;   
     } else {
-        activate_to_read = config_.tRCD - config_.AL;
-        activate_to_write = config_.tRCD - config_.AL;
+        activate_to_read = config.tRCD - config.AL;
+        activate_to_write = config.tRCD - config.AL;
     }
-    uint32_t activate_to_refresh = config_.tRC;  // need to precharge before ref, so it's tRC
+    uint32_t activate_to_refresh = config.tRC;  // need to precharge before ref, so it's tRC
 
     // TODO: deal with different refresh rate
-    uint32_t refresh_to_refresh = config_.tREFI;  // refresh intervals (per rank level)
-    uint32_t refresh_to_activate = config_.tRFC;  // tRFC is defined as ref to act
-    uint32_t refresh_to_activate_bank = config_.tRFCb;
+    uint32_t refresh_to_refresh = config.tREFI;  // refresh intervals (per rank level)
+    uint32_t refresh_to_activate = config.tRFC;  // tRFC is defined as ref to act
+    uint32_t refresh_to_activate_bank = config.tRFCb;
 
 
-    uint32_t self_refresh_entry_to_exit = config_.tCKESR;
-    uint32_t self_refresh_exit = config_.tXS;
-    uint32_t powerdown_to_exit = config_.tCKE;
-    uint32_t powerdown_exit = config_.tXP;
+    uint32_t self_refresh_entry_to_exit = config.tCKESR;
+    uint32_t self_refresh_exit = config.tXS;
+    uint32_t powerdown_to_exit = config.tCKE;
+    uint32_t powerdown_exit = config.tXP;
 
 
-    if (config_.bankgroups == 1) {  
+    if (config.bankgroups == 1) {  
         // for GDDR5 bankgroup can be disabled, in that case 
         // the value of tXXX_S should be used instead of tXXX_L 
         // (because now the device is running at a lower freq)
         // we overwrite the following values so that we don't have 
         // to change the assignement of the vectors
-        read_to_read_l = std::max(config_.burst_cycle, config_.tCCD_S);
-        write_to_read_l = config_.write_delay + config_.tWTR_S;
-        write_to_write_l = std::max(config_.burst_cycle, config_.tCCD_S);
-        activate_to_activate_l = config_.tRRD_S;
+        read_to_read_l = std::max(config.burst_cycle, config.tCCD_S);
+        write_to_read_l = config.write_delay + config.tWTR_S;
+        write_to_write_l = std::max(config.burst_cycle, config.tCCD_S);
+        activate_to_activate_l = config.tRRD_S;
     }
 
     // command READ
@@ -226,7 +225,7 @@ Timing::Timing(const Config& config) :
     };
 
     // for those who need tPPD
-    if (config_.IsGDDR() or config_.protocol == DRAMProtocol::LPDDR4 ) {
+    if (config.IsGDDR() or config.protocol == DRAMProtocol::LPDDR4 ) {
         other_banks_same_bankgroup[static_cast<int>(CommandType::PRECHARGE)] = std::list< std::pair<CommandType, uint32_t> >
         {
             { CommandType::PRECHARGE, precharge_to_precharge },

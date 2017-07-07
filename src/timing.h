@@ -11,7 +11,6 @@ namespace dramcore {
 class Timing {
     public:
         Timing(const Config& config);
-        const Config& config_; 
         std::vector< std::list< std::pair<CommandType, uint32_t> > > same_bank;
         std::vector< std::list< std::pair<CommandType, uint32_t> > > other_banks_same_bankgroup;
         std::vector< std::list< std::pair<CommandType, uint32_t> > > other_bankgroups_same_rank;
