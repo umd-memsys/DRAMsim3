@@ -76,14 +76,16 @@ Config::Config(std::string config_file)
             cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
+        if (channels != 16 && channels != 32) {
+            // vaults are basically channels here 
+            cerr << "HMC channel options: 16/32" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
         
         // the BL for is determined by max block_size, which is a multiple of 32B
         // each "device" transfer 32b per half cycle, i.e. 8B per cycle
         // therefore BL is 4 for 32B block size
         BL = block_size * 8 / 32;  
-        // vaults are basically channels here 
-        num_vaults = 32;
-        channels = num_vaults;  
 
         // A lot of the following parameters are not configurable 
         // according to the spec, so we just set them here

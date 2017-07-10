@@ -238,7 +238,7 @@ void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
 Statistics::Statistics(const Config& config):
     stats_list(),
     config_(config),
-    last_clk_(0.0)
+    last_clk_(0)
 {
     //TODO - Should stats be global?
     numb_read_reqs_issued = CounterStat("numb_read_reqs_issued", "Number of read requests issued");
@@ -348,6 +348,9 @@ void Statistics::UpdateEpoch(uint64_t clk) {
     last_clk_ = clk;
     // override the value after each update so that in the last epoch 
     // we get the overall value of these non-cumulatve stats
+    total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
+                   ref_energy.value + refb_energy.value + act_stb_energy.value + \
+                   pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
     average_bandwidth.value = static_cast<double>(numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count()) * \
                               config_.request_size_bytes / static_cast<double>(last_clk_) / config_.tCK;
     average_power.value = total_energy.value / static_cast<double>(last_clk_);

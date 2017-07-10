@@ -64,9 +64,8 @@ void BaseMemorySystem::PrintIntermediateStats() {
 
 
 void BaseMemorySystem::PrintStats() {
-    if ( clk_ % ptr_config_->epoch_period != 0 ) {
-        ptr_stats_->UpdateEpoch(clk_);
-    }
+    // update one last time before print
+    ptr_stats_->UpdateEpoch(clk_);
     cout << "-----------------------------------------------------" << endl;
     cout << "Printing final stats -- " << endl;
     cout << "-----------------------------------------------------" << endl;
@@ -125,8 +124,6 @@ bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
 }
 
 void MemorySystem::ClockTick() {
-    clk_++;
-    ptr_stats_->dramcycles++;
     for( auto ctrl : ctrls_)
         ctrl->ClockTick();
 
@@ -146,6 +143,8 @@ void MemorySystem::ClockTick() {
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }
+    clk_++;
+    ptr_stats_->dramcycles++;
     return;
 }
 

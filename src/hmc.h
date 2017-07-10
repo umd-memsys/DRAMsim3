@@ -123,7 +123,7 @@ public:
     bool InsertHMCReq(HMCRequest* req);
 
 private:
-    uint64_t ref_tick_, logic_clk_, dram_clk_;
+    uint64_t ref_tick_, logic_clk_;
     /*
     uint64_t logic_counter_, dram_counter_;
     int logic_time_inc_, dram_time_inc_;

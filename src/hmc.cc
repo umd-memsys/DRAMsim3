@@ -241,7 +241,6 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<v
     BaseMemorySystem(config_file, callback),
     ref_tick_(0),
     logic_clk_(0),
-    dram_clk_(0),
     next_link_(0)
 {
     ptr_config_ = new Config(config_file);
@@ -490,13 +489,21 @@ void HMCMemorySystem::DRAMClockTick() {
     for (auto vault:vaults_) {
         vault->ClockTick();
     }
-    dram_clk_ ++;
-    ptr_stats_->dramcycles ++;
+    if (clk_ % ptr_config_->epoch_period == 0) {
+        ptr_stats_->UpdatePreEpoch(clk_);
+        PrintIntermediateStats();
+        ptr_stats_->UpdateEpoch(clk_);
+    }
+    clk_ ++;
+    ptr_stats_->dramcycles++;
     return;
 }
 
 void HMCMemorySystem::ClockTick() {
     bool dram_ran = false;
+    // because we're using DRAM clock as base, so the faster logic clock
+    // may run several cycles in one DRAM cycle, and some things should 
+    // happen before a DRAM Clock and some after...
     for (int i = 0; i < dram_clk_ticks_; i++) {
         if (ref_tick_ % logic_clk_ticks_ == 0) {
             LogicClockTickPre();
@@ -602,7 +609,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::RD256:
             // only 1 request is needed, if the request length is shorter than block_size
             // it will be chopped and therefore results in a waste of bandwidth
-            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, dram_clk_, dummy_id);
+            dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, clk_, dummy_id);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         case HMCReqType::WR16:
@@ -623,7 +630,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::P_WR128:
         case HMCReqType::WR256:
         case HMCReqType::P_WR256:
-            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand, dram_clk_, dummy_id);
+            dram_req = new Request(CommandType::WRITE_PRECHARGE, req->mem_operand, clk_, dummy_id);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
         // TODO real question here is, if an atomic operantion 
