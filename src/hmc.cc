@@ -12,7 +12,9 @@ HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr):
 {
     Address addr = AddressMapping(mem_operand);
     vault = addr.channel_;
-    quad = vault >> 3;
+    // given that vaults could be 16 (Gen1) or 32(Gen2), using % 4
+    // to partition vaults to quads
+    quad = vault % 4;
     switch (req_type) {
         case HMCReqType::RD16:
         case HMCReqType::RD32:
