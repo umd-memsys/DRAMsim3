@@ -38,7 +38,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                     cout << "In unknown state" << endl;
                     AbruptExit(__FILE__, __LINE__);
             }
-            case CommandType::READ_PRECHARGE:
+        case CommandType::READ_PRECHARGE:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
@@ -62,7 +62,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                     cout << "In unknown state" << endl;
                     AbruptExit(__FILE__, __LINE__);
             }
-            case CommandType::WRITE_PRECHARGE:
+        case CommandType::WRITE_PRECHARGE:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::ACTIVATE;
@@ -74,7 +74,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                     cout << "In unknown state" << endl;
                     AbruptExit(__FILE__, __LINE__);
             }
-            case CommandType::REFRESH_BANK:
+        case CommandType::REFRESH_BANK:
             switch(state_) {
                 case State::CLOSED:
                     return CommandType::REFRESH_BANK;
