@@ -243,6 +243,7 @@ Statistics::Statistics(const Config& config):
     //TODO - Should stats be global?
     numb_read_reqs_issued = CounterStat("numb_read_reqs_issued", "Number of read requests issued");
     numb_write_reqs_issued = CounterStat("numb_of_write_reqs_issued", "Number of write requests issued");
+    hmc_reqs_done = CounterStat("hmc_reqs_done", "HMC Requests finished");
     numb_row_hits = CounterStat("numb_of_row_hits", "Number of row hits");
     numb_read_row_hits = CounterStat("numb_read_row_hits", "Number of read row hits");
     numb_write_row_hits = CounterStat("numb_write_row_hits", "Number of write row hits");
@@ -262,6 +263,10 @@ Statistics::Statistics(const Config& config):
     numb_self_refresh_enter_cmds_issued = CounterStat("numb_self_refresh_enter_cmds_issued", "Number of self-refresh mode enter commands issued");
     numb_self_refresh_exit_cmds_issued = CounterStat("numb_self_refresh_exit_cmds_issued", "Number of self-refresh mode exit commands issued");
     numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
+#ifdef DEBUG_HMC
+    logic_clk CounterStat("logic_clk", "HMC logic clock");
+    stats_list.push_back(&logic_clk);
+#endif  // DEBUG_HMC
 #ifdef DEBUG_POWER
     all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all banks are idle");
     active_cycles = CounterStat("rank active cycles", "Number of cycles the rank ramins active");
@@ -282,6 +287,7 @@ Statistics::Statistics(const Config& config):
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
+    stats_list.push_back(&hmc_reqs_done);
     stats_list.push_back(&numb_row_hits);
     stats_list.push_back(&numb_read_row_hits);
     stats_list.push_back(&numb_write_row_hits);
@@ -351,7 +357,13 @@ void Statistics::UpdateEpoch(uint64_t clk) {
     total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
                    ref_energy.value + refb_energy.value + act_stb_energy.value + \
                    pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
-    average_bandwidth.value = static_cast<double>(numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count()) * \
+    uint64_t reqs_issued;
+    if (hmc_reqs_done.Count() > 0) {
+        reqs_issued = hmc_reqs_done.Count();
+    } else {
+        reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count();
+    }
+    average_bandwidth.value = static_cast<double>(reqs_issued) * \
                               config_.request_size_bytes / static_cast<double>(last_clk_) / config_.tCK;
     average_power.value = total_energy.value / static_cast<double>(last_clk_);
     return;

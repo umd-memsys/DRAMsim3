@@ -109,6 +109,7 @@ public:
     Statistics(const Config& config);
     class CounterStat numb_read_reqs_issued;
     class CounterStat numb_write_reqs_issued;
+    class CounterStat hmc_reqs_done;
     class CounterStat numb_row_hits;
     class CounterStat numb_read_row_hits;
     class CounterStat numb_write_row_hits;
