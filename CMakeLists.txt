@@ -17,6 +17,10 @@ if (DEBUG_POWER)
         add_definitions(-DDEBUG_POWER)
 endif  (DEBUG_POWER)
 
+if (DEBUG_HMC)
+        message("Adding DEBUG_HMC definition...")
+        add_definitions(-DDEBUG_HMC)
+endif (DEBUG_HMC)
 
 set(EXTRA_CXX_FLAGS "-Wall -fPIC")
 set(EXTRA_CXX_FLAGS_DEBUG "-O0 -DDEBUG_OUTPUT")
