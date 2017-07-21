@@ -333,8 +333,13 @@ void Statistics::UpdatePreEpoch(uint64_t clk) {
                    ref_energy.value + refb_energy.value + act_stb_energy.value + \
                    pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
     average_power.value = (total_energy.value - total_energy.last_epoch_value) / static_cast<double>(clk - last_clk_);
-    uint64_t reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count() - \
-                           numb_read_reqs_issued.LastCount() - numb_write_reqs_issued.LastCount();
+    uint64_t reqs_issued;
+    if (hmc_reqs_done.Count() > 0) {
+        reqs_issued = hmc_reqs_done.Count() - hmc_reqs_done.LastCount();
+    } else {
+        reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count() - \
+                           numb_read_reqs_issued.LastCount() - numb_write_reqs_issued.LastCount(); 
+    }
     double gb_transfereed = static_cast<double>(reqs_issued) * config_.request_size_bytes;
     double ns_passed = static_cast<double>(clk - last_clk_) * config_.tCK;
     average_bandwidth.value = gb_transfereed / ns_passed;
