@@ -15,23 +15,30 @@ import parse_config
 def process_configs(args):
     """given parsed args, return the config files in a list"""
     configs = []
-    if args.configs:
-        for c in args.configs:
-            if not os.path.exists(c):
-                print "config file ", c, " not exists!"
-                exit(1)
-            else:
-                configs.append(c)
-            
-    if args.input_dir:
-        if not os.path.exists(args.input_dir):
-            print "input dir not exists!"
+    config_dirs = []
+    if not args.input:
+        print "please specify at least one input from -i option"
+        exit(1)
+        
+    for item in args.input:
+        if not os.path.exists(item):
+            print "Input ", item, " not exists!"
             exit(1)
-        for f in os.listdir(args.input_dir):
-            if f[-4:] != ".ini":
-                print "INFO:ignoring non-ini file:", f
+
+        if os.path.isfile(item):
+            if item[-4:] != ".ini":
+                print "INFO: ignoring non-ini file:", item
             else:
-                configs.append(os.path.join(args.input_dir, f))
+                configs.append(item)
+        elif os.path.isdir(item):
+            for f in os.listdir(item):
+                if f[-4:] != ".ini":
+                    print "INFO: ignoring non-ini file:", item
+                else:
+                    configs.append(os.path.join(item, f))
+        else:
+            print "???"
+            exit(1)
 
     return configs
 
@@ -44,13 +51,13 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output-dir", nargs="?", default="", help="override the 'output-prefix'"
                         "and the outputs will be 'output-dir/config-name-post-fix'"
                         "this won't mess the original file by using tempfiles")
-    parser.add_argument("-c", "--configs", nargs="*", help="config files"
-                        "NOTE we're assuming the hmc config has 'hmc' in it")
-    parser.add_argument("-d", "--input-dir", help="input directory with configs")
+    parser.add_argument("-i", "--input", nargs="+", help="configs input, could be a dir or list of files"
+                        "non-ini files will be ignored")
     parser.add_argument("-n", default=100000, type=int, help="num of cycles, applied to all configs")
     parser.add_argument("--cpu-type", default="random", choices=["random", "trace", "stream"],
                         help="cpu type")
     parser.add_argument("-t", "--trace-file", help="trace file, only for trace cpu")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Silent output" )
     args = parser.parse_args()
 
     # some input sanity check
@@ -58,15 +65,8 @@ if __name__ == "__main__":
         print "Exicutable: ", args.executable, " not exits!"
         exit(1)
 
-    if not (args.input_dir or args.configs):
-        print "Please provide config files with -o or -d option, see -h for help"
-        exit(1)
-
-    if args.input_dir and args.configs:
-        print "WARNING: both -c and -d specified, using both..."
-
     configs = process_configs(args)   
-    print configs
+    # print configs
 
     if args.output_dir:
         if not os.path.exists(args.output_dir):
@@ -102,8 +102,13 @@ if __name__ == "__main__":
             cmd_str += " --trace-file=%s" % args.trace_file
 
         print cmd_str
+        temp_stdout = None
+        if args.quiet:
+            temp_stdout = tempfile.TemporaryFile()
+        else:
+            temp_stdout = sys.stdout
         try:
-            subprocess.call(shlex.split(cmd_str))
+            subprocess.call(shlex.split(cmd_str), stdout=temp_stdout)
         except KeyboardInterrupt:
             print "skipping this one..."
 
