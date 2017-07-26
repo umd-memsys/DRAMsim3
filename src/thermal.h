@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <time.h> 
+#include <cmath>
 #include "common.h"
 #include "bankstate.h"
 #include "timing.h"
