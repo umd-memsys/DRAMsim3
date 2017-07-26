@@ -8,7 +8,6 @@
 #include "bankstate.h"
 #include "timing.h"
 #include "configuration.h"
-#include "ThermalConfig.h"
 
 using namespace std; 
 

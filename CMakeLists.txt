@@ -72,7 +72,7 @@ set(SOURCES
         )
 
 if (THERMAL)
-        set(SOURCES ${SOURCES} src/thermal.cc)
+        set(SOURCES ${SOURCES} src/thermal.cc src/sp_ienv.c src/thermal_solver.c)
 endif (THERMAL)
 
 set(SOURCES_TEST
@@ -87,7 +87,8 @@ include_directories(src ext/headers)
 add_library(dramcore SHARED ${SOURCES})
 
 if (THERMAL)
-        target_link_libraries(dramcore inih fmt superlu_mt)
+        find_package(Threads)
+        target_link_libraries(dramcore inih fmt superlu_mt ${CMAKE_THREAD_LIBS_INIT})
 else (THERMAL)
         target_link_libraries(dramcore inih fmt)
 endif (THERMAL)
