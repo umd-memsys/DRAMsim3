@@ -9,6 +9,7 @@
 #include "bankstate.h"
 #include "timing.h"
 #include "configuration.h"
+#include "ThermalConfig.h"
 
 using namespace std; 
 
@@ -16,34 +17,15 @@ namespace dramcore{
 
 	class ThermalCalculator
 	{
-		// thermal simulation parameters 
-		double T0;
-
-		double R_TSV;
-
-		double Ksi;
-		double Kcu;
-		double Kin;
-		double Khs; 
-
-		double Csi;
-		double Ccu;
-		double Cin;
-		double Chs;
-
-		double Hsi;
-		double Hcu;
-		double Hin;
-		double Hhs;
-
 		int time_iter0, time_iter; 
+		double Tamb; // The ambient temperature in Kelvin
 
 		const Config& config_;
 
 		int dimX, dimY, numP; // Dimension of the memory 
 		double **Midx; // Midx storing thermal conductance 
 		double *Cap; // Cap storing the thermal capacitance 
-		int MidSize, CapSize; // first dimension size of Midx and Cap
+		int MidxSize, CapSize; // first dimension size of Midx and Cap
 		vector<vector<double> > T_trans, T_final;
 		//double *T_trans; // T_trans storing the transient temperature array 
 		//double *T_final; // T_final storing the final temperature array 
@@ -68,8 +50,9 @@ namespace dramcore{
 		void CalcTransT(int case_id); 
 		void CalcFinalT(int case_id);
 		void InitialParameters();
-		int square_array(int total_grids_)
+		int square_array(int total_grids_);
 		double GetMaxT(vector<vector<double> > T_, int case_id); 
+		void calculate_time_step();
 
 
 	public:

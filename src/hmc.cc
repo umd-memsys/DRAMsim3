@@ -248,6 +248,7 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<v
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics(*ptr_config_);
+    ptr_thermCal_ = new ThermalCalculator(*ptr_config_);
 
     // sanity check, this constructor should only be intialized using HMC
     if (!ptr_config_->IsHMC()) {
@@ -261,7 +262,7 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<v
     vault_callback_ = std::bind(&HMCMemorySystem::VaultCallback, this, std::placeholders::_1);
     vaults_.reserve(32);
     for (int i = 0; i < 32; i++) {
-        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, vault_callback_));
+        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, *ptr_thermCal_, vault_callback_));
     }
     // initialize vaults and crossbar
     // the first layer of xbar will be num_links * 4 (4 for quadrants)

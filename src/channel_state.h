@@ -5,6 +5,7 @@
 #include "bankstate.h"
 #include "timing.h"
 #include "configuration.h"
+#include "thermal.h"
 #include <vector>
 #include <list>
 
@@ -12,7 +13,7 @@ namespace  dramcore {
 
 class ChannelState {
 public:
-    ChannelState(const Config &config, const Timing &timing, Statistics &stats);
+    ChannelState(const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator &thermcalc);
     Command GetRequiredCommand(const Command& cmd) const;
     bool IsReady(const Command& cmd, uint64_t clk) const;
     void UpdateState(const Command& cmd);
@@ -30,6 +31,9 @@ public:
 
     bool need_to_update_refresh_waiting_status_ = true;
     std::vector<bool> rank_in_self_refresh_mode_;
+
+     
+
 private:
     const Config& config_;
     const Timing& timing_;
@@ -37,6 +41,7 @@ private:
     std::ofstream val_output_;
 #endif
     Statistics& stats_;
+    ThermalCalculator& thermcalc_;
     std::vector< std::vector< std::vector<BankState*> > > bank_states_;
     std::vector< std::vector<uint64_t> > four_aw;
     std::vector< std::vector<uint64_t> > thirty_two_aw;

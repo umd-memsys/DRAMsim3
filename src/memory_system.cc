@@ -11,6 +11,7 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics(*ptr_config_);
+    ptr_thermCal_ = new ThermalCalculator(*ptr_config_);
 
     //Stats output files
     stats_file_.open(ptr_config_->stats_file);
@@ -87,7 +88,7 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
 
     ctrls_.resize(ptr_config_->channels);
     for(auto i = 0; i < ptr_config_->channels; i++) {
-        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
+        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, *ptr_thermCal_, callback_);
     }
 }
 

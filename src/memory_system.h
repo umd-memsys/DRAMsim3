@@ -10,6 +10,7 @@
 #include "timing.h"
 #include "statistics.h"
 #include "controller.h"
+#include "thermal.h"
 
 namespace dramcore {
 
@@ -24,6 +25,7 @@ public:
     std::function<void(uint64_t req_id)> callback_;
     std::vector<Controller*> ctrls_;
     Config* ptr_config_;
+    ThermalCalculator* ptr_thermCal_;
 
 protected:
     uint64_t clk_;

@@ -4,12 +4,13 @@
 using namespace std;
 using namespace dramcore;
 
-ChannelState::ChannelState(const Config &config, const Timing &timing, Statistics &stats) :
+ChannelState::ChannelState(const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator &thermcalc) :
     need_to_update_refresh_waiting_status_(true),
     rank_in_self_refresh_mode_(std::vector<bool>(config.ranks, false)),
     config_(config),
     timing_(timing),
     stats_(stats),
+    thermcalc_(thermcalc),
     bank_states_(config_.ranks, std::vector< std::vector<BankState*> >(config_.bankgroups, std::vector<BankState*>(config_.banks_per_group, NULL) ) ),
     four_aw(config_.ranks, std::vector<uint64_t>()),
     thirty_two_aw(config_.ranks, std::vector<uint64_t>()),
@@ -243,6 +244,7 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
 #endif // VALIDATION_OUTPUT
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
+    thermcalc_.UpdatePower(cmd, clk);
     UpdateCommandIssueStats(cmd);
     return;
 }

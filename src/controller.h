@@ -8,12 +8,13 @@
 #include "command_queue.h"
 #include "refresh.h"
 #include "statistics.h"
+#include "thermal.h"
 
 namespace dramcore {
 
 class Controller {
 public:
-    Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)>& callback_);
+    Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator &thermcalc, std::function<void(uint64_t)>& callback_);
     ~Controller() {};
     void ClockTick();
     bool InsertReq(Request* req);

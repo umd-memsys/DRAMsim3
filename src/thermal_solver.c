@@ -16,7 +16,7 @@
 double get_maxT(double *T, int Tsize);
 
 
-double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ)
+double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ, double Tamb)
 {
     int numLayer, l; 
     double *T; 
@@ -88,7 +88,7 @@ double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, i
 
 
 
-double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ, int* MidxSize)
+double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ, int* MidxSize, double Tamb)
 {
     double Wsink, Lsink, Hsink, Ksink, rTSV, Ktsv; 
     int numLayer; 
@@ -443,7 +443,7 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
 }
 
 
-double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count)
+double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count, double Tamb)
 //main(int argc, char *argv[])
 {
     int numLayer; 
@@ -591,7 +591,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     double ***T; // matrix stores the temperature for active layers 
     
     
-    double *Ttp, Tt; 
+    double *Ttp, *Tt; 
     if (!(Tt = (double *)malloc(dimX * dimZ * (numP * 3 +1) * sizeof(double))) ) printf("Malloc fails for Tt\n");
     Ttp = (double *) Astore->nzval;
     printf("B.nrow is %d\n", B.nrow);
@@ -655,225 +655,11 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
 
 
 
-double *transient_thermal_solver_new(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count, double *Cap, int CapSize, double dt, double *T_trans)
-//main(int argc, char *argv[])
-{
-    int numLayer; 
-    double Wsink, Lsink, Hsink, Ksink, Ktsv; 
-    double Rsinky, Ramb;
-    double gridXsink, gridZsink; 
-    int *layerP;
-    int l, i, j; // indicator
-    int idx0, idx1, idxC; 
-    double maxT;
-
-    numLayer = numP * 3;
-
-    // define the active layer array 
-    if ( !(layerP = intMalloc(numP)) ) SUPERLU_ABORT("Malloc fails for numP[].");
-    for(l = 0; l < numP; l++)
-        layerP[l] = l * 3; 
-
-    Wsink = W; 
-    Lsink = Lc; 
-    Hsink = Hhs; 
-    Ksink = Khs; 
-    gridXsink = Wsink / dimX; gridZsink = Lsink / dimZ; 
-    Rsinky = Hsink / Ksink / gridXsink / gridZsink; // y direction
-    Ramb = Rsinky / 2; 
-
-/* convert the values to the SuperMatrix format 
- */ 
-
-    SuperMatrix   A, L, U, B;
-    double   *a;
-    int_t      *asub, *xa;
-    int_t      *perm_r; /* row permutations from partial pivoting */
-    int_t      *perm_c; /* column permutation vector */
-    SCPformat *Lstore;
-    NCPformat *Ustore;
-    int_t      nrhs, ldx, info, m, n, nnz, b;
-    int_t      nprocs; /* maximum number of processors to use. */
-    int_t      panel_size, relax, maxsup;
-    int_t      permc_spec;
-    trans_t  trans;
-    double   *rhs;
-    superlu_memusage_t   superlu_memusage;
-
-    nrhs              = 1;
-    trans             = NOTRANS;
-    nprocs             = 6;
-    b                 = 1;
-    panel_size        = sp_ienv(1);
-    relax             = sp_ienv(2);
-    maxsup            = sp_ienv(3);
-
-    /* Initialize matrix A. */
-    m = n = dimX*dimZ*(numLayer+1);
-    nnz = count;
-    if ( !(a = doubleMalloc(nnz)) ) SUPERLU_ABORT("Malloc fails for a[]."); // I cannot free the space
-    if ( !(asub = intMalloc(nnz)) ) SUPERLU_ABORT("Malloc fails for asub[]."); // I cannot free the space
-    if ( !(xa = intMalloc(n+1)) ) SUPERLU_ABORT("Malloc fails for xa[]."); // I cannot free the space
-
-    /* assign values to the arrays: a, asub and xa */ 
-    int row = -1;
-    for (i = 0; i < count; i ++)
-    {
-        idx0 = (int) (Midx[i][0] + 0.01); 
-        idx1 = (int) (Midx[i][1] + 0.01); 
-        idxC = idx0 / (dimX * dimZ); 
-
-        if (Midx[i][0] > row)
-        {
-            row = Midx[i][0]; // enter a new column 
-            xa[row] = i; // index of the first item of each row
-        }
-        a[i] = Midx[i][2] * dt; 
-        if (idx0 == idx1)
-            a[i] = a[i] + Cap[idxC];
-        asub[i] = (int) Midx[i][1]; // column index of each item 
-    }
-    xa[row+1] = count; 
-
-    //printf("Using %d Cores to calculate\n", nprocs);
-    //printf("Building the sparse matrix ...\n");
-    //printf("Dimension of the G matrix is %d x %d\n", m, n);
-    //printf("Number of non-zero entries is %d\n", nnz); 
-    
-
-    /* Create matrix A in the format expected by SuperLU. */
-    dCreate_CompCol_Matrix(&A, m, n, nnz, a, asub, xa, SLU_NC, SLU_D, SLU_GE);
-   // dPrint_CompCol_Matrix("A", &A);
-    /* Create right-hand side matrix B. */
-    if ( !(rhs = doubleMalloc(m * nrhs)) ) SUPERLU_ABORT("Malloc fails for rhs[].");
-    
-    // assign values to B 
-    for (i = 0; i < m; i++) // initialize rhs to 0
-        rhs[i] = 0; 
-    for (i = 0; i < dimX * dimZ; i++)
-        rhs[i] = Tamb / Ramb * dt; 
-    for (l = 0; l < numP; l ++){
-        for (i = 0; i < dimX; i ++){
-            for (j = 0; j < dimZ; j++)
-            {
-                rhs[dimX*dimZ*(layerP[l]+1) + j*dimX + i] = powerM[i][j][l] * dt; 
-                //rhs[dimX*dimZ*(layerP[l]+1) + i*dimZ + j] = powerM[i][j][l]; 
-                //printf("%.6f\n", powerM[i][j][l]);
-            }
-        }
-    }
-    for (l = 0; l < numLayer+1; l ++){
-        for (i = 0; i < dimX; i ++){
-            for (j = 0; j < dimZ; j ++){
-                rhs[dimX*dimZ*l+j*dimX+i] = rhs[dimX*dimZ*l+j*dimX+i] + T_trans[dimX*dimZ*l+j*dimX+i] * Cap[l];
-            }
-        }
-    }
-
-
-/*    printf("rhs:\n");
-    for (i = 0; i < m; i ++)
-        printf("%.5f\n", rhs[i]);
-*/
-    // free the space 
-    for (i = 0; i < dimX; i++)
-    {
-        for (j = 0; j < dimZ; j++)
-        {
-            free(powerM[i][j]);
-        }
-        free(powerM[i]); 
-    }
-    free(powerM);
-
-
-    dCreate_Dense_Matrix(&B, m, nrhs, rhs, m, SLU_DN, SLU_D, SLU_GE);
-
-    //dPrint_Dense_Matrix("B", &B);
-
-    if ( !(perm_r = intMalloc(m)) ) SUPERLU_ABORT("Malloc fails for perm_r[].");
-    if ( !(perm_c = intMalloc(n)) ) SUPERLU_ABORT("Malloc fails for perm_c[].");
-
-    /*
-     * Get column permutation vector perm_c[], according to permc_spec:
-     *   permc_spec = 0: natural ordering 
-     *   permc_spec = 1: minimum degree ordering on structure of A'*A
-     *   permc_spec = 2: minimum degree ordering on structure of A'+A
-     *   permc_spec = 3: approximate minimum degree for unsymmetric matrices
-     */     
-    permc_spec = 1;
-    get_perm_c(permc_spec, &A, perm_c);
-
-
-    //printf("Finish building the sparse matrix\n");
-    //printf("------------------------------------------------------------\n\n");
-
-    /* Solve the linear system. */
-    pdgssv(nprocs, &A, perm_c, perm_r, &L, &U, &B, &info);
-    
-    //printf("Finish solving the linear equation\n");
-
-    //dPrint_Dense_Matrix("B", &B);
-
-    /* extract the Temperature from B */ 
-    DNformat *Astore = (DNformat *) B.Store; 
-    //double *Tt; // vector stores the temperature for all grids 
-    //double ***T; // matrix stores the temperature for active layers 
-    
-    
-    double *Ttp; 
-    Ttp = (double *) Astore->nzval;
-    //printf("B.nrow is %d\n", B.nrow);
-    for (i = 0; i < B.nrow; ++i)
-    {
-        T_trans[i] = Ttp[i];
-    }
-
-
-    /*Tt = (double *) Astore->nzval; 
-    printf("B.nrow is %d\n", B.nrow);
-    for (i = 0; i < B.nrow; ++i)
-    {
-        Tt[i] = Tt[i] - T0; 
-        //printf("%.2f\n", T[i]);
-    }*/
-
-
-    //printf("Finish converting the temperature matrix\n");
-    //printf("Free the space...\n");
-    
-
-
-
-    /* De-allocate storage */
-    // free the arrays defined by myself
-    SUPERLU_FREE(layerP);
-
-
-    SUPERLU_FREE (rhs);
-    SUPERLU_FREE (perm_r);
-    SUPERLU_FREE (perm_c);
-    //printf("finish SUPERLU_FREE\n");
-    Destroy_CompCol_Matrix(&A);
-    Destroy_SuperMatrix_Store(&B);
-    Destroy_SuperNode_SCP(&L);
-    Destroy_CompCol_NCP(&U);
-    /* De-allocate other storage */
-    //free(K); free(H); free(layerP); free(Tt);
-
-    //printf("================= FINISH STEADY TEMPERATURE SOLVER ===============\n\n");
-
-    maxT = get_maxT(T_trans, dimX*dimZ*(numLayer+1));
-    printf("maxT = %.3f\n", maxT - T0);
-
-    return T_trans;
-
-}
 
 
 
 
-double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int MidxSize, double *Cap, int CapSize, double time, int iter, double *T_trans)
+double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int MidxSize, double *Cap, int CapSize, double time, int iter, double *T_trans, double Tamb)
 {
     double *Tp, *T, *P; 
     double *Tt; // for swap the storage between T and Tp

@@ -4,11 +4,11 @@
 using namespace dramcore; 
 using namespace std; 
 
-extern "C" double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count);
-extern "C" double *transient_thermal_solver(double ***powerM, double W, double L, int numP, int dimX, int dimZ, double **Midx, int MidxSize, double *Cap, int CapSize, double time, int iter, double *T_trans);
-extern "C" double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ, int* MidxSize);
+extern "C" double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count, double Tamb_);
+extern "C" double *transient_thermal_solver(double ***powerM, double W, double L, int numP, int dimX, int dimZ, double **Midx, int MidxSize, double *Cap, int CapSize, double time, int iter, double *T_trans, double Tamb_);
+extern "C" double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ, int* MidxSize, double Tamb_);
 extern "C" double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, int* CapSize); 
-extern "C" double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ); 
+extern "C" double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ, double Tamb_); 
 
 
 ThermalCalculator::ThermalCalculator(const Config &config):
@@ -17,11 +17,6 @@ ThermalCalculator::ThermalCalculator(const Config &config):
 	save_clk(0),
 	time_iter0(10)
 {
-	// Define the parameters for thermal simulation 
-	R_TSV = 5e-6; 
-	Ksi = 148; Kcu = 1.5; Kin = 1.5; Khs = 5.0; 
-	Csi = 1.66e6; Ccu = 3.2e6; Cin = 1.65e6; Chs = 2.42e6; 
-	Hsi = 400e-6; Hcu = 5e-6; Hin = 20e-6; Hhs = 1000e-6; 
 
 	// Initialize dimX, dimY, numP
 	if (config_.IsHMC() || config_.IsHBM())
@@ -51,6 +46,7 @@ ThermalCalculator::ThermalCalculator(const Config &config):
 		num_case = config_.ranks * config_.channels; 
 	}
 
+	Tamb = config_.Tamb0 + T0;
 
 	// Initialize the vectors
 	accu_Pmap = vector<vector<double> > (numP * dimX * dimY, vector<double> (num_case, 0)); 
@@ -59,9 +55,9 @@ ThermalCalculator::ThermalCalculator(const Config &config):
 	T_final = vector<vector<double> > ((numP*3+1) * dimX * dimY, vector<double> (num_case, 0));
 
 
-	InitialParamters(); 
+	InitialParameters(); 
 
-	refresh_count = vector<uint32_t> (config_.channels * config_ranks, 0);
+	refresh_count = vector<uint32_t> (config_.channels * config_.ranks, 0);
 }
 
 ThermalCalculator::~ThermalCalculator()
@@ -69,7 +65,7 @@ ThermalCalculator::~ThermalCalculator()
 
 }
 
-void ThermalCalculator::LocationMapping(const Command& cmd int row0, int *x, int *y, int *z)
+void ThermalCalculator::LocationMapping(const Command& cmd, int row0, int *x, int *y, int *z)
 {
 	int row_id; 
 	if (row0 > -1)
@@ -98,6 +94,7 @@ void ThermalCalculator::LocationMapping(const Command& cmd int row0, int *x, int
 	else
 	{
 		*z = 1; 
+		int bank_id = cmd.Bank();
 		int bank_id_x = bank_id / bank_y; 
 		int bank_id_y = bank_id % bank_y;
 		int grid_step = config_.rows / (config_.numXgrids * config_.numYgrids); 
@@ -128,7 +125,7 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 
 	save_clk = clk;
 
-	if (cmd.cmd_type_ == REFRESH)
+	if (cmd.cmd_type_ == CommandType::REFRESH)
 	{
 		// update refresh_count 
 		row_s = refresh_count[channel * config_.ranks + rank] * config_.numRowRefresh; 
@@ -147,15 +144,15 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 	else
 	{
 		switch (cmd.cmd_type_){
-			case ACTIVATE:
+			case CommandType::ACTIVATE:
 				energy = config_.act_energy_inc; 
 				break;
-			case READ:
-			case READ_PRECHARGE:
+			case CommandType::READ:
+			case CommandType::READ_PRECHARGE:
 				energy = config_.read_energy_inc;
 				break;
-			case WRITE:
-			case WRITE_PRECHARGE:
+			case CommandType::WRITE:
+			case CommandType::WRITE_PRECHARGE:
 				energy = config_.write_energy_inc;
 				break;
 			default:
@@ -190,7 +187,7 @@ void ThermalCalculator::PrintTransPT()
 	double maxT; 
 	for (int ir = 0; ir < num_case; ir ++){
 		CalcTransT(ir); 
-		maxT = GetMaxT(T_final, ir); 
+		maxT = GetMaxT(T_trans, ir); 
 		cout << "MaxT of case " << ir << " is " << maxT - T0 << " [C]\n";
 	}
 }
@@ -206,8 +203,8 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
 	// calculate the final temperature for each case 
 	double maxT; 
 	for (int ir = 0; ir < num_case; ir ++){
-		CalcFinalT(T_trans, ir);
-		maxT = GetMaxT(ir);
+		CalcFinalT(ir);
+		maxT = GetMaxT(T_final, ir);
 		cout << "MaxT of case " << ir << " is " << maxT - T0 << " [C]\n";
 	}
 }
@@ -240,7 +237,7 @@ void ThermalCalculator::CalcTransT(int case_id)
     for (i = 0; i < T_trans.size(); i ++)
     	T[i] = T_trans[i][case_id];
 
-    T = transient_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX, dimY, Midx, MidxSize, Cap, CapSize, time, time_iter, T);
+    T = transient_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX, dimY, Midx, MidxSize, Cap, CapSize, time, time_iter, T, Tamb);
 
     for (i = 0; i < T_trans.size(); i ++)
     	T_trans[i][case_id] = T[i]; 
@@ -269,30 +266,30 @@ void ThermalCalculator::CalcFinalT(int case_id)
     			powerM[i][j][l] = accu_Pmap[l*(dimX*dimY) + j*dimX + i][case_id] / (double) config_.power_epoch_period; 
 
     double *T; 
-    T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX, dimY, Midx, MidxSize);
+    T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX, dimY, Midx, MidxSize, Tamb);
 
     // assign the value to T_final 
     for (int i = 0; i < T_final.size(); i ++)
-    	T_final[i] = T[i];
+    	T_final[i][case_id] = T[i];
 
     free(T);
 
 }
 
-void ThermalCalculator::InitialParamters()
+void ThermalCalculator::InitialParameters()
 {
 	layerP = vector<int> (numP, 0);
 	for (int l = 0; l < numP; l++)
 		layerP[l] = l * 3; 
-	Midx = calculate_Midx_array(config_.ChipX, config_.ChipY, numP, dimX, dimY, &MidxSize);
+	Midx = calculate_Midx_array(config_.ChipX, config_.ChipY, numP, dimX, dimY, &MidxSize, Tamb);
 	Cap = calculate_Cap_array(config_.ChipX, config_.ChipY, numP, dimX, dimY, &CapSize); 
 	calculate_time_step(); 
 
 	double *T;
 	for (int ir = 0; ir < num_case; ir ++){
-		T = initialize_Temperature(config_.ChipX, config_.ChipY, numP, dimX, dimY); 
+		T = initialize_Temperature(config_.ChipX, config_.ChipY, numP, dimX, dimY, Tamb); 
 		for (int i = 0; i < T_trans.size(); i++)
-			T_trans[i] = T[i];
+			T_trans[i][ir] = T[i];
 	}
 	free(T);
 
