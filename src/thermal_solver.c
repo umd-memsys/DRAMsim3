@@ -443,7 +443,7 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
 }
 
 
-double ***steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count, double *Tt)
+double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count)
 //main(int argc, char *argv[])
 {
     int numLayer; 
@@ -591,7 +591,8 @@ double ***steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
     double ***T; // matrix stores the temperature for active layers 
     
     
-    double *Ttp; 
+    double *Ttp, Tt; 
+    if (!(Tt = (double *)malloc(dimX * dimZ * (numP * 3 +1) * sizeof(double))) ) printf("Malloc fails for Tt\n");
     Ttp = (double *) Astore->nzval;
     printf("B.nrow is %d\n", B.nrow);
     for (i = 0; i < B.nrow; ++i)
@@ -607,21 +608,6 @@ double ***steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
         Tt[i] = Tt[i] - T0; 
         //printf("%.2f\n", T[i]);
     }*/
-
-    // allocate space for T 
-    if ( !(T = (double ***)malloc(dimX * sizeof(double **))) ) printf("Malloc fails for T[].\n");
-    for (i = 0; i < dimX; i++)
-    {
-        if ( !(T[i] = (double **)malloc(dimZ * sizeof(double *))) ) printf("Malloc fails for T[%d][].\n", i);
-        for (j = 0; j < dimZ; j++)
-        {
-            if ( !(T[i][j] = (double *)malloc(numP * sizeof(double))) ) printf("Malloc fails for T[%d][%d][].\n", i,j);
-        }
-    }
-    for (l = 0; l < numP; l ++)
-        for (i = 0; i < dimX; i ++)
-            for (j = 0; j < dimZ; j++)
-                T[i][j][l] = Tt[dimX*dimZ*(layerP[l]+1) + j*dimX + i];
 
     printf("Finish converting the temperature matrix\n");
     printf("Free the space...\n");
@@ -663,7 +649,7 @@ double ***steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
 
     printf("================= FINISH STEADY TEMPERATURE SOLVER ===============\n\n");
 
-    return T;
+    return Tt;
 
 }
 
@@ -977,12 +963,24 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
             T[i] = 0;
     }
 
+    // free the space 
+    for (i = 0; i < dimX; i++)
+    {
+        for (j = 0; j < dimZ; j++)
+        {
+            free(powerM[i][j]);
+        }
+        free(powerM[i]); 
+    }
+    free(powerM);
+
+
     SUPERLU_FREE(layerP);
     SUPERLU_FREE(P);
     SUPERLU_FREE(T);
 
-    maxT = get_maxT(Tp, dimX*dimZ*(numLayer+1));
-    printf("maxT = %.3f\n", maxT - T0);
+    //maxT = get_maxT(Tp, dimX*dimZ*(numLayer+1));
+    //printf("maxT = %.3f\n", maxT - T0);
     return Tp;
 
 }

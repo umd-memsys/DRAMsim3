@@ -215,6 +215,23 @@ Config::Config(std::string config_file)
     uint32_t bytes_offset = LogBase2(bus_width / 8);
     request_size_bytes = bus_width / 8 * BL;  // transaction size in bytes
 
+    // Thermal simulation parameters 
+    power_epoch_period = static_cast<uint32_t>(reader.GetInteger("thermal", "power_epoch_period", 100000));
+    numXgrids = static_cast<uint32_t>(reader.GetInteger("thermal", "numXgrids", 1));
+    numYgrids = static_cast<uint32_t>(reader.GetInteger("thermal", "numYgrids", 1));
+    numRowRefresh = static_cast<uint32_t>(reader.GetInteger("thermal", "numRowRefresh", 2));
+    ChipX = reader.GetReal("thermal", "ChipX", 0.01); 
+    ChipY = reader.GetReal("thermal", "ChipY", 0.01);
+    Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
+    epoch_power_file_csv = reader.Get("other", "epoch_power_file", output_prefix + "epoch_power.csv");
+    epoch_temperature_file_csv = reader.Get("other", "epoch_temperature_file", output_prefix + "epoch_temperature.csv");
+    final_power_file_csv = reader.Get("other", "final_power_file", output_prefix + "final_power.csv");
+    final_temperature_file_csv = reader.Get("other", "final_temperature_file", output_prefix + "final_temperature.csv");
+
+
+
+
+
     // for each address given, because we're transimitting trascation_size bytes per transcation
     // therefore there will be throwaway_bits not used in the address
     // part of it is due to the bytes offset, the other part is the burst len 

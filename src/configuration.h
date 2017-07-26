@@ -138,6 +138,21 @@ public:
     bool IsHMC() const {return (protocol == DRAMProtocol::HMC);}
 
     uint32_t ideal_memory_latency;
+
+    // thermal simulator
+    uint32_t power_epoch_period;
+    uint32_t numRowRefresh; // number of rows to be refreshed for one time
+    double ChipX;
+    double ChipY; 
+    double Tamb0; // the ambient temperature in [C]
+    uint32_t numXgrids; 
+    uint32_t numYgrids; 
+    std::string epoch_power_file_csv; 
+    std::string epoch_temperature_file_csv;
+    std::string final_power_file_csv;
+    std::string final_temperature_file_csv;
+
+
 private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     void CalculateSize();
