@@ -4,7 +4,7 @@
 using namespace std;
 using namespace dramcore;
 
-Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator &thermcalc, std::function<void(uint64_t)>& callback) :
+Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator *thermcalc, std::function<void(uint64_t)>& callback) :
     callback_(callback),
     channel_id_(channel),
     clk_(0),
@@ -93,7 +93,7 @@ void Controller::ClockTick() {
             channel_state_.UpdateRefreshWaitingStatus((*refresh_itr)->cmd_, true);
         }
         auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
-        if(cmd.IsValid()) {
+        if(cmd.IsValid()) { 
             channel_state_.IssueCommand(cmd, clk_);
             if(cmd.IsRefresh()) {
                 channel_state_.need_to_update_refresh_waiting_status_ = true;

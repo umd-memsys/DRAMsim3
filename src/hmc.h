@@ -122,7 +122,7 @@ public:
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
 
-    ThermalCalculator* ptr_thermCal_;
+    //ThermalCalculator* ptr_thermCal_;
 
 private:
     uint64_t ref_tick_, logic_clk_;

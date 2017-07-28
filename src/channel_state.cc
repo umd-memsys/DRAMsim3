@@ -4,7 +4,7 @@
 using namespace std;
 using namespace dramcore;
 
-ChannelState::ChannelState(const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator &thermcalc) :
+ChannelState::ChannelState(const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator *thermcalc) :
     need_to_update_refresh_waiting_status_(true),
     rank_in_self_refresh_mode_(std::vector<bool>(config.ranks, false)),
     config_(config),
@@ -244,8 +244,15 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
 #endif // VALIDATION_OUTPUT
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
-    thermcalc_.UpdatePower(cmd, clk);
+
+
+    //cout << "clk = " << clk << " start UpdatePower .... ";  
+    //thermcalc_->DummyFunc(cmd, clk);
+    thermcalc_->UpdatePower(cmd, clk);
+    //cout << "end UpdatePower! ....";
     UpdateCommandIssueStats(cmd);
+    //cout << "Finish All!\n";
+
     return;
 }
 

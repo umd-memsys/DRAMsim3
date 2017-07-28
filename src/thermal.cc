@@ -48,6 +48,10 @@ ThermalCalculator::ThermalCalculator(const Config &config):
 
 	Tamb = config_.Tamb0 + T0;
 
+	cout << "vault_x = " << vault_x << "; vault_y = " << vault_y << endl;
+	cout << "bank_x = " << bank_x << "; bank_y = " << bank_y << endl;
+	cout << "dimX = " << dimX << "; dimY = " << dimY << "; numP = " << numP << endl;
+
 	// Initialize the vectors
 	accu_Pmap = vector<vector<double> > (numP * dimX * dimY, vector<double> (num_case, 0)); 
 	cur_Pmap = vector<vector<double> > (numP * dimX * dimY, vector<double> (num_case, 0)); 
@@ -58,25 +62,32 @@ ThermalCalculator::ThermalCalculator(const Config &config):
 	InitialParameters(); 
 
 	refresh_count = vector<uint32_t> (config_.channels * config_.ranks, 0);
+	cout << "size of refresh_count is " << refresh_count.size() << endl;
+	//cout << "done thermal calculator\n";
 }
 
 ThermalCalculator::~ThermalCalculator()
 {
-
+	cout << "Print the final temperature \n";
 }
 
-void ThermalCalculator::LocationMapping(const Command& cmd, int row0, int *x, int *y, int *z)
+void ThermalCalculator::LocationMapping(const Command& cmd, int bank0, int row0, int *x, int *y, int *z)
 {
-	int row_id; 
+	//cout << "Enter LocationMapping\n";
+	int row_id, bank_id; 
 	if (row0 > -1)
 		row_id = row0; 
 	else
 		row_id = cmd.Row();
 
+	if (bank0 > -1)
+		bank_id = bank0; 
+	else
+		bank_id = cmd.Bank();
+
 	if (config_.IsHMC() || config_.IsHBM())
 	{
 		int vault_id = cmd.Channel();
-		int bank_id = cmd.Bank(); 
 		int vault_id_x = vault_id / vault_y; 
 		int vault_id_y = vault_id % vault_y; 
 		int num_bank_per_layer = config_.banks / config_.num_dies; 
@@ -93,8 +104,7 @@ void ThermalCalculator::LocationMapping(const Command& cmd, int row0, int *x, in
 	}
 	else
 	{
-		*z = 1; 
-		int bank_id = cmd.Bank();
+		*z = 0; 
 		int bank_id_x = bank_id / bank_y; 
 		int bank_id_y = bank_id % bank_y;
 		int grid_step = config_.rows / (config_.numXgrids * config_.numYgrids); 
@@ -103,7 +113,17 @@ void ThermalCalculator::LocationMapping(const Command& cmd, int row0, int *x, in
 		int grid_id_y = grid_id % config_.numYgrids; 
 		*x = bank_id_x * config_.numXgrids + grid_id_x;
 		*y = bank_id_y * config_.numYgrids + grid_id_y;
+		//cout << "bank_id = " << bank_id << "; row_id = " << row_id << endl;
 	}
+	//cout << "Finish LocationMapping ...";
+
+	//cout << "x = " << *x << "; y = " << *y << "; z = " << *z << endl;
+	//cout << "--------------------------------------\n";
+}
+
+void ThermalCalculator::DummyFunc(const Command& cmd, uint64_t clk)
+{
+	// this function is to test other functions
 }
 
 
@@ -112,7 +132,7 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 	int x, y, z; // 3D-dimension of the current cell 
 	uint32_t rank, channel;
 	double energy; 
-	int row_s, ir; // for refresh
+	int row_s, ir, ib; // for refresh
 	int case_id;
 	
 	rank = cmd.Rank();
@@ -127,22 +147,27 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 
 	if (cmd.cmd_type_ == CommandType::REFRESH)
 	{
+		//cout << "rank = " << rank << "; channel = " << channel << endl;
 		// update refresh_count 
 		row_s = refresh_count[channel * config_.ranks + rank] * config_.numRowRefresh; 
 		refresh_count[channel * config_.ranks + rank] ++; 
 		if (refresh_count[channel * config_.ranks + rank] * config_.numRowRefresh == config_.rows)
 			refresh_count[channel * config_.ranks + rank] = 0;
 		energy = config_.ref_energy_inc / config_.numRowRefresh; 
-		for (ir = row_s; ir < row_s + config_.numRowRefresh; ir ++)
-		{
-			LocationMapping(cmd, ir, &x, &y, &z); 
-			accu_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
-			cur_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
+		for (ib = 0; ib < config_.banks; ib ++){
+			for (ir = row_s; ir < row_s + config_.numRowRefresh; ir ++){
+				//cout << "ib = " << ib << "; ir = " << ir << endl;
+				LocationMapping(cmd, ib, ir, &x, &y, &z); 
+				//cout << "x = " << x << "; y = " << y << "; z = " << z << endl;
+				accu_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
+				cur_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
+			}
 		}
 
 	}
 	else
 	{
+		//cout << "normal\n";
 		switch (cmd.cmd_type_){
 			case CommandType::ACTIVATE:
 				energy = config_.act_energy_inc; 
@@ -156,10 +181,10 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 				energy = config_.write_energy_inc;
 				break;
 			default:
-				printf("Error!"); 
+				//cout << "Error: CommandType is " << cmd.cmd_type_ << endl;
 				break;
 		}
-		LocationMapping(cmd, -1, &x, &y, &z); 
+		LocationMapping(cmd, -1, -1, &x, &y, &z); 
 		accu_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
 		cur_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
 	}
@@ -170,20 +195,22 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 	// print transient power and temperature 
 	if (clk > (sample_id+1) * config_.power_epoch_period)
 	{
+		//cout << "begin sampling!\n";
 		// add the background energy
 		double extra_energy = (config_.act_stb_energy_inc + config_.pre_stb_energy_inc + config_.pre_pd_energy_inc + config_.sref_energy_inc) * config_.power_epoch_period / (dimX * dimY * numP); 
 		for (int i = 0; i < dimX * dimY * numP; i ++)
 			for (int j = 0; j < num_case; j ++)
 				cur_Pmap[i][j] += extra_energy / 1000; 
 
-		PrintTransPT(); 
+		PrintTransPT(clk); 
 		cur_Pmap = vector<vector<double> > (numP * dimX * dimY, vector<double> (config_.ranks, 0)); 
 		sample_id ++;
 	}
 } 
 
-void ThermalCalculator::PrintTransPT()
+void ThermalCalculator::PrintTransPT(uint64_t clk)
 {
+	cout << "============== At " << clk * config_.tCK * 1e-6 << "[ms] =============\n"; 
 	double maxT; 
 	for (int ir = 0; ir < num_case; ir ++){
 		CalcTransT(ir); 
@@ -203,9 +230,9 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
 	// calculate the final temperature for each case 
 	double maxT; 
 	for (int ir = 0; ir < num_case; ir ++){
-		CalcFinalT(ir);
+		CalcFinalT(ir, clk);
 		maxT = GetMaxT(T_final, ir);
-		cout << "MaxT of case " << ir << " is " << maxT - T0 << " [C]\n";
+		cout << "MaxT of case " << ir << " is " << maxT << " [C]\n";
 	}
 }
 
@@ -215,6 +242,7 @@ void ThermalCalculator::CalcTransT(int case_id)
 	double *T; 
 	double time = config_.power_epoch_period * config_.tCK * 1e-9; 
 	int i, j, l;
+	double totP = 0; 
 
 	// fill in powerM
 	if ( !(powerM = (double ***)malloc(dimX * sizeof(double **))) ) printf("Malloc fails for powerM[].\n");
@@ -227,10 +255,15 @@ void ThermalCalculator::CalcTransT(int case_id)
         }
     }
 
-    for (i = 0; i < dimX; i ++)
-    	for (j = 0; j < dimY; j ++)
-    		for (l = 0; l < numP; l ++)
+    for (i = 0; i < dimX; i ++){
+    	for (j = 0; j < dimY; j ++){
+    		for (l = 0; l < numP; l ++){
     			powerM[i][j][l] = cur_Pmap[l*(dimX*dimY) + j*dimX + i][case_id] / (double) config_.power_epoch_period; 
+    			totP += powerM[i][j][l];
+    		}
+    	}
+    }
+    cout << "total Power is " << totP * 1000 << " [mW]\n";
 
     // fill in T
     if ( !(T = (double *)malloc(((numP*3+1)*dimX*dimY) * sizeof(double))) ) printf("Malloc fails for T.\n");
@@ -245,10 +278,11 @@ void ThermalCalculator::CalcTransT(int case_id)
     free(T);
 }
 
-void ThermalCalculator::CalcFinalT(int case_id)
+void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk)
 {
 	double ***powerM; 
 	int i, j, l;
+	double totP;
 	// fill in powerM
 	if ( !(powerM = (double ***)malloc(dimX * sizeof(double **))) ) printf("Malloc fails for powerM[].\n");
     for (i = 0; i < dimX; i++)
@@ -260,17 +294,26 @@ void ThermalCalculator::CalcFinalT(int case_id)
         }
     }
 
-    for (i = 0; i < dimX; i ++)
-    	for (j = 0; j < dimY; j ++)
-    		for (l = 0; l < numP; l ++)
-    			powerM[i][j][l] = accu_Pmap[l*(dimX*dimY) + j*dimX + i][case_id] / (double) config_.power_epoch_period; 
+    for (i = 0; i < dimX; i ++){
+    	for (j = 0; j < dimY; j ++){
+    		for (l = 0; l < numP; l ++){
+    			powerM[i][j][l] = accu_Pmap[l*(dimX*dimY) + j*dimX + i][case_id] / (double) clk; 
+    			totP += powerM[i][j][l]; 
+    			//cout << "powerM[" << i << "][" << j << "][" << l << "] = " << powerM[i][j][l] << endl;
+    		}
+    	}
+    }
+
+    cout << "total Power is " << totP * 1000 << " [mW]\n";
 
     double *T; 
     T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX, dimY, Midx, MidxSize, Tamb);
 
     // assign the value to T_final 
-    for (int i = 0; i < T_final.size(); i ++)
+    for (int i = 0; i < T_final.size(); i ++){
     	T_final[i][case_id] = T[i];
+    	//cout << "T_final[" << i << "][" << case_id << "] = " << T_final[i][case_id] << endl;
+    }
 
     free(T);
 
@@ -293,6 +336,7 @@ void ThermalCalculator::InitialParameters()
 	}
 	free(T);
 
+
 }
 
 int ThermalCalculator::square_array(int total_grids_)
@@ -312,7 +356,27 @@ void ThermalCalculator::calculate_time_step()
 	double dt = 100.0; 
 	int layer_dim = dimX * dimY; 
 	double c, g; 
+	int idx0, idx1, idxC; 
 
+	//cout << "CapSize = " << CapSize << "; MidxSize = " << MidxSize << "; layer_dim = " << layer_dim << endl;
+
+	for (int j = 0; j < MidxSize; j ++)
+	{
+        idx0 = (int) (Midx[j][0] + 0.01); 
+        idx1 = (int) (Midx[j][1] + 0.01); 
+        idxC = idx0 / layer_dim;
+
+        if (idx0 == idx1){
+        	g = Midx[j][2]; 
+            c = Cap[idxC]; 
+            if (c/g < dt)
+            	dt = c/g;
+        }
+    }
+
+
+
+/*
 	for (int l = 0; l < CapSize; l ++)
 	{
 		c = Cap[l]; 
@@ -321,19 +385,24 @@ void ThermalCalculator::calculate_time_step()
 			if (Midx[l*layer_dim + i][0] == Midx[l*layer_dim + i][1])
 			{
 				g = Midx[l*layer_dim + i][2]; 
+				//cout << "ID[" << l*layer_dim+i << "]: g = " << g << "; c = " << c << "; c/g = " << c/g << endl; 
 				if (c/g < dt) 
 					dt = c/g; 
 			}
 		}
 	}
+*/
 
 	cout << "maximum dt is " << dt << endl;
 
 	// calculate time_iter
 	double power_epoch_time = config_.power_epoch_period * config_.tCK * 1e-9; // [s]
+	cout << "power_epoch_time = " << power_epoch_time << endl;
 	time_iter = time_iter0; 
 	while (power_epoch_time / time_iter >= dt)
 		time_iter ++;
+	//time_iter += 10;
+	cout << "time_iter = " << time_iter << endl;
 
 }
 
@@ -342,6 +411,7 @@ double ThermalCalculator::GetMaxT(vector<vector<double> > T_, int case_id)
 	double maxT = 0; 
 	for (int i = 0; i < T_.size(); i ++)
 	{
+		///cout << T_[i][case_id] << endl;
 		if (T_[i][case_id] > maxT)
 		{
 			maxT = T_[i][case_id]; 

@@ -46,9 +46,9 @@ namespace dramcore{
 
 
 		/* private methods */
-		void LocationMapping(const Command& cmd, int row0, int *x, int *y, int *z); 
+		void LocationMapping(const Command& cmd, int bank0, int row0, int *x, int *y, int *z); 
 		void CalcTransT(int case_id); 
-		void CalcFinalT(int case_id);
+		void CalcFinalT(int case_id, uint64_t clk);
 		void InitialParameters();
 		int square_array(int total_grids_);
 		double GetMaxT(vector<vector<double> > T_, int case_id); 
@@ -60,8 +60,10 @@ namespace dramcore{
 		~ThermalCalculator(); 
 		void UpdatePower(const Command& cmd, uint64_t clk); 
 
-		void PrintTransPT(); 
+		void PrintTransPT(uint64_t clk); 
 		void PrintFinalPT(uint64_t clk); 
+
+		void DummyFunc(const Command& cmd, uint64_t clk);
 
 
 

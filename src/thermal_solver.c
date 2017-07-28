@@ -598,6 +598,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     for (i = 0; i < B.nrow; ++i)
     {
         Tt[i] = Ttp[i]-T0;
+        //printf("Tt[%d] = %.2f\n", i, Tt[i]);
     }
 
 

@@ -13,7 +13,7 @@ namespace  dramcore {
 
 class ChannelState {
 public:
-    ChannelState(const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator &thermcalc);
+    ChannelState(const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator *thermcalc);
     Command GetRequiredCommand(const Command& cmd) const;
     bool IsReady(const Command& cmd, uint64_t clk) const;
     void UpdateState(const Command& cmd);
@@ -41,7 +41,7 @@ private:
     std::ofstream val_output_;
 #endif
     Statistics& stats_;
-    ThermalCalculator& thermcalc_;
+    ThermalCalculator *thermcalc_;
     std::vector< std::vector< std::vector<BankState*> > > bank_states_;
     std::vector< std::vector<uint64_t> > four_aw;
     std::vector< std::vector<uint64_t> > thirty_two_aw;

@@ -34,8 +34,11 @@ if (THERMAL)
         set(SUPERLU_PLAT PTHREAD)
         set(SUPERLU_LIB ${SUPERLU_SRC}/lib/libsuperlu_mt_${SUPERLU_PLAT}.a)
         add_library(superlu_mt STATIC IMPORTED)
+	# add_library(superlu_blas STATIC IMPORTED)
         set_target_properties(superlu_mt 
                               PROPERTIES IMPORTED_LOCATION ${SUPERLU_LIB})
+	# set_target_properties(superlu_blas
+	#		      PROPERTIES IMPORTED_LOCATION ${SUPERLU_SRC}/lib/libblas_${SUPERLU_PLAT}.a)
         add_custom_target(build_superlu_mt
                           COMMAND make lib 
                           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/ext/SuperLU_MT_3.1/
@@ -45,6 +48,7 @@ if (THERMAL)
         
 endif (THERMAL)
 
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-fPIC -D_LONGINT -DAdd_")
 set(EXTRA_CXX_FLAGS "-Wall -fPIC")
 set(EXTRA_CXX_FLAGS_DEBUG "-O0 -DDEBUG_OUTPUT")
 set(EXTRA_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
@@ -88,7 +92,7 @@ add_library(dramcore SHARED ${SOURCES})
 
 if (THERMAL)
         find_package(Threads)
-        target_link_libraries(dramcore inih fmt superlu_mt ${CMAKE_THREAD_LIBS_INIT})
+        target_link_libraries(dramcore inih fmt superlu_mt ${CMAKE_THREAD_LIBS_INIT} m f77blas atlas)
 else (THERMAL)
         target_link_libraries(dramcore inih fmt)
 endif (THERMAL)

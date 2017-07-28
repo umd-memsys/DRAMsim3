@@ -30,9 +30,11 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function
 }
 
 BaseMemorySystem::~BaseMemorySystem() {
+    cout << "come to delete BaseMemorySystem\n";
     delete(ptr_stats_);
     delete(ptr_timing_);
     delete(ptr_config_);
+    delete(ptr_thermCal_);
 
     stats_file_.close();
     cummulative_stats_file_.close();
@@ -75,6 +77,7 @@ void BaseMemorySystem::PrintStats() {
     cout << "The stats are also written to the file " << "dramcore_stats.txt" << endl;
     ptr_stats_->PrintStats(stats_file_);
     ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
+    ptr_thermCal_->PrintFinalPT(clk_);
     return;
 }
 
@@ -88,12 +91,13 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
 
     ctrls_.resize(ptr_config_->channels);
     for(auto i = 0; i < ptr_config_->channels; i++) {
-        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, *ptr_thermCal_, callback_);
+        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, ptr_thermCal_, callback_);
     }
 }
 
 MemorySystem::~MemorySystem()
 {
+    //cout << "come to delete MemorySystem\n";
     for(auto i = 0; i < ptr_config_->channels; i++) {
         delete(ctrls_[i]);
     }
