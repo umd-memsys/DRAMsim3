@@ -66,3 +66,20 @@ and run directory.
 
 ## Using Visual Studio Code
 Just the usual way of working with a Makefile based project. Check the .vscode directory for further help.
+
+## Thermal Simulation 
+1. For thermal simulation, you have to use -DTHERMAL=1 while doing cmake: 
+- cmake .. -DTHERMAL=1
+
+2. New parameters added to the configuration files
+- power_epoch_period: number of cycles for each sampling of power profile
+- ChipX, ChipY: the 2D-dimension of the memory chip [m]
+- Tamb0: the ambient temperature in degC 
+- numXgrids, numYgrids: dimension of the thermal grids within a bank in a device
+- numRowRefresh: number of rows to be refreshed during one refresh interval within the same bank
+
+-- the sample files for thermal simulation is 
+	DDR3_1Gb_x8_1333.ini
+	HMC_2GB_4Lx16.ini
+
+
