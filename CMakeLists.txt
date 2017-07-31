@@ -28,23 +28,23 @@ if (THERMAL)
 
         # since SuperLU has a build system already, I don't want to 
         # rewirte the entire make system so here's the solution...
-        if (NOT SUPERLU_SRC)
-                set(SUPERLU_SRC ${CMAKE_SOURCE_DIR}/ext/SuperLU_MT_3.1/)
-        endif (NOT SUPERLU_SRC)
+        if (NOT SUPERLU_ROOT)
+                set(SUPERLU_ROOT ${CMAKE_SOURCE_DIR}/ext/SuperLU_MT_3.1/)
+                execute_process(COMMAND git submodule update --init -- ${SUPERLU_ROOT})
+        endif (NOT SUPERLU_ROOT)
         set(SUPERLU_PLAT PTHREAD)
-        set(SUPERLU_LIB ${SUPERLU_SRC}/lib/libsuperlu_mt_${SUPERLU_PLAT}.a)
-        add_library(superlu_mt STATIC IMPORTED)
-	# add_library(superlu_blas STATIC IMPORTED)
+        set(SUPERLU_LIB ${SUPERLU_ROOT}/lib/libsuperlu_mt_${SUPERLU_PLAT}.so)
+        add_library(superlu_mt SHARED IMPORTED)
+        
+        # add_library(superlu_blas STATIC IMPORTED)
         set_target_properties(superlu_mt 
                               PROPERTIES IMPORTED_LOCATION ${SUPERLU_LIB})
-	# set_target_properties(superlu_blas
-	#		      PROPERTIES IMPORTED_LOCATION ${SUPERLU_SRC}/lib/libblas_${SUPERLU_PLAT}.a)
         add_custom_target(build_superlu_mt
                           COMMAND make lib 
-                          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/ext/SuperLU_MT_3.1/
+                          WORKING_DIRECTORY ${SUPERLU_ROOT}
         )
         add_dependencies(superlu_mt build_superlu_mt)
-        include_directories(${SUPERLU_SRC}/SRC)  # header files are here..
+        include_directories(${SUPERLU_ROOT}/SRC)  # header files are here..
         
 endif (THERMAL)
 
