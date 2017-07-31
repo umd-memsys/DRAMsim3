@@ -22,6 +22,9 @@ cd build
 # Create Makefile using the CMakeLists.txt file in the parent directory
 cmake ..
 
+# Alternatively, build with thermal module
+cmake .. -DTHERMAL=1
+
 # Build dramcore and dramcoretest executables
 make -j4
 
@@ -61,7 +64,7 @@ Import the project from Clion. This will create a `cmake-build-debug` directory.
 and run directory.
 
 
-*Note - While CMake is a paid IDE, it provides a free student license.*
+*Note - While CLion is a paid IDE, it provides a free student license.*
 
 
 ## Using Visual Studio Code
