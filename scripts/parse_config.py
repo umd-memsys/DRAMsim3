@@ -18,6 +18,13 @@ def get_val(config, sec, opt):
                 val = config.get(sec, opt)  # shouldn't have any exceptions here..
     return val
 
+def get_val_from_file(config_file, sec, opt):
+    """
+        a quick way to obtain an option from a config file
+    """
+    config = ConfigParser.ConfigParser()
+    config.read(config_file)
+    return get_val(config, sec, opt)
 
 def get_dict(config_file):
     """

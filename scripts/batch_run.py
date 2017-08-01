@@ -10,6 +10,8 @@ import shlex
 import subprocess
 import sys
 import tempfile
+# project modules
+import analysis
 import parse_config
 
 def process_configs(args):
@@ -33,7 +35,7 @@ def process_configs(args):
         elif os.path.isdir(item):
             for f in os.listdir(item):
                 if f[-4:] != ".ini":
-                    print "INFO: ignoring non-ini file:", item
+                    print "INFO: ignoring non-ini file:", f
                 else:
                     configs.append(os.path.join(item, f))
         else:
@@ -72,28 +74,35 @@ if __name__ == "__main__":
         if not os.path.exists(args.output_dir):
             try:
                 os.mkdir(args.output_dir)
+                print "WARNING: output dir not exists, creating one..."
             except OSError:
                 print "cannot make directory: ", args.output_dir
                 exit(1)
-            else:
-                print "output dir not exists, creating one..."
-        print "Overriding the output directory to: ", args.output_dir
+        print "INFO: Overriding the output directory to: ", args.output_dir
     
     if args.cpu_type == "trace":
         if not os.path.exists(args.trace_file):
             print "trace file not found for trace cpu"
     
+    output_prefixs = []
+    pure_config_names = []
     for c in configs:
         mem_type = "default"
         if "hmc" in c.lower():
             mem_type = "hmc"
 
         config_file = c
+        pure_config_name = os.path.basename(c)[:-4]
+        pure_config_names.append(pure_config_name)
+
         if args.output_dir:
-            pure_config_name = os.path.basename(c)[:-4]
             new_prefix = os.path.join(args.output_dir, pure_config_name)
+            output_prefixs.append(new_prefix)
             temp_fp = parse_config.sub_options(c, "other", "output_prefix", new_prefix)
             config_file = temp_fp.name
+        else:
+            _prefix = parse_config.get_val_from_file(c, "other", "output_prefix")
+            output_prefixs.append(_prefix)
 
         cmd_str = "%s --memory-type=%s --cpu-type=%s -c %s -n %d" % \
                   (args.executable, mem_type, args.cpu_type, config_file, args.n)
@@ -101,7 +110,7 @@ if __name__ == "__main__":
         if args.cpu_type == "trace":
             cmd_str += " --trace-file=%s" % args.trace_file
 
-        print cmd_str
+        print "EXECUTING:", cmd_str
         temp_stdout = None
         if args.quiet:
             temp_stdout = tempfile.TemporaryFile()
@@ -112,3 +121,16 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print "skipping this one..."
 
+    print "INFO: Finished execution phase, generating results summary..."
+
+    if args.output_dir:
+        summary_dir = args.output_dir
+    else:
+        summary_dir = "."
+    stats_csvs = []
+    for output_pre in output_prefixs:
+        stats_csvs.append(output_pre+"stats.csv")
+    summary_df = analysis.get_summary_df(stats_csvs)
+    summary_df = summary_df.assign(config=pure_config_names)
+    summary_df.set_index("config", inplace=True)
+    summary_df.to_csv(os.path.join(args.output_dir, "summary.csv"))
