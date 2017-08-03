@@ -46,9 +46,7 @@ namespace dramcore{
 		vector<int> layerP; 
 
 		// Output files 
-		ofstream epoch_power_file_csv_;
     	ofstream epoch_temperature_file_csv_;
-    	ofstream final_power_file_csv_;
     	ofstream final_temperature_file_csv_;
 
 
@@ -62,7 +60,8 @@ namespace dramcore{
 		double GetMaxT(vector<vector<double> > T_, int case_id); 
 		void calculate_time_step();
 		// print to csv-files
-		void Print2CSV(ofstream& csvfile, vector<vector<double> > Array, int id, uint64_t scale);
+		void PrintCSV_trans(ofstream& csvfile, vector<vector<double> > P_, vector<vector<double> > T_, int id, uint64_t scale);
+		void PrintCSV_final(ofstream& csvfile, vector<vector<double> > P_, vector<vector<double> > T_, int id, uint64_t scale);
 		void PrintCSVHeader_trans(ofstream& csvfile);
 		void PrintCSVHeader_final(ofstream& csvfile);
 

@@ -223,10 +223,8 @@ Config::Config(std::string config_file)
     ChipX = reader.GetReal("thermal", "ChipX", 0.01); 
     ChipY = reader.GetReal("thermal", "ChipY", 0.01);
     Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
-    epoch_power_file_csv = reader.Get("other", "epoch_power_file", output_prefix + "epoch_power.csv");
-    epoch_temperature_file_csv = reader.Get("other", "epoch_temperature_file", output_prefix + "epoch_temperature.csv");
-    final_power_file_csv = reader.Get("other", "final_power_file", output_prefix + "final_power.csv");
-    final_temperature_file_csv = reader.Get("other", "final_temperature_file", output_prefix + "final_temperature.csv");
+    epoch_temperature_file_csv = reader.Get("other", "epoch_temperature_file", output_prefix + "epoch_power_temperature.csv");
+    final_temperature_file_csv = reader.Get("other", "final_temperature_file", output_prefix + "final_power_temperature.csv");
 
 
 

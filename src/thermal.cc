@@ -65,15 +65,11 @@ ThermalCalculator::ThermalCalculator(const Config &config):
 	cout << "size of refresh_count is " << refresh_count.size() << endl;
 
 	// Initialize the output file
-	epoch_power_file_csv_.open(config_.epoch_power_file_csv);
     epoch_temperature_file_csv_.open(config_.epoch_temperature_file_csv);
-    final_power_file_csv_.open(config_.final_power_file_csv);
     final_temperature_file_csv_.open(config_.final_temperature_file_csv);
 
     // print header to csv files 
-    PrintCSVHeader_trans(epoch_power_file_csv_); 
     PrintCSVHeader_trans(epoch_temperature_file_csv_);
-    PrintCSVHeader_final(final_power_file_csv_);
     PrintCSVHeader_final(final_temperature_file_csv_);
 
 	//cout << "done thermal calculator\n";
@@ -230,8 +226,7 @@ void ThermalCalculator::PrintTransPT(uint64_t clk)
 		maxT = GetMaxT(T_trans, ir); 
 		cout << "MaxT of case " << ir << " is " << maxT - T0 << " [C]\n";
 		// print to file 
-		Print2CSV(epoch_temperature_file_csv_, T_trans, ir, 1);
-		Print2CSV(epoch_power_file_csv_, cur_Pmap, ir, config_.power_epoch_period);
+		PrintCSV_trans(epoch_temperature_file_csv_, cur_Pmap, T_trans, ir, config_.power_epoch_period);
 	}
 }
 
@@ -250,15 +245,14 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
 		maxT = GetMaxT(T_final, ir);
 		cout << "MaxT of case " << ir << " is " << maxT << " [C]\n";
 		// print to file
-		Print2CSV(final_temperature_file_csv_, T_final, ir, 1);
-		Print2CSV(final_power_file_csv_, accu_Pmap, ir, clk);
+		PrintCSV_final(final_temperature_file_csv_, accu_Pmap, T_final, ir, clk);
 	}
 
 	// close all the csv files 
 	final_temperature_file_csv_.close(); 
-	final_power_file_csv_.close();
+	//final_power_file_csv_.close();
 	epoch_temperature_file_csv_.close(); 
-	epoch_power_file_csv_.close();
+	//epoch_power_file_csv_.close();
 }
 
 void ThermalCalculator::CalcTransT(int case_id)
@@ -428,21 +422,42 @@ double ThermalCalculator::GetMaxT(vector<vector<double> > T_, int case_id)
 }
 
 
-void ThermalCalculator::Print2CSV(ofstream& csvfile, vector<vector<double> > Array, int id, uint64_t scale)
+void ThermalCalculator::PrintCSV_trans(ofstream& csvfile, vector<vector<double> > P_, vector<vector<double> > T_, int id, uint64_t scale)
 {
-	for (int i = 0; i < Array.size(); i++)
-	{
-		csvfile << Array[i][id] / (double) scale << ","; 
+	double pw, tm; 
+	for (int l = 0; l < numP; l ++){
+		for (int j = 0; j < dimY; j ++){
+			for (int i = 0; i < dimX; i ++){
+				pw = P_[l*(dimX*dimY) + j*dimX + i][id] / (double) scale; 
+				tm = T_[(layerP[l]+1)*(dimX*dimY) + j*dimX + i][id] - T0;
+				csvfile << id << "," << i << "," << j << "," << l << "," << pw << "," << tm << "," << sample_id << endl;  
+			}
+		}
 	}
-	csvfile << "\n"; 
+
+}
+
+void ThermalCalculator::PrintCSV_final(ofstream& csvfile, vector<vector<double> > P_, vector<vector<double> > T_, int id, uint64_t scale)
+{
+	double pw, tm; 
+	for (int l = 0; l < numP; l ++){
+		for (int j = 0; j < dimY; j ++){
+			for (int i = 0; i < dimX; i ++){
+				pw = P_[l*(dimX*dimY) + j*dimX + i][id] / (double) scale; 
+				tm = T_[(layerP[l]+1)*(dimX*dimY) + j*dimX + i][id];
+				csvfile << id << "," << i << "," << j << "," << l << "," << pw << "," << tm << endl;  
+			}
+		}
+	}
+
 }
 
 void ThermalCalculator::PrintCSVHeader_trans(ofstream& csvfile)
 {
-	csvfile << num_case << "," << config_.power_epoch_period * config_.tCK << "," << dimX << "," << dimY << "," << numP << endl;
+	csvfile << "rank_channel_index,x,y,z,power,temperature,epoch" << endl;
 }
 
 void ThermalCalculator::PrintCSVHeader_final(ofstream& csvfile)
 {
-	csvfile << dimX << "," << dimY << "," << numP << endl;
+	csvfile << "rank_channel_index,x,y,z,power,temperature" << endl;
 }
