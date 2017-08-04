@@ -41,13 +41,39 @@ def process_configs(args):
         else:
             print "???"
             exit(1)
-
     return configs
 
 
+def build_summary(config_files, stats_csvs, summary_name):
+    # get some info from configs
+    protocols = []
+    for c in config_files:
+        protocols.append(parse_config.get_protocol(c))
+    
+    density = []
+    for c in config_files:
+        density.append(parse_config.get_density(c))
+
+    page_sizes = []
+    for c in config_files:
+        page_sizes.append(parse_config.get_page_size(c))
+
+    pure_config_names = []
+    for f in config_files:
+        pure_config_names.append(os.path.basename(f)[:-4])
+
+    summary_df = analysis.get_summary_df(stats_csvs)
+    summary_df = summary_df.assign(config=pure_config_names,
+                                   protocol=protocols,
+                                   density=density,
+                                   page_size=page_sizes)
+    summary_df.set_index("config", inplace=True)
+    summary_df.to_csv(summary_name)
+   
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a batch of simulation"
-                                     "with a given set of config files"
+                                     "with a given set of config files "
                                      "and possibliy redirect output, -h for help")
     parser.add_argument("executable", help="executable location")
     parser.add_argument("-o", "--output-dir", nargs="?", default="", help="override the 'output-prefix'"
@@ -59,7 +85,8 @@ if __name__ == "__main__":
     parser.add_argument("--cpu-type", default="random", choices=["random", "trace", "stream"],
                         help="cpu type")
     parser.add_argument("-t", "--trace-file", help="trace file, only for trace cpu")
-    parser.add_argument("-q", "--quiet", action="store_true", help="Silent output" )
+    parser.add_argument("-q", "--quiet", action="store_true", help="Silent output from simulation (not this script)" )
+    parser.add_argument("-s", "--summary", default="summary.csv", help="Summary sheet name")
     args = parser.parse_args()
 
     # some input sanity check
@@ -123,6 +150,7 @@ if __name__ == "__main__":
 
     print "INFO: Finished execution phase, generating results summary..."
 
+    # prepare building summary csv
     if args.output_dir:
         summary_dir = args.output_dir
     else:
@@ -130,7 +158,7 @@ if __name__ == "__main__":
     stats_csvs = []
     for output_pre in output_prefixs:
         stats_csvs.append(output_pre+"stats.csv")
-    summary_df = analysis.get_summary_df(stats_csvs)
-    summary_df = summary_df.assign(config=pure_config_names)
-    summary_df.set_index("config", inplace=True)
-    summary_df.to_csv(os.path.join(args.output_dir, "summary.csv"))
+
+    build_summary(configs, stats_csvs, os.path.join(args.output_dir, args.summary))
+
+    
