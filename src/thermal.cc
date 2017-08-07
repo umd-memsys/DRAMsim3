@@ -11,11 +11,15 @@ extern "C" double *calculate_Cap_array(double W, double Lc, int numP, int dimX, 
 extern "C" double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ, double Tamb_); 
 
 
-ThermalCalculator::ThermalCalculator(const Config &config):
+ThermalCalculator::ThermalCalculator(const Config &config, Statistics& stats):
 	config_(config),
+	stats_(stats),
 	sample_id(0),
 	save_clk(0),
-	time_iter0(10)
+	time_iter0(10),
+	sref_energy_prev(0.0),
+	pre_stb_energy_prev(0.0),
+	act_stb_energy_prev(0.0)
 {
 
 	// Initialize dimX, dimY, numP
@@ -206,7 +210,11 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 	{
 		//cout << "begin sampling!\n";
 		// add the background energy
-		double extra_energy = (config_.act_stb_energy_inc + config_.pre_stb_energy_inc + config_.pre_pd_energy_inc + config_.sref_energy_inc) * config_.power_epoch_period / (dimX * dimY * numP); 
+		double extra_energy = stats_.sref_energy.value + stats_.pre_stb_energy.value + stats_.act_stb_energy.value - sref_energy_prev - pre_stb_energy_prev - act_stb_energy_prev; 
+		extra_energy = extra_energy / (dimX * dimY * numP);
+		sref_energy_prev = stats_.sref_energy.value; 
+		pre_stb_energy_prev = stats_.pre_stb_energy.value; 
+		act_stb_energy_prev = stats_.act_stb_energy.value;
 		for (int i = 0; i < dimX * dimY * numP; i ++)
 			for (int j = 0; j < num_case; j ++)
 				cur_Pmap[i][j] += extra_energy / 1000; 
@@ -233,7 +241,7 @@ void ThermalCalculator::PrintTransPT(uint64_t clk)
 void ThermalCalculator::PrintFinalPT(uint64_t clk)
 {
 	// first add the background energy 
-	double extra_energy = (config_.act_stb_energy_inc + config_.pre_stb_energy_inc + config_.pre_pd_energy_inc + config_.sref_energy_inc) * clk / (dimX * dimY * numP); 
+	double extra_energy = (stats_.act_stb_energy.value + stats_.pre_stb_energy.value + stats_.sref_energy.value) / (dimX * dimY * numP); 
 		for (int i = 0; i < dimX * dimY * numP; i ++)
 			for (int j = 0; j < num_case; j ++)
 				accu_Pmap[i][j] += extra_energy / 1000; 

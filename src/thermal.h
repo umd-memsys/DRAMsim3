@@ -22,6 +22,7 @@ namespace dramcore{
 		double Tamb; // The ambient temperature in Kelvin
 
 		const Config& config_;
+		Statistics& stats_;
 
 		int dimX, dimY, numP; // Dimension of the memory 
 		double **Midx; // Midx storing thermal conductance 
@@ -38,6 +39,11 @@ namespace dramcore{
 		vector<vector<double> > cur_Pmap; // current power map 
 
 		vector<uint32_t> refresh_count; 
+
+		// previous background energy
+		double sref_energy_prev; 
+		double pre_stb_energy_prev; 
+		double act_stb_energy_prev; 
 
 		// other intermediate parameters
 		// not need to be defined here but it will be easy to use if it is defined 
@@ -67,7 +73,7 @@ namespace dramcore{
 
 
 	public:
-		ThermalCalculator(const Config &config);
+		ThermalCalculator(const Config &config, Statistics& stats);
 		~ThermalCalculator(); 
 		void UpdatePower(const Command& cmd, uint64_t clk); 
 

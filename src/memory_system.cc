@@ -11,7 +11,7 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics(*ptr_config_);
-    ptr_thermCal_ = new ThermalCalculator(*ptr_config_);
+    ptr_thermCal_ = new ThermalCalculator(*ptr_config_, *ptr_stats_);
 
     //Stats output files
     stats_file_.open(ptr_config_->stats_file);
