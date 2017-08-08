@@ -19,7 +19,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics& stats):
 	time_iter0(10),
 	sref_energy_prev(0.0),
 	pre_stb_energy_prev(0.0),
-	act_stb_energy_prev(0.0)
+	act_stb_energy_prev(0.0),
+	pre_pd_energy_prev(0.0)
 {
 
 	// Initialize dimX, dimY, numP
@@ -147,6 +148,10 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 	double energy; 
 	int row_s, ir, ib; // for refresh
 	int case_id;
+	double device_scale = (double) config_.devices_per_rank; 
+
+	if (config_.IsHMC() || config_.IsHBM())
+		device_scale = 1;
 	
 	rank = cmd.Rank();
 	channel = cmd.Channel(); 
@@ -172,8 +177,8 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 				//cout << "ib = " << ib << "; ir = " << ir << endl;
 				LocationMapping(cmd, ib, ir, &x, &y, &z); 
 				//cout << "x = " << x << "; y = " << y << "; z = " << z << endl;
-				accu_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
-				cur_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
+				accu_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000 / device_scale; 
+				cur_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000 / device_scale; 
 			}
 		}
 
@@ -198,8 +203,8 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 				break;
 		}
 		LocationMapping(cmd, -1, -1, &x, &y, &z); 
-		accu_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
-		cur_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000; 
+		accu_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000 / device_scale; 
+		cur_Pmap[z*(dimX*dimY) + y*dimX + x][case_id] += energy / 1000 / device_scale; 
 	}
 
 
@@ -210,14 +215,15 @@ void ThermalCalculator::UpdatePower(const Command& cmd, uint64_t clk)
 	{
 		//cout << "begin sampling!\n";
 		// add the background energy
-		double extra_energy = stats_.sref_energy.value + stats_.pre_stb_energy.value + stats_.act_stb_energy.value - sref_energy_prev - pre_stb_energy_prev - act_stb_energy_prev; 
+		double extra_energy = stats_.sref_energy.value + stats_.pre_stb_energy.value + stats_.act_stb_energy.value + stats_.pre_pd_energy.value - sref_energy_prev - pre_stb_energy_prev - act_stb_energy_prev - pre_pd_energy_prev; 
 		extra_energy = extra_energy / (dimX * dimY * numP);
 		sref_energy_prev = stats_.sref_energy.value; 
 		pre_stb_energy_prev = stats_.pre_stb_energy.value; 
 		act_stb_energy_prev = stats_.act_stb_energy.value;
+		pre_pd_energy_prev = stats_.pre_pd_energy.value; 
 		for (int i = 0; i < dimX * dimY * numP; i ++)
 			for (int j = 0; j < num_case; j ++)
-				cur_Pmap[i][j] += extra_energy / 1000; 
+				cur_Pmap[i][j] += extra_energy / 1000 / device_scale; 
 
 		PrintTransPT(clk); 
 		cur_Pmap = vector<vector<double> > (numP * dimX * dimY, vector<double> (config_.ranks, 0)); 
@@ -240,11 +246,16 @@ void ThermalCalculator::PrintTransPT(uint64_t clk)
 
 void ThermalCalculator::PrintFinalPT(uint64_t clk)
 {
+	double device_scale = (double) config_.devices_per_rank; 
+
+	if (config_.IsHMC() || config_.IsHBM())
+		device_scale = 1;
+
 	// first add the background energy 
-	double extra_energy = (stats_.act_stb_energy.value + stats_.pre_stb_energy.value + stats_.sref_energy.value) / (dimX * dimY * numP); 
+	double extra_energy = (stats_.act_stb_energy.value + stats_.pre_stb_energy.value + stats_.sref_energy.value + stats_.pre_pd_energy.value) / (dimX * dimY * numP); 
 		for (int i = 0; i < dimX * dimY * numP; i ++)
 			for (int j = 0; j < num_case; j ++)
-				accu_Pmap[i][j] += extra_energy / 1000; 
+				accu_Pmap[i][j] += extra_energy / 1000 / device_scale; 
 
 	// calculate the final temperature for each case 
 	double maxT; 

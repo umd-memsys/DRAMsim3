@@ -44,6 +44,7 @@ namespace dramcore{
 		double sref_energy_prev; 
 		double pre_stb_energy_prev; 
 		double act_stb_energy_prev; 
+		double pre_pd_energy_prev;
 
 		// other intermediate parameters
 		// not need to be defined here but it will be easy to use if it is defined 
