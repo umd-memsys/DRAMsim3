@@ -145,10 +145,10 @@ public:
     class DoubleStat write_energy;
     class DoubleStat ref_energy;    // rank ref
     class DoubleStat refb_energy;  // bank refresh
-    class DoubleStat act_stb_energy;  // active standby
-    class DoubleStat pre_stb_energy;  // precharge standby
-    class DoubleStat pre_pd_energy;  // precharge powerdown energy
-    class DoubleStat sref_energy;  // self ref energy
+    std::vector<std::vector<DoubleStat>> act_stb_energy;  // active standby
+    std::vector<std::vector<DoubleStat>> pre_stb_energy;  // precharge standby
+    std::vector<std::vector<DoubleStat>> pre_pd_energy;  // precharge powerdown energy
+    std::vector<std::vector<DoubleStat>> sref_energy;  // self ref energy
     class DoubleStat total_energy;
     class NonCumulativeStat average_power;
 
@@ -165,6 +165,12 @@ public:
     void PrintEpochStatsCSVFormat(std::ostream& where) const;
 
     friend std::ostream& operator<<(std::ostream& os, Statistics& stats);
+
+    static double Sum(const std::vector<std::vector<DoubleStat>>& stats_vector);
+    template<class T>
+    void PushStatsVecToList(std::vector<std::vector<T>>& stats_vector);
+    void InitStatsPerRank(std::vector<std::vector<DoubleStat>>& stats_vector,
+                          double inc_value, std::string stat_name, std::string stat_desc);
 private:
     const Config& config_;
     uint64_t last_clk_;

@@ -277,10 +277,26 @@ Statistics::Statistics(const Config& config):
     write_energy = DoubleStat(config_.write_energy_inc, "write_energy", "WRITE energy (not including IO)");
     ref_energy = DoubleStat(config_.ref_energy_inc, "ref_energy", "Refresh energy");
     refb_energy = DoubleStat(config_.refb_energy_inc, "refb_energy", "Bank-Refresh energy");
-    act_stb_energy = DoubleStat(config_.act_stb_energy_inc,"act_stb_energy", "Active standby energy");
-    pre_stb_energy = DoubleStat(config_.pre_stb_energy_inc, "pre_stb_energy", "Precharge standby energy");
-    pre_pd_energy = DoubleStat(config_.pre_pd_energy_inc, "pre_pd_energy", "Precharge powerdown energy");
-    sref_energy = DoubleStat(config_.sref_energy_inc, "sref_energy", "Self-refresh energy");
+    // act_stb_energy = DoubleStat(config_.act_stb_energy_inc,"act_stb_energy", "Active standby energy");
+    // act_stb_energy.reserve(config_.channels);
+    InitStatsPerRank(act_stb_energy, config_.act_stb_energy_inc,
+                     "act_stb_energy", "Active standby energy");
+    // for (unsigned i = 0; i < config_.channels; i++) {
+    //     std::vector<DoubleStat> act_stb_channel;
+    //     for (unsigned j = 0; j < config_.ranks; j++) {
+    //         std::string short_desc = "act_stb_energy_" + std::to_string(i) + "_" + std::to_string(j);
+    //         std::string long_desc = "Active standby energy of channel " + std::to_string(i) + " rank " + std::to_string(j);
+    //         DoubleStat act_stb_rank = DoubleStat(config_.act_stb_energy_inc, short_desc, long_desc);
+    //         act_stb_channel.push_back(act_stb_rank);
+    //     }
+    //     act_stb_energy.push_back(act_stb_channel);
+    // }
+    InitStatsPerRank(pre_stb_energy, config_.pre_stb_energy_inc, 
+                     "pre_pd_energy", "Precharge standby energy");
+    InitStatsPerRank(pre_pd_energy, config_.pre_pd_energy_inc,
+                     "pre_pd_energy", "Precharge powerdown energy");
+    InitStatsPerRank(sref_energy, config_.sref_energy_inc, 
+                     "sref_energy", "Self-refresh energy");
     total_energy = DoubleStat(0.0, "total_energy", "(pJ) Total energy consumed");
     average_power = NonCumulativeStat ("average_power", "(mW) Average Power for all devices");
     average_bandwidth = NonCumulativeStat("average_bandwidth", "(GB/s) Average Aggregated Bandwidths");
@@ -316,10 +332,12 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&write_energy);
     stats_list.push_back(&ref_energy);
     stats_list.push_back(&refb_energy);
-    stats_list.push_back(&act_stb_energy);
-    stats_list.push_back(&pre_stb_energy);
-    stats_list.push_back(&pre_pd_energy);
-    stats_list.push_back(&sref_energy);
+
+    // push vectorized stats to list
+    PushStatsVecToList(act_stb_energy);
+    PushStatsVecToList(pre_stb_energy);
+    PushStatsVecToList(pre_pd_energy);
+    PushStatsVecToList(sref_energy);
     stats_list.push_back(&total_energy);
     stats_list.push_back(&average_power);
     stats_list.push_back(&average_bandwidth);
@@ -330,8 +348,8 @@ void Statistics::UpdatePreEpoch(uint64_t clk) {
     // this is used to calculate the stats that are dependent on other stats before each epoch print
     // like total energy, power, bandwith
     total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
-                   ref_energy.value + refb_energy.value + act_stb_energy.value + \
-                   pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
+                   ref_energy.value + refb_energy.value + Sum(act_stb_energy) + \
+                   Sum(pre_stb_energy) + Sum(pre_pd_energy) + Sum(sref_energy);
     average_power.value = (total_energy.value - total_energy.last_epoch_value) / static_cast<double>(clk - last_clk_);
     uint64_t reqs_issued;
     if (hmc_reqs_done.Count() > 0) {
@@ -360,8 +378,8 @@ void Statistics::UpdateEpoch(uint64_t clk) {
     // override the value after each update so that in the last epoch 
     // we get the overall value of these non-cumulatve stats
     total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
-                   ref_energy.value + refb_energy.value + act_stb_energy.value + \
-                   pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
+                   ref_energy.value + refb_energy.value + Sum(act_stb_energy) + 
+                   Sum(pre_stb_energy) + Sum(pre_pd_energy) + Sum(sref_energy);
     uint64_t reqs_issued;
     if (hmc_reqs_done.Count() > 0) {
         reqs_issued = hmc_reqs_done.Count();
@@ -404,6 +422,40 @@ void Statistics::PrintEpochStatsCSVFormat(std::ostream& where) const {
     }
     where << endl;
     return;
+}
+
+
+double Statistics::Sum(const std::vector<std::vector<DoubleStat>>& stats_vector) {
+    double stats_sum = 0.0;
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        for (unsigned j = 0; j < stats_vector[i].size(); j++) {
+            stats_sum += stats_vector[i][j].value;
+        }
+    }
+    return stats_sum;
+}
+
+template<class T>
+void Statistics::PushStatsVecToList(std::vector<std::vector<T>>& stats_vector) {
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        for (unsigned j = 0; j < stats_vector[i].size(); j++) {
+            stats_list.push_back(&(stats_vector[i][j]));
+        }
+    }
+}
+
+void Statistics::InitStatsPerRank(std::vector<std::vector<DoubleStat>>& stats_vector,
+                                  double inc_value, std::string stat_name, std::string stat_desc) {
+    for (unsigned i = 0; i < config_.channels; i++) {
+        std::vector<DoubleStat> channel_stats;
+        for (unsigned j = 0; j < config_.ranks; j++) {
+            std::string short_desc = stat_name + "_" + std::to_string(i) + "_" + std::to_string(j);
+            std::string long_desc = stat_desc + " of channel " + std::to_string(i) + " rank " + std::to_string(j);
+            DoubleStat rank_stat = DoubleStat(inc_value, short_desc, long_desc);
+            channel_stats.push_back(rank_stat);
+        }
+        stats_vector.push_back(channel_stats);
+    }
 }
 
 namespace dramcore {
