@@ -13,11 +13,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
                                                                                 stats_(stats),
                                                                                 sample_id(0),
                                                                                 save_clk(0),
-                                                                                time_iter0(10),
-                                                                                sref_energy_prev(0.0),
-                                                                                pre_stb_energy_prev(0.0),
-                                                                                act_stb_energy_prev(0.0),
-                                                                                pre_pd_energy_prev(0.0)
+                                                                                time_iter0(10)
 {
 
     // Initialize dimX, dimY, numP
@@ -60,9 +56,14 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     T_trans = vector<vector<double>>((numP * 3 + 1) * dimX * dimY, vector<double>(num_case, 0));
     T_final = vector<vector<double>>((numP * 3 + 1) * dimX * dimY, vector<double>(num_case, 0));
 
+    sref_energy_prev = vector<double> (num_case, 0); 
+    pre_stb_energy_prev = vector<double> (num_case, 0);
+    act_stb_energy_prev = vector<double> (num_case, 0);
+    pre_pd_energy_prev = vector<double> (num_case, 0); 
+
     InitialParameters();
 
-    refresh_count = vector<uint32_t>(config_.channels * config_.ranks, 0);
+    refresh_count = vector<vector<uint32_t> > (config_.channels * config_.ranks, vector<uint32_t> (config_.banks, 0));
     cout << "size of refresh_count is " << refresh_count.size() << endl;
 
     // Initialize the output file
@@ -131,11 +132,6 @@ void ThermalCalculator::LocationMapping(const Command &cmd, int bank0, int row0,
     //cout << "--------------------------------------\n";
 }
 
-void ThermalCalculator::DummyFunc(const Command &cmd, uint64_t clk)
-{
-    // this function is to test other functions
-}
-
 void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
 {
     int x, y, z; // 3D-dimension of the current cell
@@ -143,18 +139,19 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
     double energy;
     int row_s, ir, ib; // for refresh
     int case_id;
-    double device_scale = (double)config_.devices_per_rank;
-
-    if (config_.IsHMC() || config_.IsHBM())
-        device_scale = 1;
+    double device_scale;
 
     rank = cmd.Rank();
     channel = cmd.Channel();
 
-    if (config_.IsHMC() || config_.IsHBM())
+    if (config_.IsHMC() || config_.IsHBM()){
+        device_scale = 1; 
         case_id = 0;
-    else
+    }
+    else{
+        device_scale = (double)config_.devices_per_rank;
         case_id = channel * config_.ranks + rank;
+    }
 
     save_clk = clk;
 
@@ -162,21 +159,34 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
     {
         //cout << "rank = " << rank << "; channel = " << channel << endl;
         // update refresh_count
-        row_s = refresh_count[channel * config_.ranks + rank] * config_.numRowRefresh;
-        refresh_count[channel * config_.ranks + rank]++;
-        if (refresh_count[channel * config_.ranks + rank] * config_.numRowRefresh == config_.rows)
-            refresh_count[channel * config_.ranks + rank] = 0;
-        energy = config_.ref_energy_inc / config_.numRowRefresh;
-        for (ib = 0; ib < config_.banks; ib++)
-        {
-            for (ir = row_s; ir < row_s + config_.numRowRefresh; ir++)
-            {
+        //cout << "refresh count = " << refresh_count[channel * config_.ranks + rank][0] << "; Row " << refresh_count[channel * config_.ranks + rank][0] * config_.numRowRefresh << " ~ Row " << refresh_count[channel * config_.ranks + rank][0] * config_.numRowRefresh  + config_.numRowRefresh-1 << endl;
+        for (ib = 0; ib < config_.banks; ib ++){
+            row_s = refresh_count[channel * config_.ranks + rank][ib] * config_.numRowRefresh;
+            refresh_count[channel * config_.ranks + rank][ib] ++; 
+            if (refresh_count[channel * config_.ranks + rank][ib] * config_.numRowRefresh == config_.rows)
+                refresh_count[channel * config_.ranks + rank][ib] = 0;
+            energy = config_.ref_energy_inc / config_.numRowRefresh / config_.banks; 
+            for (ir = row_s; ir < row_s + config_.numRowRefresh; ir ++){
                 //cout << "ib = " << ib << "; ir = " << ir << endl;
                 LocationMapping(cmd, ib, ir, &x, &y, &z);
                 //cout << "x = " << x << "; y = " << y << "; z = " << z << endl;
                 accu_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000 / device_scale;
                 cur_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000 / device_scale;
             }
+        }
+    }
+    else if (cmd.cmd_type_ == CommandType::REFRESH_BANK)
+    {
+        ib = cmd.Bank(); 
+        row_s = refresh_count[channel * config_.ranks + rank][ib] * config_.numRowRefresh;
+        refresh_count[channel * config_.ranks + rank][ib] ++; 
+        if (refresh_count[channel * config_.ranks + rank][ib] * config_.numRowRefresh == config_.rows)
+            refresh_count[channel * config_.ranks + rank][ib] = 0;
+        energy = config_.refb_energy_inc / config_.numRowRefresh; 
+        for (ir = row_s; ir < row_s + config_.numRowRefresh; ir ++){
+            LocationMapping(cmd, ib, ir, &x, &y, &z);
+            accu_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000 / device_scale;
+            cur_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000 / device_scale;
         }
     }
     else
@@ -209,19 +219,44 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
     {
         //cout << "begin sampling!\n";
         // add the background energy
-        double pre_stb_sum = Statistics::Sum(stats_.pre_stb_energy);
-        double act_stb_sum = Statistics::Sum(stats_.act_stb_energy);
-        double pre_pd_sum = Statistics::Sum(stats_.pre_pd_energy);
-        double sref_sum = Statistics::Sum(stats_.sref_energy);
-        double extra_energy = sref_sum + pre_stb_sum + act_stb_sum + pre_pd_sum - sref_energy_prev - pre_stb_energy_prev - act_stb_energy_prev - pre_pd_energy_prev;
-        extra_energy = extra_energy / (dimX * dimY * numP);
-        sref_energy_prev = sref_sum;
-        pre_stb_energy_prev = pre_stb_sum;
-        act_stb_energy_prev = act_stb_sum;
-        pre_pd_energy_prev = pre_pd_sum;
-        for (int i = 0; i < dimX * dimY * numP; i++)
-            for (int j = 0; j < num_case; j++)
-                cur_Pmap[i][j] += extra_energy / 1000 / device_scale;
+        if (config_.IsHMC() || config_.IsHBM()){
+            double pre_stb_sum = Statistics::Sum(stats_.pre_stb_energy);
+            double act_stb_sum = Statistics::Sum(stats_.act_stb_energy);
+            double pre_pd_sum = Statistics::Sum(stats_.pre_pd_energy);
+            double sref_sum = Statistics::Sum(stats_.sref_energy);
+            double extra_energy = sref_sum + pre_stb_sum + act_stb_sum + pre_pd_sum - sref_energy_prev[0] - pre_stb_energy_prev[0] - act_stb_energy_prev[0] - pre_pd_energy_prev[0];
+            extra_energy = extra_energy / (dimX * dimY * numP);
+            sref_energy_prev[0] = sref_sum;
+            pre_stb_energy_prev[0] = pre_stb_sum;
+            act_stb_energy_prev[0] = act_stb_sum;
+            pre_pd_energy_prev[0] = pre_pd_sum;
+
+            for (int i = 0; i < dimX * dimY * numP; i++)
+                for (int j = 0; j < num_case; j++)
+                    cur_Pmap[i][j] += extra_energy / 1000 / device_scale;
+        }
+        else{
+            double extra_energy;
+            int case_id;  
+            for (int jch = 0; jch < config_.channels; jch ++){
+                for (int jrk = 0; jrk < config_.ranks; jrk ++){
+                    case_id = jch*config_.ranks+jrk; // case_id is determined by the channel and rank index 
+                    extra_energy = stats_.sref_energy[jch][jrk].value + stats_.pre_stb_energy[jch][jrk].value + stats_.act_stb_energy[jch][jrk].value + stats_.pre_pd_energy[jch][jrk].value - sref_energy_prev[case_id] - pre_stb_energy_prev[case_id] - act_stb_energy_prev[case_id] - pre_pd_energy_prev[case_id];
+                    extra_energy = extra_energy / (dimX * dimY * numP);
+                    sref_energy_prev[case_id] = stats_.sref_energy[jch][jrk].value;
+                    pre_stb_energy_prev[case_id] = stats_.pre_stb_energy[jch][jrk].value;
+                    act_stb_energy_prev[case_id] = stats_.act_stb_energy[jch][jrk].value;
+                    pre_pd_energy_prev[case_id] = stats_.pre_pd_energy[jch][jrk].value;
+
+                    for (int i = 0; i < dimX * dimY * numP; i ++){
+                        cur_Pmap[i][case_id] += extra_energy / 1000 / device_scale; 
+                    }
+                }
+            }
+        }
+
+
+        
 
         PrintTransPT(clk);
         cur_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(config_.ranks, 0));
@@ -251,10 +286,28 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
         device_scale = 1;
 
     // first add the background energy
-    double extra_energy = (Statistics::Sum(stats_.act_stb_energy) + Statistics::Sum(stats_.pre_stb_energy) + Statistics::Sum(stats_.sref_energy) + Statistics::Sum(stats_.pre_pd_energy)) / (dimX * dimY * numP);
-    for (int i = 0; i < dimX * dimY * numP; i++)
-        for (int j = 0; j < num_case; j++)
-            accu_Pmap[i][j] += extra_energy / 1000 / device_scale;
+    if (config_.IsHMC() || config_.IsHBM()){
+        double extra_energy = (Statistics::Sum(stats_.act_stb_energy) + Statistics::Sum(stats_.pre_stb_energy) + Statistics::Sum(stats_.sref_energy) + Statistics::Sum(stats_.pre_pd_energy)) / (dimX * dimY * numP);
+        for (int i = 0; i < dimX * dimY * numP; i++)
+            for (int j = 0; j < num_case; j++)
+                accu_Pmap[i][j] += extra_energy / 1000 / device_scale;
+    }
+    else{
+        double extra_energy; 
+        int case_id; 
+        for (int jch = 0; jch < config_.channels; jch ++){
+            for (int jrk = 0; jrk < config_.ranks; jrk ++){
+                case_id = jch*config_.ranks+jrk; // case_id is determined by the channel and rank index 
+                extra_energy = (stats_.sref_energy[jch][jrk].value + stats_.pre_stb_energy[jch][jrk].value + stats_.act_stb_energy[jch][jrk].value + stats_.pre_pd_energy[jch][jrk].value) / (dimX * dimY * numP);
+
+                for (int i = 0; i < dimX * dimY * numP; i ++){
+                    accu_Pmap[i][case_id] += extra_energy / 1000 / device_scale; 
+                }
+            }
+        }
+    }
+
+    
 
     // calculate the final temperature for each case
     double maxT;

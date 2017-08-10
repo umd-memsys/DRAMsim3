@@ -38,13 +38,14 @@ namespace dramcore{
 		vector<vector<double> > accu_Pmap; // accumulative power map  
 		vector<vector<double> > cur_Pmap; // current power map 
 
-		vector<uint32_t> refresh_count; 
+		vector<vector<uint32_t> > refresh_count; 
+										   // 
 
 		// previous background energy
-		double sref_energy_prev; 
-		double pre_stb_energy_prev; 
-		double act_stb_energy_prev; 
-		double pre_pd_energy_prev;
+		vector<double> sref_energy_prev; 
+		vector<double> pre_stb_energy_prev; 
+		vector<double> act_stb_energy_prev; 
+		vector<double> pre_pd_energy_prev;
 
 		// other intermediate parameters
 		// not need to be defined here but it will be easy to use if it is defined 
@@ -80,8 +81,6 @@ namespace dramcore{
 
 		void PrintTransPT(uint64_t clk); 
 		void PrintFinalPT(uint64_t clk); 
-
-		void DummyFunc(const Command& cmd, uint64_t clk);
 
 
 
