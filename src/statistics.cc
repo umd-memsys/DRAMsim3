@@ -277,20 +277,8 @@ Statistics::Statistics(const Config& config):
     write_energy = DoubleStat(config_.write_energy_inc, "write_energy", "WRITE energy (not including IO)");
     ref_energy = DoubleStat(config_.ref_energy_inc, "ref_energy", "Refresh energy");
     refb_energy = DoubleStat(config_.refb_energy_inc, "refb_energy", "Bank-Refresh energy");
-    // act_stb_energy = DoubleStat(config_.act_stb_energy_inc,"act_stb_energy", "Active standby energy");
-    // act_stb_energy.reserve(config_.channels);
     InitStatsPerRank(act_stb_energy, config_.act_stb_energy_inc,
                      "act_stb_energy", "Active standby energy");
-    // for (unsigned i = 0; i < config_.channels; i++) {
-    //     std::vector<DoubleStat> act_stb_channel;
-    //     for (unsigned j = 0; j < config_.ranks; j++) {
-    //         std::string short_desc = "act_stb_energy_" + std::to_string(i) + "_" + std::to_string(j);
-    //         std::string long_desc = "Active standby energy of channel " + std::to_string(i) + " rank " + std::to_string(j);
-    //         DoubleStat act_stb_rank = DoubleStat(config_.act_stb_energy_inc, short_desc, long_desc);
-    //         act_stb_channel.push_back(act_stb_rank);
-    //     }
-    //     act_stb_energy.push_back(act_stb_channel);
-    // }
     InitStatsPerRank(pre_stb_energy, config_.pre_stb_energy_inc, 
                      "pre_pd_energy", "Precharge standby energy");
     InitStatsPerRank(pre_pd_energy, config_.pre_pd_energy_inc,
