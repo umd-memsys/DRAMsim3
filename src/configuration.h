@@ -140,6 +140,7 @@ public:
     uint32_t ideal_memory_latency;
 
     // thermal simulator
+    std::string loc_mapping;
     uint32_t power_epoch_period;
     uint32_t numRowRefresh; // number of rows to be refreshed for one time
     double ChipX;

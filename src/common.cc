@@ -50,6 +50,12 @@ uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
     return static_cast<uint32_t>(store ^ addr);
 }
 
+int GetBitInPos(uint64_t bits, int pos) {
+    // given a uint64_t value get the binary value of pos-th bit
+    // from MSB to LSB indexed as 63 - 0
+    return (bits >> pos) & 1; 
+}
+
 uint32_t LogBase2(uint32_t power_of_two) {
     uint32_t i = 0;
     while( power_of_two > 1) {
@@ -58,6 +64,27 @@ uint32_t LogBase2(uint32_t power_of_two) {
     }
     return i;
 }
+
+std::vector<std::string> StringSplit(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    StringSplit(s, delim, std::back_inserter(elems));
+    return elems;
+}
+
+template<typename Out>
+void StringSplit(const std::string &s, char delim, Out result) {
+    std::stringstream ss;
+    ss.str(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        if (!item.empty()) {
+            *(result++) = item;
+        } else {
+            *(result++) = "";
+        }
+    }
+}
+
 
 void AbruptExit(const std::string& file, int line) {
     std::cerr << "Exiting Abruptly - " << file << ":" << line << endl; \

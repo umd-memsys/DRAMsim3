@@ -9,6 +9,9 @@ extern "C" double **calculate_Midx_array(double W, double Lc, int numP, int dimX
 extern "C" double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, int *CapSize);
 extern "C" double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ, double Tamb_);
 
+
+std::function<Address(const Command& cmd)> dramcore::GetPhyAddress;
+
 ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : time_iter0(10),
                                                                                 config_(config),
                                                                                 stats_(stats),
@@ -50,6 +53,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     cout << "bank_x = " << bank_x << "; bank_y = " << bank_y << endl;
     cout << "dimX = " << dimX << "; dimY = " << dimY << "; numP = " << numP << endl;
 
+    SetPhyAddressMapping();
+
     // Initialize the vectors
     accu_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(num_case, 0));
     cur_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(num_case, 0));
@@ -80,6 +85,74 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
 ThermalCalculator::~ThermalCalculator()
 {
     cout << "Print the final temperature \n";
+}
+
+void ThermalCalculator::SetPhyAddressMapping() {
+    std::string mapping_string = config_.loc_mapping;
+    int total_bits = LogBase2(config_.channel_size * config_.channels) + 20;  // 20 for MB
+    cout << "total of " << total_bits << " bits" << endl;
+    std::vector<int> mapped_pos;
+    std::vector<int> field_widths(6, 0);  // 6 fixed fields: ch-ra-ba-ro-co-by
+    mapped_pos.reserve(total_bits);
+    std::vector<std::string> bit_fields = StringSplit(mapping_string, ',');
+    for (unsigned i = 0; i < bit_fields.size(); i++) {
+        cout << "field " << i << ": " << bit_fields[i] << endl; 
+        std::vector<std::string> bit_pos = StringSplit(bit_fields[i], '-');
+        for (unsigned j = 0; j < bit_pos.size(); j++) {
+            // cout << bit_pos[j] << " ";
+            if (!bit_pos[j].empty()){
+                int pos = std::stoi(bit_pos[j]);
+                cout << pos << " ";
+                mapped_pos.push_back(pos);
+                field_widths[i] += 1;
+            }
+        }
+        cout << endl;
+    }
+
+    cout << "final mapped pos:";
+    for (unsigned i = 0; i < mapped_pos.size(); i++) {
+        cout << mapped_pos[i] << " ";
+    }
+    cout << endl;
+
+    GetPhyAddress = [mapped_pos, field_widths](const Command& cmd) {
+        // after AddressMapping, the cmd contains the address like
+        // channel-rank-bg-bank-row-col-byte but it may again be interleved 
+        // as mapped_pos indicates, so we first construct a 64-bit address as 
+        // that format and remap it to optain the new actual location
+        uint64_t new_hex = 0;
+        int pos = 0;
+        new_hex = (cmd.Channel() << pos) | new_hex;
+        pos += field_widths[0];
+        new_hex = (cmd.Rank() << pos) | new_hex;
+        pos += field_widths[1];
+        int bank = config_.banks_per_group * cmd.Bankgroup() + cmd.Bank();
+        new_hex = (bank << pos) | new_hex;
+        pos += field_widths[2];
+        new_hex = (cmd.Row() << pos) | new_hex;
+        pos += field_widths[3];
+        new_hex = (cmd.Column() << pos) | new_hex;
+        pos += field_width[4];
+        
+        // ch - ra - ba - ro - co - by
+        // TODO ignore bankgroup and bytes field here?
+        int new_pos[] = {0, 0, 0, 0, 0};
+        int field_index = 0;
+        int bits_counted = 0; 
+        for (unsigned i = 0; i < mapped_pos.size(); i++) {
+            if (bits_counted == field_widths[field_index]) {
+                bits_counted = 0;
+                field_index += 1;
+                continue;
+            } else {
+                int this_bit = GetBitInPos(new_hex, mapped_pos[i]);
+                new_pos[field_index] |= (this_bit << bits_counted); 
+            }
+        }
+        uint32_t channel, rank, bank, row, col, by = 0;
+        return Address();
+    };
 }
 
 void ThermalCalculator::LocationMapping(const Command &cmd, int bank0, int row0, int *x, int *y, int *z)

@@ -1,6 +1,7 @@
 #ifndef __THERMAL_H
 #define __THERMAL_H
 
+#include <functional>
 #include <vector>
 #include <iostream>
 #include <time.h>
@@ -16,6 +17,8 @@ using namespace std;
 
 namespace dramcore
 {
+
+extern std::function<Address(const Command& cmd)> GetPhyAddress;
 
 class ThermalCalculator
 {
@@ -58,6 +61,7 @@ class ThermalCalculator
     ofstream final_temperature_file_csv_;
 
     /* private methods */
+    void SetPhyAddressMapping();
     void LocationMapping(const Command &cmd, int bank0, int row0, int *x, int *y, int *z);
     void CalcTransT(int case_id);
     void CalcFinalT(int case_id, uint64_t clk);
