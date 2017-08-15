@@ -136,6 +136,8 @@ public:
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
     bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}
     bool IsHMC() const {return (protocol == DRAMProtocol::HMC);}
+    // yzy: add another function 
+    bool IsDDR4() const {return (protocol == DRAMProtocol::DDR4);}
 
     uint32_t ideal_memory_latency;
 
@@ -145,8 +147,13 @@ public:
     double ChipX;
     double ChipY; 
     double Tamb0; // the ambient temperature in [C]
-    uint32_t numXgrids; 
-    uint32_t numYgrids; 
+    int numXgrids; 
+    int numYgrids; 
+    int matX;
+    int matY;
+    int bank_order; // 0: x-direction priority, 1: y-direction priority
+    int bank_layer_order; // 0; low-layer priority, 1: high-layer priority
+    double bank_asr; // the aspect ratio of a bank: #row_bits / #col_bits
     std::string epoch_power_file_csv; 
     std::string epoch_temperature_file_csv;
     std::string final_power_file_csv;

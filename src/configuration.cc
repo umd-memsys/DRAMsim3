@@ -217,8 +217,37 @@ Config::Config(std::string config_file)
 
     // Thermal simulation parameters 
     power_epoch_period = static_cast<uint32_t>(reader.GetInteger("thermal", "power_epoch_period", 100000));
-    numXgrids = static_cast<uint32_t>(reader.GetInteger("thermal", "numXgrids", 1));
-    numYgrids = static_cast<uint32_t>(reader.GetInteger("thermal", "numYgrids", 1));
+    //numXgrids = static_cast<uint32_t>(reader.GetInteger("thermal", "numXgrids", 1));
+    //numYgrids = static_cast<uint32_t>(reader.GetInteger("thermal", "numYgrids", 1));
+
+    matX = static_cast<int>(reader.GetInteger("thermal", "matX", 512));
+    matY = static_cast<int>(reader.GetInteger("thermal", "matY", 512));
+    numXgrids = rows / matX;
+    if (IsGDDR()) {
+        // For GDDR5(x), each column access gives you device_width * BL bits 
+        numYgrids = columns * BL * device_width / matY;
+        bank_asr = (double) rows / (columns * BL * device_width); 
+        cout << "columns = " << columns << "; BL = " << BL << "; device_width = " << device_width << endl;
+        cout << "mul_result = " << (columns * BL * device_width) << endl;
+        cout << "rows = " << rows << "; bank_asr = " << bank_asr << endl;
+    } else if (IsHBM()) {
+        // Similar to GDDR5(x), but HBM has both BL2 and BL4, and only 1 device_width, 
+        // meaning it will have different prefetch length and burst length
+        // so we will use the prefetch length of 2 here
+        numYgrids = columns * 2 * device_width / matY;
+        bank_asr = rows / (columns * 2 * device_width); 
+    } else if (IsHMC()) {
+        // had to hard code here since it has nothing to do with the width
+        numYgrids = 256 * 8 / matY;  // 256B page size
+        bank_asr = rows / (256 * 8); 
+    } else {
+        // shift 20 bits first so that we won't have an overflow problem...
+        numYgrids = columns * device_width / matY;
+        bank_asr = rows / (columns * device_width);
+    }
+
+    bank_order = static_cast<int>(reader.GetInteger("thermal", "bank_order", 1));
+    bank_layer_order = static_cast<int>(reader.GetInteger("thermal", "bank_layer_order", 0));
     numRowRefresh = static_cast<uint32_t>(reader.GetInteger("thermal", "numRowRefresh", 2));
     ChipX = reader.GetReal("thermal", "ChipX", 0.01); 
     ChipY = reader.GetReal("thermal", "ChipY", 0.01);

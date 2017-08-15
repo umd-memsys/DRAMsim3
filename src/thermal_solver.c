@@ -172,7 +172,7 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
         for (j = 0; j < dimZ; j ++)
         {
             if ( !(TSV[i][j] = (int *)malloc((numP - 1) * sizeof(int))) )
-                printf("Malloc fails for TSV[%d][%d][]", i, j);
+                printf("Malloc fails for TSV[%d][%d][]. \n", i, j);
         }
     }
     // initialize TSV array 
@@ -208,7 +208,7 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     for (j = 0; j < dimZ; j ++)
     {
         if ( !(Rvert[i][j] = (double *)malloc((numLayer+1) * sizeof(double))) )
-            printf("Malloc fails for Rvert[%d][%d][]", i, j);
+            printf("Malloc fails for Rvert[%d][%d][]. \n", i, j);
     }
   }
   // initialize Rvert mat

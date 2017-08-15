@@ -63,6 +63,7 @@ class ThermalCalculator
     void CalcFinalT(int case_id, uint64_t clk);
     void InitialParameters();
     int square_array(int total_grids_);
+    int determineXY(double xd, double yd, int total_grids_);
     double GetMaxT(vector<vector<double>> T_, int case_id);
     void calculate_time_step();
     // print to csv-files
