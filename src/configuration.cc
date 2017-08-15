@@ -246,19 +246,7 @@ Config::Config(std::string config_file)
         bank_asr = rows / (columns * device_width);
     }
 
-    bank_order = static_cast<int>(reader.GetInteger("thermal", "bank_order", 1));
-    bank_layer_order = static_cast<int>(reader.GetInteger("thermal", "bank_layer_order", 0));
-    numRowRefresh = static_cast<uint32_t>(reader.GetInteger("thermal", "numRowRefresh", 2));
-    ChipX = reader.GetReal("thermal", "ChipX", 0.01); 
-    ChipY = reader.GetReal("thermal", "ChipY", 0.01);
-    Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
-    epoch_temperature_file_csv = reader.Get("other", "epoch_temperature_file", output_prefix + "epoch_power_temperature.csv");
-    final_temperature_file_csv = reader.Get("other", "final_temperature_file", output_prefix + "final_power_temperature.csv");
-
-
-
-
-
+    
     // for each address given, because we're transimitting trascation_size bytes per transcation
     // therefore there will be throwaway_bits not used in the address
     // part of it is due to the bytes offset, the other part is the burst len 
@@ -280,6 +268,17 @@ Config::Config(std::string config_file)
 #endif
 
     ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));
+
+    // Thermal simulation parameters 
+    loc_mapping = reader.Get("thermal", "loc_mapping", "");
+    bank_order = static_cast<int>(reader.GetInteger("thermal", "bank_order", 1));
+    bank_layer_order = static_cast<int>(reader.GetInteger("thermal", "bank_layer_order", 0));
+    numRowRefresh = static_cast<uint32_t>(reader.GetInteger("thermal", "numRowRefresh", 2));
+    ChipX = reader.GetReal("thermal", "ChipX", 0.01); 
+    ChipY = reader.GetReal("thermal", "ChipY", 0.01);
+    Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
+    epoch_temperature_file_csv = reader.Get("other", "epoch_temperature_file", output_prefix + "epoch_power_temperature.csv");
+    final_temperature_file_csv = reader.Get("other", "final_temperature_file", output_prefix + "final_power_temperature.csv");
 
 }
 

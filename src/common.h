@@ -7,6 +7,8 @@
 #include <functional>
 #include <stdint.h>
 #include <vector>
+#include <iterator>
+#include <sstream>
 
 namespace dramcore {
 
@@ -28,7 +30,12 @@ class Address {
 
 uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos);
 extern std::function<Address(uint64_t)> AddressMapping;
-// void SetAddressMapping(Config* config);
+int GetBitInPos(uint64_t bits, int pos);
+// it's 2017 and c++ std::string still lacks a split function, oh well
+std::vector<std::string> StringSplit(const std::string &s, char delim);
+template<typename Out>
+void StringSplit(const std::string &s, char delim, Out result);
+
 uint32_t LogBase2(uint32_t power_of_two);
 void AbruptExit(const std::string& file, int line);
 void callback_func(uint64_t req_id);

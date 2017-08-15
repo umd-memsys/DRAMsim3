@@ -9,6 +9,9 @@ extern "C" double **calculate_Midx_array(double W, double Lc, int numP, int dimX
 extern "C" double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, int *CapSize);
 extern "C" double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ, double Tamb_);
 
+
+std::function<Address(const Command& cmd)> dramcore::GetPhyAddress;
+
 ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : time_iter0(10),
                                                                                 config_(config),
                                                                                 stats_(stats),
@@ -56,6 +59,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     cout << "bank_x = " << bank_x << "; bank_y = " << bank_y << endl;
     cout << "dimX = " << dimX << "; dimY = " << dimY << "; numP = " << numP << endl;
 
+    SetPhyAddressMapping();
+
     // Initialize the vectors
     accu_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(num_case, 0));
     cur_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(num_case, 0));
@@ -88,21 +93,89 @@ ThermalCalculator::~ThermalCalculator()
     //cout << "Print the final temperature \n";
 }
 
+void ThermalCalculator::SetPhyAddressMapping() {
+    std::string mapping_string = config_.loc_mapping;
+    std::vector<std::string> bit_fields = StringSplit(mapping_string, ',');
+    std::vector<std::vector<int>> mapped_pos(bit_fields.size(), std::vector<int>());
+    for (unsigned i = 0; i < bit_fields.size(); i++) {
+        std::vector<std::string> bit_pos = StringSplit(bit_fields[i], '-');
+        for (unsigned j = 0; j < bit_pos.size(); j++) {
+            if (!bit_pos[j].empty()){
+                int pos = std::stoi(bit_pos[j]);
+                mapped_pos[i].push_back(pos);
+            }
+        }
+    }
+
+#ifdef DEBUG_LOC_MAPPING
+    cout << "final mapped pos:";
+    for (unsigned i = 0; i < mapped_pos.size(); i++) {
+        for (unsigned j = 0; j < mapped_pos[i].size(); j++) {
+            cout << mapped_pos[i][j] << " ";
+        }
+        cout << endl;
+    }
+    cout << endl;
+#endif // DEBUG_LOC_MAPPING
+
+    int starting_pos = config_.throwaway_bits;
+
+    GetPhyAddress = [mapped_pos, starting_pos](const Command& cmd) {
+        uint64_t new_hex = 0;
+        
+        // ch - ra - bg - ba - ro - co
+        int origin_pos[] = {cmd.Channel(), cmd.Rank(), cmd.Bankgroup(), cmd.Bank(), cmd.Row(), cmd.Column()};
+        int new_pos[] = {0, 0, 0, 0, 0, 0};
+        for (unsigned i = 0; i < mapped_pos.size(); i++) {
+            int field_width = mapped_pos[i].size();
+            for (int j = 0; j < field_width; j++){
+                int this_bit = GetBitInPos(origin_pos[i], field_width - j -1);
+                new_hex |= (this_bit << mapped_pos[i][j]);
+#ifdef DEBUG_LOC_MAPPING
+                cout << "mapping " << this_bit << " to " << mapped_pos[i][j] << endl;
+#endif  // DEBUG_LOC_MAPPING
+            }
+        }
+
+        int pos = starting_pos;
+        for (int i = mapped_pos.size() - 1; i >= 0; i--) {
+            new_pos[i] = ModuloWidth(new_hex, mapped_pos[i].size(), pos);
+            pos += mapped_pos[i].size();
+        }
+
+#ifdef DEBUG_LOC_MAPPING
+        cout << "new channel " << new_pos[0] << endl;;
+        cout << "new rank " << new_pos[1] << endl;
+        cout << "new bg " << new_pos[2] << endl;
+        cout << "new bank " << new_pos[3] << " vs old bank " << cmd.Bank() << endl;
+        cout << "new row " << new_pos[4] << " vs old row " << cmd.Row() << endl;
+        cout << "new col " << new_pos[5] << " vs old col " << cmd.Column() << endl;
+        cout << std::dec;
+#endif
+
+        return Address(new_pos[0], new_pos[1], new_pos[2], 
+                       new_pos[3], new_pos[4], new_pos[5]);
+    };
+}
+
 void ThermalCalculator::LocationMapping(const Command &cmd, int bank0, int row0, int *x, int *y, int *z)
 {
-    //cout << "Enter LocationMapping\n";
-    int row_id, bank_id, col_id = cmd.Column();
+    Address new_loc = GetPhyAddress(cmd);
+    // use new_loc.channel_ new_loc.rank_ .etc.
+    int row_id, bank_id;
+    int col_id = new_loc.column_;
+    cout << "new col " << col_id;
     int bank_id_x, bank_id_y;
-    //cout << "row0 = " << row0 << "; bank0 = " << bank0 << endl;
+
     if (row0 > -1)
         row_id = row0;
     else
-        row_id = cmd.Row();
+        row_id = new_loc.row_;
 
     if (bank0 > -1)
         bank_id = bank0;
     else
-        bank_id = cmd.Bank();
+        bank_id = new_loc.bank_;
 
     if (config_.bank_order == 1)
     {
