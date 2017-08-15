@@ -89,75 +89,74 @@ ThermalCalculator::~ThermalCalculator()
 
 void ThermalCalculator::SetPhyAddressMapping() {
     std::string mapping_string = config_.loc_mapping;
-    int total_bits = LogBase2(config_.channel_size * config_.channels) + 20;  // 20 for MB
-    cout << "total of " << total_bits << " bits" << endl;
-    std::vector<int> mapped_pos;
-    std::vector<int> field_widths(6, 0);  // 6 fixed fields: ch-ra-ba-ro-co-by
-    mapped_pos.reserve(total_bits);
     std::vector<std::string> bit_fields = StringSplit(mapping_string, ',');
+    std::vector<std::vector<int>> mapped_pos(bit_fields.size(), std::vector<int>());
     for (unsigned i = 0; i < bit_fields.size(); i++) {
-        cout << "field " << i << ": " << bit_fields[i] << endl; 
         std::vector<std::string> bit_pos = StringSplit(bit_fields[i], '-');
         for (unsigned j = 0; j < bit_pos.size(); j++) {
-            // cout << bit_pos[j] << " ";
             if (!bit_pos[j].empty()){
                 int pos = std::stoi(bit_pos[j]);
-                cout << pos << " ";
-                mapped_pos.push_back(pos);
-                field_widths[i] += 1;
+                mapped_pos[i].push_back(pos);
             }
+        }
+    }
+
+#ifdef DEBUG_LOC_MAPPING
+    cout << "final mapped pos:";
+    for (unsigned i = 0; i < mapped_pos.size(); i++) {
+        for (unsigned j = 0; j < mapped_pos[i].size(); j++) {
+            cout << mapped_pos[i][j] << " ";
         }
         cout << endl;
     }
-
-    cout << "final mapped pos:";
-    for (unsigned i = 0; i < mapped_pos.size(); i++) {
-        cout << mapped_pos[i] << " ";
-    }
     cout << endl;
+#endif // DEBUG_LOC_MAPPING
 
-    GetPhyAddress = [mapped_pos, field_widths](const Command& cmd) {
-        // after AddressMapping, the cmd contains the address like
-        // channel-rank-bg-bank-row-col-byte but it may again be interleved 
-        // as mapped_pos indicates, so we first construct a 64-bit address as 
-        // that format and remap it to optain the new actual location
+    int starting_pos = config_.throwaway_bits;
+
+    GetPhyAddress = [mapped_pos, starting_pos](const Command& cmd) {
         uint64_t new_hex = 0;
-        int pos = 0;
-        new_hex = (cmd.Channel() << pos) | new_hex;
-        pos += field_widths[0];
-        new_hex = (cmd.Rank() << pos) | new_hex;
-        pos += field_widths[1];
-        int bank = config_.banks_per_group * cmd.Bankgroup() + cmd.Bank();
-        new_hex = (bank << pos) | new_hex;
-        pos += field_widths[2];
-        new_hex = (cmd.Row() << pos) | new_hex;
-        pos += field_widths[3];
-        new_hex = (cmd.Column() << pos) | new_hex;
-        pos += field_width[4];
         
-        // ch - ra - ba - ro - co - by
-        // TODO ignore bankgroup and bytes field here?
-        int new_pos[] = {0, 0, 0, 0, 0};
-        int field_index = 0;
-        int bits_counted = 0; 
+        // ch - ra - bg - ba - ro - co
+        int origin_pos[] = {cmd.Channel(), cmd.Rank(), cmd.Bankgroup(), cmd.Bank(), cmd.Row(), cmd.Column()};
+        int new_pos[] = {0, 0, 0, 0, 0, 0};
         for (unsigned i = 0; i < mapped_pos.size(); i++) {
-            if (bits_counted == field_widths[field_index]) {
-                bits_counted = 0;
-                field_index += 1;
-                continue;
-            } else {
-                int this_bit = GetBitInPos(new_hex, mapped_pos[i]);
-                new_pos[field_index] |= (this_bit << bits_counted); 
+            int field_width = mapped_pos[i].size();
+            for (int j = 0; j < field_width; j++){
+                int this_bit = GetBitInPos(origin_pos[i], field_width - j -1);
+                new_hex |= (this_bit << mapped_pos[i][j]);
+#ifdef DEBUG_LOC_MAPPING
+                cout << "mapping " << this_bit << " to " << mapped_pos[i][j] << endl;
+#endif  // DEBUG_LOC_MAPPING
             }
         }
-        uint32_t channel, rank, bank, row, col, by = 0;
-        return Address();
+
+        int pos = starting_pos;
+        for (int i = mapped_pos.size() - 1; i >= 0; i--) {
+            new_pos[i] = ModuloWidth(new_hex, mapped_pos[i].size(), pos);
+            pos += mapped_pos[i].size();
+        }
+
+#ifdef DEBUG_LOC_MAPPING
+        cout << "new channel " << new_pos[0] << endl;;
+        cout << "new rank " << new_pos[1] << endl;
+        cout << "new bg " << new_pos[2] << endl;
+        cout << "new bank " << new_pos[3] << " vs old bank " << cmd.Bank() << endl;
+        cout << "new row " << new_pos[4] << " vs old row " << cmd.Row() << endl;
+        cout << "new col " << new_pos[5] << " vs old col " << cmd.Column() << endl;
+        cout << std::dec;
+#endif
+
+        return Address(new_pos[0], new_pos[1], new_pos[2], 
+                       new_pos[3], new_pos[4], new_pos[5]);
     };
 }
 
 void ThermalCalculator::LocationMapping(const Command &cmd, int bank0, int row0, int *x, int *y, int *z)
 {
     //cout << "Enter LocationMapping\n";
+    Address new_loc = GetPhyAddress(cmd);
+    // use new_loc.channel_ new_loc.rank_ .etc.
     int row_id, bank_id;
     if (row0 > -1)
         row_id = row0;
