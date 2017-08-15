@@ -95,6 +95,13 @@ ThermalCalculator::~ThermalCalculator()
 
 void ThermalCalculator::SetPhyAddressMapping() {
     std::string mapping_string = config_.loc_mapping;
+    if (mapping_string.empty()) {
+        // if no location mapping specified, then do not map and use default mapping...
+        GetPhyAddress = [](const Command& cmd) {
+            return Address(cmd.addr_);
+        };
+        return;
+    }
     std::vector<std::string> bit_fields = StringSplit(mapping_string, ',');
     std::vector<std::vector<int>> mapped_pos(bit_fields.size(), std::vector<int>());
     for (unsigned i = 0; i < bit_fields.size(); i++) {
@@ -164,7 +171,6 @@ void ThermalCalculator::LocationMapping(const Command &cmd, int bank0, int row0,
     // use new_loc.channel_ new_loc.rank_ .etc.
     int row_id, bank_id;
     int col_id = new_loc.column_;
-    cout << "new col " << col_id;
     int bank_id_x, bank_id_y;
 
     if (row0 > -1)
