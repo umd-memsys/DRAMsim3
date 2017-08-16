@@ -10,7 +10,7 @@ extern "C" double *calculate_Cap_array(double W, double Lc, int numP, int dimX, 
 extern "C" double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ, double Tamb_);
 
 
-std::function<Address(const Command& cmd)> dramcore::GetPhyAddress;
+std::function<Address(const Address& addr)> dramcore::GetPhyAddress;
 
 ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : time_iter0(10),
                                                                                 config_(config),
@@ -97,8 +97,8 @@ void ThermalCalculator::SetPhyAddressMapping() {
     std::string mapping_string = config_.loc_mapping;
     if (mapping_string.empty()) {
         // if no location mapping specified, then do not map and use default mapping...
-        GetPhyAddress = [](const Command& cmd) {
-            return Address(cmd.addr_);
+        GetPhyAddress = [](const Address& addr) {
+            return Address(addr);
         };
         return;
     }
@@ -127,11 +127,11 @@ void ThermalCalculator::SetPhyAddressMapping() {
 
     int starting_pos = config_.throwaway_bits;
 
-    GetPhyAddress = [mapped_pos, starting_pos](const Command& cmd) {
+    GetPhyAddress = [mapped_pos, starting_pos](const Address& addr) {
         uint64_t new_hex = 0;
         
         // ch - ra - bg - ba - ro - co
-        int origin_pos[] = {cmd.Channel(), cmd.Rank(), cmd.Bankgroup(), cmd.Bank(), cmd.Row(), cmd.Column()};
+        int origin_pos[] = {addr.channel_, addr.rank_, addr.bankgroup_, addr.bank_, addr.row_, addr.column_};
         int new_pos[] = {0, 0, 0, 0, 0, 0};
         for (unsigned i = 0; i < mapped_pos.size(); i++) {
             int field_width = mapped_pos[i].size();
@@ -154,9 +154,9 @@ void ThermalCalculator::SetPhyAddressMapping() {
         cout << "new channel " << new_pos[0] << endl;;
         cout << "new rank " << new_pos[1] << endl;
         cout << "new bg " << new_pos[2] << endl;
-        cout << "new bank " << new_pos[3] << " vs old bank " << cmd.Bank() << endl;
-        cout << "new row " << new_pos[4] << " vs old row " << cmd.Row() << endl;
-        cout << "new col " << new_pos[5] << " vs old col " << cmd.Column() << endl;
+        cout << "new bank " << new_pos[3] << " vs old bank " << addr.bank_ << endl;
+        cout << "new row " << new_pos[4] << " vs old row " << addr.row_ << endl;
+        cout << "new col " << new_pos[5] << " vs old col " << addr.colum << endl;
         cout << std::dec;
 #endif
 
@@ -167,7 +167,7 @@ void ThermalCalculator::SetPhyAddressMapping() {
 
 void ThermalCalculator::LocationMapping(const Command &cmd, int bank0, int row0, int *x, int *y, int *z)
 {
-    Address new_loc = GetPhyAddress(cmd);
+    Address new_loc = GetPhyAddress(cmd.addr_);
     // use new_loc.channel_ new_loc.rank_ .etc.
     int row_id, bank_id;
     int col_id = new_loc.column_;

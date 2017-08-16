@@ -18,7 +18,7 @@ using namespace std;
 namespace dramcore
 {
 
-extern std::function<Address(const Command& cmd)> GetPhyAddress;
+extern std::function<Address(const Address& addr)> GetPhyAddress;
 
 class ThermalCalculator
 {
