@@ -163,6 +163,7 @@ public:
 
 private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
+    void ProtocolAdjust();
     void CalculateSize();
     void SetAddressMapping();
 };

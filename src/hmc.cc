@@ -245,11 +245,6 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<v
     logic_clk_(0),
     next_link_(0)
 {
-    ptr_config_ = new Config(config_file);
-    ptr_timing_ = new Timing(*ptr_config_);
-    ptr_stats_ = new Statistics(*ptr_config_);
-    ptr_thermCal_ = new ThermalCalculator(*ptr_config_, *ptr_stats_);
-
     // sanity check, this constructor should only be intialized using HMC
     if (!ptr_config_->IsHMC()) {
         cerr << "Initialzed an HMC system without an HMC config file!" << endl;
