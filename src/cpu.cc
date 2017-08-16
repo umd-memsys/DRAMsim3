@@ -23,9 +23,9 @@ void RandomCPU::ClockTick() {
     // and is also immune to address mapping and scheduling policies
     clk_++;
     if (get_next_) {
-        last_addr_ = rand();
+        last_addr_ = gen();
     }
-    bool is_write = (rand() % 3 == 0);  // R/W ratio 2:1
+    bool is_write = (gen() % 3 == 0);  // R/W ratio 2:1
     get_next_ = memory_system_.InsertReq(last_addr_, is_write);
     return;
 }
