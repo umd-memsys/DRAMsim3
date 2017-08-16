@@ -2,6 +2,7 @@
 #define __CPU_H
 
 #include <fstream>
+#include <random>
 #include <vector>
 #include "controller.h"
 #include "common.h"
@@ -25,6 +26,7 @@ public:
     void ClockTick() override ;
 private:
     uint64_t last_addr_;
+    std::mt19937_64 gen;
     bool get_next_ = true;
 };
 
