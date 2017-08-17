@@ -1,32 +1,26 @@
 #ifndef THERMALCONFIG_H
 #define THERMALCONFIG_H
 
-extern double T0;
-extern double Tamb;
+static double T0 = 273.15; // [C]
 
-extern double ChipX;
-extern double ChipZ;
-extern double R_TSV;
+static double R_TSV = 5e-6; // [m]
 
 /* Thermal conductance */
-extern double Ksi;
-extern double Kcu;
-extern double Kin;
-extern double Khs; 
+static double Ksi = 148.0; // Silicon
+static double Kcu = 401.0; // Copper
+static double Kin = 1.5;  // insulator 
+static double Khs = 5.0; // Heat sink 
 
 /* Thermal capacitance */
-extern double Csi;
-extern double Ccu;
-extern double Cin;
-extern double Chs;
+static double Csi = 1.66e6; // Silicon
+static double Ccu = 3.2e6; // Copper 
+static double Cin = 1.65e6; // insulator 
+static double Chs = 2.42e6; // Heat sink 
 
 /* Layer Hight */
-extern double Hsi;
-extern double Hcu;
-extern double Hin;
-extern double Hhs;
-
-/* trasient control parameters */
-extern int TimeIter0;
+static double Hsi = 400e-6; // Silicon 
+static double Hcu = 5e-6; // Copper 
+static double Hin = 20e-6; // Insulator 
+static double Hhs = 1000e-6; // Heat sink 
 
 #endif

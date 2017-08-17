@@ -346,6 +346,10 @@ void Config::SetAddressMapping() {
     bank_width = LogBase2(banks_per_group);
     row_width = LogBase2(rows);
     column_width = LogBase2(columns);
+    // add BL bits for GDDR
+    if (IsGDDR()) {
+        column_width += LogBase2(BL);  
+    }
     uint32_t bytes_offset = LogBase2(bus_width / 8);
     request_size_bytes = bus_width / 8 * BL;  // transaction size in bytes
     // for each address given, because we're transimitting trascation_size bytes per transcation
