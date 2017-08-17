@@ -63,6 +63,9 @@ class ThermalCalculator
     /* private methods */
     void SetPhyAddressMapping();
     void LocationMapping(const Command &cmd, int bank0, int row0, int *x, int *y, int *z);
+    void LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0, int caseID_, double add_energy);
+    void LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0, int caseID_, double add_energy);
+
     void CalcTransT(int case_id);
     void CalcFinalT(int case_id, uint64_t clk);
     void InitialParameters();

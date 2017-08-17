@@ -58,6 +58,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     cout << "vault_x = " << vault_x << "; vault_y = " << vault_y << endl;
     cout << "bank_x = " << bank_x << "; bank_y = " << bank_y << endl;
     cout << "dimX = " << dimX << "; dimY = " << dimY << "; numP = " << numP << endl;
+    cout << "number of devices is " << config_.devices_per_rank << endl;
 
     SetPhyAddressMapping();
 
@@ -164,6 +165,311 @@ void ThermalCalculator::SetPhyAddressMapping() {
                        new_pos[3], new_pos[4], new_pos[5]);
     };
 }
+
+void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0, int caseID_, double add_energy)
+{
+    int row_id, bank_id, col_id;
+    Address temp_addr = Address(cmd.addr_);
+    Address new_loc;
+    int bank_id_x, bank_id_y, grid_id_x, grid_id_y;
+    int x, y, z; 
+
+    if (row0 > -1)
+        row_id = row0;
+    else
+        row_id = cmd.Row();
+
+    if (bank0 > -1)
+        bank_id = bank0;
+    else
+        bank_id = cmd.Bank();
+
+    if (config_.bank_order == 1)
+    {
+        // y-direction priority
+        
+        if (config_.IsHMC() || config_.IsHBM())
+        {
+            int vault_id = cmd.Channel();
+            int vault_id_x = vault_id / vault_y;
+            int vault_id_y = vault_id % vault_y;
+            int num_bank_per_layer = config_.banks / config_.num_dies;
+            if (config_.bank_layer_order == 0)
+                z = bank_id / num_bank_per_layer;
+            else
+                z = numP - bank_id / num_bank_per_layer - 1; 
+            int bank_same_layer = bank_id % num_bank_per_layer;
+            bank_id_x = bank_same_layer / bank_y;
+            bank_id_y = bank_same_layer % bank_y;
+            grid_id_x = row_id / config_.matX; 
+
+            for (int i = 0; i < config_.BL; i ++)
+            {
+                new_loc = GetPhyAddress(temp_addr);
+                col_id = new_loc.column_;
+                grid_id_y = col_id / config_.matY;
+                x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
+                y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
+
+                accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+                cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+                temp_addr.column_ ++; 
+            }
+
+            //cout << "col_id = " << col_id << endl;
+            //cout << "bank:(" << bank_x << ", " << bank_y << "); bank_id:(" << bank_id_x << ", " << bank_id_y << ")\n";
+            //cout << "grid_id:(" << grid_id_x << ", " << grid_id_y << ")\n";
+            //cout << "(" << *x << ", " << *y << ")\n";
+        }
+        else
+        {
+            z = 0;
+            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+            {
+                int bank_group_id = bank_id / config_.banks_per_group; 
+                int sub_bank_id = bank_id % config_.banks_per_group; 
+                bank_id_x = sub_bank_id / 2; 
+                bank_id_y = sub_bank_id % 2; 
+                if (bank_x <= bank_y)
+                    bank_id_y += bank_group_id * 2; 
+                else
+                    bank_id_x += bank_group_id * 2; 
+            }
+            else
+            {
+                bank_id_x = bank_id / bank_y;
+                bank_id_y = bank_id % bank_y;
+            }
+            
+            grid_id_x = row_id / config_.matX; 
+
+            for (int i = 0; i < config_.BL; i ++)
+            {
+                new_loc = GetPhyAddress(temp_addr);
+                col_id = new_loc.column_;
+                
+                grid_id_y = col_id / config_.matY;
+                x = bank_id_x * config_.numXgrids + grid_id_x;
+                y = bank_id_y * config_.numYgrids + grid_id_y; 
+
+                if (temp_addr.column_ < 0){
+                    cout << "column_ = " << temp_addr.column_ << ", col_id = " << col_id << "\t";
+                    cout << "( " << x << " , " << y << " )\n"; 
+                }
+
+                accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+                cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+                temp_addr.column_ ++; 
+            }
+            //cout << "cmd.Row() = " << cmd.Row() << "; cmd.Column() = " << endl;
+            //cout << "bank_id = " << bank_id << "; row_id = " << row_id << "; col_id = " << col_id << endl;
+            //cout << "(" << *x << ", " << *y << ")\n";
+        }
+
+    }
+    else
+    {
+        // x-direction priority
+        if (config_.IsHMC() || config_.IsHBM())
+        {
+            int vault_id = cmd.Channel();
+            int vault_id_y = vault_id / vault_x;
+            int vault_id_x = vault_id % vault_x;
+            int num_bank_per_layer = config_.banks / config_.num_dies;
+            if (config_.bank_layer_order == 0)
+                z = bank_id / num_bank_per_layer;
+            else
+                z = numP - bank_id / num_bank_per_layer - 1; 
+            int bank_same_layer = bank_id % num_bank_per_layer;
+            bank_id_y = bank_same_layer / bank_x;
+            bank_id_x = bank_same_layer % bank_x;
+            grid_id_x = row_id / config_.matX;
+
+            for (int i = 0; i < config_.BL; i ++)
+            {
+                new_loc = GetPhyAddress(temp_addr);
+                col_id = new_loc.column_;
+                grid_id_y = col_id / config_.matY;
+                x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
+                y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
+
+                accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+                cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+                temp_addr.column_ ++; 
+            }
+        }
+        else
+        {
+            z = 0;
+            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+            {
+                int bank_group_id = bank_id / config_.banks_per_group; 
+                int sub_bank_id = bank_id % config_.banks_per_group; 
+                bank_id_y = sub_bank_id / 2; 
+                bank_id_x = sub_bank_id % 2; 
+                if (bank_x <= bank_y){
+                    bank_id_y += bank_group_id * 2; 
+                }
+                else{
+                    bank_id_x += bank_group_id * 2; 
+                }
+            }
+            else
+            {
+                bank_id_y = bank_id / bank_x;
+                bank_id_x = bank_id % bank_x;
+            }
+            grid_id_x = row_id / config_.matX; 
+
+
+            for (int i = 0; i < config_.BL; i ++)
+            {
+                new_loc = GetPhyAddress(temp_addr);
+                col_id = new_loc.column_;
+                grid_id_y = col_id / config_.matY;
+                x = bank_id_x * config_.numXgrids + grid_id_x;
+                y = bank_id_y * config_.numYgrids + grid_id_y;
+
+                accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+                cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+                temp_addr.column_ ++; 
+            }
+            //cout << "bank_id = " << bank_id << "; row_id = " << row_id << endl;
+            //cout << "(" << *x << ", " << *y << ")\n";
+        }
+    }
+}
+
+
+void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0, int caseID_, double add_energy)
+{
+    int row_id, bank_id;
+    int col_id = 0;
+    int bank_id_x, bank_id_y;
+    int x, y, z;
+
+    if (row0 > -1)
+        row_id = row0;
+    else
+        row_id = cmd.Row();
+
+    if (bank0 > -1)
+        bank_id = bank0;
+    else
+        bank_id = cmd.Bank();
+
+    if (config_.bank_order == 1)
+    {
+        // y-direction priority
+        
+        if (config_.IsHMC() || config_.IsHBM())
+        {
+            int vault_id = cmd.Channel();
+            int vault_id_x = vault_id / vault_y;
+            int vault_id_y = vault_id % vault_y;
+            int num_bank_per_layer = config_.banks / config_.num_dies;
+            if (config_.bank_layer_order == 0)
+                z = bank_id / num_bank_per_layer;
+            else
+                z = numP - bank_id / num_bank_per_layer - 1; 
+            int bank_same_layer = bank_id % num_bank_per_layer;
+            bank_id_x = bank_same_layer / bank_y;
+            bank_id_y = bank_same_layer % bank_y;
+            int grid_id_x = row_id / config_.matX; 
+            int grid_id_y = col_id / config_.matY; 
+            x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
+            y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
+        }
+        else
+        {
+            z = 0;
+            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+            {
+                int bank_group_id = bank_id / config_.banks_per_group; 
+                int sub_bank_id = bank_id % config_.banks_per_group; 
+                bank_id_x = sub_bank_id / 2; 
+                bank_id_y = sub_bank_id % 2; 
+                if (bank_x <= bank_y)
+                    bank_id_y += bank_group_id * 2; 
+                else
+                    bank_id_x += bank_group_id * 2; 
+            }
+            else
+            {
+                bank_id_x = bank_id / bank_y;
+                bank_id_y = bank_id % bank_y;
+            }
+            
+            int grid_id_x = row_id / config_.matX; 
+            int grid_id_y = col_id / config_.matY; 
+            x = bank_id_x * config_.numXgrids + grid_id_x;
+            y = bank_id_y * config_.numYgrids + grid_id_y;
+        }
+
+    }
+    else
+    {
+        // x-direction priority
+        if (config_.IsHMC() || config_.IsHBM())
+        {
+            int vault_id = cmd.Channel();
+            int vault_id_y = vault_id / vault_x;
+            int vault_id_x = vault_id % vault_x;
+            int num_bank_per_layer = config_.banks / config_.num_dies;
+            if (config_.bank_layer_order == 0)
+                z = bank_id / num_bank_per_layer;
+            else
+                z = numP - bank_id / num_bank_per_layer - 1; 
+            int bank_same_layer = bank_id % num_bank_per_layer;
+            bank_id_y = bank_same_layer / bank_x;
+            bank_id_x = bank_same_layer % bank_x;
+            int grid_id_x = row_id / config_.matX; 
+            int grid_id_y = col_id / config_.matY; 
+            x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
+            y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
+        }
+        else
+        {
+            z = 0;
+            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+            {
+                int bank_group_id = bank_id / config_.banks_per_group; 
+                int sub_bank_id = bank_id % config_.banks_per_group; 
+                bank_id_y = sub_bank_id / 2; 
+                bank_id_x = sub_bank_id % 2; 
+                if (bank_x <= bank_y){
+                    bank_id_y += bank_group_id * 2; 
+                }
+                else{
+                    bank_id_x += bank_group_id * 2; 
+                }
+            }
+            else
+            {
+                bank_id_y = bank_id / bank_x;
+                bank_id_x = bank_id % bank_x;
+            }
+            int grid_id_x = row_id / config_.matX; 
+            int grid_id_y = col_id / config_.matY; 
+            x = bank_id_x * config_.numXgrids + grid_id_x;
+            y = bank_id_y * config_.numYgrids + grid_id_y;
+            //cout << "bank_id = " << bank_id << "; row_id = " << row_id << endl;
+            //cout << "(" << *x << ", " << *y << ")\n";
+        }
+    }
+
+    // y is the baseline y
+    for (int i = 0; i < config_.numYgrids; i ++)
+    {
+        //cout << "y = " << y << endl;
+        accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+        cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
+        y ++;
+    }
+
+}
+
+
 
 void ThermalCalculator::LocationMapping(const Command &cmd, int bank0, int row0, int *x, int *y, int *z)
 {
@@ -329,13 +635,9 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
             refresh_count[channel * config_.ranks + rank][ib] ++; 
             if (refresh_count[channel * config_.ranks + rank][ib] * config_.numRowRefresh == config_.rows)
                 refresh_count[channel * config_.ranks + rank][ib] = 0;
-            energy = config_.ref_energy_inc / config_.numRowRefresh / config_.banks; 
+            energy = config_.ref_energy_inc / config_.numRowRefresh / config_.banks / config_.numYgrids; 
             for (ir = row_s; ir < row_s + config_.numRowRefresh; ir ++){
-                //cout << "ib = " << ib << "; ir = " << ir << endl;
-                LocationMapping(cmd, ib, ir, &x, &y, &z);
-                //cout << "x = " << x << "; y = " << y << "; z = " << z << endl;
-                accu_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
-                cur_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
+                //LocationMappingANDaddEnergy_RF(cmd, ib, ir, case_id, energy / 1000.0 / device_scale);
             }
         }
     }
@@ -347,11 +649,9 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
         refresh_count[channel * config_.ranks + rank][ib] ++; 
         if (refresh_count[channel * config_.ranks + rank][ib] * config_.numRowRefresh == config_.rows)
             refresh_count[channel * config_.ranks + rank][ib] = 0;
-        energy = config_.refb_energy_inc / config_.numRowRefresh; 
+        energy = config_.refb_energy_inc / config_.numRowRefresh / config_.numYgrids; 
         for (ir = row_s; ir < row_s + config_.numRowRefresh; ir ++){
-            LocationMapping(cmd, ib, ir, &x, &y, &z);
-            accu_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
-            cur_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
+            //LocationMappingANDaddEnergy_RF(cmd, ib, ir, case_id, energy / 1000.0 / device_scale);
         }
     }
     else
@@ -362,14 +662,17 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
         switch (cmd.cmd_type_)
         {
         case CommandType::ACTIVATE:
+            cout << "ACTIVATE\n"; 
             energy = config_.act_energy_inc;
             break;
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
+            cout << "READ\n";
             energy = config_.read_energy_inc;
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
+            cout << "WRITE\n";
             energy = config_.write_energy_inc;
             break;
         default:
@@ -377,9 +680,11 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
             //cout << "Error: CommandType is " << cmd.cmd_type_ << endl;
             break;
         }
-        LocationMapping(cmd, -1, -1, &x, &y, &z);
-        accu_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
-        cur_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
+        energy /= config_.BL;
+        LocationMappingANDaddEnergy(cmd, -1, -1, case_id, energy / 1000.0 / device_scale);
+        //LocationMapping(cmd, -1, -1, &x, &y, &z);
+        //accu_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
+        //cur_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
     }
 
     //cout << "Finish UpdatePower()\n";
@@ -452,6 +757,7 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
     if (config_.IsHMC() || config_.IsHBM())
         device_scale = 1;
 
+    /*
     // first add the background energy
     if (config_.IsHMC() || config_.IsHBM()){
         double extra_energy = (Statistics::Sum(stats_.act_stb_energy) + Statistics::Sum(stats_.pre_stb_energy) + Statistics::Sum(stats_.sref_energy) + Statistics::Sum(stats_.pre_pd_energy)) / (dimX * dimY * numP);
@@ -478,7 +784,7 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
             }
         }
     }
-
+    */
     
 
     // calculate the final temperature for each case
