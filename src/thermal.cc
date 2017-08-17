@@ -252,11 +252,6 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 x = bank_id_x * config_.numXgrids + grid_id_x;
                 y = bank_id_y * config_.numYgrids + grid_id_y; 
 
-                if (temp_addr.column_ < 0){
-                    cout << "column_ = " << temp_addr.column_ << ", col_id = " << col_id << "\t";
-                    cout << "( " << x << " , " << y << " )\n"; 
-                }
-
                 accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
                 cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
                 temp_addr.column_ ++; 
