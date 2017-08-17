@@ -188,6 +188,12 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
     else
         bank_id = cmd.Bank();
 
+    // modify the bank-id if there exists bank groups 
+    if (config_.bankgroups > 1)
+    {
+        bank_id += cmd.Bankgroup() * config_.banks_per_group;
+    }
+
     if (config_.bank_order == 1)
     {
         // y-direction priority
@@ -1083,7 +1089,7 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
         }
         else
         {
-            csvfile << "bank_id,start_x,end_x,start_y,end_y,z" << endl;
+            csvfile << "vault_id,bank_id,start_x,end_x,start_y,end_y,z" << endl;
             z = 0;
             for (bank_id = 0; bank_id < config_.banks; bank_id ++){
                 if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
@@ -1107,7 +1113,7 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
                 end_x = (bank_id_x + 1) * config_.numXgrids - 1; 
                 start_y = bank_id_y * config_.numYgrids;
                 end_y = (bank_id_y + 1) * config_.numYgrids - 1;
-                csvfile << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
+                csvfile << "0," << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
             }
         }
 
@@ -1141,7 +1147,7 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
         }
         else
         {
-            csvfile << "bank_id,start_x,end_x,start_y,end_y,z" << endl;
+            csvfile << "vault_id,bank_id,start_x,end_x,start_y,end_y,z" << endl;
             z = 0;
             for (bank_id = 0; bank_id < config_.banks; bank_id ++){
                 if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
@@ -1167,7 +1173,7 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
                 end_x = (bank_id_x + 1) * config_.numXgrids - 1; 
                 start_y = bank_id_y * config_.numYgrids;
                 end_y = (bank_id_y + 1) * config_.numYgrids - 1;
-                csvfile << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
+                csvfile << "0," << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
             }
         }
     }
