@@ -59,6 +59,7 @@ class ThermalCalculator
     // Output files
     ofstream epoch_temperature_file_csv_;
     ofstream final_temperature_file_csv_;
+    ofstream bank_position_csv_;
 
     /* private methods */
     void SetPhyAddressMapping();
@@ -78,6 +79,7 @@ class ThermalCalculator
     void PrintCSV_final(ofstream &csvfile, vector<vector<double>> P_, vector<vector<double>> T_, int id, uint64_t scale);
     void PrintCSVHeader_trans(ofstream &csvfile);
     void PrintCSVHeader_final(ofstream &csvfile);
+    void PrintCSV_bank(ofstream &csvfile);
 
   public:
     ThermalCalculator(const Config &config, Statistics &stats);

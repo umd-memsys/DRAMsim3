@@ -159,6 +159,7 @@ public:
     std::string epoch_temperature_file_csv;
     std::string final_power_file_csv;
     std::string final_temperature_file_csv;
+    std::string bank_position_csv;
 
 
 private:
