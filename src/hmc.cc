@@ -315,10 +315,10 @@ void HMCMemorySystem::SetClockRatio() {
 
     clk_tick_product_ = dram_clk_ticks_ * logic_clk_ticks_;
     
-// #ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
     cout << "HMC Logic clock speed " << dram_clk_ticks_ << endl;
     cout << "HMC DRAM clock speed " << logic_clk_ticks_ << endl;
-// #endif
+#endif
 
     return;
 }
@@ -515,9 +515,6 @@ void HMCMemorySystem::ClockTick() {
                 dram_ran = true;
             }
             LogicClockTickPost();
-#ifdef DEBUG_HMC
-            ptr_stats_->logic_clk++;
-#endif // DEBUG_HMC
             logic_clk_ ++;
         }
         ref_tick_ ++;

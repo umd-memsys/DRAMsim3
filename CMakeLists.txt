@@ -17,11 +17,6 @@ if (DEBUG_POWER)
         add_definitions(-DDEBUG_POWER)
 endif  (DEBUG_POWER)
 
-if (DEBUG_HMC)
-        message("Adding DEBUG_HMC definition...")
-        add_definitions(-DDEBUG_HMC)
-endif (DEBUG_HMC)
-
 if (THERMAL)
         message("Adding thermal module...")
         add_definitions(-DTHERMAL)
