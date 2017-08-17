@@ -662,17 +662,14 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
         switch (cmd.cmd_type_)
         {
         case CommandType::ACTIVATE:
-            cout << "ACTIVATE\n"; 
             energy = config_.act_energy_inc;
             break;
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
-            cout << "READ\n";
             energy = config_.read_energy_inc;
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
-            cout << "WRITE\n";
             energy = config_.write_energy_inc;
             break;
         default:
