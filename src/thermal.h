@@ -11,7 +11,7 @@
 #include "bankstate.h"
 #include "timing.h"
 #include "configuration.h"
-#include "ThermalConfig.h"
+#include "thermal_config.h"
 
 using namespace std;
 

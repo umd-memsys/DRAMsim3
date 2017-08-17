@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <stdio.h>
-#include "ThermalConfig.h"
+#include "thermal_config.h"
 
 //#define DEBUG
 //#define DEBUGMIDX
