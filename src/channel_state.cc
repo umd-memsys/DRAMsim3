@@ -62,10 +62,11 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
             for(auto j = 0; j < config_.bankgroups; j++) {
                 for(auto k = 0; k < config_.banks_per_group; k++) {
                     CommandType required_cmd_type = bank_states_[cmd.Rank()][j][k]->GetRequiredCommandType(cmd);
-                    if( required_cmd_type != cmd.cmd_type_) {
+                    if( required_cmd_type != cmd.cmd_type_) {  // precharge
                         auto addr = Address(cmd.addr_);
                         addr.bankgroup_ = j;
                         addr.bank_ = k;
+                        addr.row_ = bank_states_[cmd.Rank()][j][k]->OpenRow();
                         return Command(required_cmd_type, addr);
                     }
                 }
