@@ -167,14 +167,14 @@ Config::Config(std::string config_file)
     numXgrids = rows / matX;
     if (IsGDDR()) {
         // For GDDR5(x), each column access gives you device_width * BL bits 
-        numYgrids = columns * BL * device_width / matY;
-        bank_asr = (double) rows / (columns * BL * device_width); 
+        numYgrids = columns * device_width / matY;
+        bank_asr = (double) rows / (columns * device_width); 
     } else if (IsHBM()) {
         // Similar to GDDR5(x), but HBM has both BL2 and BL4, and only 1 device_width, 
         // meaning it will have different prefetch length and burst length
         // so we will use the prefetch length of 2 here
-        numYgrids = columns * 2 * device_width / matY;
-        bank_asr = (double)rows / (columns * 2 * device_width); 
+        numYgrids = columns * device_width / matY;
+        bank_asr = (double)rows / (columns * device_width); 
     } else if (IsHMC()) {
         // had to hard code here since it has nothing to do with the width
         numYgrids = 256 * 8 / matY;  // 256B page size

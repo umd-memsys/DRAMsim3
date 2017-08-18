@@ -31,7 +31,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
             bank_x = 1;  bank_y = 2; 
         }
         else{
-            bank_x = 1; bank_y = 4;
+            bank_x = 2; bank_y = 2;
         }
         xd = bank_x * config_.bank_asr; 
         yd = bank_y * 1.0; 
@@ -222,8 +222,8 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
             {
                 new_loc = GetPhyAddress(temp_addr);
                 col_id = new_loc.column_ * config_.device_width;
-                cout << " column = " << temp_addr.column_;
-                cout << " col_id = " << col_id << endl;
+                //cout << " column = " << temp_addr.column_;
+                //cout << " col_id = " << col_id << endl;
                 for (int j = 0; j < config_.device_width; j ++){
                     grid_id_y = col_id / config_.matY;
                     x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
