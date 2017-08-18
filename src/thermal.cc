@@ -27,7 +27,12 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     {
         double xd, yd; 
         numP = config_.num_dies;
-        bank_x = 1;  bank_y = 2; 
+        if (config_.IsHMC()){
+            bank_x = 1;  bank_y = 2; 
+        }
+        else{
+            bank_x = 1; bank_y = 4;
+        }
         xd = bank_x * config_.bank_asr; 
         yd = bank_y * 1.0; 
         vault_x = determineXY(xd, yd, config_.channels); 
@@ -217,11 +222,14 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
             {
                 new_loc = GetPhyAddress(temp_addr);
                 col_id = new_loc.column_ * config_.device_width;
+                cout << " column = " << temp_addr.column_;
+                cout << " col_id = " << col_id << endl;
                 for (int j = 0; j < config_.device_width; j ++){
                     grid_id_y = col_id / config_.matY;
                     x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
                     y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
 
+                    //cout << "\tx = " << x << "; y = " << y << endl;
                     accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy / config_.device_width;
                     cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy / config_.device_width;
                     col_id ++;
@@ -230,7 +238,6 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 temp_addr.column_ ++; 
             }
 
-            //cout << "col_id = " << col_id << endl;
             //cout << "bank:(" << bank_x << ", " << bank_y << "); bank_id:(" << bank_id_x << ", " << bank_id_y << ")\n";
             //cout << "grid_id:(" << grid_id_x << ", " << grid_id_y << ")\n";
             //cout << "(" << *x << ", " << *y << ")\n";
@@ -305,6 +312,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                     grid_id_y = col_id / config_.matY;
                     x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
                     y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
+
 
                     accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy / config_.device_width;
                     cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy / config_.device_width;
@@ -399,6 +407,17 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
             int grid_id_y = col_id / config_.matY; 
             x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
             y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
+            
+            /*
+            cout << " bank_save_layer = " << bank_same_layer;
+            cout << " numXgrids = " << config_.numXgrids; 
+            cout << " bank_x = " << bank_x; 
+            cout << " vault_x = " << vault_x; 
+            cout << " vault_id = " << vault_id;
+            cout << " vault_id_x = " << vault_id_x; 
+            cout << " bank_id_x = " << bank_id_x; 
+            cout << " grid_id_x = " << grid_id_x;
+            cout << " x = " << x << endl;*/
         }
         else
         {
@@ -482,6 +501,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
     for (int i = 0; i < config_.numYgrids; i ++)
     {
         //cout << "y = " << y << endl;
+        
         accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
         cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
         y ++;
@@ -682,14 +702,17 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
         switch (cmd.cmd_type_)
         {
         case CommandType::ACTIVATE:
+            //cout << "ACTIVATE\n";
             energy = config_.act_energy_inc;
             break;
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
+            //cout << "READ\n";
             energy = config_.read_energy_inc;
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
+            //cout << "WRITE\n";
             energy = config_.write_energy_inc;
             break;
         default:

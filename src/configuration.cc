@@ -169,23 +169,20 @@ Config::Config(std::string config_file)
         // For GDDR5(x), each column access gives you device_width * BL bits 
         numYgrids = columns * BL * device_width / matY;
         bank_asr = (double) rows / (columns * BL * device_width); 
-        cout << "columns = " << columns << "; BL = " << BL << "; device_width = " << device_width << endl;
-        cout << "mul_result = " << (columns * BL * device_width) << endl;
-        cout << "rows = " << rows << "; bank_asr = " << bank_asr << endl;
     } else if (IsHBM()) {
         // Similar to GDDR5(x), but HBM has both BL2 and BL4, and only 1 device_width, 
         // meaning it will have different prefetch length and burst length
         // so we will use the prefetch length of 2 here
         numYgrids = columns * 2 * device_width / matY;
-        bank_asr = rows / (columns * 2 * device_width); 
+        bank_asr = (double)rows / (columns * 2 * device_width); 
     } else if (IsHMC()) {
         // had to hard code here since it has nothing to do with the width
         numYgrids = 256 * 8 / matY;  // 256B page size
-        bank_asr = rows / (256 * 8); 
+        bank_asr = (double)rows / (256 * 8); 
     } else {
         // shift 20 bits first so that we won't have an overflow problem...
         numYgrids = columns * device_width / matY;
-        bank_asr = rows / (columns * device_width);
+        bank_asr = (double)rows / (columns * device_width);
     }
 
     ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));

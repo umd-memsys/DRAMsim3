@@ -2,7 +2,7 @@ close all
 clear
 clc
 
-mem = 'ddr4'; 
+mem = 'hbm'; 
 
 data = csvread(['./build/' mem '-output-final_power_temperature.csv'], 1, 0);
 pos = csvread(['./build/' mem '-output-bank_position.csv'], 1, 0); 
