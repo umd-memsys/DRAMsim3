@@ -44,20 +44,16 @@ Config::Config(std::string config_file)
     columns = static_cast<uint32_t>(reader.GetInteger("dram_structure", "columns", 1 << 10));
     device_width = static_cast<uint32_t>(reader.GetInteger("dram_structure", "device_width", 8));
     BL = static_cast<uint32_t>(reader.GetInteger("dram_structure", "BL", 8));
+    num_dies = static_cast<unsigned int>(reader.GetInteger("dram_structure", "num_dies", 1));
 
     // HMC Specific parameters
     num_links = static_cast<unsigned int>(reader.GetInteger("hmc", "num_links", 4));
-    num_dies = static_cast<unsigned int>(reader.GetInteger("hmc", "num_dies", 8));
     link_width = static_cast<unsigned int>(reader.GetInteger("hmc", "link_width", 16));
     link_speed = static_cast<unsigned int>(reader.GetInteger("hmc", "link_speed", 30));
     block_size = static_cast<unsigned int>(reader.GetInteger("hmc", "block_size", 32));
     xbar_queue_depth = static_cast<unsigned int>(reader.GetInteger("hmc", "xbar_queue_depth", 16));
     
     ProtocolAdjust();
-    if (IsHMC()) {  // need to do sanity check and overwrite some values...
-        
-
-    }
     
     // calculate rank and re-calculate channel_size
     CalculateSize();
@@ -286,6 +282,12 @@ void Config::ProtocolAdjust() {
         }
         bankgroups = 1;
         banks_per_group = banks;
+    } else if (IsHBM()) {
+        // HBM is more flexible layout 
+        if (num_dies != 2 && num_dies != 4 && num_dies !=8) {
+            cerr << "HBM die options: 2/4/8" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
     }
 }
 
@@ -347,9 +349,9 @@ void Config::SetAddressMapping() {
     row_width = LogBase2(rows);
     column_width = LogBase2(columns);
     // add BL bits for GDDR
-    if (IsGDDR()) {
+    if (IsGDDR() || IsHBM()) {
         column_width += LogBase2(BL);  
-    }
+    } 
     uint32_t bytes_offset = LogBase2(bus_width / 8);
     request_size_bytes = bus_width / 8 * BL;  // transaction size in bytes
     // for each address given, because we're transimitting trascation_size bytes per transcation
