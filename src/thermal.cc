@@ -245,7 +245,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
         else
         {
             z = 0;
-            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+            if (config_.bankgroups > 1)
             {
                 int bank_group_id = bank_id / config_.banks_per_group; 
                 int sub_bank_id = bank_id % config_.banks_per_group; 
@@ -325,7 +325,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
         else
         {
             z = 0;
-            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+            if (config_.bankgroups > 1)
             {
                 int bank_group_id = bank_id / config_.banks_per_group; 
                 int sub_bank_id = bank_id % config_.banks_per_group; 
@@ -422,7 +422,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
         else
         {
             z = 0;
-            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+            if (config_.bankgroups > 1)
             {
                 int bank_group_id = bank_id / config_.banks_per_group; 
                 int sub_bank_id = bank_id % config_.banks_per_group; 
@@ -470,7 +470,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
         else
         {
             z = 0;
-            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+            if (config_.bankgroups > 1)
             {
                 int bank_group_id = bank_id / config_.banks_per_group; 
                 int sub_bank_id = bank_id % config_.banks_per_group; 
@@ -511,135 +511,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
 
 
 
-void ThermalCalculator::LocationMapping(const Command &cmd, int bank0, int row0, int *x, int *y, int *z)
-{
-    Address new_loc = GetPhyAddress(cmd.addr_);
-    // use new_loc.channel_ new_loc.rank_ .etc.
-    int row_id, bank_id;
-    int col_id = new_loc.column_;
-    int bank_id_x, bank_id_y;
 
-    if (row0 > -1)
-        row_id = row0;
-    else
-        row_id = new_loc.row_;
-
-    if (bank0 > -1)
-        bank_id = bank0;
-    else
-        bank_id = new_loc.bank_;
-
-    if (config_.bank_order == 1)
-    {
-        // y-direction priority
-        
-        if (config_.IsHMC() || config_.IsHBM())
-        {
-            int vault_id = cmd.Channel();
-            int vault_id_x = vault_id / vault_y;
-            int vault_id_y = vault_id % vault_y;
-            int num_bank_per_layer = config_.banks / config_.num_dies;
-            if (config_.bank_layer_order == 0)
-                *z = bank_id / num_bank_per_layer;
-            else
-                *z = numP - bank_id / num_bank_per_layer - 1; 
-            int bank_same_layer = bank_id % num_bank_per_layer;
-            bank_id_x = bank_same_layer / bank_y;
-            bank_id_y = bank_same_layer % bank_y;
-            int grid_id_x = row_id / config_.matX; 
-            int grid_id_y = col_id / config_.matY; 
-            *x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
-            *y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
-            //cout << "col_id = " << col_id << endl;
-            //cout << "bank:(" << bank_x << ", " << bank_y << "); bank_id:(" << bank_id_x << ", " << bank_id_y << ")\n";
-            //cout << "grid_id:(" << grid_id_x << ", " << grid_id_y << ")\n";
-            //cout << "(" << *x << ", " << *y << ")\n";
-        }
-        else
-        {
-            *z = 0;
-            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
-            {
-                int bank_group_id = bank_id / config_.banks_per_group; 
-                int sub_bank_id = bank_id % config_.banks_per_group; 
-                bank_id_x = sub_bank_id / 2; 
-                bank_id_y = sub_bank_id % 2; 
-                if (bank_x <= bank_y)
-                    bank_id_y += bank_group_id * 2; 
-                else
-                    bank_id_x += bank_group_id * 2; 
-            }
-            else
-            {
-                bank_id_x = bank_id / bank_y;
-                bank_id_y = bank_id % bank_y;
-            }
-            
-            int grid_id_x = row_id / config_.matX; 
-            int grid_id_y = col_id / config_.matY; 
-            *x = bank_id_x * config_.numXgrids + grid_id_x;
-            *y = bank_id_y * config_.numYgrids + grid_id_y;
-            //cout << "cmd.Row() = " << cmd.Row() << "; cmd.Column() = " << endl;
-            //cout << "bank_id = " << bank_id << "; row_id = " << row_id << "; col_id = " << col_id << endl;
-            //cout << "(" << *x << ", " << *y << ")\n";
-        }
-
-    }
-    else
-    {
-        // x-direction priority
-        if (config_.IsHMC() || config_.IsHBM())
-        {
-            int vault_id = cmd.Channel();
-            int vault_id_y = vault_id / vault_x;
-            int vault_id_x = vault_id % vault_x;
-            int num_bank_per_layer = config_.banks / config_.num_dies;
-            if (config_.bank_layer_order == 0)
-                *z = bank_id / num_bank_per_layer;
-            else
-                *z = numP - bank_id / num_bank_per_layer - 1; 
-            int bank_same_layer = bank_id % num_bank_per_layer;
-            bank_id_y = bank_same_layer / bank_x;
-            bank_id_x = bank_same_layer % bank_x;
-            int grid_id_x = row_id / config_.matX; 
-            int grid_id_y = col_id / config_.matY; 
-            *x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
-            *y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
-        }
-        else
-        {
-            *z = 0;
-            if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
-            {
-                int bank_group_id = bank_id / config_.banks_per_group; 
-                int sub_bank_id = bank_id % config_.banks_per_group; 
-                bank_id_y = sub_bank_id / 2; 
-                bank_id_x = sub_bank_id % 2; 
-                if (bank_x <= bank_y){
-                    bank_id_y += bank_group_id * 2; 
-                }
-                else{
-                    bank_id_x += bank_group_id * 2; 
-                }
-            }
-            else
-            {
-                bank_id_y = bank_id / bank_x;
-                bank_id_x = bank_id % bank_x;
-            }
-            int grid_id_x = row_id / config_.matX; 
-            int grid_id_y = col_id / config_.matY; 
-            *x = bank_id_x * config_.numXgrids + grid_id_x;
-            *y = bank_id_y * config_.numYgrids + grid_id_y;
-            //cout << "bank_id = " << bank_id << "; row_id = " << row_id << endl;
-            //cout << "(" << *x << ", " << *y << ")\n";
-        }
-    }
-    //cout << "Finish LocationMapping ...";
-
-    //cout << "x = " << *x << "; y = " << *y << "; z = " << *z << endl;
-    //cout << "--------------------------------------\n";
-}
 
 void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
 {
