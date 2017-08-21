@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import os
+import sys
 from collections import OrderedDict
 
 try:
@@ -10,32 +12,31 @@ except:
     print "please install numpy, matplotlib and pandas"
     raise
 
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
-def construct_mesh(df, val_key, xkey="x", ykey="y", zkey="z"):
+
+
+def construct_mesh(df, val_key, xkey="x", ykey="y"):
     """
     to construct mesh data structure to be used for plotting later
     this should be as generic as possible
-    the 4 keys in the args are used to locate data in the dataframe
-    return a list of dicts that each dict represent a "z" layer (plane) of data
+    the 3 keys in the args are used to locate data in the dataframe
+    return a dict that can be used by pcolor/pcolormesh functions
     """
     x = df[xkey]
     y = df[ykey]
-    z = df[zkey]
     t = df[val_key]
-    res = []  # for each z we return a group of xx, yy, tt
-    for each_z, group in df.groupby(zkey):
-        xx, yy = np.meshgrid(x.unique(), y.unique())
-        # the data structure is matlib-like y-axis oriented
-        y_groups = df.groupby(ykey)
-        tt = []
-        for i in y.unique():
-            group = y_groups.get_group(i)
-            t = group[val_key]
-            tt.append(t)
-        tt = np.array(tt)
-        res.append({xkey:xx, ykey:yy, val_key:tt})
+    xx, yy = np.meshgrid(x.unique(), y.unique())
+    zz = []
+    y_groups = df.groupby(ykey)
+    for i in y.unique():
+        group = y_groups.get_group(i)
+        z = group[val_key]
+        zz.append(z)
+    zz = np.array(zz)
+    res = {"x":xx, "y":yy, "val":zz}
     return res
 
 
@@ -45,109 +46,155 @@ def plot_heatmap(x, y, t, title, save_to=""):
     """
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    pcm = ax.pcolormesh(x, y, t, cmap="RdYlGn_r")
+    pcm = ax.pcolormesh(x, y, t, cmap="coolwarm")
     fig.colorbar(pcm, ax=ax, extend="max")
     fig.savefig("heatmap.png")
 
-def plot_sub_heatmap(fig, ax, x, y, t, title):
-    pcm = ax.pcolormesh(x, y, t, cmap="RdYlGn_r")
-    fig.colorbar(pcm, ax=ax, extend="max")
-    return fix, ax
 
-def prep_fig_axes(num_plots, separate_figs=False):
+def plot_sub_heatmap(fig, ax, x, y, t, title):
+    pcm = ax.pcolormesh(x, y, t, cmap="coolwarm")
+    ax.set_title(title)
+    fig.colorbar(pcm, ax=ax, extend="max")
+    return fig, ax
+
+def prep_fig_axes(num_plots):
     """
-    if separate_figs is False then use subplots for each graph
-    otherwise use different figs
+    so for each z dimension we plot 1 fig and if
+    there are multiple channels plot them as subplots
     returns a dict with fig as keys and axes list as values
     """
-    figs = OrderedDict()
-    if not separate_figs:
-        fig = plt.figure()
-        axes = []
-        if num_plots == 1:
-            n_rows = 1
-            n_cols = 1
-        elif num_plots == 2:
-            n_rows = 1
-            n_cols = 2
-        elif num_plots == 4:
-            n_rows = 2
-            n_cols = 2
-        elif num_plots ==8:
-            n_rows = 2
-            n_cols = 4
-        else:
-            n_rows = 1
-            n_cols = 1
-        # create axes in subplot
-        plot_num = 1
-        for j in range(n_rows):
-            for k in range(n_cols):
-                axes.append(fig.add_subplot(j, k, plot_num))
-                plot_num += 1
-        figs[fig] = axes
+    fig = plt.figure(tight_layout=True)
+    if num_plots == 1:
+        n_rows = 1
+        n_cols = 1
+    elif num_plots == 2:
+        n_rows = 1
+        n_cols = 2
+    elif num_plots == 4:
+        n_rows = 2
+        n_cols = 2
+    elif num_plots ==8:
+        n_rows = 2
+        n_cols = 4
+    elif num_plots == 16:
+        n_rows = 4
+        n_cols = 4
+    elif num_plots == 32:
+        n_rows = 4
+        n_cols = 8
+    elif num_plots == 64:
+        n_rows = 8
+        n_cols = 8
     else:
-        for i in range(num_plots):
-            fig = plt.figure()
-            ax = figure.add_subplot(111)
-            figs[fig] = [ax]
-    return figs
+        n_rows = 1
+        n_cols = 1
+    # create axes in subplot
+    plot_num = 1
+    for i in xrange(num_plots):
+        # args in add_subplot start from 1
+        ax = fig.add_subplot(n_rows, n_cols, plot_num)
+        plot_num += 1
+    return fig, fig.get_axes()
 
-def plot_multi_heatmap(multi_layer_data, separate_figs=False, save_to=""):
+
+def plot_multi_rank_heatmap(multi_rank_data, save_to=""):
     """
     this should also be a generic plot function 
     return figs and axes so that we can process it later
     """
-    num_plots = len(multi_layer_data)
-    figs = prep_fig_axes(num_plots, separate_figs=False)
+    num_plots = len(multi_rank_data)
+    fig, axes = prep_fig_axes(num_plots)
     plot_num = 0
-    for fig, axes in figs.iteritems():
-        for ax in axes:
-            data = multi_layer_data[plot_num]
-            plot_sub_heatmap(fig, ax, data["x"], data["y"], data["val"], data["title"])
-    return figs 
+    for ax in axes:
+        data = multi_rank_data[plot_num]
+        plot_sub_heatmap(fig, ax, data["x"], data["y"], data["val"], data["title"])
+        plot_num += 1
+    return fig, axes
 
 
-def plot_temp(csv_file_name):
-    frame = pd.read_csv(csv_file_name)
-    temp_data_all = construct_mesh(frame, "temperature")
-    for i, temp_data in enumerate(temp_data_all):
-        # iterate all layers
-        title = "heatmap-layer-" + str(i)
-        plot_heatmap(temp_data["x"], temp_data["y"], temp_data["val"], 
-                     title, save_to=title+".png")
+def plot_bank_patch(bank_line_data, fig_axes, show_num=True):
+    z = bank_line_data["z"]
+    fig = fig_axes[z]["fig"]
+    axes = fig_axes[z]["axes"]
+    x_len = bank_line_data["end_x"] - bank_line_data["start_x"]
+    y_len = bank_line_data["end_y"] - bank_line_data["start_y"]
+    starting_coord = (bank_line_data["start_x"], bank_line_data["start_y"])
+    for ax in axes:
+        ax.add_patch(
+            patches.Rectangle(
+                starting_coord,
+                x_len,
+                y_len,
+                fill=False,
+                edgecolor=None,  # default
+                linewidth=None  # default
+            )
+        )
+        if show_num:
+            ax.text(
+                starting_coord[0] + 2, 
+                starting_coord[1] + 2,
+                "B" + str(bank_line_data["bank_id"]),
+                fontsize=8,
+                color="white"
+            )
 
-def plot_power(csv_file_name):
-    frame = pd.read_csv(csv_file_name)
-    temp_data_all = construct_mesh(frame, "power")
-    for i, temp_data in enumerate(temp_data_all):
-        # iterate all layers
-        title = "heatmap-layer-" + str(i)
-        plot_heatmap(temp_data["x"], temp_data["y"], temp_data["val"], 
-                     title, save_to=title+".png")
+    return
+
+
+def save_figs(figs, prefix, img_format="png"):
+    for i, fig_axes in enumerate(figs):
+        fig = fig_axes["fig"]
+        fig_name = prefix + str(i) + "." + img_format
+        print "generating ",fig_name
+        fig.savefig(fig_name)
 
 
 def plot_simulation(stats_csv_file, bank_pos_file):
+    """
+    so for each z dimension we plot 1 fig and if
+    there are multiple channels plot them as subplots
+    """
     frame = pd.read_csv(stats_csv_file)
-    rank_frames = frame.groupby("rank_channel_index")
+    die_frames = frame.groupby("z")
     power_data = []
     temp_data = []
-    for rank, rank_frame in rank_frames:
-        rank_power_data = construct_mesh(rank_frame, "power", "x", "y", "z")
-        rank_temp_data = construct_mesh(rank_frame, "temperature", "x", "y", "z")
-        for d in rank_power_data:
-            d["title"] = "channel_rank_" + str(rank) + "_power_map"
-        for d in rank_power_data:
-            d["title"] = "channel_rank_" + str(rank) + "_temperature_map"
-
-        power_data += rank_power_data
-        temp_data += rank_temp_data
-
-    power_figs = plot_multi_heatmap(power_data)
-    temp_figs = plot_multi_heatmap(temp_data)
-
-    # TODO add bank partition lines
-    # TODO save figs
+    for z, z_frame in die_frames:
+        rank_frames = z_frame.groupby("rank_channel_index")
+        z_power_data = []
+        z_temp_data = []
+        for rank, rank_frame in rank_frames:
+            rank_power_data = construct_mesh(rank_frame, "power", "x", "y")
+            rank_power_data["title"] = "die_" + str(z) + "_channel_rank_" + str(rank) + "_power"
+            rank_temp_data = construct_mesh(rank_frame, "temperature", "x", "y")
+            rank_temp_data["title"] = "die_" + str(z) + "_channel_rank_" + str(rank) + "_temperature"
+            z_power_data.append(rank_power_data)
+            z_temp_data.append(rank_temp_data)
+        power_data.append(z_power_data)
+        temp_data.append(z_temp_data)
     
+    num_figs = len(power_data)
+    power_figs = []
+    temp_figs = []
+    for i in range(num_figs):
+        fig, axes = plot_multi_rank_heatmap(power_data[i])
+        power_figs.append({"fig":fig, "axes":axes})
+        fig, axes = plot_multi_rank_heatmap(temp_data[i])
+        temp_figs.append({"fig":fig, "axes":axes})
 
+    bank_pos_frame = pd.read_csv(bank_pos_file)
 
+    bank_pos = []
+    for index, row in bank_pos_frame.iterrows():
+        plot_bank_patch(row, power_figs)
+        plot_bank_patch(row, temp_figs)
+        
+    return power_figs, temp_figs
+    
+if __name__ == "__main__":
+    prefix = sys.argv[1]
+    csv_file = prefix + "final_power_temperature.csv"
+    bank_pos_file = prefix + "bank_position.csv"
+    p_figs, t_figs = plot_simulation(csv_file, bank_pos_file)
+    save_figs(p_figs, prefix + "fig_power_")
+    save_figs(t_figs, prefix + "fig_temp_")
