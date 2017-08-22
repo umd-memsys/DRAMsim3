@@ -63,7 +63,7 @@ if layer >= 0 and layer <= Z:
 			if l_ > w_:
 				rot = 0
 			else:
-				rot = 90
+				rot = 0
 
 			ca.text(y_-0.5+l_/4, x_-0.5+w_/2, 'R'+str(int(Bpos[i,0]))+'B'+str(int(Bpos[i,1])), color='r', rotation=rot)
 
@@ -73,7 +73,7 @@ if layer >= 0 and layer <= Z:
 	title_str = 'Power (layer' + str(layer) + ')'
 	ca.set_title(title_str)
 	plt.colorbar()
-	plt.savefig(args.save_root + 'final_power_layer' + str(layer) + '.png')
+	plt.savefig(args.save_root + args.mem_name + '_final_power_layer' + str(layer) + '.png')
 
 	plt.figure()
 	plt.imshow(temperature[:,:,layer], aspect='auto')
@@ -88,7 +88,7 @@ if layer >= 0 and layer <= Z:
 			if l_ > w_:
 				rot = 0
 			else:
-				rot = 90
+				rot = 0
 
 			ca.text(y_-0.5+l_/4, x_-0.5+w_/2, 'R'+str(int(Bpos[i,0]))+'B'+str(int(Bpos[i,1])), color='r', rotation=rot)
 
@@ -98,7 +98,7 @@ if layer >= 0 and layer <= Z:
 	title_str = 'Power (layer' + str(layer) + ')'
 	ca.set_title(title_str)
 	plt.colorbar()
-	plt.savefig(args.save_root + 'final_temperature_layer' + str(layer) + '.png')
+	plt.savefig(args.save_root + args.mem_name + '_final_temperature_layer' + str(layer) + '.png')
 
 else:
 	print "You should name a correct layer index"

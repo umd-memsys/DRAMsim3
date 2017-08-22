@@ -23,16 +23,12 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     // The dimension of the chip is determined such that the floorplan is
     // as square as possilbe. If a square floorplan cannot be reached, 
     // x-dimension is larger
-    if (config_.IsHMC() || config_.IsHBM())
+    if (config_.IsHMC())
     {
         double xd, yd; 
         numP = config_.num_dies;
-        if (config_.IsHMC()){
-            bank_x = 1;  bank_y = 2; 
-        }
-        else{
-            bank_x = 2; bank_y = 2;
-        }
+        bank_x = 1; bank_y = 2;
+
         xd = bank_x * config_.bank_asr; 
         yd = bank_y * 1.0; 
         vault_x = determineXY(xd, yd, config_.channels); 
@@ -42,6 +38,17 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
         dimY = vault_y * bank_y * config_.numYgrids;
 
         num_case = 1;
+    }
+    else if (config_.IsHBM())
+    {
+        numP = config_.num_dies; 
+        bank_x = 8; bank_y = 2; 
+        vault_x = 1; vault_y = 2; 
+        dimX = vault_x * bank_x * config_.numXgrids; 
+        dimY = vault_y * bank_y * config_.numYgrids; 
+
+        num_case = 1; 
+
     }
     else
     {
@@ -177,10 +184,10 @@ void ThermalCalculator::SetPhyAddressMapping() {
 
 void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0, int caseID_, double add_energy)
 {
-    int row_id, bank_id, col_id;
+    int vault_id, bank_id, row_id, col_id;
     Address temp_addr = Address(cmd.addr_);
     Address new_loc;
-    int bank_id_x, bank_id_y, grid_id_x, grid_id_y;
+    int vault_id_x, vault_id_y, bank_id_x, bank_id_y, grid_id_x, grid_id_y;
     int x, y, z; 
 
     if (row0 > -1)
@@ -199,37 +206,53 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
         bank_id += cmd.Bankgroup() * config_.banks_per_group;
     }
 
+    //cout << "bank_order = " << config_.bank_order << endl;
+
     if (config_.bank_order == 1)
     {
         // y-direction priority
-        
         if (config_.IsHMC() || config_.IsHBM())
         {
-            int vault_id = cmd.Channel();
-            int vault_id_x = vault_id / vault_y;
-            int vault_id_y = vault_id % vault_y;
-            int num_bank_per_layer = config_.banks / config_.num_dies;
-            if (config_.bank_layer_order == 0)
-                z = bank_id / num_bank_per_layer;
+            if (config_.IsHMC())
+            {
+                vault_id = cmd.Channel();
+                vault_id_x = vault_id / vault_y;
+                vault_id_y = vault_id % vault_y;
+                int num_bank_per_layer = config_.banks / config_.num_dies;
+                if (config_.bank_layer_order == 0)
+                    z = bank_id / num_bank_per_layer;
+                else
+                    z = numP - bank_id / num_bank_per_layer - 1; 
+                int bank_same_layer = bank_id % num_bank_per_layer;
+                bank_id_x = bank_same_layer / bank_y;
+                bank_id_y = bank_same_layer % bank_y;
+            }
             else
-                z = numP - bank_id / num_bank_per_layer - 1; 
-            int bank_same_layer = bank_id % num_bank_per_layer;
-            bank_id_x = bank_same_layer / bank_y;
-            bank_id_y = bank_same_layer % bank_y;
+            {
+                vault_id = cmd.Channel(); 
+                int bank_group_id = bank_id / config_.banks_per_group; 
+                int sub_bank_id = bank_id % config_.banks_per_group; 
+                bank_id_x = bank_group_id * 2 + sub_bank_id / 2; 
+                bank_id_y = sub_bank_id % 2; 
+
+                z = vault_id / 2; // each layer has two channels (vaults)
+                vault_id_y = vault_id % 2; 
+                vault_id_x = 0; 
+
+                //cout << "vault_id_y = " << vault_id_y << endl;
+            }
+            
             grid_id_x = row_id / config_.matX; 
 
             for (int i = 0; i < config_.BL; i ++)
             {
                 new_loc = GetPhyAddress(temp_addr);
                 col_id = new_loc.column_ * config_.device_width;
-                //cout << " column = " << temp_addr.column_;
-                //cout << " col_id = " << col_id << endl;
                 for (int j = 0; j < config_.device_width; j ++){
                     grid_id_y = col_id / config_.matY;
                     x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
                     y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
 
-                    //cout << "\tx = " << x << "; y = " << y << endl;
                     accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy / config_.device_width;
                     cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy / config_.device_width;
                     col_id ++;
@@ -237,10 +260,6 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 
                 temp_addr.column_ ++; 
             }
-
-            //cout << "bank:(" << bank_x << ", " << bank_y << "); bank_id:(" << bank_id_x << ", " << bank_id_y << ")\n";
-            //cout << "grid_id:(" << grid_id_x << ", " << grid_id_y << ")\n";
-            //cout << "(" << *x << ", " << *y << ")\n";
         }
         else
         {
@@ -249,6 +268,8 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
             {
                 int bank_group_id = bank_id / config_.banks_per_group; 
                 int sub_bank_id = bank_id % config_.banks_per_group; 
+                // banks in a group always form like a square
+                // bank_groups are arranged in a line -- either in x or y direction
                 bank_id_x = sub_bank_id / 2; 
                 bank_id_y = sub_bank_id % 2; 
                 if (bank_x <= bank_y)
@@ -291,18 +312,34 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
         // x-direction priority
         if (config_.IsHMC() || config_.IsHBM())
         {
-            int vault_id = cmd.Channel();
-            int vault_id_y = vault_id / vault_x;
-            int vault_id_x = vault_id % vault_x;
-            int num_bank_per_layer = config_.banks / config_.num_dies;
-            if (config_.bank_layer_order == 0)
-                z = bank_id / num_bank_per_layer;
+            if (config_.IsHMC())
+            {
+                vault_id = cmd.Channel();
+                vault_id_y = vault_id / vault_x;
+                vault_id_x = vault_id % vault_x;
+                int num_bank_per_layer = config_.banks / config_.num_dies;
+                if (config_.bank_layer_order == 0)
+                    z = bank_id / num_bank_per_layer;
+                else
+                    z = numP - bank_id / num_bank_per_layer - 1; 
+                int bank_same_layer = bank_id % num_bank_per_layer;
+                bank_id_y = bank_same_layer / bank_x;
+                bank_id_x = bank_same_layer % bank_x;
+            }
             else
-                z = numP - bank_id / num_bank_per_layer - 1; 
-            int bank_same_layer = bank_id % num_bank_per_layer;
-            bank_id_y = bank_same_layer / bank_x;
-            bank_id_x = bank_same_layer % bank_x;
-            grid_id_x = row_id / config_.matX;
+            {
+                vault_id = cmd.Channel(); 
+                int bank_group_id = bank_id / config_.banks_per_group; 
+                int sub_bank_id = bank_id % config_.banks_per_group; 
+                bank_id_x = bank_group_id * 2 + sub_bank_id / 2; 
+                bank_id_y = sub_bank_id % 2; 
+
+                z = vault_id / 2; // each layer has two channels (vaults)
+                vault_id_y = vault_id % 2; 
+                vault_id_x = 0; 
+            }
+            
+            grid_id_x = row_id / config_.matX; 
 
             for (int i = 0; i < config_.BL; i ++)
             {
@@ -311,8 +348,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 for (int j = 0; j < config_.device_width; j ++){
                     grid_id_y = col_id / config_.matY;
                     x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
-                    y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
-
+                    y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
 
                     accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy / config_.device_width;
                     cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy / config_.device_width;
@@ -371,9 +407,9 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
 
 void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0, int caseID_, double add_energy)
 {
-    int row_id, bank_id;
+    int vault_id, bank_id, row_id;
     int col_id = 0;
-    int bank_id_x, bank_id_y;
+    int vault_id_x, vault_id_y, bank_id_x, bank_id_y, grid_id_x, grid_id_y;
     int x, y, z;
 
     if (row0 > -1)
@@ -392,32 +428,37 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
         
         if (config_.IsHMC() || config_.IsHBM())
         {
-            int vault_id = cmd.Channel();
-            int vault_id_x = vault_id / vault_y;
-            int vault_id_y = vault_id % vault_y;
-            int num_bank_per_layer = config_.banks / config_.num_dies;
-            if (config_.bank_layer_order == 0)
-                z = bank_id / num_bank_per_layer;
+            if (config_.IsHMC())
+            {
+                vault_id = cmd.Channel();
+                vault_id_x = vault_id / vault_y;
+                vault_id_y = vault_id % vault_y;
+                int num_bank_per_layer = config_.banks / config_.num_dies;
+                if (config_.bank_layer_order == 0)
+                    z = bank_id / num_bank_per_layer;
+                else
+                    z = numP - bank_id / num_bank_per_layer - 1; 
+                int bank_same_layer = bank_id % num_bank_per_layer;
+                bank_id_x = bank_same_layer / bank_y;
+                bank_id_y = bank_same_layer % bank_y;
+            }
             else
-                z = numP - bank_id / num_bank_per_layer - 1; 
-            int bank_same_layer = bank_id % num_bank_per_layer;
-            bank_id_x = bank_same_layer / bank_y;
-            bank_id_y = bank_same_layer % bank_y;
-            int grid_id_x = row_id / config_.matX; 
-            int grid_id_y = col_id / config_.matY; 
+            {
+                vault_id = cmd.Channel(); 
+                int bank_group_id = bank_id / config_.banks_per_group; 
+                int sub_bank_id = bank_id % config_.banks_per_group; 
+                bank_id_x = bank_group_id * 2 + sub_bank_id / 2; 
+                bank_id_y = sub_bank_id % 2; 
+
+                z = vault_id / 2; // each layer has two channels (vaults)
+                vault_id_y = vault_id % 2; 
+                vault_id_x = 0; 
+            }
+            grid_id_x = row_id / config_.matX; 
+            grid_id_y = col_id / config_.matY;
             x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
-            y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
-            
-            /*
-            cout << " bank_save_layer = " << bank_same_layer;
-            cout << " numXgrids = " << config_.numXgrids; 
-            cout << " bank_x = " << bank_x; 
-            cout << " vault_x = " << vault_x; 
-            cout << " vault_id = " << vault_id;
-            cout << " vault_id_x = " << vault_id_x; 
-            cout << " bank_id_x = " << bank_id_x; 
-            cout << " grid_id_x = " << grid_id_x;
-            cout << " x = " << x << endl;*/
+            y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
+
         }
         else
         {
@@ -439,8 +480,8 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
                 bank_id_y = bank_id % bank_y;
             }
             
-            int grid_id_x = row_id / config_.matX; 
-            int grid_id_y = col_id / config_.matY; 
+            grid_id_x = row_id / config_.matX; 
+            grid_id_y = col_id / config_.matY; 
             x = bank_id_x * config_.numXgrids + grid_id_x;
             y = bank_id_y * config_.numYgrids + grid_id_y;
         }
@@ -451,21 +492,37 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
         // x-direction priority
         if (config_.IsHMC() || config_.IsHBM())
         {
-            int vault_id = cmd.Channel();
-            int vault_id_y = vault_id / vault_x;
-            int vault_id_x = vault_id % vault_x;
-            int num_bank_per_layer = config_.banks / config_.num_dies;
-            if (config_.bank_layer_order == 0)
-                z = bank_id / num_bank_per_layer;
+            if (config_.IsHMC())
+            {
+                vault_id = cmd.Channel();
+                vault_id_y = vault_id / vault_x;
+                vault_id_x = vault_id % vault_x;
+                int num_bank_per_layer = config_.banks / config_.num_dies;
+                if (config_.bank_layer_order == 0)
+                    z = bank_id / num_bank_per_layer;
+                else
+                    z = numP - bank_id / num_bank_per_layer - 1; 
+                int bank_same_layer = bank_id % num_bank_per_layer;
+                bank_id_y = bank_same_layer / bank_x;
+                bank_id_x = bank_same_layer % bank_x;
+            }
             else
-                z = numP - bank_id / num_bank_per_layer - 1; 
-            int bank_same_layer = bank_id % num_bank_per_layer;
-            bank_id_y = bank_same_layer / bank_x;
-            bank_id_x = bank_same_layer % bank_x;
-            int grid_id_x = row_id / config_.matX; 
-            int grid_id_y = col_id / config_.matY; 
+            {
+                vault_id = cmd.Channel(); 
+                int bank_group_id = bank_id / config_.banks_per_group; 
+                int sub_bank_id = bank_id % config_.banks_per_group; 
+                bank_id_x = bank_group_id * 2 + sub_bank_id / 2; 
+                bank_id_y = sub_bank_id % 2; 
+
+                z = vault_id / 2; // each layer has two channels (vaults)
+                vault_id_y = vault_id % 2; 
+                vault_id_x = 0; 
+            }
+            grid_id_x = row_id / config_.matX; 
+            grid_id_y = col_id / config_.matY;
             x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
-            y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y;
+            y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
+
         }
         else
         {
@@ -488,8 +545,8 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
                 bank_id_y = bank_id / bank_x;
                 bank_id_x = bank_id % bank_x;
             }
-            int grid_id_x = row_id / config_.matX; 
-            int grid_id_y = col_id / config_.matY; 
+            grid_id_x = row_id / config_.matX; 
+            grid_id_y = col_id / config_.matY; 
             x = bank_id_x * config_.numXgrids + grid_id_x;
             y = bank_id_y * config_.numYgrids + grid_id_y;
             //cout << "bank_id = " << bank_id << "; row_id = " << row_id << endl;
@@ -960,26 +1017,50 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
         if (config_.IsHMC() || config_.IsHBM())
         {
             csvfile << "vault_id,bank_id,start_x,end_x,start_y,end_y,z" << endl;
-            for (vault_id = 0; vault_id < config_.channels; vault_id ++){
-                vault_id_x = vault_id / vault_y;
-                vault_id_y = vault_id % vault_y;
-                num_bank_per_layer = config_.banks / config_.num_dies;
-                for (bank_id = 0; bank_id < config_.banks; bank_id ++){
-                    if (config_.bank_layer_order == 0)
-                        z = bank_id / num_bank_per_layer;
-                    else
-                        z = numP - bank_id / num_bank_per_layer - 1; 
-                    bank_same_layer = bank_id % num_bank_per_layer;
-                    bank_id_x = bank_same_layer / bank_y;
-                    bank_id_y = bank_same_layer % bank_y;
+            if (config_.IsHMC())
+            {
+                for (vault_id = 0; vault_id < config_.channels; vault_id ++){
+                    vault_id_x = vault_id / vault_y;
+                    vault_id_y = vault_id % vault_y;
+                    num_bank_per_layer = config_.banks / config_.num_dies;
+                    for (bank_id = 0; bank_id < config_.banks; bank_id ++){
+                        if (config_.bank_layer_order == 0)
+                            z = bank_id / num_bank_per_layer;
+                        else
+                            z = numP - bank_id / num_bank_per_layer - 1; 
+                        bank_same_layer = bank_id % num_bank_per_layer;
+                        bank_id_x = bank_same_layer / bank_y;
+                        bank_id_y = bank_same_layer % bank_y;
 
-                    start_x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids; 
-                    end_x = vault_id_x * (bank_x * config_.numXgrids) + (bank_id_x + 1) * config_.numXgrids - 1;
-                    start_y =  vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids;
-                    end_y = vault_id_y * (bank_y * config_.numYgrids) + (bank_id_y + 1) * config_.numYgrids - 1;
-                    csvfile << vault_id << "," << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
+                        start_x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids; 
+                        end_x = vault_id_x * (bank_x * config_.numXgrids) + (bank_id_x + 1) * config_.numXgrids - 1;
+                        start_y =  vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids;
+                        end_y = vault_id_y * (bank_y * config_.numYgrids) + (bank_id_y + 1) * config_.numYgrids - 1;
+                        csvfile << vault_id << "," << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
+                    }
                 }
             }
+            else
+            {
+                for (vault_id = 0; vault_id < config_.channels; vault_id ++){
+                    z = vault_id / 2; // each layer has two channels (vaults)
+                    vault_id_y = vault_id % 2; 
+                    vault_id_x = 0; 
+                    for (bank_id = 0; bank_id < config_.banks; bank_id ++){
+                        bank_group_id = bank_id / config_.banks_per_group; 
+                        sub_bank_id = bank_id % config_.banks_per_group; 
+                        bank_id_x = bank_group_id * 2 + sub_bank_id / 2; 
+                        bank_id_y = sub_bank_id % 2;
+
+                        start_x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids; 
+                        end_x = vault_id_x * (bank_x * config_.numXgrids) + (bank_id_x + 1) * config_.numXgrids - 1;
+                        start_y =  vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids;
+                        end_y = vault_id_y * (bank_y * config_.numYgrids) + (bank_id_y + 1) * config_.numYgrids - 1;
+                        csvfile << vault_id << "," << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
+                    }  
+                }
+            }
+            
 
         }
         else
@@ -1019,24 +1100,47 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
         if (config_.IsHMC() || config_.IsHBM())
         {
             csvfile << "vault_id,bank_id,start_x,end_x,start_y,end_y,z" << endl;
-            for (vault_id = 0; vault_id < config_.channels; vault_id ++){
-                vault_id_y = vault_id / vault_x;
-                vault_id_x = vault_id % vault_x;
-                num_bank_per_layer = config_.banks / config_.num_dies;
-                for (bank_id = 0; bank_id < config_.banks; bank_id ++){
-                    if (config_.bank_layer_order == 0)
-                        z = bank_id / num_bank_per_layer;
-                    else
-                        z = numP - bank_id / num_bank_per_layer - 1; 
-                    bank_same_layer = bank_id % num_bank_per_layer;
-                    bank_id_y = bank_same_layer / bank_x;
-                    bank_id_x = bank_same_layer % bank_x;
-            
-                    start_x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids; 
-                    end_x = vault_id_x * (bank_x * config_.numXgrids) + (bank_id_x + 1) * config_.numXgrids - 1;
-                    start_y =  vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids;
-                    end_y = vault_id_y * (bank_y * config_.numYgrids) + (bank_id_y + 1) * config_.numYgrids - 1;
-                    csvfile << vault_id << "," << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
+            if (config_.IsHMC())
+            {
+                for (vault_id = 0; vault_id < config_.channels; vault_id ++){
+                    vault_id_y = vault_id / vault_x;
+                    vault_id_x = vault_id % vault_x;
+                    num_bank_per_layer = config_.banks / config_.num_dies;
+                    for (bank_id = 0; bank_id < config_.banks; bank_id ++){
+                        if (config_.bank_layer_order == 0)
+                            z = bank_id / num_bank_per_layer;
+                        else
+                            z = numP - bank_id / num_bank_per_layer - 1; 
+                        bank_same_layer = bank_id % num_bank_per_layer;
+                        bank_id_y = bank_same_layer / bank_x;
+                        bank_id_x = bank_same_layer % bank_x;
+
+                        start_x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids; 
+                        end_x = vault_id_x * (bank_x * config_.numXgrids) + (bank_id_x + 1) * config_.numXgrids - 1;
+                        start_y =  vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids;
+                        end_y = vault_id_y * (bank_y * config_.numYgrids) + (bank_id_y + 1) * config_.numYgrids - 1;
+                        csvfile << vault_id << "," << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
+                    }
+                }
+            }
+            else
+            {
+                for (vault_id = 0; vault_id < config_.channels; vault_id ++){
+                    z = vault_id / 2; // each layer has two channels (vaults)
+                    vault_id_y = vault_id % 2; 
+                    vault_id_x = 0; 
+                    for (bank_id = 0; bank_id < config_.banks; bank_id ++){
+                        bank_group_id = bank_id / config_.banks_per_group; 
+                        sub_bank_id = bank_id % config_.banks_per_group; 
+                        bank_id_x = bank_group_id * 2 + sub_bank_id / 2; 
+                        bank_id_y = sub_bank_id % 2;
+
+                        start_x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids; 
+                        end_x = vault_id_x * (bank_x * config_.numXgrids) + (bank_id_x + 1) * config_.numXgrids - 1;
+                        start_y =  vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids;
+                        end_y = vault_id_y * (bank_y * config_.numYgrids) + (bank_id_y + 1) * config_.numYgrids - 1;
+                        csvfile << vault_id << "," << bank_id << "," << start_x << "," << end_x << "," << start_y << "," << end_y << "," << z << endl;
+                    }  
                 }
             }
         }
