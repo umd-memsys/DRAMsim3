@@ -25,6 +25,8 @@ class ThermalCalculator
     int time_iter0, time_iter;
     double Tamb; // The ambient temperature in Kelvin
 
+    int num_dummy; 
+
     const Config &config_;
     Statistics &stats_;
 

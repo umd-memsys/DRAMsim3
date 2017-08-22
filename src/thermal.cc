@@ -18,6 +18,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
                                                                                 sample_id(0),
                                                                                 save_clk(0)
 {
+    num_dummy = 2; // always even number
+    cout << num_dummy / 2 << " cicles of dummy cells\n";
 
     // Initialize dimX, dimY, numP
     // The dimension of the chip is determined such that the floorplan is
@@ -70,8 +72,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     // Initialize the vectors
     accu_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(num_case, 0));
     cur_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(num_case, 0));
-    T_trans = vector<vector<double>>((numP * 3 + 1) * dimX * dimY, vector<double>(num_case, 0));
-    T_final = vector<vector<double>>((numP * 3 + 1) * dimX * dimY, vector<double>(num_case, 0));
+    T_trans = vector<vector<double>>((numP * 3 + 1) * (dimX+num_dummy) * (dimY+num_dummy), vector<double>(num_case, 0));
+    T_final = vector<vector<double>>((numP * 3 + 1) * (dimX+num_dummy) * (dimY+num_dummy), vector<double>(num_case, 0));
 
     sref_energy_prev = vector<double> (num_case, 0); 
     pre_stb_energy_prev = vector<double> (num_case, 0);
@@ -725,20 +727,26 @@ void ThermalCalculator::CalcTransT(int case_id)
     double time = config_.power_epoch_period * config_.tCK * 1e-9;
     int i, j, l;
 
-    // fill in powerM
-    if (!(powerM = (double ***)malloc(dimX * sizeof(double **))))
+    // assert in powerM
+    if (!(powerM = (double ***)malloc((dimX+num_dummy) * sizeof(double **))))
         printf("Malloc fails for powerM[].\n");
-    for (i = 0; i < dimX; i++)
+    for (i = 0; i < dimX+num_dummy; i++)
     {
-        if (!(powerM[i] = (double **)malloc(dimY * sizeof(double *))))
+        if (!(powerM[i] = (double **)malloc((dimY+num_dummy) * sizeof(double *))))
             printf("Malloc fails for powerM[%d][].\n", i);
-        for (j = 0; j < dimY; j++)
+        for (j = 0; j < dimY+num_dummy; j++)
         {
             if (!(powerM[i][j] = (double *)malloc(numP * sizeof(double))))
                 printf("Malloc fails for powerM[%d][%d][].\n", i, j);
         }
     }
+    // initialize powerM
+    for (i = 0; i < dimX+num_dummy; i ++)
+        for (j = 0; j < dimY+num_dummy; j++)
+            for (l = 0; l < numP; l ++)
+                powerM[i][j][l] = 0;
 
+    // fill in powerM
     double totP = 0.0;
     for (i = 0; i < dimX; i++)
     {
@@ -746,20 +754,20 @@ void ThermalCalculator::CalcTransT(int case_id)
         {
             for (l = 0; l < numP; l++)
             {
-                powerM[i][j][l] = cur_Pmap[l * (dimX * dimY) + j * dimX + i][case_id] / (double)config_.power_epoch_period;
-                totP += powerM[i][j][l];
+                powerM[i+num_dummy/2][j+num_dummy/2][l] = cur_Pmap[l * (dimX * dimY) + j * dimX + i][case_id] / (double)config_.power_epoch_period;
+                totP += powerM[i+num_dummy/2][j+num_dummy/2][l];
             }
         }
     }
     cout << "total Power is " << totP * 1000 << " [mW]\n";
 
     // fill in T
-    if (!(T = (double *)malloc(((numP * 3 + 1) * dimX * dimY) * sizeof(double))))
+    if (!(T = (double *)malloc(((numP * 3 + 1) * (dimX+num_dummy) * (dimY+num_dummy)) * sizeof(double))))
         printf("Malloc fails for T.\n");
     for (i = 0; i < T_trans.size(); i++)
         T[i] = T_trans[i][case_id];
 
-    T = transient_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX, dimY, Midx, MidxSize, Cap, CapSize, time, time_iter, T, Tamb);
+    T = transient_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Midx, MidxSize, Cap, CapSize, time, time_iter, T, Tamb);
 
     for (i = 0; i < T_trans.size(); i++)
         T_trans[i][case_id] = T[i];
@@ -771,20 +779,26 @@ void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk)
 {
     double ***powerM;
     int i, j, l;
-    // fill in powerM
-    if (!(powerM = (double ***)malloc(dimX * sizeof(double **))))
+    // assert in powerM
+    if (!(powerM = (double ***)malloc((dimX+num_dummy) * sizeof(double **))))
         printf("Malloc fails for powerM[].\n");
-    for (i = 0; i < dimX; i++)
+    for (i = 0; i < dimX+num_dummy; i++)
     {
-        if (!(powerM[i] = (double **)malloc(dimY * sizeof(double *))))
+        if (!(powerM[i] = (double **)malloc((dimY+num_dummy) * sizeof(double *))))
             printf("Malloc fails for powerM[%d][].\n", i);
-        for (j = 0; j < dimY; j++)
+        for (j = 0; j < dimY+num_dummy; j++)
         {
             if (!(powerM[i][j] = (double *)malloc(numP * sizeof(double))))
                 printf("Malloc fails for powerM[%d][%d][].\n", i, j);
         }
     }
 
+    // initialize powerM
+    for (i = 0; i < dimX+num_dummy; i ++)
+        for (j = 0; j < dimY+num_dummy; j++)
+            for (l = 0; l < numP; l ++)
+                powerM[i][j][l] = 0;
+    // fill in powerM
     double totP = 0.0;
     for (i = 0; i < dimX; i++)
     {
@@ -792,8 +806,8 @@ void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk)
         {
             for (l = 0; l < numP; l++)
             {
-                powerM[i][j][l] = accu_Pmap[l * (dimX * dimY) + j * dimX + i][case_id] / (double)clk;
-                totP += powerM[i][j][l];
+                powerM[i+num_dummy/2][j+num_dummy/2][l] = accu_Pmap[l * (dimX * dimY) + j * dimX + i][case_id] / (double)clk;
+                totP += powerM[i+num_dummy/2][j+num_dummy/2][l];
                 //cout << "powerM[" << i << "][" << j << "][" << l << "] = " << powerM[i][j][l] << endl;
             }
         }
@@ -802,7 +816,7 @@ void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk)
     cout << "total Power is " << totP * 1000 << " [mW]\n";
 
     double *T;
-    T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX, dimY, Midx, MidxSize, Tamb);
+    T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Midx, MidxSize, Tamb);
 
     // assign the value to T_final
     for (int i = 0; i < T_final.size(); i++)
@@ -819,14 +833,14 @@ void ThermalCalculator::InitialParameters()
     layerP = vector<int>(numP, 0);
     for (int l = 0; l < numP; l++)
         layerP[l] = l * 3;
-    Midx = calculate_Midx_array(config_.ChipX, config_.ChipY, numP, dimX, dimY, &MidxSize, Tamb);
-    Cap = calculate_Cap_array(config_.ChipX, config_.ChipY, numP, dimX, dimY, &CapSize);
+    Midx = calculate_Midx_array(config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, &MidxSize, Tamb);
+    Cap = calculate_Cap_array(config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, &CapSize);
     calculate_time_step();
 
     double *T;
     for (int ir = 0; ir < num_case; ir++)
     {
-        T = initialize_Temperature(config_.ChipX, config_.ChipY, numP, dimX, dimY, Tamb);
+        T = initialize_Temperature(config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Tamb);
         for (int i = 0; i < T_trans.size(); i++)
             T_trans[i][ir] = T[i];
     }
@@ -871,7 +885,7 @@ int ThermalCalculator::determineXY(double xd, double yd, int total_grids_)
 void ThermalCalculator::calculate_time_step()
 {
     double dt = 100.0;
-    int layer_dim = dimX * dimY;
+    int layer_dim = (dimX+num_dummy) * (dimY + num_dummy);
     //cout << "CapSize = " << CapSize << "; MidxSize = " << MidxSize << "; layer_dim = " << layer_dim << endl;
 
     for (int j = 0; j < MidxSize; j++)
@@ -884,6 +898,7 @@ void ThermalCalculator::calculate_time_step()
         {
             double g = Midx[j][2];
             double c = Cap[idxC];
+            //cout << "c = " << c << "; g = " << g << endl;
             if (c / g < dt)
                 dt = c / g;
         }
@@ -919,13 +934,19 @@ void ThermalCalculator::PrintCSV_trans(ofstream &csvfile, vector<vector<double>>
 {
     for (int l = 0; l < numP; l++)
     {
-        for (int j = 0; j < dimY; j++)
+        for (int j = 0; j < dimY+num_dummy; j++)
         {
-            for (int i = 0; i < dimX; i++)
-            {
-                double pw = P_[l * (dimX * dimY) + j * dimX + i][id] / (double)scale;
-                double tm = T_[(layerP[l] + 1) * (dimX * dimY) + j * dimX + i][id] - T0;
-                csvfile << id << "," << i << "," << j << "," << l << "," << pw << "," << tm << "," << sample_id << endl;
+            //cout << "j = " << j << endl; 
+            if (j < num_dummy/2 || j >= dimY+num_dummy/2)
+                continue; 
+            for (int i = 0; i < dimX+num_dummy; i++)
+            { 
+                //cout << "\ti = " << i << "; (dimX, dimY) = (" << dimX << "," << dimY << ")\n";
+                if (i < num_dummy/2 || i >= dimX+num_dummy/2)
+                    continue; 
+                double pw = P_[l * ((dimX) * (dimY)) + (j-num_dummy/2) * (dimX) + (i-num_dummy/2)][id] / (double)scale;
+                double tm = T_[(layerP[l] + 1) * ((dimX+num_dummy) * (dimY+num_dummy)) + j * (dimX+num_dummy) + i][id] - T0;
+                csvfile << id << "," << i-num_dummy/2 << "," << j-num_dummy/2 << "," << l << "," << pw << "," << tm << "," << sample_id << endl;
             }
         }
     }
@@ -935,13 +956,17 @@ void ThermalCalculator::PrintCSV_final(ofstream &csvfile, vector<vector<double>>
 {
     for (int l = 0; l < numP; l++)
     {
-        for (int j = 0; j < dimY; j++)
+        for (int j = 0; j < dimY+num_dummy; j++)
         {
-            for (int i = 0; i < dimX; i++)
+            if (j < num_dummy/2 || j >= dimY+num_dummy/2)
+                continue; 
+            for (int i = 0; i < dimX+num_dummy; i++)
             {
-                double pw = P_[l * (dimX * dimY) + j * dimX + i][id] / (double)scale;
-                double tm = T_[(layerP[l] + 1) * (dimX * dimY) + j * dimX + i][id];
-                csvfile << id << "," << i << "," << j << "," << l << "," << pw << "," << tm << endl;
+                if (i < num_dummy/2 || i >= dimX + num_dummy/2)
+                    continue; 
+                double pw = P_[l * (dimX * dimY) + (j-num_dummy/2) * dimX + (i-num_dummy/2)][id] / (double)scale;
+                double tm = T_[(layerP[l] + 1) * ((dimX+num_dummy) * (dimY+num_dummy)) + j * (dimX+num_dummy) + i][id];
+                csvfile << id << "," << i-num_dummy/2 << "," << j-num_dummy/2 << "," << l << "," << pw << "," << tm << endl;
             }
         }
     }
