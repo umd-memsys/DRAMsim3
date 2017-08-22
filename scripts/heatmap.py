@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+import argparse
 import os
 import sys
 from collections import OrderedDict
@@ -188,13 +188,33 @@ def plot_simulation(stats_csv_file, bank_pos_file):
     for index, row in bank_pos_frame.iterrows():
         plot_bank_patch(row, power_figs)
         plot_bank_patch(row, temp_figs)
-        
     return power_figs, temp_figs
-    
+
 if __name__ == "__main__":
-    prefix = sys.argv[1]
-    csv_file = prefix + "final_power_temperature.csv"
-    bank_pos_file = prefix + "bank_position.csv"
+    parser = argparse.ArgumentParser(description="Plot power and temperature heatmap")
+    parser.add_argument("-p", "--prefix", help="prefix of the simulation,"
+                        "if this is provided then no need for other arguments",
+                        default = "")
+    parser.add_argument("-s", "--stats-csv", help="temp and power stats csv file")
+    parser.add_argument("-b", "--bank-csv", help="bank postion csv file")
+    args = parser.parse_args()
+    prefix = args.prefix
+    if prefix:
+        csv_file = prefix + "final_power_temperature.csv"
+        bank_pos_file = prefix + "bank_position.csv"
+    else:
+        if  args.stats_csv:
+            print args.stats_csv
+            csv_file = args.stats_csv
+        else:
+            print "need stats csv file for temp and power!"
+            exit(1)
+        if args.bank_csv:
+            print args.bank_csv
+            bank_pos_file = args.bank_csv
+        else:
+            print "need bank position file!"
+            exit(1)
     p_figs, t_figs = plot_simulation(csv_file, bank_pos_file)
     save_figs(p_figs, prefix + "fig_power_")
     save_figs(t_figs, prefix + "fig_temp_")
