@@ -2,6 +2,7 @@
 #define __CONFIG_H
 
 #include <cassert>
+#include <cmath>
 #include <string>
 #include <utility>
 #include <vector>

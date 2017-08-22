@@ -191,7 +191,7 @@ Config::Config(std::string config_file)
     loc_mapping = reader.Get("thermal", "loc_mapping", "");
     bank_order = static_cast<int>(reader.GetInteger("thermal", "bank_order", 1));
     bank_layer_order = static_cast<int>(reader.GetInteger("thermal", "bank_layer_order", 0));
-    numRowRefresh = static_cast<uint32_t>(reader.GetInteger("thermal", "numRowRefresh", 2));
+    numRowRefresh = static_cast<uint32_t>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
     ChipX = reader.GetReal("thermal", "ChipX", 0.01); 
     ChipY = reader.GetReal("thermal", "ChipY", 0.01);
     Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
