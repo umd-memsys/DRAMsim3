@@ -37,9 +37,9 @@ void StreamCPU::ClockTick() {
     if (next_location_) {
         // jump to a new location and start
         next_location_ = false;
-        addr_a_ = rand();
-        addr_b_ = rand();
-        addr_c_ = rand();
+        addr_a_ = gen();
+        addr_b_ = gen();
+        addr_c_ = gen();
         offset_ = 0;
     }
     if (next_element_) {
@@ -50,9 +50,9 @@ void StreamCPU::ClockTick() {
         all_inserted_ = inserted_a && inserted_b && inserted_c;
     } else {
         if (all_inserted_) {
-            next_element_ = (rand() % 50 == 0); 
+            next_element_ = (gen() % 50 == 0); 
         } else {
-            next_element_ = (rand() % 20 == 0);
+            next_element_ = (gen() % 20 == 0);
         }
     }
     if (offset_ >= array_size_) {
