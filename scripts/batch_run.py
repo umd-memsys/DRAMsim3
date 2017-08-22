@@ -95,7 +95,6 @@ if __name__ == "__main__":
         exit(1)
 
     configs = process_configs(args)   
-    # print configs
 
     if args.output_dir:
         if not os.path.exists(args.output_dir):

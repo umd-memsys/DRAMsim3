@@ -36,6 +36,8 @@ public:
     void ClockTick() override ;
 private:
     uint64_t addr_a_, addr_b_, addr_c_, offset_ = 0;
+    std::mt19937_64 gen;
+    bool get_next_ = true;
     const uint64_t array_size_ = 2 << 20;  // elements in array
     bool next_location_ = true, next_element_ = true, all_inserted_ = false;
 };
