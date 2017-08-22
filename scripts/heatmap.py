@@ -54,7 +54,9 @@ def plot_heatmap(x, y, t, title, save_to=""):
 def plot_sub_heatmap(fig, ax, x, y, t, title):
     pcm = ax.pcolormesh(x, y, t, cmap="coolwarm")
     ax.set_title(title)
-    fig.colorbar(pcm, ax=ax, extend="max")
+    # no offset used since temperature should be straightforward
+    c_bar_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
+    cbar = fig.colorbar(pcm, ax=ax, extend="max", format=c_bar_formatter)
     return fig, ax
 
 def prep_fig_axes(num_plots):
