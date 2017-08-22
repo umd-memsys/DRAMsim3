@@ -987,7 +987,7 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
             csvfile << "vault_id,bank_id,start_x,end_x,start_y,end_y,z" << endl;
             z = 0;
             for (bank_id = 0; bank_id < config_.banks; bank_id ++){
-                if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+                if (config_.bankgroups > 1)
                 {
                     bank_group_id = bank_id / config_.banks_per_group; 
                     sub_bank_id = bank_id % config_.banks_per_group; 
@@ -1045,7 +1045,7 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
             csvfile << "vault_id,bank_id,start_x,end_x,start_y,end_y,z" << endl;
             z = 0;
             for (bank_id = 0; bank_id < config_.banks; bank_id ++){
-                if ((config_.IsGDDR() || config_.IsDDR4()) && config_.bankgroups > 1)
+                if (config_.bankgroups > 1)
                 {
                     bank_group_id = bank_id / config_.banks_per_group; 
                     sub_bank_id = bank_id % config_.banks_per_group; 
