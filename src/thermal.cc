@@ -120,13 +120,33 @@ void ThermalCalculator::SetPhyAddressMapping() {
         return;
     }
     std::vector<std::string> bit_fields = StringSplit(mapping_string, ',');
+    if (bit_fields.size() != 6) {
+        cerr << "loc_mapping should have 6 fields!" << endl;
+        exit(1);
+    }
     std::vector<std::vector<int>> mapped_pos(bit_fields.size(), std::vector<int>());
     for (unsigned i = 0; i < bit_fields.size(); i++) {
         std::vector<std::string> bit_pos = StringSplit(bit_fields[i], '-');
         for (unsigned j = 0; j < bit_pos.size(); j++) {
             if (!bit_pos[j].empty()){
-                int pos = std::stoi(bit_pos[j]);
-                mapped_pos[i].push_back(pos);
+                int colon_pos = bit_pos[j].find(":");
+                if (colon_pos == std::string::npos) {  // no "start:end" short cuts
+                    int pos = std::stoi(bit_pos[j]);
+                    mapped_pos[i].push_back(pos);
+                } else {
+                    // for string like start:end (both inclusive), push all numbers in between into mapped_pos
+                    int start_pos = std::stoi(bit_pos[j].substr(0, colon_pos));
+                    int end_pos = std::stoi(bit_pos[j].substr(colon_pos + 1, std::string::npos));
+                    if (start_pos > end_pos) {  // seriously there is no smart way in c++ to do this?
+                        for (int k = start_pos; k >= end_pos; k--) {
+                            mapped_pos[i].push_back(k);
+                        }
+                    } else {
+                        for (int k = start_pos; k <= end_pos; k++) {
+                            mapped_pos[i].push_back(k);
+                        }
+                    }
+                }
             }
         }
     }
@@ -142,38 +162,39 @@ void ThermalCalculator::SetPhyAddressMapping() {
     cout << endl;
 #endif // DEBUG_LOC_MAPPING
 
-    int starting_pos = config_.throwaway_bits;
+    const int column_offset = 3; 
 
-    GetPhyAddress = [mapped_pos, starting_pos](const Address& addr) {
+    GetPhyAddress = [mapped_pos, column_offset](const Address& addr) {
         uint64_t new_hex = 0;
-        
         // ch - ra - bg - ba - ro - co
         int origin_pos[] = {addr.channel_, addr.rank_, addr.bankgroup_, addr.bank_, addr.row_, addr.column_};
         int new_pos[] = {0, 0, 0, 0, 0, 0};
         for (unsigned i = 0; i < mapped_pos.size(); i++) {
             int field_width = mapped_pos[i].size();
             for (int j = 0; j < field_width; j++){
-                int this_bit = GetBitInPos(origin_pos[i], field_width - j -1);
-                new_hex |= (this_bit << mapped_pos[i][j]);
+                uint64_t this_bit = GetBitInPos(origin_pos[i], field_width - j -1);
+                uint64_t new_bit = (this_bit << mapped_pos[i][j]);
+                new_hex |= new_bit;
 #ifdef DEBUG_LOC_MAPPING
-                cout << "mapping " << this_bit << " to " << mapped_pos[i][j] << endl;
+                cout << "mapping " << this_bit << " to " << mapped_pos[i][j] << ", result:"
+                     << std::hex << new_hex << std::dec << endl;
 #endif  // DEBUG_LOC_MAPPING
             }
         }
 
-        int pos = starting_pos;
+        int pos = column_offset;
         for (int i = mapped_pos.size() - 1; i >= 0; i--) {
             new_pos[i] = ModuloWidth(new_hex, mapped_pos[i].size(), pos);
             pos += mapped_pos[i].size();
         }
 
 #ifdef DEBUG_LOC_MAPPING
-        cout << "new channel " << new_pos[0] << endl;;
-        cout << "new rank " << new_pos[1] << endl;
-        cout << "new bg " << new_pos[2] << endl;
+        cout << "new channel " << new_pos[0] << " vs old channel " << addr.channel_ << endl;;
+        cout << "new rank " << new_pos[1] << " vs old rank " << addr.rank_ << endl;
+        cout << "new bg " << new_pos[2] << " vs old bg " << addr.bankgroup_ << endl;
         cout << "new bank " << new_pos[3] << " vs old bank " << addr.bank_ << endl;
         cout << "new row " << new_pos[4] << " vs old row " << addr.row_ << endl;
-        cout << "new col " << new_pos[5] << " vs old col " << addr.colum << endl;
+        cout << "new col " << new_pos[5] << " vs old col " << addr.column_ << endl;
         cout << std::dec;
 #endif
 
