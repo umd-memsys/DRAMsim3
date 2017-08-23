@@ -211,16 +211,9 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
     int vault_id_x, vault_id_y, bank_id_x, bank_id_y, grid_id_x, grid_id_y;
     int x, y, z; 
 
-    if (row0 > -1)
-        row_id = row0;
-    else
-        row_id = cmd.Row();
-
-    if (bank0 > -1)
-        bank_id = bank0;
-    else
-        bank_id = cmd.Bank();
-
+    row_id = cmd.Row();
+    bank_id = cmd.Bank();
+    
     // modify the bank-id if there exists bank groups 
     if (config_.bankgroups > 1)
     {
@@ -433,15 +426,13 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
     int vault_id_x, vault_id_y, bank_id_x, bank_id_y, grid_id_x, grid_id_y;
     int x, y, z;
 
-    if (row0 > -1)
-        row_id = row0;
-    else
-        row_id = cmd.Row();
-
-    if (bank0 > -1)
-        bank_id = bank0;
-    else
-        bank_id = cmd.Bank();
+    // remap the row (if set in ini file) so that they don't concentrate in one area
+    Address temp_addr = Address(cmd.addr_);
+    temp_addr.row_ = row0;
+    temp_addr.bank_ = bank0;
+    temp_addr = GetPhyAddress(temp_addr);
+    row_id = temp_addr.row_;
+    bank_id = bank0;
 
     if (config_.bank_order == 1)
     {
