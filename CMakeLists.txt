@@ -17,6 +17,11 @@ if (DEBUG_POWER)
         add_definitions(-DDEBUG_POWER)
 endif  (DEBUG_POWER)
 
+
+if (DEBUG_LOC_MAPPING)
+        add_definitions(-DDEBUG_LOC_MAPPING)
+endif (DEBUG_LOC_MAPPING)
+
 if (THERMAL)
         message("Adding thermal module...")
         add_definitions(-DTHERMAL)
