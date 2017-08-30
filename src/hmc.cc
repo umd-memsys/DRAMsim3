@@ -245,10 +245,6 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<v
     logic_clk_(0),
     next_link_(0)
 {
-    ptr_config_ = new Config(config_file);
-    ptr_timing_ = new Timing(*ptr_config_);
-    ptr_stats_ = new Statistics(*ptr_config_);
-
     // sanity check, this constructor should only be intialized using HMC
     if (!ptr_config_->IsHMC()) {
         cerr << "Initialzed an HMC system without an HMC config file!" << endl;
@@ -319,10 +315,10 @@ void HMCMemorySystem::SetClockRatio() {
 
     clk_tick_product_ = dram_clk_ticks_ * logic_clk_ticks_;
     
-// #ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
     cout << "HMC Logic clock speed " << dram_clk_ticks_ << endl;
     cout << "HMC DRAM clock speed " << logic_clk_ticks_ << endl;
-// #endif
+#endif
 
     return;
 }
