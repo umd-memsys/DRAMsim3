@@ -2,6 +2,7 @@
 #define __CONFIG_H
 
 #include <cassert>
+#include <cmath>
 #include <string>
 #include <utility>
 #include <vector>
@@ -140,6 +141,7 @@ public:
     uint32_t ideal_memory_latency;
 private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
+    void ProtocolAdjust();
     void CalculateSize();
     void SetAddressMapping();
 };

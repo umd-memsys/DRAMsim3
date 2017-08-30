@@ -44,71 +44,22 @@ Config::Config(std::string config_file)
     columns = static_cast<uint32_t>(reader.GetInteger("dram_structure", "columns", 1 << 10));
     device_width = static_cast<uint32_t>(reader.GetInteger("dram_structure", "device_width", 8));
     BL = static_cast<uint32_t>(reader.GetInteger("dram_structure", "BL", 8));
+    num_dies = static_cast<unsigned int>(reader.GetInteger("dram_structure", "num_dies", 1));
 
-    if (IsHMC()) {  // need to do sanity check and overwrite some values...
-        num_links = static_cast<unsigned int>(reader.GetInteger("hmc", "num_links", 4));
-        num_dies = static_cast<unsigned int>(reader.GetInteger("hmc", "num_dies", 8));
-        link_width = static_cast<unsigned int>(reader.GetInteger("hmc", "link_width", 16));
-        // there is a 12.5 we will just use 12 or 13 to simplify coding...
-        link_speed = static_cast<unsigned int>(reader.GetInteger("hmc", "link_speed", 30));
-        block_size = static_cast<unsigned int>(reader.GetInteger("hmc", "block_size", 32));
-        xbar_queue_depth = static_cast<unsigned int>(reader.GetInteger("hmc", "xbar_queue_depth", 16));
-        
-        // sanity checks 
-        if (num_links !=2 && num_links != 4) {
-            cerr << "HMC can only have 2 or 4 links!" << endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        if (num_dies != 4 && num_dies != 8) {
-            cerr << "HMC can only have 4/8 layers of dies!" << endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        if (link_width != 4 && link_width != 8 && link_width != 16) {
-            cerr << "HMC link width can only be 4 (quater), 8 (half) or 16 (full)!" << endl;
-            AbruptExit(__FILE__, __LINE__);
-        } 
-        if (link_speed != 10000 && link_speed != 12500 && link_speed != 15000 && 
-            link_speed != 25000 && link_speed != 28000 && link_speed != 30000  ) {
-            cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps" << endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        if (block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {
-            cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        if (channels != 16 && channels != 32) {
-            // vaults are basically channels here 
-            cerr << "HMC channel options: 16/32" << endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        
-        // the BL for is determined by max block_size, which is a multiple of 32B
-        // each "device" transfer 32b per half cycle, i.e. 8B per cycle
-        // therefore BL is 4 for 32B block size
-        BL = block_size * 8 / 32;  
-
-        // A lot of the following parameters are not configurable 
-        // according to the spec, so we just set them here
-        rows = 65536;
-        columns = 16;
-        // TODO column access granularity(16B) != device width (4B), oooooooooops
-        // meaning that for each column access, 
-        // and the (min) block size is 32, which is exactly BL = 8, and BL can be up to 64... really?
-        device_width = 32; 
-        bus_width = 32;
-        if (num_dies == 4) {
-            banks = 8;  // NOTE this is banks per vault 
-            channel_size = 128;
-        } else {
-            banks = 16;
-            channel_size = 256;
-        }
-        bankgroups = 1;
-        banks_per_group = banks;
-    }
+    // HMC Specific parameters
+    num_links = static_cast<unsigned int>(reader.GetInteger("hmc", "num_links", 4));
+    link_width = static_cast<unsigned int>(reader.GetInteger("hmc", "link_width", 16));
+    link_speed = static_cast<unsigned int>(reader.GetInteger("hmc", "link_speed", 30));
+    block_size = static_cast<unsigned int>(reader.GetInteger("hmc", "block_size", 32));
+    xbar_queue_depth = static_cast<unsigned int>(reader.GetInteger("hmc", "xbar_queue_depth", 16));
+    
+    ProtocolAdjust();
     
     // calculate rank and re-calculate channel_size
     CalculateSize();
+
+    SetAddressMapping();
+
 
     // Timing Parameters
     // TODO there is no need to keep all of these variables, they should just be temporary
@@ -206,34 +157,6 @@ Config::Config(std::string config_file)
     cummulative_stats_file_csv = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative_stats.csv");
     epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", output_prefix + "epoch-stats.csv");
 
-    channel_width = LogBase2(channels);
-    rank_width = LogBase2(ranks);
-    bankgroup_width = LogBase2(bankgroups);
-    bank_width = LogBase2(banks_per_group);
-    row_width = LogBase2(rows);
-    column_width = LogBase2(columns);
-    uint32_t bytes_offset = LogBase2(bus_width / 8);
-    request_size_bytes = bus_width / 8 * BL;  // transaction size in bytes
-
-    // for each address given, because we're transimitting trascation_size bytes per transcation
-    // therefore there will be throwaway_bits not used in the address
-    // part of it is due to the bytes offset, the other part is the burst len 
-    // (same as column auto increment)
-    // so effectively only column_width_ -(throwaway_bits - bytes_offset) will be used in column addressing
-    throwaway_bits = LogBase2(request_size_bytes);
-    column_width -= (throwaway_bits - bytes_offset);
-
-    SetAddressMapping();
-
-#ifdef DEBUG_OUTPUT
-    cout << "Address bits:" << endl;
-    cout << setw(10) << "Channel " << channel_width << endl;
-    cout << setw(10) << "Rank " << rank_width << endl;
-    cout << setw(10) << "Bankgroup " << bankgroup_width << endl;
-    cout << setw(10) << "Bank " << bank_width << endl;
-    cout << setw(10) << "Row " << row_width << endl;
-    cout << setw(10) << "Column " << column_width << endl;
-#endif
 
     ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));
 
@@ -263,6 +186,67 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
     cout << "DRAM Procotol " << protocol_str << endl;
 #endif 
     return protocol_pairs[protocol_str];
+}
+
+
+void Config::ProtocolAdjust() {
+    // Sanity check for different protocols, mostly HBM/HMC
+    if (IsHMC()) {
+        if (num_links !=2 && num_links != 4) {
+            cerr << "HMC can only have 2 or 4 links!" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        if (num_dies != 4 && num_dies != 8) {
+            cerr << "HMC can only have 4/8 layers of dies!" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        if (link_width != 4 && link_width != 8 && link_width != 16) {
+            cerr << "HMC link width can only be 4 (quater), 8 (half) or 16 (full)!" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        } 
+        if (link_speed != 10000 && link_speed != 12500 && link_speed != 15000 && 
+            link_speed != 25000 && link_speed != 28000 && link_speed != 30000  ) {
+            cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        if (block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {
+            cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        if (channels != 16 && channels != 32) {
+            // vaults are basically channels here 
+            cerr << "HMC channel options: 16/32" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+        // the BL for is determined by max block_size, which is a multiple of 32B
+        // each "device" transfer 32b per half cycle, i.e. 8B per cycle
+        // therefore BL is 4 for 32B block size
+        BL = block_size * 8 / 32;  
+
+        // A lot of the following parameters are not configurable 
+        // according to the spec, so we just set them here
+        rows = 65536;
+        columns = 64;
+        // meaning that for each column access, 
+        // and the (min) block size is 32, which is exactly BL = 8, and BL can be up to 64... really?
+        device_width = 32; 
+        bus_width = 32;
+        if (num_dies == 4) {
+            banks = 8;  // NOTE this is banks per vault 
+            channel_size = 128;
+        } else {
+            banks = 16;
+            channel_size = 256;
+        }
+        bankgroups = 1;
+        banks_per_group = banks;
+    } else if (IsHBM()) {
+        // HBM is more flexible layout 
+        if (num_dies != 2 && num_dies != 4 && num_dies !=8) {
+            cerr << "HBM die options: 2/4/8" << endl;
+            AbruptExit(__FILE__, __LINE__);
+        }
+    }
 }
 
 
@@ -316,6 +300,37 @@ void Config::CalculateSize() {
 
 void Config::SetAddressMapping() {
     // has to strictly follow the order of chan, rank, bg, bank, row, col
+    channel_width = LogBase2(channels);
+    rank_width = LogBase2(ranks);
+    bankgroup_width = LogBase2(bankgroups);
+    bank_width = LogBase2(banks_per_group);
+    row_width = LogBase2(rows);
+    // add BL bits for GDDR
+    if (IsGDDR() || IsHBM()) {
+        columns *= BL;  
+    } 
+    column_width = LogBase2(columns);
+    uint32_t bytes_offset = LogBase2(bus_width / 8);
+    request_size_bytes = bus_width / 8 * BL;  // transaction size in bytes
+    // for each address given, because we're transimitting trascation_size bytes per transcation
+    // therefore there will be throwaway_bits not used in the address
+    // part of it is due to the bytes offset, the other part is the burst len 
+    // (same as column auto increment)
+    // so effectively the last (throwaway_bits - bytes_offsets) are masked to 0
+    throwaway_bits = LogBase2(request_size_bytes);
+    int masked_col_bits = throwaway_bits - bytes_offset;
+    unsigned col_mask = (0xFFFFFFFF <<  masked_col_bits);
+
+#ifdef DEBUG_OUTPUT
+    cout << "Address bits:" << endl;
+    cout << setw(10) << "Channel " << channel_width << endl;
+    cout << setw(10) << "Rank " << rank_width << endl;
+    cout << setw(10) << "Bankgroup " << bankgroup_width << endl;
+    cout << setw(10) << "Bank " << bank_width << endl;
+    cout << setw(10) << "Row " << row_width << endl;
+    cout << setw(10) << "Column " << column_width << endl;
+#endif
+
     int field_pos[] = {0, 0, 0, 0, 0, 0};
     int field_widths[] = {0, 0, 0, 0, 0, 0};
 
@@ -366,7 +381,7 @@ void Config::SetAddressMapping() {
         }
     }
 
-    AddressMapping = [field_pos, field_widths](uint64_t hex_addr) {
+    AddressMapping = [field_pos, field_widths, col_mask](uint64_t hex_addr) {
         uint32_t channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0, column = 0;
         channel = ModuloWidth(hex_addr, field_widths[0], field_pos[0]);
         rank = ModuloWidth(hex_addr, field_widths[1], field_pos[1]);
@@ -374,6 +389,8 @@ void Config::SetAddressMapping() {
         bank = ModuloWidth(hex_addr, field_widths[3], field_pos[3]);
         row = ModuloWidth(hex_addr, field_widths[4], field_pos[4]);
         column = ModuloWidth(hex_addr, field_widths[5], field_pos[5]);
+        column = column & col_mask;
         return Address(channel, rank, bankgroup, bank, row, column);
     };
 }
+
