@@ -18,9 +18,6 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
                                                                                 sample_id(0),
                                                                                 save_clk(0)
 {
-    num_dummy = 2; // always even number
-    cout << num_dummy / 2 << " cicles of dummy cells\n";
-
     // Initialize dimX, dimY, numP
     // The dimension of the chip is determined such that the floorplan is
     // as square as possilbe. If a square floorplan cannot be reached, 
