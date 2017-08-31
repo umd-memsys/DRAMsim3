@@ -24,6 +24,7 @@ public:
     Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
     Command AggressivePrecharge();
     void IssueRequest(std::list<Request*>& queue, std::list<Request*>::iterator req_itr);
+    bool IsReqInsertable(Request* req);
     bool InsertReq(Request* req);
     std::list<Request*>& GetQueue(int rank, int bankgroup, int bank);
     uint64_t clk_;

@@ -332,6 +332,10 @@ inline void HMCMemorySystem::IterateNextLink() {
 }
 
 
+bool HMCMemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) { //TODO @shawn - To implement
+    return true;
+}
+
 bool HMCMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     // to be compatible with other protocol we have this interface
     // when using this intreface the size of each transaction will be block_size

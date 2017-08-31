@@ -140,6 +140,11 @@ Command CommandQueue::AggressivePrecharge() {
     return Command();
 }
 
+bool CommandQueue::IsReqInsertable(Request* req) {
+    std::list<Request*>& queue = GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
+    return queue.size() < config_.queue_size;
+}
+
 bool CommandQueue::InsertReq(Request* req) {
     std::list<Request*>& queue = GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
     if (queue.size() < config_.queue_size) {

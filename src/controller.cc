@@ -139,6 +139,10 @@ void Controller::ClockTick() {
     
 }
 
+bool Controller::IsReqInsertable(Request* req) {
+    return cmd_queue_.IsReqInsertable(req);
+}
+
 bool Controller::InsertReq(Request* req) {
     return cmd_queue_.InsertReq(req);
 }
