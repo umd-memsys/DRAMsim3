@@ -15,13 +15,13 @@ namespace dramcore {
 
 class BaseMemorySystem {
 public:
-    BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
+    BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback);
     virtual ~BaseMemorySystem();
     virtual bool InsertReq(uint64_t hex_addr, bool is_write) = 0;
     virtual void ClockTick() = 0;
     virtual void PrintIntermediateStats();
     virtual void PrintStats();
-    std::function<void(uint64_t req_id)> callback_;
+    std::function<void(uint64_t req_id)> read_callback_, write_callback_;
     std::vector<Controller*> ctrls_;
     Config* ptr_config_;
 
@@ -46,7 +46,7 @@ protected:
 
 class MemorySystem : public BaseMemorySystem {
 public:
-    MemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
+    MemorySystem(const std::string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback);
     ~MemorySystem();
     bool InsertReq(uint64_t hex_addr, bool is_write) override ;
     void ClockTick() override ;
@@ -60,7 +60,7 @@ private:
 // To establish a baseline for what a 'good' memory standard can and cannot do for a given application
 class IdealMemorySystem : public BaseMemorySystem {
 public:
-    IdealMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
+    IdealMemorySystem(const std::string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback);
     ~IdealMemorySystem();
     bool InsertReq(uint64_t hex_addr, bool is_write) override ;
     void ClockTick() override ;

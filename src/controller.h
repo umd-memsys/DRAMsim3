@@ -13,11 +13,11 @@ namespace dramcore {
 
 class Controller {
 public:
-    Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)>& callback_);
+    Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback);
     ~Controller() {};
     void ClockTick();
     bool InsertReq(Request* req);
-    std::function<void(uint64_t)>& callback_;
+    std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
 protected:
     uint64_t clk_;

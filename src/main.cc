@@ -40,13 +40,13 @@ int main(int argc, const char **argv)
 
     BaseMemorySystem *memory_system;
     if(memory_system_type == "default") { //TODO - Better name than default?
-        memory_system = new MemorySystem(config_file, callback_func);
+        memory_system = new MemorySystem(config_file, read_callback_func, write_callback_func);
     }
     else if(memory_system_type == "hmc") {
-        memory_system = new HMCMemorySystem(config_file, callback_func);
+        memory_system = new HMCMemorySystem(config_file, read_callback_func, write_callback_func);
     }
     else if(memory_system_type == "ideal") {
-        memory_system = new IdealMemorySystem(config_file, callback_func);
+        memory_system = new IdealMemorySystem(config_file, read_callback_func, write_callback_func);
     }
     else {
         cout << "Unknown memory system type" << endl;

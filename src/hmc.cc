@@ -239,8 +239,8 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
     }
 
 
-HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback):
-    BaseMemorySystem(config_file, callback),
+HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback):
+    BaseMemorySystem(config_file, read_callback, write_callback),
     ref_tick_(0),
     logic_clk_(0),
     next_link_(0)
@@ -257,7 +257,7 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<v
     vault_callback_ = std::bind(&HMCMemorySystem::VaultCallback, this, std::placeholders::_1);
     vaults_.reserve(ptr_config_->channels);
     for (int i = 0; i < ptr_config_->channels; i++) {
-        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, vault_callback_));
+        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, vault_callback_, vault_callback_));
     }
     // initialize vaults and crossbar
     // the first layer of xbar will be num_links * 4 (4 for quadrants)
@@ -437,7 +437,7 @@ void HMCMemorySystem::LogicClockTickPre() {
         if (!link_resp_queues_[i].empty()) {
             HMCResponse* resp = link_resp_queues_[i].front();
             if (resp->exit_time <= logic_clk_) {
-                callback_(resp->resp_id);
+                read_callback_(resp->resp_id); //TODO - @shawn - separate read and write callbacks for hmc
                 delete(resp);
                 link_resp_queues_[i].erase(link_resp_queues_[i].begin());
                 ptr_stats_->hmc_reqs_done++;

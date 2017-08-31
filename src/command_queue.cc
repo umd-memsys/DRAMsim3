@@ -4,8 +4,7 @@
 using namespace std;
 using namespace dramcore;
 
-CommandQueue::CommandQueue(uint32_t channel_id, const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)> &callback) :
-    callback_(callback),
+CommandQueue::CommandQueue(uint32_t channel_id, const Config &config, const ChannelState &channel_state, Statistics &stats) :
     clk_(0),
     rank_queues_empty(vector<bool>(config.ranks, true)),
     rank_queues_empty_from_time_(std::vector<uint64_t >(config.ranks, 0)),

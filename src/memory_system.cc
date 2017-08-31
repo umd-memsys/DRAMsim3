@@ -4,8 +4,9 @@
 using namespace std;
 using namespace dramcore;
 
-BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback) :
-    callback_(callback),
+BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
+    read_callback_(read_callback),
+    write_callback_(write_callback),
     clk_(0)
 {
     ptr_config_ = new Config(config_file);
@@ -77,8 +78,8 @@ void BaseMemorySystem::PrintStats() {
     return;
 }
 
-MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> callback) :
-    BaseMemorySystem(config_file, callback)
+MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
+    BaseMemorySystem(config_file, read_callback, write_callback)
 {
     if (ptr_config_->IsHMC()) {
         cerr << "Initialzed a memory system with an HMC config file!" << endl;
@@ -87,7 +88,7 @@ MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_
 
     ctrls_.resize(ptr_config_->channels);
     for(auto i = 0; i < ptr_config_->channels; i++) {
-        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, callback_);
+        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, read_callback_, write_callback_);
     }
 }
 
@@ -149,8 +150,8 @@ void MemorySystem::ClockTick() {
 }
 
 
-IdealMemorySystem::IdealMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback):
-    BaseMemorySystem(config_file, callback),
+IdealMemorySystem::IdealMemorySystem(const std::string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback):
+    BaseMemorySystem(config_file, read_callback, write_callback),
     latency_(ptr_config_->ideal_memory_latency)
 {
 
@@ -179,7 +180,12 @@ void IdealMemorySystem::ClockTick() {
                 ptr_stats_->numb_write_reqs_issued++;
             }
             ptr_stats_->access_latency.AddValue(clk_ - req->arrival_time_);
-            callback_(req->hex_addr_);
+            if(req->cmd_.IsRead())
+                read_callback_(req->hex_addr_);
+            else if(req->cmd_.IsWrite())
+                write_callback_(req->hex_addr_);
+            else
+                AbruptExit(__FILE__, __LINE__);
             delete(req);
             infinite_buffer_q_.erase(req_itr++);
         }

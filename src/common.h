@@ -31,7 +31,8 @@ extern std::function<Address(uint64_t)> AddressMapping;
 // void SetAddressMapping(Config* config);
 uint32_t LogBase2(uint32_t power_of_two);
 void AbruptExit(const std::string& file, int line);
-void callback_func(uint64_t req_id);
+void read_callback_func(uint64_t req_id);
+void write_callback_func(uint64_t req_id);
 
 enum class State {
     OPEN,

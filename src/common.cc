@@ -64,12 +64,18 @@ void AbruptExit(const std::string& file, int line) {
     exit(-1);
 }
 
-//Dummy callback function for use when the simulator is not integrated with zsim,SST or other frontend feeders
-void callback_func(uint64_t addr) {
+//Dummy callback functions for use when the simulator is not integrated with a frontend feeders
+void read_callback_func(uint64_t addr) {
 #ifdef LOG_REQUESTS
-    cout << "Request with address = " << addr << " is returned" << endl;
+    cout << "Read Request with address = " << addr << " is returned" << endl;
 #endif
     return;
+}
+
+void write_callback_func(uint64_t addr) {
+#ifdef LOG_REQUESTS
+    cout << "Write Request with address = " << addr << " is returned" << endl;
+#endif
 }
 
 }
