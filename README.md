@@ -61,7 +61,7 @@ Import the project from Clion. This will create a `cmake-build-debug` directory.
 and run directory.
 
 
-*Note - While CMake is a paid IDE, it provides a free student license.*
+*Note - While Clion is a paid IDE, it provides a free student license.*
 
 
 ## Using Visual Studio Code
