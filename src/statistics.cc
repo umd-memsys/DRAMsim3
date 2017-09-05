@@ -283,7 +283,7 @@ Statistics::Statistics(const Config& config):
     sref_energy = DoubleStat(config_.sref_energy_inc, "sref_energy", "Self-refresh energy");
     total_energy = DoubleStat(0.0, "total_energy", "(pJ) Total energy consumed");
     average_power = NonCumulativeStat ("average_power", "(mW) Average Power for all devices");
-    average_bandwidth = NonCumulativeStat("average_bandwidth", "(GB/s) Average Aggregated Bandwidths");
+    average_bandwidth = NonCumulativeStat("average_bandwidth", "(GB/s) Average Aggregate Bandwidth");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -328,7 +328,7 @@ Statistics::Statistics(const Config& config):
 
 void Statistics::UpdatePreEpoch(uint64_t clk) {
     // this is used to calculate the stats that are dependent on other stats before each epoch print
-    // like total energy, power, bandwith
+    // like total energy, power, bandwidth
     total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
                    ref_energy.value + refb_energy.value + act_stb_energy.value + \
                    pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
@@ -340,9 +340,9 @@ void Statistics::UpdatePreEpoch(uint64_t clk) {
         reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count() - \
                            numb_read_reqs_issued.LastCount() - numb_write_reqs_issued.LastCount(); 
     }
-    double gb_transfereed = static_cast<double>(reqs_issued) * config_.request_size_bytes;
+    double gb_transferred = static_cast<double>(reqs_issued) * config_.request_size_bytes;
     double ns_passed = static_cast<double>(clk - last_clk_) * config_.tCK;
-    average_bandwidth.value = gb_transfereed / ns_passed;
+    average_bandwidth.value = gb_transferred / ns_passed;
 }
 
 void Statistics::PrintStats(std::ostream &where) const {

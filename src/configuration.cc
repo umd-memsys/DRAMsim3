@@ -148,7 +148,8 @@ Config::Config(std::string config_file)
     // Other Parameters
     // give a prefix instead of specify the output name one by one... 
     // this would allow outputing to a directory and you can always override these values
-    output_prefix = reader.Get("other", "output_prefix", "dramsim3-output-");
+
+    output_prefix = reader.Get("other", "output_prefix", "dramcore-");
     epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
     stats_file = reader.Get("other", "stats_file", output_prefix + "stats.txt");
     cummulative_stats_file = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative-stats.txt");

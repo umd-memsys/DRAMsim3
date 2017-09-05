@@ -5,7 +5,7 @@
 using namespace std;
 using namespace dramcore;
 
-BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
+BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
     read_callback_(read_callback),
     write_callback_(write_callback),
     clk_(0)
@@ -15,12 +15,16 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function
     ptr_stats_ = new Statistics(*ptr_config_);
 
     //Stats output files
-    stats_file_.open(ptr_config_->stats_file);
-    cummulative_stats_file_.open(ptr_config_->cummulative_stats_file);
-    epoch_stats_file_.open(ptr_config_->epoch_stats_file);
-    stats_file_csv_.open(ptr_config_->stats_file_csv);
-    cummulative_stats_file_csv_.open(ptr_config_->cummulative_stats_file_csv);
-    epoch_stats_file_csv_.open(ptr_config_->epoch_stats_file_csv);
+    //TODO - Implement checks to see if a directory exits or else to create one.
+    cout << fmt::format("***Note***\nEnsure that the directory '{}' exists in the working directory\notherwise dramcore output stat files won't be printed\n", output_dir);
+    const std::string output_dir_path = output_dir + "/";
+
+    stats_file_.open(output_dir_path + ptr_config_->stats_file);
+    cummulative_stats_file_.open(output_dir_path + ptr_config_->cummulative_stats_file);
+    epoch_stats_file_.open(output_dir_path + ptr_config_->epoch_stats_file);
+    stats_file_csv_.open(output_dir_path + ptr_config_->stats_file_csv);
+    cummulative_stats_file_csv_.open(output_dir_path + ptr_config_->cummulative_stats_file_csv);
+    epoch_stats_file_csv_.open(output_dir_path + ptr_config_->epoch_stats_file_csv);
 
     ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(cummulative_stats_file_csv_);
@@ -79,8 +83,8 @@ void BaseMemorySystem::PrintStats() {
     return;
 }
 
-MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
-    BaseMemorySystem(config_file, read_callback, write_callback)
+MemorySystem::MemorySystem(const string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
+    BaseMemorySystem(config_file, output_dir, read_callback, write_callback)
 {
     if (ptr_config_->IsHMC()) {
         cerr << "Initialized a memory system with an HMC config file!" << endl;
@@ -140,8 +144,8 @@ void MemorySystem::ClockTick() {
 }
 
 
-IdealMemorySystem::IdealMemorySystem(const std::string &config_file, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback):
-    BaseMemorySystem(config_file, read_callback, write_callback),
+IdealMemorySystem::IdealMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback):
+    BaseMemorySystem(config_file, output_dir, read_callback, write_callback),
     latency_(ptr_config_->ideal_memory_latency)
 {
 
