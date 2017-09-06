@@ -12,7 +12,7 @@ except:
     print "please install numpy, matplotlib and pandas"
     raise
 
-# matplotlib.use("Agg")
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
