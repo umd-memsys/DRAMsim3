@@ -1,8 +1,7 @@
 #!/usr/bin/python
 import os
 import sys
-import ConfigParser
-
+import parse_config
 
 class Command(object):
     """
@@ -85,39 +84,6 @@ class Command(object):
         bank_num = self.bankgroup * config["dram_structure"]["banks_per_group"] + self.bank
         return "%d,%s,%d\n" % (self.clk, cmd_str, bank_num)
 
-
-def get_val(config, sec, opt):
-    """
-    get value from a ini file given the section and option
-    the priority here is int, float, boolean and finally string
-    """
-    try:
-        val = config.getint(sec, opt)
-    except ValueError:
-        try:
-            val = config.getfloat(sec, opt)
-        except ValueError:
-            try:
-                val = config.getboolean(sec, opt)
-            except ValueError:
-                val = config.get(sec, opt)  # shouldn't have any exceptions here..
-    return val
-
-def get_config_dict(config_file):
-    """
-    read a ini file specified by config_file and
-    return a dict of configs with [section][option] : value structure
-    """
-    _config_dict = {}
-    config = ConfigParser.ConfigParser()
-    config.read(config_file)
-    for sec in config.sections():
-        _config_dict[sec] = {}
-        for opt in config.options(sec):
-            _config_dict[sec][opt] = get_val(config, sec, opt)
-    return _config_dict
-
-
 def calculate_megs_per_device(config):
     """
     given config dict, calculate device density in Mbits
@@ -158,7 +124,7 @@ class DRAMValidation(object):
 
         self.drampower_out = self.verilog_out[:-3] + ".power.trc"
 
-        self.configs = get_config_dict(config_file_name)
+        self.configs = parse_config.get_dict(config_file_name)
 
         trace_in = open(trace_file_name, "r")
 
@@ -618,7 +584,7 @@ if __name__ == "__main__":
     ini_file = sys.argv[1]
     cmd_trace_file = sys.argv[2]
 
-    configs = get_config_dict(ini_file)
+    configs = parse_config.get_dict(ini_file)
 
     validation = None
     if configs["dram_structure"]["protocol"] == "DDR4":

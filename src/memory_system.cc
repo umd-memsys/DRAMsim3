@@ -1,11 +1,13 @@
 #include "memory_system.h"
 #include "../ext/fmt/src/format.h"
+#include <assert.h>
 
 using namespace std;
 using namespace dramcore;
 
-BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback) :
-    callback_(callback),
+BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
+    read_callback_(read_callback),
+    write_callback_(write_callback),
     clk_(0)
 {
     ptr_config_ = new Config(config_file);
@@ -14,12 +16,16 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, std::function
     ptr_thermCal_ = new ThermalCalculator(*ptr_config_, *ptr_stats_);
 
     //Stats output files
-    stats_file_.open(ptr_config_->stats_file);
-    cummulative_stats_file_.open(ptr_config_->cummulative_stats_file);
-    epoch_stats_file_.open(ptr_config_->epoch_stats_file);
-    stats_file_csv_.open(ptr_config_->stats_file_csv);
-    cummulative_stats_file_csv_.open(ptr_config_->cummulative_stats_file_csv);
-    epoch_stats_file_csv_.open(ptr_config_->epoch_stats_file_csv);
+    //TODO - Implement checks to see if a directory exits or else to create one.
+    cout << fmt::format("***Note***\nEnsure that the directory '{}' exists in the working directory\notherwise dramcore output stat files won't be printed\n", output_dir);
+    const std::string output_dir_path = output_dir + "/";
+
+    stats_file_.open(output_dir_path + ptr_config_->stats_file);
+    cummulative_stats_file_.open(output_dir_path + ptr_config_->cummulative_stats_file);
+    epoch_stats_file_.open(output_dir_path + ptr_config_->epoch_stats_file);
+    stats_file_csv_.open(output_dir_path + ptr_config_->stats_file_csv);
+    cummulative_stats_file_csv_.open(output_dir_path + ptr_config_->cummulative_stats_file_csv);
+    epoch_stats_file_csv_.open(output_dir_path + ptr_config_->epoch_stats_file_csv);
 
     ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(cummulative_stats_file_csv_);
@@ -81,17 +87,17 @@ void BaseMemorySystem::PrintStats() {
     return;
 }
 
-MemorySystem::MemorySystem(const string &config_file, std::function<void(uint64_t)> callback) :
-    BaseMemorySystem(config_file, callback)
+MemorySystem::MemorySystem(const string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
+    BaseMemorySystem(config_file, output_dir, read_callback, write_callback)
 {
     if (ptr_config_->IsHMC()) {
-        cerr << "Initialzed a memory system with an HMC config file!" << endl;
+        cerr << "Initialized a memory system with an HMC config file!" << endl;
         AbruptExit(__FILE__, __LINE__);
-    }
+    } //TODO - Unnecessary. To remove.
 
     ctrls_.resize(ptr_config_->channels);
     for(auto i = 0; i < ptr_config_->channels; i++) {
-        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, ptr_thermCal_, callback_);
+        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, read_callback_, write_callback_);
     }
 }
 
@@ -103,7 +109,15 @@ MemorySystem::~MemorySystem()
     }
 }
 
-bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
+bool MemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) {
+    CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
+    Request* temp_req = new Request(cmd_type, hex_addr, clk_, 0); //TODO - This is probably not very efficient
+    bool status = ctrls_[temp_req->Channel()]->IsReqInsertable(temp_req);
+    delete temp_req;
+    return status;
+}
+
+bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) { //TODO - make it return void
     //Record trace - Record address trace for debugging or other purposes
 #ifdef GENERATE_TRACE
     address_trace_ << fmt::format("{:#x} {} {}\n", hex_addr, is_write ? "WRITE" : "READ", clk_);
@@ -113,18 +127,8 @@ bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     id_++;
     Request* req = new Request(cmd_type, hex_addr, clk_, id_);
 
-    // Some CPU simulators might not model the backpressure because queues are full.
-    // An approximate way of addressing this scenario is to buffer all such requests here in the DRAM simulator and then
-    // feed them into the actual memory controller queues as and when space becomes available.
-    // Note - This is an approximation and if the size of such buffer queue becomes large during the course of the
-    // simulation, then the accuracy sought of devolves into that of a trace based simulation.
     bool is_insertable = ctrls_[req->Channel()]->InsertReq(req);
-    if((*ptr_config_).req_buffering_enabled && !is_insertable) {
-        buffer_q_.push_back(req);
-        is_insertable = true;
-        ptr_stats_->numb_buffered_requests++;
-    }
-
+    assert(is_insertable);
     return is_insertable;
 }
 
@@ -132,30 +136,21 @@ void MemorySystem::ClockTick() {
     for( auto ctrl : ctrls_)
         ctrl->ClockTick();
 
-    //Insert requests stored in the buffer_q as and when space is available
-    if(!buffer_q_.empty()) {
-        for(auto req_itr = buffer_q_.begin(); req_itr != buffer_q_.end(); req_itr++) {
-            auto req = *req_itr;
-            if(ctrls_[req->Channel()]->InsertReq(req)) {
-                buffer_q_.erase(req_itr);
-                break;  // either break or set req_itr to the return value of erase()
-            }
-        }
-    }
 
     if( clk_ % ptr_config_->epoch_period == 0) {
         ptr_stats_->UpdatePreEpoch(clk_);
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }
+    
     clk_++;
     ptr_stats_->dramcycles++;
     return;
 }
 
 
-IdealMemorySystem::IdealMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback):
-    BaseMemorySystem(config_file, callback),
+IdealMemorySystem::IdealMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback):
+    BaseMemorySystem(config_file, output_dir, read_callback, write_callback),
     latency_(ptr_config_->ideal_memory_latency)
 {
 
@@ -184,7 +179,12 @@ void IdealMemorySystem::ClockTick() {
                 ptr_stats_->numb_write_reqs_issued++;
             }
             ptr_stats_->access_latency.AddValue(clk_ - req->arrival_time_);
-            callback_(req->hex_addr_);
+            if(req->cmd_.IsRead())
+                read_callback_(req->hex_addr_);
+            else if(req->cmd_.IsWrite())
+                write_callback_(req->hex_addr_);
+            else
+                AbruptExit(__FILE__, __LINE__);
             delete(req);
             infinite_buffer_q_.erase(req_itr++);
         }
