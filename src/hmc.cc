@@ -332,8 +332,15 @@ inline void HMCMemorySystem::IterateNextLink() {
 }
 
 
-bool HMCMemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) { //TODO @shawn - To implement
-    return true;
+bool HMCMemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) { 
+    bool insertable = false;
+    for (auto link_queue = link_req_queues_.begin(); link_queue != link_req_queues_.end(); link_queue ++) {
+        if ((*link_queue).size() < queue_depth_) {
+            insertable = true;
+            break;
+        }
+    }
+    return insertable;
 }
 
 bool HMCMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
@@ -441,7 +448,11 @@ void HMCMemorySystem::LogicClockTickPre() {
         if (!link_resp_queues_[i].empty()) {
             HMCResponse* resp = link_resp_queues_[i].front();
             if (resp->exit_time <= logic_clk_) {
-                read_callback_(resp->resp_id); //TODO - @shawn - separate read and write callbacks for hmc
+                if (resp->type == HMCRespType::RD_RS) {
+                    read_callback_(resp->resp_id);
+                } else {
+                    write_callback_(resp->resp_id);
+                }
                 delete(resp);
                 link_resp_queues_[i].erase(link_resp_queues_[i].begin());
                 ptr_stats_->hmc_reqs_done++;
