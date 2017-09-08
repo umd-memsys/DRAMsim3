@@ -97,7 +97,7 @@ MemorySystem::MemorySystem(const string &config_file, const std::string &output_
 
     ctrls_.resize(ptr_config_->channels);
     for(auto i = 0; i < ptr_config_->channels; i++) {
-        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, read_callback_, write_callback_);
+        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, ptr_thermCal_, read_callback_, write_callback_);
     }
 }
 
