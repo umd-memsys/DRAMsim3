@@ -64,7 +64,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     Tamb = config_.Tamb0 + T0;
 
     cout << "bank aspect ratio = " << config_.bank_asr << endl;
-    cout << "#rows = " << config_.rows << "; #columns = " << config_.rows / config_.bank_asr << endl;
+    //cout << "#rows = " << config_.rows << "; #columns = " << config_.rows / config_.bank_asr << endl;
     cout << "numXgrids = " << config_.numXgrids << "; numYgrids = " << config_.numYgrids << endl;
     cout << "vault_x = " << vault_x << "; vault_y = " << vault_y << endl;
     cout << "bank_x = " << bank_x << "; bank_y = " << bank_y << endl;
@@ -209,6 +209,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
     Address new_loc;
     int vault_id_x, vault_id_y, bank_id_x, bank_id_y, grid_id_x, grid_id_y;
     int x, y, z; 
+    int col_tile_id; 
 
     row_id = cmd.Row();
     bank_id = cmd.Bank();
@@ -255,14 +256,15 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 //cout << "vault_id_y = " << vault_id_y << endl;
             }
             
-            grid_id_x = row_id / config_.matX; 
+            grid_id_x = row_id / config_.matX / config_.RowTile; 
 
             for (int i = 0; i < config_.BL; i ++)
             {
                 new_loc = GetPhyAddress(temp_addr);
                 col_id = new_loc.column_ * config_.device_width;
+                col_tile_id = row_id / config_.TileRowNum;  
                 for (int j = 0; j < config_.device_width; j ++){
-                    grid_id_y = col_id / config_.matY;
+                    grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
                     x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
                     y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
 
@@ -296,14 +298,15 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 bank_id_y = bank_id % bank_y;
             }
             
-            grid_id_x = row_id / config_.matX; 
+            grid_id_x = row_id / config_.matX / config_.RowTile; 
 
             for (int i = 0; i < config_.BL; i ++)
             {
                 new_loc = GetPhyAddress(temp_addr);
                 col_id = new_loc.column_ * config_.device_width;
+                col_tile_id = row_id / config_.TileRowNum;  
                 for (int j = 0; j < config_.device_width; j ++){
-                    grid_id_y = col_id / config_.matY;
+                    grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
                     x = bank_id_x * config_.numXgrids + grid_id_x;
                     y = bank_id_y * config_.numYgrids + grid_id_y; 
 
@@ -352,14 +355,15 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 vault_id_x = 0; 
             }
             
-            grid_id_x = row_id / config_.matX; 
+            grid_id_x = row_id / config_.matX / config_.RowTile; 
 
             for (int i = 0; i < config_.BL; i ++)
             {
                 new_loc = GetPhyAddress(temp_addr);
                 col_id = new_loc.column_ * config_.device_width;
+                col_tile_id = row_id / config_.TileRowNum; 
                 for (int j = 0; j < config_.device_width; j ++){
-                    grid_id_y = col_id / config_.matY;
+                    grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
                     x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
                     y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
 
@@ -392,15 +396,16 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 bank_id_y = bank_id / bank_x;
                 bank_id_x = bank_id % bank_x;
             }
-            grid_id_x = row_id / config_.matX; 
+            grid_id_x = row_id / config_.matX / config_.RowTile; 
 
 
             for (int i = 0; i < config_.BL; i ++)
             {
                 new_loc = GetPhyAddress(temp_addr);
                 col_id = new_loc.column_ * config_.device_width;
+                col_tile_id = row_id / config_.TileRowNum; 
                 for (int j = 0; j < config_.device_width; j ++){
-                    grid_id_y = col_id / config_.matY;
+                    grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
                     x = bank_id_x * config_.numXgrids + grid_id_x;
                     y = bank_id_y * config_.numYgrids + grid_id_y;
 
@@ -424,6 +429,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
     int col_id = 0;
     int vault_id_x, vault_id_y, bank_id_x, bank_id_y, grid_id_x, grid_id_y;
     int x, y, z;
+    int col_tile_id;
 
     // remap the row (if set in ini file) so that they don't concentrate in one area
     Address temp_addr = Address(cmd.addr_);
@@ -465,8 +471,9 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
                 vault_id_y = vault_id % 2; 
                 vault_id_x = 0; 
             }
-            grid_id_x = row_id / config_.matX; 
-            grid_id_y = col_id / config_.matY;
+            grid_id_x = row_id / config_.matX / config_.RowTile; 
+            col_tile_id = row_id / config_.TileRowNum; 
+            grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
             x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
             y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
 
@@ -491,8 +498,9 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
                 bank_id_y = bank_id % bank_y;
             }
             
-            grid_id_x = row_id / config_.matX; 
-            grid_id_y = col_id / config_.matY; 
+            grid_id_x = row_id / config_.matX / config_.RowTile; 
+            col_tile_id = row_id / config_.TileRowNum; 
+            grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
             x = bank_id_x * config_.numXgrids + grid_id_x;
             y = bank_id_y * config_.numYgrids + grid_id_y;
         }
@@ -529,8 +537,9 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
                 vault_id_y = vault_id % 2; 
                 vault_id_x = 0; 
             }
-            grid_id_x = row_id / config_.matX; 
-            grid_id_y = col_id / config_.matY;
+            grid_id_x = row_id / config_.matX / config_.RowTile; 
+            col_tile_id = row_id / config_.TileRowNum; 
+            grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
             x = vault_id_x * (bank_x * config_.numXgrids) + bank_id_x * config_.numXgrids + grid_id_x;
             y = vault_id_y * (bank_y * config_.numYgrids) + bank_id_y * config_.numYgrids + grid_id_y; 
 
@@ -556,8 +565,9 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
                 bank_id_y = bank_id / bank_x;
                 bank_id_x = bank_id % bank_x;
             }
-            grid_id_x = row_id / config_.matX; 
-            grid_id_y = col_id / config_.matY; 
+            grid_id_x = row_id / config_.matX / config_.RowTile; 
+            col_tile_id = row_id / config_.TileRowNum; 
+            grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
             x = bank_id_x * config_.numXgrids + grid_id_x;
             y = bank_id_y * config_.numYgrids + grid_id_y;
             //cout << "bank_id = " << bank_id << "; row_id = " << row_id << endl;
