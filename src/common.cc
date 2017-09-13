@@ -78,4 +78,24 @@ void write_callback_func(uint64_t addr) {
 #endif
 }
 
+bool DirExist(std::string dir) {
+    // courtesy to stackoverflow
+    struct stat info;
+    if ( stat( dir.c_str(), &info) != 0 ) {
+        return false;
+    } else if ( info.st_mode & S_IFDIR ) {
+        return true;
+    } else {  // exists but is file
+        return false;
+    }
+} 
+
+std::string RenameFileWithNumber(const std::string file_name, int number) {
+    int last_dot_index = file_name.find_last_of(".");
+    std::string prefix = file_name.substr(0, last_dot_index);
+    std::string postfix = file_name.substr(last_dot_index, file_name.size());
+    std::string result = prefix + "_" + std::to_string(number) + postfix;
+    return result;
+}
+
 }

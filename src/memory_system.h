@@ -25,12 +25,14 @@ public:
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
     std::vector<Controller*> ctrls_;
     Config* ptr_config_;
+    static int num_mems_;  // a lot of CPU sims create a MemorySystem for each channel, oh well..
 
 protected:
     uint64_t clk_;
     uint64_t id_;
     Timing* ptr_timing_;
     Statistics* ptr_stats_;
+    int mem_sys_id_;
 
     //Stats output files
     std::ofstream stats_file_;

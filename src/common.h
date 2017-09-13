@@ -7,6 +7,8 @@
 #include <functional>
 #include <stdint.h>
 #include <vector>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 namespace dramcore {
 
@@ -33,6 +35,8 @@ uint32_t LogBase2(uint32_t power_of_two);
 void AbruptExit(const std::string& file, int line);
 void read_callback_func(uint64_t req_id);
 void write_callback_func(uint64_t req_id);
+bool DirExist(std::string dir);
+std::string RenameFileWithNumber(const std::string file_name, int number);
 
 enum class State {
     OPEN,

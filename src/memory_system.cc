@@ -1,30 +1,57 @@
 #include "memory_system.h"
-#include "../ext/fmt/src/format.h"
 #include <assert.h>
+
+#ifdef GENERATE_TRACE
+#include "../ext/fmt/src/format.h"
+#endif // GENERATE_TRACE
 
 using namespace std;
 using namespace dramcore;
+
+// alternative way is to assign the id in constructor but this is less destructive
+int BaseMemorySystem::num_mems_ = 0;
 
 BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
     read_callback_(read_callback),
     write_callback_(write_callback),
     clk_(0)
 {
+    mem_sys_id_ = num_mems_;
+    num_mems_ += 1;
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics(*ptr_config_);
 
     //Stats output files
-    //TODO - Implement checks to see if a directory exits or else to create one.
-    cout << fmt::format("***Note***\nEnsure that the directory '{}' exists in the working directory\notherwise dramcore output stat files won't be printed\n", output_dir);
-    const std::string output_dir_path = output_dir + "/";
+    std::string output_dir_path;
+    if ( !DirExist(output_dir) ) {
+        cout << "WARNING: Output directory " << output_dir << " not exists! Using current directory for output!" << endl;
+        output_dir_path = "./";
+    } else {
+        output_dir_path = output_dir + "/";
+    }
 
-    stats_file_.open(output_dir_path + ptr_config_->stats_file);
-    cummulative_stats_file_.open(output_dir_path + ptr_config_->cummulative_stats_file);
-    epoch_stats_file_.open(output_dir_path + ptr_config_->epoch_stats_file);
-    stats_file_csv_.open(output_dir_path + ptr_config_->stats_file_csv);
-    cummulative_stats_file_csv_.open(output_dir_path + ptr_config_->cummulative_stats_file_csv);
-    epoch_stats_file_csv_.open(output_dir_path + ptr_config_->epoch_stats_file_csv);
+    std::string stats_file_name(output_dir_path + ptr_config_->stats_file);
+    std::string cummulative_stats_file_name(output_dir_path + ptr_config_->cummulative_stats_file);
+    std::string epoch_stats_file_name(output_dir_path + ptr_config_->epoch_stats_file);
+    std::string stats_file_csv_name(output_dir_path + ptr_config_->stats_file_csv);
+    std::string cummulative_stats_file_csv_name(output_dir_path + ptr_config_->cummulative_stats_file_csv);
+    std::string epoch_stats_file_csv_name(output_dir_path + ptr_config_->epoch_stats_file_csv);
+    if (mem_sys_id_ > 0) {
+        // if there are more than one memory_systems then rename the output to preven being overwritten
+        stats_file_name = RenameFileWithNumber(stats_file_name, mem_sys_id_);
+        cummulative_stats_file_name = RenameFileWithNumber(cummulative_stats_file_name, mem_sys_id_);
+        epoch_stats_file_name = RenameFileWithNumber(epoch_stats_file_name, mem_sys_id_);
+        stats_file_csv_name = RenameFileWithNumber(stats_file_csv_name, mem_sys_id_);
+        cummulative_stats_file_csv_name = RenameFileWithNumber(cummulative_stats_file_csv_name, mem_sys_id_);
+        epoch_stats_file_csv_name = RenameFileWithNumber(epoch_stats_file_csv_name, mem_sys_id_);
+    } 
+    stats_file_.open(stats_file_name);
+    cummulative_stats_file_.open(cummulative_stats_file_name);
+    epoch_stats_file_.open(epoch_stats_file_name);
+    stats_file_csv_.open(stats_file_csv_name);
+    cummulative_stats_file_csv_.open(cummulative_stats_file_csv_name);
+    epoch_stats_file_csv_.open(epoch_stats_file_csv_name);
 
     ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(cummulative_stats_file_csv_);
@@ -33,6 +60,8 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
     address_trace_.open("address.trace");
 #endif
 }
+
+
 
 BaseMemorySystem::~BaseMemorySystem() {
     delete(ptr_stats_);
@@ -73,7 +102,7 @@ void BaseMemorySystem::PrintStats() {
     // update one last time before print
     ptr_stats_->UpdateEpoch(clk_);
     cout << "-----------------------------------------------------" << endl;
-    cout << "Printing final stats -- " << endl;
+    cout << "Printing final stats of MemorySystem "<< mem_sys_id_ << " -- " << endl;
     cout << "-----------------------------------------------------" << endl;
     cout << *ptr_stats_;
     cout << "-----------------------------------------------------" << endl;
