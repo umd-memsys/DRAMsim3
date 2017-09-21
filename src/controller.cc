@@ -44,19 +44,16 @@ void Controller::ClockTick() {
     // if we have rank states it would make life easier
     for (unsigned i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
-            stats_.sref_energy++;
+            stats_.sref_cycles++;
+            // stats_.sref_energy++;
         } else {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
-#ifdef DEBUG_POWER
                 stats_.all_bank_idle_cycles++;
-#endif // DEBUG_POWER
-                stats_.pre_stb_energy++;
+                // stats_.pre_stb_energy++;
             } else {
-#ifdef DEBUG_POWER
                 stats_.active_cycles++;
-#endif // DEBUG_POWER
-                stats_.act_stb_energy++;
+                // stats_.act_stb_energy++;
             }
         }
     }

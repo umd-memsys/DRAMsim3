@@ -267,10 +267,9 @@ Statistics::Statistics(const Config& config):
     logic_clk CounterStat("logic_clk", "HMC logic clock");
     stats_list.push_back(&logic_clk);
 #endif  // DEBUG_HMC
-#ifdef DEBUG_POWER
+    sref_cycles = CounterStat("sref_cycles", "Cycles in self-refresh state");
     all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all banks are idle");
     active_cycles = CounterStat("rank active cycles", "Number of cycles the rank ramins active");
-#endif // DEBUG_POWER
     // energy and power stats
     act_energy = DoubleStat(config_.act_energy_inc, "act_energy", "ACT energy");
     read_energy = DoubleStat(config_.read_energy_inc, "read_energy", "READ energy (not including IO)");
@@ -307,10 +306,8 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&numb_self_refresh_enter_cmds_issued);
     stats_list.push_back(&numb_self_refresh_exit_cmds_issued);
     stats_list.push_back(&numb_rw_rowhits_pending_refresh);
-#ifdef DEBUG_POWER
     stats_list.push_back(&all_bank_idle_cycles);
     stats_list.push_back(&active_cycles);
-#endif // DEBUG_POWER
     stats_list.push_back(&act_energy);
     stats_list.push_back(&read_energy);
     stats_list.push_back(&write_energy);
@@ -327,19 +324,34 @@ Statistics::Statistics(const Config& config):
 
 
 void Statistics::UpdatePreEpoch(uint64_t clk) {
-    // this is used to calculate the stats that are dependent on other stats before each epoch print
-    // like total energy, power, bandwidth
+    // Add this function because some stats depends on other stats
+    // need to update them before printing out
+    // To speed up simulation, instead of calculating power as it happens (per cycle or per command)
+    // we calculate it every epoch
+    act_energy.value = numb_activate_cmds_issued.CountDouble() * config_.act_energy_inc;
+    read_energy.value = numb_read_cmds_issued.CountDouble() * config_.read_energy_inc;
+    write_energy.value = numb_write_cmds_issued.CountDouble() * config_.write_energy_inc;
+    ref_energy.value = numb_refresh_cmds_issued.CountDouble() * config_.ref_energy_inc;
+    refb_energy.value = numb_refresh_bank_cmds_issued.CountDouble() * config_.refb_energy_inc;
+    act_stb_energy.value = active_cycles.CountDouble() * config_.act_stb_energy_inc;
+    pre_stb_energy.value = all_bank_idle_cycles.CountDouble() * config_.pre_stb_energy_inc;
+    sref_energy.value = sref_cycles.CountDouble() * config_.sref_energy_inc;
+
     total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
                    ref_energy.value + refb_energy.value + act_stb_energy.value + \
                    pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
     average_power.value = (total_energy.value - total_energy.last_epoch_value) / static_cast<double>(clk - last_clk_);
+
+    // because HMC requests != read commands, 
     uint64_t reqs_issued;
     if (hmc_reqs_done.Count() > 0) {
         reqs_issued = hmc_reqs_done.Count() - hmc_reqs_done.LastCount();
     } else {
         reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count() - \
-                           numb_read_reqs_issued.LastCount() - numb_write_reqs_issued.LastCount(); 
+                      numb_read_reqs_issued.LastCount() - numb_write_reqs_issued.LastCount(); 
     }
+
+    // calculate averaged bandwidth in this epoch
     double gb_transferred = static_cast<double>(reqs_issued) * config_.request_size_bytes;
     double ns_passed = static_cast<double>(clk - last_clk_) * config_.tCK;
     average_bandwidth.value = gb_transferred / ns_passed;
@@ -359,18 +371,18 @@ void Statistics::UpdateEpoch(uint64_t clk) {
     last_clk_ = clk;
     // override the value after each update so that in the last epoch 
     // we get the overall value of these non-cumulatve stats
-    total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
-                   ref_energy.value + refb_energy.value + act_stb_energy.value + \
-                   pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
-    uint64_t reqs_issued;
-    if (hmc_reqs_done.Count() > 0) {
-        reqs_issued = hmc_reqs_done.Count();
-    } else {
-        reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count();
-    }
-    average_bandwidth.value = static_cast<double>(reqs_issued) * \
-                              config_.request_size_bytes / static_cast<double>(last_clk_) / config_.tCK;
-    average_power.value = total_energy.value / static_cast<double>(last_clk_);
+    // total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
+    //                ref_energy.value + refb_energy.value + act_stb_energy.value + \
+    //                pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
+    // uint64_t reqs_issued;
+    // if (hmc_reqs_done.Count() > 0) {
+    //     reqs_issued = hmc_reqs_done.Count();
+    // } else {
+    //     reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count();
+    // }
+    // average_bandwidth.value = static_cast<double>(reqs_issued) * \
+    //                           config_.request_size_bytes / static_cast<double>(last_clk_) / config_.tCK;
+    // average_power.value = total_energy.value / static_cast<double>(last_clk_);
     return;
 }
 

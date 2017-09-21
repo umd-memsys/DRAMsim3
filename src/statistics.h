@@ -32,6 +32,7 @@ public:
     CounterStat(std::string name, std::string desc);
     void operator=(int count) { count_ = count; }
     uint64_t Count() { return count_; }
+    double CountDouble() {return static_cast<double>(count_); }
     uint64_t LastCount() { return last_epoch_count_; }
     CounterStat& operator++() { count_++; return *this; }
     CounterStat& operator++(int) { count_++; return *this; }
@@ -134,11 +135,10 @@ public:
 
     class CounterStat numb_rw_rowhits_pending_refresh;
 
-#ifdef DEBUG_POWER
+    class CounterStat sref_cycles;
     class CounterStat active_cycles;
     class CounterStat all_bank_idle_cycles;
-#endif // DEBUG_POWER
-    
+
     // energy and power stats
     class DoubleStat act_energy;
     class DoubleStat read_energy;
