@@ -45,15 +45,12 @@ void Controller::ClockTick() {
     for (unsigned i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
             stats_.sref_cycles++;
-            // stats_.sref_energy++;
         } else {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
                 stats_.all_bank_idle_cycles++;
-                // stats_.pre_stb_energy++;
             } else {
                 stats_.active_cycles++;
-                // stats_.act_stb_energy++;
             }
         }
     }

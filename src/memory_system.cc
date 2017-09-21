@@ -100,6 +100,7 @@ void BaseMemorySystem::PrintIntermediateStats() {
 
 void BaseMemorySystem::PrintStats() {
     // update one last time before print
+    ptr_stats_->UpdatePreEpoch(clk_);
     ptr_stats_->UpdateEpoch(clk_);
     cout << "-----------------------------------------------------" << endl;
     cout << "Printing final stats of MemorySystem "<< mem_sys_id_ << " -- " << endl;

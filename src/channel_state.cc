@@ -315,27 +315,22 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
             stats_.numb_read_cmds_issued++;
-            // stats_.read_energy++;
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
             stats_.numb_write_cmds_issued++;
-            // stats_.write_energy++;
             break;
         case CommandType::ACTIVATE:
             stats_.numb_activate_cmds_issued++;
-            // stats_.act_energy++;
             break;
         case CommandType::PRECHARGE:
             stats_.numb_precharge_cmds_issued++;
             break;
         case CommandType::REFRESH:
             stats_.numb_refresh_cmds_issued++;
-            // stats_.ref_energy++;
             break;
         case CommandType::REFRESH_BANK:
             stats_.numb_refresh_bank_cmds_issued++;
-            // stats_.refb_energy++;
             break;
         case CommandType::SELF_REFRESH_ENTER:
             stats_.numb_self_refresh_enter_cmds_issued++;

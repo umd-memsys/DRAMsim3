@@ -369,20 +369,6 @@ void Statistics::UpdateEpoch(uint64_t clk) {
         stat->UpdateEpoch();
     }
     last_clk_ = clk;
-    // override the value after each update so that in the last epoch 
-    // we get the overall value of these non-cumulatve stats
-    // total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
-    //                ref_energy.value + refb_energy.value + act_stb_energy.value + \
-    //                pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
-    // uint64_t reqs_issued;
-    // if (hmc_reqs_done.Count() > 0) {
-    //     reqs_issued = hmc_reqs_done.Count();
-    // } else {
-    //     reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count();
-    // }
-    // average_bandwidth.value = static_cast<double>(reqs_issued) * \
-    //                           config_.request_size_bytes / static_cast<double>(last_clk_) / config_.tCK;
-    // average_power.value = total_energy.value / static_cast<double>(last_clk_);
     return;
 }
 
