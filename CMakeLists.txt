@@ -7,8 +7,13 @@ add_subdirectory(ext/fmt)
 
 # self-defined flgas that help debugging
 # use cmake -DGENERATE_TRACE=ON or 1 to enbale this
+if (NO_BACKPRESSURE)
+        message("Adding NO_BACKPRESSURE - To enable infinite buffering of memory requests in memory controller to support CPUs that does not model backpressure when the queues in the memory controller are full")
+        add_definitions(-DNO_BACKPRESSURE)
+endif (NO_BACKPRESSURE)
+
 if (GENERATE_TRACE)
-        message("Adding GENERATE_TRACE definition...")
+        message("Adding GENERATE_TRACE - To log to a file the memory address trace along with timing information")
         add_definitions(-DGENERATE_TRACE)
 endif (GENERATE_TRACE)
 

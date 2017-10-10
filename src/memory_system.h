@@ -54,6 +54,10 @@ public:
     bool IsReqInsertable(uint64_t hex_addr, bool is_write) override ;
     bool InsertReq(uint64_t hex_addr, bool is_write) override ;
     void ClockTick() override ;
+private:
+#ifdef NO_BACKPRESSURE
+    std::list<Request*> buffer_q_;
+#endif
 };
 
 

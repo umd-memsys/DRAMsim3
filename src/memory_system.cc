@@ -156,7 +156,7 @@ bool MemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) {
     return status;
 }
 
-bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) { //TODO - make it return void
+bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     //Record trace - Record address trace for debugging or other purposes
 #ifdef GENERATE_TRACE
     address_trace_ << fmt::format("{:#x} {} {}\n", hex_addr, is_write ? "WRITE" : "READ", clk_);
@@ -167,6 +167,18 @@ bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) { //TODO - make i
     Request* req = new Request(cmd_type, hex_addr, clk_, id_);
 
     bool is_insertable = ctrls_[req->Channel()]->InsertReq(req);
+#ifdef NO_BACKPRESSURE
+    // Some CPU simulators might not model the backpressure because queues are full.
+    // An approximate way of addressing this scenario is to buffer all such requests here in the DRAM simulator and then
+    // feed them into the actual memory controller queues as and when space becomes available.
+    // Note - This is an approximation and if the size of such buffer queue becomes large during the course of the
+    // simulation, then the accuracy sought of devolves into that of a memory address trace based simulation.
+    if((*ptr_config_).req_buffering_enabled && !is_insertable) {
+        buffer_q_.push_back(req);
+        is_insertable = true;
+        ptr_stats_->numb_buffered_requests++;
+    }
+#endif
     assert(is_insertable);
     return is_insertable;
 }
@@ -175,6 +187,18 @@ void MemorySystem::ClockTick() {
     for( auto ctrl : ctrls_)
         ctrl->ClockTick();
 
+#ifdef NO_BACKPRESSURE
+    //Insert requests stored in the buffer_q as and when space is available
+    if(!buffer_q_.empty()) {
+        for(auto req_itr = buffer_q_.begin(); req_itr != buffer_q_.end(); req_itr++) {
+            auto req = *req_itr;
+            if(ctrls_[req->Channel()]->InsertReq(req)) {
+                buffer_q_.erase(req_itr);
+                break;  // either break or set req_itr to the return value of erase()
+            }
+        }
+    }
+#endif
 
     if( clk_ % ptr_config_->epoch_period == 0) {
         ptr_stats_->UpdatePreEpoch(clk_);
