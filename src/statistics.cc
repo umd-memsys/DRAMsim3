@@ -250,7 +250,7 @@ Statistics::Statistics(const Config& config):
     numb_aggressive_precharges = CounterStat("numb_aggressive_precharges", "Number of aggressive precharges issued");
     numb_ondemand_precharges = CounterStat("numb_ondemand_precharges", "Number of on demand precharges issued");
     dramcycles = CounterStat("Cycles", "Total number of DRAM execution cycles");
-    access_latency = HistogramStat(0, 80, 10, "access_latency", "Histogram of access latencies");
+    access_latency = HistogramStat(0, 200, 10, "access_latency", "Histogram of access latencies");
     numb_buffered_requests = CounterStat("numb_buffered_requests", "Number of buffered requests because queues were full");
     hbm_dual_command_issue_cycles = CounterStat("hbm_dual_command_issue_cycles", "Number of cycles in which two commands were issued");
     hbm_dual_non_rw_cmd_attempt_cycles = CounterStat("hbm_dual_non_rw_cmd_attempt_cycles", "Number of cycles during which an opportunity to issue a read/write is possibly missed");

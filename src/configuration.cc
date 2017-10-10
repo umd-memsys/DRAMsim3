@@ -145,18 +145,23 @@ Config::Config(std::string config_file)
     pre_pd_energy_inc = VDD * IDD2P * devices;
     sref_energy_inc = VDD * IDD6x * devices;
 
+    // determine how much output we want:
+    // -1: no file output at all
+    // 0: no epoch file output, only outputs the summary in the end
+    // 1: default value, adds epoch CSV output on level 0
+    // 2: excessive output, adds epoch text output on level 1
+    output_level = reader.GetInteger("other", "output_level", 1);
     // Other Parameters
     // give a prefix instead of specify the output name one by one... 
     // this would allow outputing to a directory and you can always override these values
-
-    output_prefix = reader.Get("other", "output_prefix", "dramcore-");
+    output_prefix = reader.Get("other", "output_prefix", "dramsim_");
     epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
     stats_file = reader.Get("other", "stats_file", output_prefix + "stats.txt");
-    cummulative_stats_file = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative-stats.txt");
-    epoch_stats_file = reader.Get("other", "epoch_stats_file", output_prefix + "epoch-stats.txt");
+    cummulative_stats_file = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative_stats.txt");
+    epoch_stats_file = reader.Get("other", "epoch_stats_file", output_prefix + "epoch_stats.txt");
     stats_file_csv = reader.Get("other", "stats_file", output_prefix + "stats.csv");
     cummulative_stats_file_csv = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative_stats.csv");
-    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", output_prefix + "epoch-stats.csv");
+    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", output_prefix + "epoch_stats.csv");
 
 
     ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));

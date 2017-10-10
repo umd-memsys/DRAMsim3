@@ -46,16 +46,26 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
         cummulative_stats_file_csv_name = RenameFileWithNumber(cummulative_stats_file_csv_name, mem_sys_id_);
         epoch_stats_file_csv_name = RenameFileWithNumber(epoch_stats_file_csv_name, mem_sys_id_);
     } 
-    stats_file_.open(stats_file_name);
-    cummulative_stats_file_.open(cummulative_stats_file_name);
-    epoch_stats_file_.open(epoch_stats_file_name);
-    stats_file_csv_.open(stats_file_csv_name);
-    cummulative_stats_file_csv_.open(cummulative_stats_file_csv_name);
-    epoch_stats_file_csv_.open(epoch_stats_file_csv_name);
+
+    if (ptr_config_->output_level >= 0) {
+        stats_file_.open(stats_file_name);
+        stats_file_csv_.open(stats_file_csv_name);
+    }
+
+    if (ptr_config_->output_level >= 1) {
+        epoch_stats_file_csv_.open(epoch_stats_file_csv_name);
+        cummulative_stats_file_csv_.open(cummulative_stats_file_csv_name);
+    }
+
+    if (ptr_config_->output_level >= 2) {
+        epoch_stats_file_.open(epoch_stats_file_name);
+        cummulative_stats_file_.open(cummulative_stats_file_name);
+    }
 
     ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(cummulative_stats_file_csv_);
     ptr_stats_->PrintStatsCSVHeader(epoch_stats_file_csv_);
+
 #ifdef GENERATE_TRACE
     address_trace_.open("address.trace");
 #endif
@@ -80,20 +90,23 @@ BaseMemorySystem::~BaseMemorySystem() {
 }
 
 void BaseMemorySystem::PrintIntermediateStats() {
-    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
-    cummulative_stats_file_ << "Cummulative stats at clock = " << clk_ << endl;
-    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
-    ptr_stats_->PrintStats(cummulative_stats_file_);
-    cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+    if (ptr_config_->output_level >= 1) {
+        ptr_stats_->PrintStatsCSVFormat(cummulative_stats_file_csv_);
+        ptr_stats_->PrintEpochStatsCSVFormat(epoch_stats_file_csv_);
+    }
 
-    epoch_stats_file_ << "-----------------------------------------------------" << endl;
-    epoch_stats_file_ << "Epoch stats from clock = " << clk_ - ptr_config_->epoch_period << " to " << clk_<< endl;
-    epoch_stats_file_ << "-----------------------------------------------------" << endl;
-    ptr_stats_->PrintEpochStats(epoch_stats_file_);
-    epoch_stats_file_ << "-----------------------------------------------------" << endl;
-
-    ptr_stats_->PrintStatsCSVFormat(cummulative_stats_file_csv_);
-    ptr_stats_->PrintEpochStatsCSVFormat(epoch_stats_file_csv_);
+    if (ptr_config_->output_level >= 2) {
+        cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+        cummulative_stats_file_ << "Cummulative stats at clock = " << clk_ << endl;
+        cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+        ptr_stats_->PrintStats(cummulative_stats_file_);
+        cummulative_stats_file_ << "-----------------------------------------------------" << endl;
+        epoch_stats_file_ << "-----------------------------------------------------" << endl;
+        epoch_stats_file_ << "Epoch stats from clock = " << clk_ - ptr_config_->epoch_period << " to " << clk_<< endl;
+        epoch_stats_file_ << "-----------------------------------------------------" << endl;
+        ptr_stats_->PrintEpochStats(epoch_stats_file_);
+        epoch_stats_file_ << "-----------------------------------------------------" << endl;
+    }
     return;
 }
 
@@ -107,9 +120,10 @@ void BaseMemorySystem::PrintStats() {
     cout << "-----------------------------------------------------" << endl;
     cout << *ptr_stats_;
     cout << "-----------------------------------------------------" << endl;
-    cout << "The stats are also written to the file " << "dramcore_stats.txt" << endl;
-    ptr_stats_->PrintStats(stats_file_);
-    ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
+    if (ptr_config_ ->output_level >= 0) {
+        ptr_stats_->PrintStats(stats_file_);
+        ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
+    }
     return;
 }
 
@@ -119,7 +133,7 @@ MemorySystem::MemorySystem(const string &config_file, const std::string &output_
     if (ptr_config_->IsHMC()) {
         cerr << "Initialized a memory system with an HMC config file!" << endl;
         AbruptExit(__FILE__, __LINE__);
-    } //TODO - Unnecessary. To remove.
+    }
 
     ctrls_.resize(ptr_config_->channels);
     for(auto i = 0; i < ptr_config_->channels; i++) {

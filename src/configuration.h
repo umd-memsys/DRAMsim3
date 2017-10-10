@@ -123,6 +123,7 @@ public:
     std::string output_prefix;
 
     uint32_t epoch_period;
+    int output_level;
     std::string stats_file;
     std::string cummulative_stats_file;
     std::string epoch_stats_file;
