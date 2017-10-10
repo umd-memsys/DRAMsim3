@@ -36,10 +36,10 @@ protected:
 
     //Stats output files
     std::ofstream stats_file_;
-    std::ofstream cummulative_stats_file_;
+    std::ofstream cumulative_stats_file_;
     std::ofstream epoch_stats_file_;
     std::ofstream stats_file_csv_;
-    std::ofstream cummulative_stats_file_csv_;
+    std::ofstream cumulative_stats_file_csv_;
     std::ofstream epoch_stats_file_csv_;
 #ifdef GENERATE_TRACE
     std::ofstream address_trace_;
