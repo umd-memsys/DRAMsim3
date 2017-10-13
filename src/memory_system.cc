@@ -113,7 +113,7 @@ void BaseMemorySystem::PrintIntermediateStats() {
 
 void BaseMemorySystem::PrintStats() {
     // update one last time before print
-    ptr_stats_->UpdatePreEpoch(clk_);
+    ptr_stats_->PreEpochCompute(clk_);
     ptr_stats_->UpdateEpoch(clk_);
     cout << "-----------------------------------------------------" << endl;
     cout << "Printing final stats of MemorySystem "<< mem_sys_id_ << " -- " << endl;
@@ -201,7 +201,7 @@ void MemorySystem::ClockTick() {
 #endif
 
     if( clk_ % ptr_config_->epoch_period == 0) {
-        ptr_stats_->UpdatePreEpoch(clk_);
+        ptr_stats_->PreEpochCompute(clk_);
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }

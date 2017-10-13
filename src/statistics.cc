@@ -95,39 +95,38 @@ void DoubleStat::PrintEpochCSVFormat(std::ostream& where) const {
     return;
 }
 
-NonCumulativeStat::NonCumulativeStat(std::string name, std::string desc):
+DoubleComputeStat::DoubleComputeStat(std::string name, std::string desc):
     BaseStat(name, desc)
 {}
 
-void NonCumulativeStat::Print(std::ostream& where) const {
-    PrintNameValueDesc(where, name_, value, description_);
+void DoubleComputeStat::Print(std::ostream& where) const {
+    PrintNameValueDesc(where, name_, cummulative_value, description_);
     return;
 }
 
 
-void NonCumulativeStat::UpdateEpoch() {}
+void DoubleComputeStat::UpdateEpoch() {}
 
-void NonCumulativeStat::PrintEpoch(std::ostream& where) const {
-    PrintNameValueDesc(where, name_, value, description_);
+void DoubleComputeStat::PrintEpoch(std::ostream& where) const {
+    PrintNameValueDesc(where, name_, epoch_value, description_);
     return;
 }
 
-void NonCumulativeStat::PrintCSVHeader(std::ostream& where) const {
+void DoubleComputeStat::PrintCSVHeader(std::ostream& where) const {
     where << fmt::format("{},", name_);
     return;
 }
 
 
-void NonCumulativeStat::PrintCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", value );
+void DoubleComputeStat::PrintCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", cummulative_value );
     return;
 }
 
-void NonCumulativeStat::PrintEpochCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", value);
+void DoubleComputeStat::PrintEpochCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", epoch_value);
     return;
 }
-
 
 HistogramStat::HistogramStat(int start, int end, uint32_t numb_bins, std::string name, std::string desc):
     BaseStat(name, desc),
@@ -271,18 +270,18 @@ Statistics::Statistics(const Config& config):
     all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all banks are idle");
     active_cycles = CounterStat("rank active cycles", "Number of cycles the rank ramins active");
     // energy and power stats
-    act_energy = DoubleStat(config_.act_energy_inc, "act_energy", "ACT energy");
-    read_energy = DoubleStat(config_.read_energy_inc, "read_energy", "READ energy (not including IO)");
-    write_energy = DoubleStat(config_.write_energy_inc, "write_energy", "WRITE energy (not including IO)");
-    ref_energy = DoubleStat(config_.ref_energy_inc, "ref_energy", "Refresh energy");
-    refb_energy = DoubleStat(config_.refb_energy_inc, "refb_energy", "Bank-Refresh energy");
-    act_stb_energy = DoubleStat(config_.act_stb_energy_inc,"act_stb_energy", "Active standby energy");
-    pre_stb_energy = DoubleStat(config_.pre_stb_energy_inc, "pre_stb_energy", "Precharge standby energy");
-    pre_pd_energy = DoubleStat(config_.pre_pd_energy_inc, "pre_pd_energy", "Precharge powerdown energy");
-    sref_energy = DoubleStat(config_.sref_energy_inc, "sref_energy", "Self-refresh energy");
-    total_energy = DoubleStat(0.0, "total_energy", "(pJ) Total energy consumed");
-    average_power = NonCumulativeStat ("average_power", "(mW) Average Power for all devices");
-    average_bandwidth = NonCumulativeStat("average_bandwidth", "(GB/s) Average Aggregate Bandwidth");
+    act_energy = DoubleComputeStat("act_energy", "ACT energy");
+    read_energy = DoubleComputeStat("read_energy", "READ energy (not including IO)");
+    write_energy = DoubleComputeStat("write_energy", "WRITE energy (not including IO)");
+    ref_energy = DoubleComputeStat("ref_energy", "Refresh energy");
+    refb_energy = DoubleComputeStat("refb_energy", "Bank-Refresh energy");
+    act_stb_energy = DoubleComputeStat("act_stb_energy", "Active standby energy");
+    pre_stb_energy = DoubleComputeStat("pre_stb_energy", "Precharge standby energy");
+    pre_pd_energy = DoubleComputeStat("pre_pd_energy", "Precharge powerdown energy");
+    sref_energy = DoubleComputeStat("sref_energy", "Self-refresh energy");
+    total_energy = DoubleComputeStat("total_energy", "(pJ) Total energy consumed");
+    average_power = DoubleComputeStat("average_power", "(mW) Average Power for all devices");
+    average_bandwidth = DoubleComputeStat("average_bandwidth", "(GB/s) Average Aggregate Bandwidth");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -323,38 +322,47 @@ Statistics::Statistics(const Config& config):
 }
 
 
-void Statistics::UpdatePreEpoch(uint64_t clk) {
-    // Add this function because some stats depends on other stats
-    // need to update them before printing out
-    // To speed up simulation, instead of calculating power as it happens (per cycle or per command)
-    // we calculate it every epoch
-    act_energy.value = numb_activate_cmds_issued.CountDouble() * config_.act_energy_inc;
-    read_energy.value = numb_read_cmds_issued.CountDouble() * config_.read_energy_inc;
-    write_energy.value = numb_write_cmds_issued.CountDouble() * config_.write_energy_inc;
-    ref_energy.value = numb_refresh_cmds_issued.CountDouble() * config_.ref_energy_inc;
-    refb_energy.value = numb_refresh_bank_cmds_issued.CountDouble() * config_.refb_energy_inc;
-    act_stb_energy.value = active_cycles.CountDouble() * config_.act_stb_energy_inc;
-    pre_stb_energy.value = all_bank_idle_cycles.CountDouble() * config_.pre_stb_energy_inc;
-    sref_energy.value = sref_cycles.CountDouble() * config_.sref_energy_inc;
-
-    total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
-                   ref_energy.value + refb_energy.value + act_stb_energy.value + \
-                   pre_stb_energy.value + pre_pd_energy.value + sref_energy.value;
-    average_power.value = (total_energy.value - total_energy.last_epoch_value) / static_cast<double>(clk - last_clk_);
-
-    // because HMC requests != read commands, 
-    uint64_t reqs_issued;
-    if (hmc_reqs_done.Count() > 0) {
-        reqs_issued = hmc_reqs_done.Count() - hmc_reqs_done.LastCount();
+void Statistics::PreEpochCompute(uint64_t clk) {
+    // because HMC requests != read commands,
+    uint64_t reqs_issued_epoch, reqs_issued;
+    if(!config_.IsHMC()) {
+        reqs_issued_epoch = numb_read_reqs_issued.Count() - numb_read_reqs_issued.LastCount()
+                            + numb_write_reqs_issued.Count() - numb_write_reqs_issued.LastCount();
+        reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count();
     } else {
-        reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count() - \
-                      numb_read_reqs_issued.LastCount() - numb_write_reqs_issued.LastCount(); 
+        reqs_issued_epoch = hmc_reqs_done.Count() - hmc_reqs_done.LastCount();
+        reqs_issued = hmc_reqs_done.Count();
     }
 
-    // calculate averaged bandwidth in this epoch
-    double gb_transferred = static_cast<double>(reqs_issued) * config_.request_size_bytes;
-    double ns_passed = static_cast<double>(clk - last_clk_) * config_.tCK;
-    average_bandwidth.value = gb_transferred / ns_passed;
+    //Epoch level compute stats
+    act_energy.epoch_value = (numb_activate_cmds_issued.Count() - numb_activate_cmds_issued.LastCount()) * config_.act_energy_inc;
+    read_energy.epoch_value = (numb_read_cmds_issued.Count() - numb_read_cmds_issued.LastCount()) * config_.read_energy_inc;
+    write_energy.epoch_value = (numb_write_cmds_issued.Count() - numb_write_cmds_issued.LastCount()) * config_.write_energy_inc;
+    ref_energy.epoch_value = (numb_refresh_cmds_issued.Count() - numb_refresh_cmds_issued.LastCount()) * config_.ref_energy_inc;
+    refb_energy.epoch_value = (numb_refresh_bank_cmds_issued.Count() - numb_refresh_bank_cmds_issued.LastCount()) * config_.refb_energy_inc;
+    act_stb_energy.epoch_value = (active_cycles.Count() - active_cycles.LastCount()) * config_.act_stb_energy_inc;
+    pre_stb_energy.epoch_value = (all_bank_idle_cycles.Count() - all_bank_idle_cycles.LastCount()) * config_.pre_stb_energy_inc;
+    sref_energy.epoch_value = (sref_cycles.Count() - sref_cycles.LastCount()) * config_.sref_energy_inc;
+    total_energy.epoch_value = act_energy.epoch_value + read_energy.epoch_value + write_energy.epoch_value
+                               + ref_energy.epoch_value + refb_energy.epoch_value + act_stb_energy.epoch_value
+                               + pre_stb_energy.epoch_value + pre_pd_energy.epoch_value + sref_energy.epoch_value;
+    average_power.epoch_value = total_energy.epoch_value / (clk - last_clk_);
+    average_bandwidth.epoch_value = (reqs_issued_epoch * config_.request_size_bytes) / ((clk - last_clk_) * config_.tCK);
+
+    //Cummulative compute stats
+    act_energy.cummulative_value = numb_activate_cmds_issued.Count() * config_.act_energy_inc;
+    read_energy.cummulative_value = numb_read_cmds_issued.Count() * config_.read_energy_inc;
+    write_energy.cummulative_value = numb_write_cmds_issued.Count() * config_.write_energy_inc;
+    ref_energy.cummulative_value = numb_refresh_cmds_issued.Count() * config_.ref_energy_inc;
+    refb_energy.cummulative_value = numb_refresh_bank_cmds_issued.Count() * config_.refb_energy_inc;
+    act_stb_energy.cummulative_value = active_cycles.Count() * config_.act_stb_energy_inc;
+    pre_stb_energy.cummulative_value = all_bank_idle_cycles.Count() * config_.pre_stb_energy_inc;
+    sref_energy.cummulative_value = sref_cycles.Count() * config_.sref_energy_inc;
+    total_energy.cummulative_value = act_energy.cummulative_value + read_energy.cummulative_value + write_energy.cummulative_value
+                                     + ref_energy.cummulative_value + refb_energy.cummulative_value + act_stb_energy.cummulative_value
+                                     + pre_stb_energy.cummulative_value + sref_energy.cummulative_value;
+    average_power.cummulative_value = total_energy.epoch_value / clk;
+    average_bandwidth.cummulative_value = (reqs_issued * config_.request_size_bytes) / ((clk) * config_.tCK);
 }
 
 void Statistics::PrintStats(std::ostream &where) const {

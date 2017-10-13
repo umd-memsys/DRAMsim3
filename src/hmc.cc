@@ -508,7 +508,7 @@ void HMCMemorySystem::DRAMClockTick() {
         vault->ClockTick();
     }
     if (clk_ % ptr_config_->epoch_period == 0) {
-        ptr_stats_->UpdatePreEpoch(clk_);
+        ptr_stats_->PreEpochCompute(clk_);
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }

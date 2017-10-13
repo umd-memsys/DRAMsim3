@@ -89,19 +89,18 @@ private:
 };
 
 
-class NonCumulativeStat : public BaseStat {
-    // each epoch only print the value within this epoch 
-    // and so is the final print
+class DoubleComputeStat : public BaseStat {
 public:
-    NonCumulativeStat() : BaseStat() {};
-    NonCumulativeStat(std::string name, std::string desc);
+    DoubleComputeStat() : BaseStat() {};
+    DoubleComputeStat(std::string name, std::string desc);
     void Print(std::ostream& where) const override ;
     void UpdateEpoch() override ;
     void PrintEpoch(std::ostream& where) const override ;
     void PrintCSVHeader(std::ostream& where) const override ;
     void PrintCSVFormat(std::ostream& where) const override ;
     void PrintEpochCSVFormat(std::ostream& where) const override ;
-    double value;
+    double epoch_value;
+    double cummulative_value;
 };
 
 
@@ -140,25 +139,24 @@ public:
     class CounterStat all_bank_idle_cycles;
 
     // energy and power stats
-    class DoubleStat act_energy;
-    class DoubleStat read_energy;
-    class DoubleStat write_energy;
-    class DoubleStat ref_energy;    // rank ref
-    class DoubleStat refb_energy;  // bank refresh
-    class DoubleStat act_stb_energy;  // active standby
-    class DoubleStat pre_stb_energy;  // precharge standby
-    class DoubleStat pre_pd_energy;  // precharge powerdown energy
-    class DoubleStat sref_energy;  // self ref energy
-    class DoubleStat total_energy;
-    class NonCumulativeStat average_power;
-
-    class NonCumulativeStat average_bandwidth;
+    class DoubleComputeStat act_energy;
+    class DoubleComputeStat read_energy;
+    class DoubleComputeStat write_energy;
+    class DoubleComputeStat ref_energy;
+    class DoubleComputeStat refb_energy;
+    class DoubleComputeStat act_stb_energy;
+    class DoubleComputeStat pre_stb_energy;
+    class DoubleComputeStat pre_pd_energy;
+    class DoubleComputeStat sref_energy;
+    class DoubleComputeStat total_energy;
+    class DoubleComputeStat average_power;
+    class DoubleComputeStat average_bandwidth;
     
     std::list<class BaseStat*> stats_list;
 
     void PrintStats(std::ostream& where) const;
     void UpdateEpoch(uint64_t clk);
-    void UpdatePreEpoch(uint64_t clk);
+    void PreEpochCompute(uint64_t clk);
     void PrintEpochStats(std::ostream& where) const;
     void PrintStatsCSVHeader(std::ostream& where) const;
     void PrintStatsCSVFormat(std::ostream& where) const;
