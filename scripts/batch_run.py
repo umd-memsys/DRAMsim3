@@ -121,17 +121,13 @@ if __name__ == "__main__":
         pure_config_name = os.path.basename(c)[:-4]
         pure_config_names.append(pure_config_name)
 
+        prefix = parse_config.get_val_from_file(c, "other", "output_prefix")
         if args.output_dir:
-            new_prefix = os.path.join(args.output_dir, pure_config_name)
-            output_prefixs.append(new_prefix)
-            temp_fp = parse_config.sub_options(c, "other", "output_prefix", new_prefix)
-            config_file = temp_fp.name
-        else:
-            _prefix = parse_config.get_val_from_file(c, "other", "output_prefix")
-            output_prefixs.append(_prefix)
+            prefix = os.path.join(args.output_dir, prefix)
+        output_prefixs.append(prefix)
 
-        cmd_str = "%s --memory-type=%s --cpu-type=%s -c %s -n %d" % \
-                  (args.executable, mem_type, args.cpu_type, config_file, args.n)
+        cmd_str = "%s --memory-type=%s --cpu-type=%s -c %s -n %d --output-dir %s" % \
+                  (args.executable, mem_type, args.cpu_type, config_file, args.n, args.output_dir)
         
         if args.cpu_type == "trace":
             cmd_str += " --trace-file=%s" % args.trace_file

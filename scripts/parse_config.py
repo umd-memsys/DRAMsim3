@@ -58,7 +58,7 @@ def get_density(config_file):
     """
         get device density in mega bytes
     """
-    bankgroups = get_val_from_file(config_file, "dram_structure", "bankgroup")
+    bankgroups = get_val_from_file(config_file, "dram_structure", "bankgroups")
     banks = get_val_from_file(config_file, "dram_structure", "banks_per_group")
     rows = get_val_from_file(config_file, "dram_structure", "rows")
     page_size = get_page_size(config_file)
