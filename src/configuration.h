@@ -118,7 +118,6 @@ public:
     bool enable_self_refresh;
     uint32_t idle_cycles_for_self_refresh;
     bool aggressive_precharging_enabled;
-    bool req_buffering_enabled;
 
     std::string output_prefix;
 

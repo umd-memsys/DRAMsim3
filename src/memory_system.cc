@@ -173,7 +173,7 @@ bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     // feed them into the actual memory controller queues as and when space becomes available.
     // Note - This is an approximation and if the size of such buffer queue becomes large during the course of the
     // simulation, then the accuracy sought of devolves into that of a memory address trace based simulation.
-    if((*ptr_config_).req_buffering_enabled && !is_insertable) {
+    if((!is_insertable)) {
         buffer_q_.push_back(req);
         is_insertable = true;
         ptr_stats_->numb_buffered_requests++;

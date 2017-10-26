@@ -28,7 +28,6 @@ Config::Config(std::string config_file)
     enable_self_refresh = reader.GetBoolean("system", "enable_self_refresh", false);
     idle_cycles_for_self_refresh = static_cast<uint32_t>(reader.GetInteger("system", "idle_cycles_for_self_refresh", 1000));
     aggressive_precharging_enabled = reader.GetBoolean("system", "aggressive_precharging_enabled", false);
-    req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
 
     // DRAM organization
     bankgroups = static_cast<uint32_t>(reader.GetInteger("dram_structure", "bankgroups", 2));
