@@ -241,14 +241,14 @@ Statistics::Statistics(const Config& config):
 {
     //TODO - Should stats be global?
     numb_read_reqs_issued = CounterStat("numb_read_reqs_issued", "Number of read requests issued");
-    numb_write_reqs_issued = CounterStat("numb_of_write_reqs_issued", "Number of write requests issued");
+    numb_write_reqs_issued = CounterStat("numb_write_reqs_issued", "Number of write requests issued");
     hmc_reqs_done = CounterStat("hmc_reqs_done", "HMC Requests finished");
-    numb_row_hits = CounterStat("numb_of_row_hits", "Number of row hits");
+    numb_row_hits = CounterStat("numb_row_hits", "Number of row hits");
     numb_read_row_hits = CounterStat("numb_read_row_hits", "Number of read row hits");
     numb_write_row_hits = CounterStat("numb_write_row_hits", "Number of write row hits");
     numb_aggressive_precharges = CounterStat("numb_aggressive_precharges", "Number of aggressive precharges issued");
     numb_ondemand_precharges = CounterStat("numb_ondemand_precharges", "Number of on demand precharges issued");
-    dramcycles = CounterStat("Cycles", "Total number of DRAM execution cycles");
+    dramcycles = CounterStat("cycles", "Total number of DRAM execution cycles");
     access_latency = HistogramStat(0, 200, 10, "access_latency", "Histogram of access latencies");
     numb_buffered_requests = CounterStat("numb_buffered_requests", "Number of buffered requests because queues were full");
     hbm_dual_command_issue_cycles = CounterStat("hbm_dual_command_issue_cycles", "Number of cycles in which two commands were issued");
@@ -263,12 +263,12 @@ Statistics::Statistics(const Config& config):
     numb_self_refresh_exit_cmds_issued = CounterStat("numb_self_refresh_exit_cmds_issued", "Number of self-refresh mode exit commands issued");
     numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
 #ifdef DEBUG_HMC
-    logic_clk CounterStat("logic_clk", "HMC logic clock");
+    logic_clk CounterStat("hmc_logic_clk", "HMC logic clock");
     stats_list.push_back(&logic_clk);
 #endif  // DEBUG_HMC
     sref_cycles = CounterStat("sref_cycles", "Cycles in self-refresh state");
     all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all banks are idle");
-    active_cycles = CounterStat("rank active cycles", "Number of cycles the rank ramins active");
+    active_cycles = CounterStat("rank_active_cycles", "Number of cycles the rank ramains active");
     // energy and power stats
     act_energy = DoubleComputeStat("act_energy", "ACT energy");
     read_energy = DoubleComputeStat("read_energy", "READ energy (not including IO)");
@@ -361,7 +361,7 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     total_energy.cumulative_value = act_energy.cumulative_value + read_energy.cumulative_value + write_energy.cumulative_value
                                      + ref_energy.cumulative_value + refb_energy.cumulative_value + act_stb_energy.cumulative_value
                                      + pre_stb_energy.cumulative_value + sref_energy.cumulative_value;
-    average_power.cumulative_value = total_energy.epoch_value / clk;
+    average_power.cumulative_value = total_energy.cumulative_value / clk;
     average_bandwidth.cumulative_value = (reqs_issued * config_.request_size_bytes) / ((clk) * config_.tCK);
 }
 
