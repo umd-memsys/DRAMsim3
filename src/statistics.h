@@ -100,7 +100,7 @@ public:
     void PrintCSVFormat(std::ostream& where) const override ;
     void PrintEpochCSVFormat(std::ostream& where) const override ;
     double epoch_value;
-    double cummulative_value;
+    double cumulative_value;
 };
 
 

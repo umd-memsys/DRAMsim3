@@ -100,7 +100,7 @@ DoubleComputeStat::DoubleComputeStat(std::string name, std::string desc):
 {}
 
 void DoubleComputeStat::Print(std::ostream& where) const {
-    PrintNameValueDesc(where, name_, cummulative_value, description_);
+    PrintNameValueDesc(where, name_, cumulative_value, description_);
     return;
 }
 
@@ -119,7 +119,7 @@ void DoubleComputeStat::PrintCSVHeader(std::ostream& where) const {
 
 
 void DoubleComputeStat::PrintCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", cummulative_value );
+    where << fmt::format("{},", cumulative_value );
     return;
 }
 
@@ -349,20 +349,20 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     average_power.epoch_value = total_energy.epoch_value / (clk - last_clk_);
     average_bandwidth.epoch_value = (reqs_issued_epoch * config_.request_size_bytes) / ((clk - last_clk_) * config_.tCK);
 
-    //Cummulative compute stats
-    act_energy.cummulative_value = numb_activate_cmds_issued.Count() * config_.act_energy_inc;
-    read_energy.cummulative_value = numb_read_cmds_issued.Count() * config_.read_energy_inc;
-    write_energy.cummulative_value = numb_write_cmds_issued.Count() * config_.write_energy_inc;
-    ref_energy.cummulative_value = numb_refresh_cmds_issued.Count() * config_.ref_energy_inc;
-    refb_energy.cummulative_value = numb_refresh_bank_cmds_issued.Count() * config_.refb_energy_inc;
-    act_stb_energy.cummulative_value = active_cycles.Count() * config_.act_stb_energy_inc;
-    pre_stb_energy.cummulative_value = all_bank_idle_cycles.Count() * config_.pre_stb_energy_inc;
-    sref_energy.cummulative_value = sref_cycles.Count() * config_.sref_energy_inc;
-    total_energy.cummulative_value = act_energy.cummulative_value + read_energy.cummulative_value + write_energy.cummulative_value
-                                     + ref_energy.cummulative_value + refb_energy.cummulative_value + act_stb_energy.cummulative_value
-                                     + pre_stb_energy.cummulative_value + sref_energy.cummulative_value;
-    average_power.cummulative_value = total_energy.epoch_value / clk;
-    average_bandwidth.cummulative_value = (reqs_issued * config_.request_size_bytes) / ((clk) * config_.tCK);
+    //cumulative compute stats
+    act_energy.cumulative_value = numb_activate_cmds_issued.Count() * config_.act_energy_inc;
+    read_energy.cumulative_value = numb_read_cmds_issued.Count() * config_.read_energy_inc;
+    write_energy.cumulative_value = numb_write_cmds_issued.Count() * config_.write_energy_inc;
+    ref_energy.cumulative_value = numb_refresh_cmds_issued.Count() * config_.ref_energy_inc;
+    refb_energy.cumulative_value = numb_refresh_bank_cmds_issued.Count() * config_.refb_energy_inc;
+    act_stb_energy.cumulative_value = active_cycles.Count() * config_.act_stb_energy_inc;
+    pre_stb_energy.cumulative_value = all_bank_idle_cycles.Count() * config_.pre_stb_energy_inc;
+    sref_energy.cumulative_value = sref_cycles.Count() * config_.sref_energy_inc;
+    total_energy.cumulative_value = act_energy.cumulative_value + read_energy.cumulative_value + write_energy.cumulative_value
+                                     + ref_energy.cumulative_value + refb_energy.cumulative_value + act_stb_energy.cumulative_value
+                                     + pre_stb_energy.cumulative_value + sref_energy.cumulative_value;
+    average_power.cumulative_value = total_energy.epoch_value / clk;
+    average_bandwidth.cumulative_value = (reqs_issued * config_.request_size_bytes) / ((clk) * config_.tCK);
 }
 
 void Statistics::PrintStats(std::ostream &where) const {
