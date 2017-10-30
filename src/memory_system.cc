@@ -32,18 +32,15 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
     }
 
     std::string stats_file_name(output_dir_path + ptr_config_->stats_file);
-    std::string cumulative_stats_file_name(output_dir_path + ptr_config_->cumulative_stats_file);
     std::string epoch_stats_file_name(output_dir_path + ptr_config_->epoch_stats_file);
     std::string stats_file_csv_name(output_dir_path + ptr_config_->stats_file_csv);
-    std::string cumulative_stats_file_csv_name(output_dir_path + ptr_config_->cumulative_stats_file_csv);
     std::string epoch_stats_file_csv_name(output_dir_path + ptr_config_->epoch_stats_file_csv);
+    std::string histo_stats_file_csv_name(output_dir_path + ptr_config_->histo_stats_file_csv);
     if (mem_sys_id_ > 0) {
         // if there are more than one memory_systems then rename the output to preven being overwritten
         stats_file_name = RenameFileWithNumber(stats_file_name, mem_sys_id_);
-        cumulative_stats_file_name = RenameFileWithNumber(cumulative_stats_file_name, mem_sys_id_);
         epoch_stats_file_name = RenameFileWithNumber(epoch_stats_file_name, mem_sys_id_);
         stats_file_csv_name = RenameFileWithNumber(stats_file_csv_name, mem_sys_id_);
-        cumulative_stats_file_csv_name = RenameFileWithNumber(cumulative_stats_file_csv_name, mem_sys_id_);
         epoch_stats_file_csv_name = RenameFileWithNumber(epoch_stats_file_csv_name, mem_sys_id_);
     } 
 
@@ -54,17 +51,17 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
 
     if (ptr_config_->output_level >= 1) {
         epoch_stats_file_csv_.open(epoch_stats_file_csv_name);
-        cumulative_stats_file_csv_.open(cumulative_stats_file_csv_name);
+        ptr_stats_->PrintStatsCSVHeader(epoch_stats_file_csv_);
     }
 
     if (ptr_config_->output_level >= 2) {
-        epoch_stats_file_.open(epoch_stats_file_name);
-        cumulative_stats_file_.open(cumulative_stats_file_name);
+        histo_stats_file_csv_.open(histo_stats_file_csv_name);
     }
 
-    ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
-    ptr_stats_->PrintStatsCSVHeader(cumulative_stats_file_csv_);
-    ptr_stats_->PrintStatsCSVHeader(epoch_stats_file_csv_);
+    if (ptr_config_->output_level >= 3) {
+        epoch_stats_file_.open(epoch_stats_file_name);
+    }
+
 
 #ifdef GENERATE_TRACE
     address_trace_.open("address.trace");
@@ -79,10 +76,8 @@ BaseMemorySystem::~BaseMemorySystem() {
     delete(ptr_config_);
 
     stats_file_.close();
-    cumulative_stats_file_.close();
     epoch_stats_file_.close();
     stats_file_csv_.close();
-    cumulative_stats_file_csv_.close();
     epoch_stats_file_csv_.close();
 #ifdef GENERATE_TRACE
     address_trace_.close();
@@ -91,16 +86,14 @@ BaseMemorySystem::~BaseMemorySystem() {
 
 void BaseMemorySystem::PrintIntermediateStats() {
     if (ptr_config_->output_level >= 1) {
-        ptr_stats_->PrintStatsCSVFormat(cumulative_stats_file_csv_);
         ptr_stats_->PrintEpochStatsCSVFormat(epoch_stats_file_csv_);
     }
 
     if (ptr_config_->output_level >= 2) {
-        cumulative_stats_file_ << "-----------------------------------------------------" << endl;
-        cumulative_stats_file_ << "cumulative stats at clock = " << clk_ << endl;
-        cumulative_stats_file_ << "-----------------------------------------------------" << endl;
-        ptr_stats_->PrintStats(cumulative_stats_file_);
-        cumulative_stats_file_ << "-----------------------------------------------------" << endl;
+        ptr_stats_->PrintEpochHistoStatsCSVFormat(histo_stats_file_csv_);
+    }
+
+    if (ptr_config_->output_level >= 3) {
         epoch_stats_file_ << "-----------------------------------------------------" << endl;
         epoch_stats_file_ << "Epoch stats from clock = " << clk_ - ptr_config_->epoch_period << " to " << clk_<< endl;
         epoch_stats_file_ << "-----------------------------------------------------" << endl;
@@ -122,6 +115,9 @@ void BaseMemorySystem::PrintStats() {
     cout << "-----------------------------------------------------" << endl;
     if (ptr_config_ ->output_level >= 0) {
         ptr_stats_->PrintStats(stats_file_);
+        // had to print the header here instead of the constructor
+        // because histogram headers are only known at the end
+        ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
         ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
     }
     return;

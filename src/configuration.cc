@@ -148,7 +148,8 @@ Config::Config(std::string config_file)
     // -1: no file output at all
     // 0: no epoch file output, only outputs the summary in the end
     // 1: default value, adds epoch CSV output on level 0
-    // 2: excessive output, adds epoch text output on level 1
+    // 2: adds histogram epoch outputs in a different CSV format
+    // 3: excessive output, adds epoch text output on level 2
     output_level = reader.GetInteger("other", "output_level", 1);
     // Other Parameters
     // give a prefix instead of specify the output name one by one... 
@@ -156,11 +157,10 @@ Config::Config(std::string config_file)
     output_prefix = reader.Get("other", "output_prefix", "dramsim_");
     epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
     stats_file = reader.Get("other", "stats_file", output_prefix + "stats.txt");
-    cumulative_stats_file = reader.Get("other", "cumulative_stats_file", output_prefix + "cumulative_stats.txt");
     epoch_stats_file = reader.Get("other", "epoch_stats_file", output_prefix + "epoch_stats.txt");
     stats_file_csv = reader.Get("other", "stats_file", output_prefix + "stats.csv");
-    cumulative_stats_file_csv = reader.Get("other", "cumulative_stats_file", output_prefix + "cumulative_stats.csv");
     epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", output_prefix + "epoch_stats.csv");
+    histo_stats_file_csv = reader.Get("other", "histo_stat_file", output_prefix + "histo_stats.csv");
 
 
     ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));

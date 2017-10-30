@@ -133,28 +133,12 @@ HistogramStat::HistogramStat(int start, int end, uint32_t numb_bins, std::string
     start_(start),
     end_(end),
     numb_bins_(numb_bins),
-    neg_outlier_count_(0),
-    pos_outlier_count_(0),
-    last_epoch_neg_outlier_count_(0),
-    last_epoch_pos_outlier_count_(0)
+    epoch_count_(0)
 {
     if(start_ >= end_ || numb_bins <= 0) {
         cout << "Histogram stat improperly specified" << endl;
         AbruptExit(__FILE__, __LINE__);
     }
-    bin_count_.resize(numb_bins);
-    last_epoch_bin_count_.resize(numb_bins);
-    // num of bins plus pos and neg outliers
-    headers_.reserve(numb_bins_ + 2);
-
-    std::string bin_str = fmt::format("[ < {} ]", start_);
-    headers_[0] = bin_str;
-    for (unsigned i = 0; i < numb_bins_; i++) {
-        bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        headers_[i] = bin_str;
-    }
-    bin_str = fmt::format("[ > {} ]", end_);     
-    headers_[numb_bins_ + 1] = bin_str;
 }
 
 void HistogramStat::AddValue(int val) {
@@ -165,126 +149,83 @@ void HistogramStat::AddValue(int val) {
     }
 }
 
-std::vector<uint64_t> HistogramStat::GetPrintableBins(bool epoch) const {
+std::vector<uint64_t> HistogramStat::GetAggregatedBins() const {
     int bin_width = (end_ - start_)/numb_bins_;
     // 2 extra slots to insert positive and negative outliers
-    std::vector<uint64_t> printable_bins(numb_bins_ + 2, 0);
-    std::map<int, uint64_t> &bins;
-    if (epoch) {
-        bins = last_epoch_bins_;
-    } else {
-        bins = bins_;
-    }
+    std::vector<uint64_t> aggr_bins(numb_bins_ + 2, 0);
+    const std::map<int, uint64_t>& bins = bins_;
     for (auto i = bins.begin(); i != bins.end(); i++) {
         if (i->first < start_) {
-            printable_bins.front() += i->second;
+            aggr_bins.front() += i->second;
         } else if (i->first > end_) {
-            printable_bins.back() += i->second;
+            aggr_bins.back() += i->second;
         } else {
             int bin_index = (i->first - start_) / bin_width + 1;  // +1 to offset the negative outlier
-            printable_bins[bin_index] += i->second;
+            aggr_bins[bin_index] += i->second;
         }
     }
-    return printable_bins;
+    return aggr_bins;
 }
 
 void HistogramStat::Print(std::ostream& where) const {
+    // ONLY print aggregated histograms in the final text output
     PrintNameValueDesc(where, name_, " ", description_);
+    std::vector<uint64_t> aggr_bins = GetAggregatedBins();
+
+    // get strings
+    std::vector<std::string> bin_strs;
+    std::string bin_str = fmt::format("[ < {} ]", start_);
+    bin_strs.push_back(bin_str);
     int bin_width = (end_ - start_)/numb_bins_;
-    std::vector<uint64_t> printable_bins = GetPrintableBins(false);
-    for (unsigned i =0; i < printable_bins.size(); i++) {
-        PrintNameValue(where, headers_[i], printable_bins[i]);
-        // if (i == 0) {
-        //     auto bin_str = fmt::format("[ < {} ]", start_);
-        //     PrintNameValue(where, bin_str, printable_bins[i]);
-        // } else if (i == printable_bins.size() - 1) {
-        //     auto bin_str = fmt::format("[ > {} ]", end_);     
-        //     PrintNameValue(where, bin_str, printable_bins[i]);
-        // } else {
-        //     auto bin_start = start_ + (i - 1) * bin_width;
-        //     auto bin_end = start_ + i * bin_width - 1;
-        //     auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        //     PrintNameValue(where, bin_str, printable_bins[i]);
-        // }
+    for (unsigned i = 1; i < numb_bins_ + 1; i++) {
+        auto bin_start = start_ + (i - 1) * bin_width;
+        auto bin_end = start_ + i * bin_width - 1;
+        bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
+        bin_strs.push_back(bin_str);
     }
-    // for (auto i = bins_.begin(); i != bins_.end(); i++) {
-    //     std::string bin_str = fmt::format("[{}]", i->first);
-    //     PrintNameValue(where, bin_str, i->second);
-    // }
+    bin_str = fmt::format("[ > {} ]", end_);     
+    bin_strs.push_back(bin_str);
+
+    for (unsigned i =0; i < aggr_bins.size(); i++) {
+        PrintNameValue(where, bin_strs[i], aggr_bins[i]);
+    }
     return;
 }
 
 void HistogramStat::UpdateEpoch() {
     last_epoch_bins_ = bins_;
+    epoch_count_ ++;
     return;
 }
 
 void HistogramStat::PrintEpoch(std::ostream& where) const {
-    //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
-    // auto bin_width = (end_ - start_)/numb_bins_;
-    // PrintNameValueDesc(where, name_, " ", description_);
-    // for (auto i = bins_.begin(); i != bins_.end(); i++) {
-    //     std::string bin_str = fmt::format("[{}]", i->first);
-    //     PrintNameValue(where, bin_str, last_epoch_bins_.at(i->first) -  i->second);
-    // }
-    std::vector<uint64_t> print_bins = GetPrintableBins(false);
-    std::vector<uint64_t> print_bins_epoch = GetPrintableBins(true);
-    for (unsigned i =0; i < print_bins.size(); i++) {
-        PrintNameValue(where, headers_[i], print_bins[i] - print_bins_epoch[i]);
-    }
-    // auto bin_str = fmt::format("[ < {} ]", start_);
-    // PrintNameValue(where, bin_str, neg_outlier_count_ - last_epoch_neg_outlier_count_);
-    // for(auto i = 0; i < numb_bins_; i++) {
-    //     auto bin_start = start_ + i*bin_width;
-    //     auto bin_end = start_ + (i+1)*bin_width - 1;
-    //     auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-    //     PrintNameValue(where, bin_str, bin_count_[i] - last_epoch_bin_count_[i]);
-    // }
-    // bin_str = fmt::format("[ > {} ]", end_);
-    // PrintNameValue(where, bin_str, pos_outlier_count_ - last_epoch_pos_outlier_count_);
+    // don't print histogram, put them in csv instead
     return;
 }
 
 
 void HistogramStat::PrintCSVHeader(std::ostream& where) const {
-    // auto bin_width = (end_ - start_)/numb_bins_;
-    // where << fmt::format("{}[<{}],", name_, start);
     for (auto i = bins_.begin(); i != bins_.end(); i++) {
-        where << fmt::format("{}[{}],", name_, i->first);
+        where << fmt::format("{}-{},", name_,i->first);
     }
-    // for(auto i = 0; i < numb_bins_; i++) {
-    //     auto bin_start = start_ + i*bin_width;
-    //     auto bin_end = start_ + (i+1)*bin_width - 1;
-    //     where << fmt::format("{}[{}-{}],", name_, bin_start, bin_end);
-    // }
-    // where << fmt::format("{}[>{}],", name_, end_);
     return;
 }
 
 void HistogramStat::PrintCSVFormat(std::ostream& where) const {
-
     for (auto i = bins_.begin(); i != bins_.end(); i++) {
         where << fmt::format("{},", i->second);
     }
-
-    // where << fmt::format("{},", neg_outlier_count_);
-    // for(auto i = 0; i < numb_bins_; i++) {
-    //     where << fmt::format("{},", bin_count_[i]);
-    // }
-    // where << fmt::format("{},", pos_outlier_count_);
     return;
 }
 
 
 void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
-    for (auto i = bins_.begin(); i != bins_.end(); i++) {
-        where << fmt::format("{},", i->second - last_epoch_bins_.at(i->first));
+    if (epoch_count_ == 0) {
+        where << "name,value,count,epoch" << endl;
     }
-    // where << fmt::format("{},", neg_outlier_count_ - last_epoch_neg_outlier_count_);
-    // for(auto i = 0; i < numb_bins_; i++) {
-    //     where << fmt::format("{},", bin_count_[i] - last_epoch_bin_count_[i]);
-    // }
-    // where << fmt::format("{},", pos_outlier_count_ - last_epoch_pos_outlier_count_);
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        where << fmt::format("{},{},{},{}",name_, i->first, i->second, epoch_count_) << endl;
+    }
     return;
 }
 
@@ -303,7 +244,6 @@ Statistics::Statistics(const Config& config):
     numb_aggressive_precharges = CounterStat("numb_aggressive_precharges", "Number of aggressive precharges issued");
     numb_ondemand_precharges = CounterStat("numb_ondemand_precharges", "Number of on demand precharges issued");
     dramcycles = CounterStat("cycles", "Total number of DRAM execution cycles");
-    access_latency = HistogramStat(0, 200, 10, "access_latency", "Histogram of access latencies");
     numb_buffered_requests = CounterStat("numb_buffered_requests", "Number of buffered requests because queues were full");
     hbm_dual_command_issue_cycles = CounterStat("hbm_dual_command_issue_cycles", "Number of cycles in which two commands were issued");
     hbm_dual_non_rw_cmd_attempt_cycles = CounterStat("hbm_dual_non_rw_cmd_attempt_cycles", "Number of cycles during which an opportunity to issue a read/write is possibly missed");
@@ -337,6 +277,9 @@ Statistics::Statistics(const Config& config):
     average_latency = DoubleComputeStat("average_latency", "Average latency in DRAM cycles");
     average_power = DoubleComputeStat("average_power", "(mW) Average Power for all devices");
     average_bandwidth = DoubleComputeStat("average_bandwidth", "(GB/s) Average Aggregate Bandwidth");
+    
+    // histogram stats
+    access_latency = HistogramStat(0, 200, 10, "access_latency", "Histogram of access latencies");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -347,7 +290,6 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&numb_aggressive_precharges);
     stats_list.push_back(&numb_ondemand_precharges);
     stats_list.push_back(&dramcycles);
-    stats_list.push_back(&access_latency);
     stats_list.push_back(&numb_buffered_requests);
     stats_list.push_back(&hbm_dual_command_issue_cycles);
     stats_list.push_back(&hbm_dual_non_rw_cmd_attempt_cycles);
@@ -374,6 +316,7 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&total_energy);
     stats_list.push_back(&average_power);
     stats_list.push_back(&average_bandwidth);
+    histo_stats_list.push_back(&access_latency);
 }
 
 
@@ -424,11 +367,17 @@ void Statistics::PrintStats(std::ostream &where) const {
     for(auto stat : stats_list) {
         stat->Print(where);
     }
+    for(auto stat : histo_stats_list) {
+        stat->Print(where);
+    }
 }
 
 void Statistics::UpdateEpoch(uint64_t clk) {
     // get clk information so that we can calculate power, bandwidth, etc.
     for(auto stat : stats_list) {
+        stat->UpdateEpoch();
+    }
+    for(auto stat : histo_stats_list) {
         stat->UpdateEpoch();
     }
     last_clk_ = clk;
@@ -447,12 +396,18 @@ void Statistics::PrintStatsCSVHeader(std::ostream& where) const {
     for(auto stat : stats_list) {
         stat->PrintCSVHeader(where);
     }
+    for(auto stat : histo_stats_list) {
+        stat->PrintCSVHeader(where);
+    }
     where << endl;
     return;
 }
 
 void Statistics::PrintStatsCSVFormat(std::ostream& where) const {
     for(auto stat : stats_list) {
+        stat->PrintCSVFormat(where);
+    }
+    for(auto stat : histo_stats_list) {
         stat->PrintCSVFormat(where);
     }
     where << endl;
@@ -464,6 +419,13 @@ void Statistics::PrintEpochStatsCSVFormat(std::ostream& where) const {
         stat->PrintEpochCSVFormat(where);
     }
     where << endl;
+    return;
+}
+
+void Statistics::PrintEpochHistoStatsCSVFormat(std::ostream& where) const {
+    for (auto stat : histo_stats_list) {
+        stat->PrintEpochCSVFormat(where);
+    }
     return;
 }
 

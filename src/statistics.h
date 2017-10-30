@@ -63,16 +63,14 @@ public:
     void PrintCSVHeader(std::ostream& where) const override ;
     void PrintCSVFormat(std::ostream& where) const override ;
     void PrintEpochCSVFormat(std::ostream& where) const override ;
-    std::vector<uint64_t> GetPrintableBins(bool epoch) const;
+    std::vector<uint64_t> GetAggregatedBins() const;
 private:
     int start_;
     int end_;
     uint32_t numb_bins_;
     std::map<int, uint64_t> bins_;
     std::map<int, uint64_t> last_epoch_bins_;
-    std::vector<std::string> headers_;
-    std::vector<uint64_t> bin_count_, last_epoch_bin_count_;
-    uint64_t neg_outlier_count_, pos_outlier_count_, last_epoch_neg_outlier_count_, last_epoch_pos_outlier_count_;
+    uint64_t epoch_count_;
 };
 
 
@@ -160,6 +158,7 @@ public:
     class DoubleComputeStat average_bandwidth;
     
     std::list<class BaseStat*> stats_list;
+    std::list<class HistogramStat*> histo_stats_list;
 
     void PrintStats(std::ostream& where) const;
     void UpdateEpoch(uint64_t clk);
@@ -168,6 +167,7 @@ public:
     void PrintStatsCSVHeader(std::ostream& where) const;
     void PrintStatsCSVFormat(std::ostream& where) const;
     void PrintEpochStatsCSVFormat(std::ostream& where) const;
+    void PrintEpochHistoStatsCSVFormat(std::ostream& where) const;
 
     friend std::ostream& operator<<(std::ostream& os, Statistics& stats);
 private:

@@ -124,11 +124,10 @@ public:
     uint32_t epoch_period;
     int output_level;
     std::string stats_file;
-    std::string cumulative_stats_file;
     std::string epoch_stats_file;
     std::string stats_file_csv;
-    std::string cumulative_stats_file_csv;
     std::string epoch_stats_file_csv;
+    std::string histo_stats_file_csv;
 
     //Computed parameters
     uint32_t request_size_bytes;
