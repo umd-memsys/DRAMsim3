@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <list>
+#include <map>
 #include <vector>
 #include "configuration.h"
 
@@ -54,6 +55,7 @@ class HistogramStat : public BaseStat {
 public:
     HistogramStat():BaseStat() {}
     HistogramStat(int start, int end, uint32_t numb_bins, std::string name, std::string desc);
+    HistogramStat(std::string name, std::string desc): BaseStat(name, desc) {}
     void AddValue(int val);
     void Print(std::ostream& where) const override ;
     void UpdateEpoch() override ;
@@ -61,10 +63,14 @@ public:
     void PrintCSVHeader(std::ostream& where) const override ;
     void PrintCSVFormat(std::ostream& where) const override ;
     void PrintEpochCSVFormat(std::ostream& where) const override ;
+    std::vector<uint64_t> GetPrintableBins(bool epoch) const;
 private:
     int start_;
     int end_;
     uint32_t numb_bins_;
+    std::map<int, uint64_t> bins_;
+    std::map<int, uint64_t> last_epoch_bins_;
+    std::vector<std::string> headers_;
     std::vector<uint64_t> bin_count_, last_epoch_bin_count_;
     uint64_t neg_outlier_count_, pos_outlier_count_, last_epoch_neg_outlier_count_, last_epoch_pos_outlier_count_;
 };
@@ -149,6 +155,7 @@ public:
     class DoubleComputeStat pre_pd_energy;
     class DoubleComputeStat sref_energy;
     class DoubleComputeStat total_energy;
+    class DoubleComputeStat average_latency;
     class DoubleComputeStat average_power;
     class DoubleComputeStat average_bandwidth;
     

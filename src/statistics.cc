@@ -139,98 +139,152 @@ HistogramStat::HistogramStat(int start, int end, uint32_t numb_bins, std::string
     last_epoch_pos_outlier_count_(0)
 {
     if(start_ >= end_ || numb_bins <= 0) {
-        cout << "Hisogram stat improperly specified" << endl;
+        cout << "Histogram stat improperly specified" << endl;
         AbruptExit(__FILE__, __LINE__);
     }
     bin_count_.resize(numb_bins);
     last_epoch_bin_count_.resize(numb_bins);
+    // num of bins plus pos and neg outliers
+    headers_.reserve(numb_bins_ + 2);
+
+    std::string bin_str = fmt::format("[ < {} ]", start_);
+    headers_[0] = bin_str;
+    for (unsigned i = 0; i < numb_bins_; i++) {
+        bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
+        headers_[i] = bin_str;
+    }
+    bin_str = fmt::format("[ > {} ]", end_);     
+    headers_[numb_bins_ + 1] = bin_str;
 }
 
 void HistogramStat::AddValue(int val) {
-    if( val >= start_ && val <= end_) {
-        auto bin_index = (val*numb_bins_)/(end_ - start_); //TODO - Could be made better
-        bin_count_[bin_index]++;
+    if ( bins_.count(val) <= 0 ) {
+        bins_[val] = 1;
+    } else {
+        bins_[val] += 1;
     }
-    else if( val < start_) {
-        neg_outlier_count_++;
+}
+
+std::vector<uint64_t> HistogramStat::GetPrintableBins(bool epoch) const {
+    int bin_width = (end_ - start_)/numb_bins_;
+    // 2 extra slots to insert positive and negative outliers
+    std::vector<uint64_t> printable_bins(numb_bins_ + 2, 0);
+    std::map<int, uint64_t> &bins;
+    if (epoch) {
+        bins = last_epoch_bins_;
+    } else {
+        bins = bins_;
     }
-    else if ( val > end_) {
-        pos_outlier_count_++;
+    for (auto i = bins.begin(); i != bins.end(); i++) {
+        if (i->first < start_) {
+            printable_bins.front() += i->second;
+        } else if (i->first > end_) {
+            printable_bins.back() += i->second;
+        } else {
+            int bin_index = (i->first - start_) / bin_width + 1;  // +1 to offset the negative outlier
+            printable_bins[bin_index] += i->second;
+        }
     }
-    return;
+    return printable_bins;
 }
 
 void HistogramStat::Print(std::ostream& where) const {
-    auto bin_width = (end_ - start_)/numb_bins_;
     PrintNameValueDesc(where, name_, " ", description_);
-    auto bin_str = fmt::format("[ < {} ]", start_);
-    PrintNameValue(where, bin_str, neg_outlier_count_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        auto bin_start = start_ + i*bin_width;
-        auto bin_end = start_ + (i+1)*bin_width - 1;
-        auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        PrintNameValue(where, bin_str, bin_count_[i]);
+    int bin_width = (end_ - start_)/numb_bins_;
+    std::vector<uint64_t> printable_bins = GetPrintableBins(false);
+    for (unsigned i =0; i < printable_bins.size(); i++) {
+        PrintNameValue(where, headers_[i], printable_bins[i]);
+        // if (i == 0) {
+        //     auto bin_str = fmt::format("[ < {} ]", start_);
+        //     PrintNameValue(where, bin_str, printable_bins[i]);
+        // } else if (i == printable_bins.size() - 1) {
+        //     auto bin_str = fmt::format("[ > {} ]", end_);     
+        //     PrintNameValue(where, bin_str, printable_bins[i]);
+        // } else {
+        //     auto bin_start = start_ + (i - 1) * bin_width;
+        //     auto bin_end = start_ + i * bin_width - 1;
+        //     auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
+        //     PrintNameValue(where, bin_str, printable_bins[i]);
+        // }
     }
-    bin_str = fmt::format("[ > {} ]", end_);
-    PrintNameValue(where, bin_str, pos_outlier_count_);
+    // for (auto i = bins_.begin(); i != bins_.end(); i++) {
+    //     std::string bin_str = fmt::format("[{}]", i->first);
+    //     PrintNameValue(where, bin_str, i->second);
+    // }
     return;
 }
 
 void HistogramStat::UpdateEpoch() {
-    last_epoch_neg_outlier_count_ = neg_outlier_count_;
-    last_epoch_pos_outlier_count_ = pos_outlier_count_;
-    for(auto i = 0; i < numb_bins_; i++) {
-        last_epoch_bin_count_[i] = bin_count_[i];
-    }
+    last_epoch_bins_ = bins_;
     return;
 }
 
 void HistogramStat::PrintEpoch(std::ostream& where) const {
     //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
-    auto bin_width = (end_ - start_)/numb_bins_;
-    PrintNameValueDesc(where, name_, " ", description_);
-    auto bin_str = fmt::format("[ < {} ]", start_);
-    PrintNameValue(where, bin_str, neg_outlier_count_ - last_epoch_neg_outlier_count_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        auto bin_start = start_ + i*bin_width;
-        auto bin_end = start_ + (i+1)*bin_width - 1;
-        auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        PrintNameValue(where, bin_str, bin_count_[i] - last_epoch_bin_count_[i]);
+    // auto bin_width = (end_ - start_)/numb_bins_;
+    // PrintNameValueDesc(where, name_, " ", description_);
+    // for (auto i = bins_.begin(); i != bins_.end(); i++) {
+    //     std::string bin_str = fmt::format("[{}]", i->first);
+    //     PrintNameValue(where, bin_str, last_epoch_bins_.at(i->first) -  i->second);
+    // }
+    std::vector<uint64_t> print_bins = GetPrintableBins(false);
+    std::vector<uint64_t> print_bins_epoch = GetPrintableBins(true);
+    for (unsigned i =0; i < print_bins.size(); i++) {
+        PrintNameValue(where, headers_[i], print_bins[i] - print_bins_epoch[i]);
     }
-    bin_str = fmt::format("[ > {} ]", end_);
-    PrintNameValue(where, bin_str, pos_outlier_count_ - last_epoch_pos_outlier_count_);
+    // auto bin_str = fmt::format("[ < {} ]", start_);
+    // PrintNameValue(where, bin_str, neg_outlier_count_ - last_epoch_neg_outlier_count_);
+    // for(auto i = 0; i < numb_bins_; i++) {
+    //     auto bin_start = start_ + i*bin_width;
+    //     auto bin_end = start_ + (i+1)*bin_width - 1;
+    //     auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
+    //     PrintNameValue(where, bin_str, bin_count_[i] - last_epoch_bin_count_[i]);
+    // }
+    // bin_str = fmt::format("[ > {} ]", end_);
+    // PrintNameValue(where, bin_str, pos_outlier_count_ - last_epoch_pos_outlier_count_);
     return;
 }
 
 
 void HistogramStat::PrintCSVHeader(std::ostream& where) const {
-    auto bin_width = (end_ - start_)/numb_bins_;
-    where << fmt::format("{}[<{}],", name_, start_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        auto bin_start = start_ + i*bin_width;
-        auto bin_end = start_ + (i+1)*bin_width - 1;
-        where << fmt::format("{}[{}-{}],", name_, bin_start, bin_end);
+    // auto bin_width = (end_ - start_)/numb_bins_;
+    // where << fmt::format("{}[<{}],", name_, start);
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        where << fmt::format("{}[{}],", name_, i->first);
     }
-    where << fmt::format("{}[>{}],", name_, end_);
+    // for(auto i = 0; i < numb_bins_; i++) {
+    //     auto bin_start = start_ + i*bin_width;
+    //     auto bin_end = start_ + (i+1)*bin_width - 1;
+    //     where << fmt::format("{}[{}-{}],", name_, bin_start, bin_end);
+    // }
+    // where << fmt::format("{}[>{}],", name_, end_);
     return;
 }
 
 void HistogramStat::PrintCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", neg_outlier_count_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        where << fmt::format("{},", bin_count_[i]);
+
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        where << fmt::format("{},", i->second);
     }
-    where << fmt::format("{},", pos_outlier_count_);
+
+    // where << fmt::format("{},", neg_outlier_count_);
+    // for(auto i = 0; i < numb_bins_; i++) {
+    //     where << fmt::format("{},", bin_count_[i]);
+    // }
+    // where << fmt::format("{},", pos_outlier_count_);
     return;
 }
 
 
 void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", neg_outlier_count_ - last_epoch_neg_outlier_count_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        where << fmt::format("{},", bin_count_[i] - last_epoch_bin_count_[i]);
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        where << fmt::format("{},", i->second - last_epoch_bins_.at(i->first));
     }
-    where << fmt::format("{},", pos_outlier_count_ - last_epoch_pos_outlier_count_);
+    // where << fmt::format("{},", neg_outlier_count_ - last_epoch_neg_outlier_count_);
+    // for(auto i = 0; i < numb_bins_; i++) {
+    //     where << fmt::format("{},", bin_count_[i] - last_epoch_bin_count_[i]);
+    // }
+    // where << fmt::format("{},", pos_outlier_count_ - last_epoch_pos_outlier_count_);
     return;
 }
 
@@ -280,6 +334,7 @@ Statistics::Statistics(const Config& config):
     pre_pd_energy = DoubleComputeStat("pre_pd_energy", "Precharge powerdown energy");
     sref_energy = DoubleComputeStat("sref_energy", "Self-refresh energy");
     total_energy = DoubleComputeStat("total_energy", "(pJ) Total energy consumed");
+    average_latency = DoubleComputeStat("average_latency", "Average latency in DRAM cycles");
     average_power = DoubleComputeStat("average_power", "(mW) Average Power for all devices");
     average_bandwidth = DoubleComputeStat("average_bandwidth", "(GB/s) Average Aggregate Bandwidth");
 
