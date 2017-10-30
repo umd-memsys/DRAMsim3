@@ -55,15 +55,17 @@ class HistogramStat : public BaseStat {
 public:
     HistogramStat():BaseStat() {}
     HistogramStat(int start, int end, uint32_t numb_bins, std::string name, std::string desc);
-    HistogramStat(std::string name, std::string desc): BaseStat(name, desc) {}
     void AddValue(int val);
     void Print(std::ostream& where) const override ;
     void UpdateEpoch() override ;
-    void PrintEpoch(std::ostream& where) const override ;
+    void PrintEpoch(std::ostream& where) const {} // don't print histogram, put them in csv instead
     void PrintCSVHeader(std::ostream& where) const override ;
     void PrintCSVFormat(std::ostream& where) const override ;
     void PrintEpochCSVFormat(std::ostream& where) const override ;
     std::vector<uint64_t> GetAggregatedBins() const;
+    double GetAverage() const;
+    uint64_t AccuSum() const;  // Accumulated Sum (value * count)
+    uint64_t CountSum() const;
 private:
     int start_;
     int end_;

@@ -153,8 +153,7 @@ std::vector<uint64_t> HistogramStat::GetAggregatedBins() const {
     int bin_width = (end_ - start_)/numb_bins_;
     // 2 extra slots to insert positive and negative outliers
     std::vector<uint64_t> aggr_bins(numb_bins_ + 2, 0);
-    const std::map<int, uint64_t>& bins = bins_;
-    for (auto i = bins.begin(); i != bins.end(); i++) {
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
         if (i->first < start_) {
             aggr_bins.front() += i->second;
         } else if (i->first > end_) {
@@ -165,6 +164,28 @@ std::vector<uint64_t> HistogramStat::GetAggregatedBins() const {
         }
     }
     return aggr_bins;
+}
+
+uint64_t HistogramStat::AccuSum() const {
+    uint64_t sum = 0;
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        sum += i->first * i->second;
+    }
+    return sum;
+}
+
+uint64_t HistogramStat::CountSum() const {
+    uint64_t count = 0;
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        count += i->second;
+    }
+    return count;
+}
+
+double HistogramStat::GetAverage() const {
+    uint64_t sum = AccuSum();
+    uint64_t count = CountSum();
+    return static_cast<double>(sum) / static_cast<double>(count);
 }
 
 void HistogramStat::Print(std::ostream& where) const {
@@ -195,11 +216,6 @@ void HistogramStat::Print(std::ostream& where) const {
 void HistogramStat::UpdateEpoch() {
     last_epoch_bins_ = bins_;
     epoch_count_ ++;
-    return;
-}
-
-void HistogramStat::PrintEpoch(std::ostream& where) const {
-    // don't print histogram, put them in csv instead
     return;
 }
 
@@ -314,6 +330,7 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&pre_pd_energy);
     stats_list.push_back(&sref_energy);
     stats_list.push_back(&total_energy);
+    stats_list.push_back(&average_latency);
     stats_list.push_back(&average_power);
     stats_list.push_back(&average_bandwidth);
     histo_stats_list.push_back(&access_latency);
@@ -361,6 +378,8 @@ void Statistics::PreEpochCompute(uint64_t clk) {
                                      + pre_stb_energy.cumulative_value + sref_energy.cumulative_value;
     average_power.cumulative_value = total_energy.epoch_value / clk;
     average_bandwidth.cumulative_value = (reqs_issued * config_.request_size_bytes) / ((clk) * config_.tCK);
+
+    average_latency.cumulative_value = access_latency.GetAverage();
 }
 
 void Statistics::PrintStats(std::ostream &where) const {
