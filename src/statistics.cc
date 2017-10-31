@@ -96,7 +96,9 @@ void DoubleStat::PrintEpochCSVFormat(std::ostream& where) const {
 }
 
 DoubleComputeStat::DoubleComputeStat(std::string name, std::string desc):
-    BaseStat(name, desc)
+    BaseStat(name, desc),
+    epoch_value(0),
+    cumulative_value(0)
 {}
 
 void DoubleComputeStat::Print(std::ostream& where) const {
