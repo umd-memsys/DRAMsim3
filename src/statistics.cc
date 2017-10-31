@@ -292,6 +292,7 @@ Statistics::Statistics(const Config& config):
     pre_pd_energy = DoubleComputeStat("pre_pd_energy", "Precharge powerdown energy");
     sref_energy = DoubleComputeStat("sref_energy", "Self-refresh energy");
     total_energy = DoubleComputeStat("total_energy", "(pJ) Total energy consumed");
+    queue_usage = DoubleComputeStat("queue_usage", "average overall command queue usage");
     average_power = DoubleComputeStat("average_power", "(mW) Average Power for all devices");
     average_bandwidth = DoubleComputeStat("average_bandwidth", "(GB/s) Average Aggregate Bandwidth");
     average_latency = DoubleComputeStat("average_latency", "Average latency in DRAM cycles");
@@ -333,6 +334,7 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&pre_pd_energy);
     stats_list.push_back(&sref_energy);
     stats_list.push_back(&total_energy);
+    stats_list.push_back(&queue_usage);
     stats_list.push_back(&average_power);
     stats_list.push_back(&average_bandwidth);
     stats_list.push_back(&average_latency);
@@ -381,6 +383,10 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     total_energy.cumulative_value = act_energy.cumulative_value + read_energy.cumulative_value + write_energy.cumulative_value
                                      + ref_energy.cumulative_value + refb_energy.cumulative_value + act_stb_energy.cumulative_value
                                      + pre_stb_energy.cumulative_value + sref_energy.cumulative_value;
+    double last_queue_usage = static_cast<double>(queue_usage.epoch_value);
+    double avg_queue_usage = (last_queue_usage * static_cast<double>(last_clk_) 
+                                  + queue_usage.epoch_value) / static_cast<double>(clk);
+    queue_usage.cumulative_value = avg_queue_usage;
     average_power.cumulative_value = total_energy.cumulative_value / clk;
     average_bandwidth.cumulative_value = (reqs_issued * config_.request_size_bytes) / ((clk) * config_.tCK);
 

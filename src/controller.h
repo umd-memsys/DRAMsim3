@@ -20,6 +20,7 @@ public:
     bool InsertReq(Request* req);
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
+    int QueueUsage() const;
 protected:
     uint64_t clk_;
     const Config& config_;

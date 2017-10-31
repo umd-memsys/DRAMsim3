@@ -203,6 +203,13 @@ void MemorySystem::ClockTick() {
 #endif
 
     if( clk_ % ptr_config_->epoch_period == 0) {
+        // calculate queue usage each epoch 
+        // otherwise it would be too inefficient
+        int queue_usage_total = 0;
+        for (auto ctrl:ctrls_) {
+            queue_usage_total += ctrl->QueueUsage();
+        }
+        ptr_stats_->queue_usage.epoch_value = static_cast<double>(queue_usage_total);
         ptr_stats_->PreEpochCompute(clk_);
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);

@@ -240,3 +240,11 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue, std::list<Request*>:
     }
     return;
 }
+
+int CommandQueue::QueueUsage() const {
+    int usage = 0;
+    for (auto i = queues_.begin(); i != queues_.end(); i++) {
+        usage += i->size();
+    }
+    return usage;
+}

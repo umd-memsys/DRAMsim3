@@ -151,6 +151,7 @@ public:
     class DoubleComputeStat pre_pd_energy;
     class DoubleComputeStat sref_energy;
     class DoubleComputeStat total_energy;
+    class DoubleComputeStat queue_usage;
     class DoubleComputeStat average_power;
     class DoubleComputeStat average_bandwidth;
     class DoubleComputeStat average_latency;
