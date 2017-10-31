@@ -14,7 +14,8 @@ int BaseMemorySystem::num_mems_ = 0;
 BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
     read_callback_(read_callback),
     write_callback_(write_callback),
-    clk_(0)
+    clk_(0),
+    last_req_clk_(0)
 {
     mem_sys_id_ = num_mems_;
     num_mems_ += 1;
@@ -176,6 +177,11 @@ bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     }
 #endif
     assert(is_insertable);
+
+    // update interarrival latency
+    ptr_stats_->interarrival_latency.AddValue(clk_ - last_req_clk_);
+    last_req_clk_ = clk_;
+
     return is_insertable;
 }
 

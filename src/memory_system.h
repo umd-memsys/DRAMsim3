@@ -30,6 +30,7 @@ public:
 protected:
     uint64_t clk_;
     uint64_t id_;
+    uint64_t last_req_clk_;
     Timing* ptr_timing_;
     Statistics* ptr_stats_;
     int mem_sys_id_;

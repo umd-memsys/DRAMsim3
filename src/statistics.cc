@@ -292,12 +292,13 @@ Statistics::Statistics(const Config& config):
     pre_pd_energy = DoubleComputeStat("pre_pd_energy", "Precharge powerdown energy");
     sref_energy = DoubleComputeStat("sref_energy", "Self-refresh energy");
     total_energy = DoubleComputeStat("total_energy", "(pJ) Total energy consumed");
-    average_latency = DoubleComputeStat("average_latency", "Average latency in DRAM cycles");
     average_power = DoubleComputeStat("average_power", "(mW) Average Power for all devices");
     average_bandwidth = DoubleComputeStat("average_bandwidth", "(GB/s) Average Aggregate Bandwidth");
-    
+    average_latency = DoubleComputeStat("average_latency", "Average latency in DRAM cycles");
+    average_interarrival = DoubleComputeStat("average_interarrival", "Average interarrival latency of requests");
     // histogram stats
     access_latency = HistogramStat(0, 200, 10, "access_latency", "Histogram of access latencies");
+    interarrival_latency = HistogramStat(0, 100, 10, "interarrival_latency", "Histogram of interarrival latencies");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -332,10 +333,12 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&pre_pd_energy);
     stats_list.push_back(&sref_energy);
     stats_list.push_back(&total_energy);
-    stats_list.push_back(&average_latency);
     stats_list.push_back(&average_power);
     stats_list.push_back(&average_bandwidth);
+    stats_list.push_back(&average_latency);
+    stats_list.push_back(&average_interarrival);
     histo_stats_list.push_back(&access_latency);
+    histo_stats_list.push_back(&interarrival_latency);
 }
 
 
@@ -382,6 +385,7 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     average_bandwidth.cumulative_value = (reqs_issued * config_.request_size_bytes) / ((clk) * config_.tCK);
 
     average_latency.cumulative_value = access_latency.GetAverage();
+    average_interarrival.cumulative_value = interarrival_latency.GetAverage();
 }
 
 void Statistics::PrintStats(std::ostream &where) const {

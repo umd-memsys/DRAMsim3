@@ -403,6 +403,8 @@ bool HMCMemorySystem::InsertReqToLink(HMCRequest* req, int link) {
         HMCResponse *resp = new HMCResponse(req->mem_operand, req->type, link, req->quad);
         resp_lookup_table.insert(std::pair<uint64_t, HMCResponse*>(resp->resp_id, resp));
         link_age_counter[link] = 1;
+        ptr_stats_->interarrival_latency.AddValue(clk_ - last_req_clk_);
+        last_req_clk_ = clk_;
         return true;
     } else {
         return false;

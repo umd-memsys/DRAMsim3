@@ -122,13 +122,9 @@ public:
     class CounterStat numb_aggressive_precharges;
     class CounterStat numb_ondemand_precharges;
     class CounterStat dramcycles;
-
-    class HistogramStat access_latency;
     class CounterStat numb_buffered_requests;
-
     class CounterStat hbm_dual_command_issue_cycles;
     class CounterStat hbm_dual_non_rw_cmd_attempt_cycles;
-
     class CounterStat numb_read_cmds_issued;
     class CounterStat numb_write_cmds_issued;
     class CounterStat numb_activate_cmds_issued;
@@ -155,10 +151,15 @@ public:
     class DoubleComputeStat pre_pd_energy;
     class DoubleComputeStat sref_energy;
     class DoubleComputeStat total_energy;
-    class DoubleComputeStat average_latency;
     class DoubleComputeStat average_power;
     class DoubleComputeStat average_bandwidth;
-    
+    class DoubleComputeStat average_latency;
+    class DoubleComputeStat average_interarrival;
+   
+    // histogram stats
+    class HistogramStat access_latency;
+    class HistogramStat interarrival_latency;
+
     std::list<class BaseStat*> stats_list;
     std::list<class HistogramStat*> histo_stats_list;
 
