@@ -238,9 +238,9 @@ void HistogramStat::PrintCSVFormat(std::ostream& where) const {
 
 
 void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
-    if (epoch_count_ == 0) {
-        where << "name,value,count,epoch" << endl;
-    }
+    // if (epoch_count_ == 0) {
+    //     where << "name,value,count,epoch" << endl;
+    // }
     for (auto i = bins_.begin(); i != bins_.end(); i++) {
         where << fmt::format("{},{},{},{}",name_, i->first, i->second, epoch_count_) << endl;
     }
@@ -454,6 +454,9 @@ void Statistics::PrintEpochStatsCSVFormat(std::ostream& where) const {
 }
 
 void Statistics::PrintEpochHistoStatsCSVFormat(std::ostream& where) const {
+    if (last_clk_ == 0) {
+        where << "name,value,count,epoch" << endl;
+    }
     for (auto stat : histo_stats_list) {
         stat->PrintEpochCSVFormat(where);
     }

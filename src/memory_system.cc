@@ -202,7 +202,7 @@ void MemorySystem::ClockTick() {
     }
 #endif
 
-    if( clk_ % ptr_config_->epoch_period == 0) {
+    if( clk_ % ptr_config_->epoch_period == 0 && clk_ != 0) {
         // calculate queue usage each epoch 
         // otherwise it would be too inefficient
         int queue_usage_total = 0;
