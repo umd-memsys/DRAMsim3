@@ -8,6 +8,7 @@
 namespace dramcore {
 
 enum class HMCReqType {
+    RD0,
     RD16,
     RD32,
     RD48,
@@ -17,6 +18,7 @@ enum class HMCReqType {
     RD112,
     RD128,
     RD256,
+    WR0,
     WR16,
     WR32,
     WR48,

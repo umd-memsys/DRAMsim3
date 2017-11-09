@@ -214,7 +214,8 @@ void Config::ProtocolAdjust() {
             cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
-        if (block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {
+        // block_size = 0 to simulate ideal bandwidth situation
+        if (block_size != 0 && block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {
             cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
             AbruptExit(__FILE__, __LINE__);
         }

@@ -16,6 +16,10 @@ HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr):
     // to partition vaults to quads
     quad = vault % 4;
     switch (req_type) {
+        case HMCReqType::RD0:
+        case HMCReqType::WR0:
+            flits = 0;
+            break;
         case HMCReqType::RD16:
         case HMCReqType::RD32:
         case HMCReqType::RD48:
@@ -119,6 +123,11 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
         quad(src_quad)
     {   
         switch(req_type) {
+            case HMCReqType::RD0:
+            case HMCReqType::WR0:
+                type = HMCRespType::NONE;
+                flits = 0;
+                break;
             case HMCReqType::RD16:
                 type = HMCRespType::RD_RS;
                 flits = 2;
@@ -349,6 +358,9 @@ bool HMCMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     HMCReqType req_type;
     if (is_write) {
         switch(ptr_config_->block_size) {
+            case 0:
+                req_type = HMCReqType::WR0;
+                break;
             case 32:
                 req_type = HMCReqType::WR32;
                 break;
@@ -368,6 +380,9 @@ bool HMCMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
         }
     } else {
         switch(ptr_config_->block_size) {
+            case 0:
+                req_type = HMCReqType::RD0;
+                break;
             case 32:
                 req_type = HMCReqType::RD32;
                 break;
@@ -636,6 +651,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
     Request *dram_req;
     int64_t dummy_id = 0;  // TODO use a dummy id for Request constructor...
     switch(req->type) {
+        case HMCReqType::RD0:
         case HMCReqType::RD16:
         case HMCReqType::RD32:
         case HMCReqType::RD48:
@@ -650,6 +666,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
             dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, clk_, dummy_id);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
+        case HMCReqType::WR0:
         case HMCReqType::WR16:
         case HMCReqType::WR32:
         case HMCReqType::P_WR16:
