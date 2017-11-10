@@ -107,7 +107,7 @@ void Controller::ClockTick() {
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
         
-        if (config_.IsHBM()){ //TODO - Current implementation doesn't do dual command issue during refresh
+        if (config_.enable_hbm_dual_cmd) { //TODO - Current implementation doesn't do dual command issue during refresh
             auto second_cmd = cmd_queue_.GetCommandToIssue();
             if (second_cmd.IsValid()) {
                 if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {

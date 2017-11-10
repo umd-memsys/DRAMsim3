@@ -118,6 +118,7 @@ public:
     bool enable_self_refresh;
     uint32_t idle_cycles_for_self_refresh;
     bool aggressive_precharging_enabled;
+    bool enable_hbm_dual_cmd;
 
     std::string output_prefix;
 

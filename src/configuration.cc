@@ -38,6 +38,8 @@ Config::Config(std::string config_file)
         banks_per_group *= bankgroups;
         bankgroups = 1;
     }
+    enable_hbm_dual_cmd = reader.GetBoolean("dram_structure", "hbm_dual_cmd", true);
+    enable_hbm_dual_cmd &= IsHBM();  // Make sure only HBM enables this
     banks = bankgroups * banks_per_group;
     rows = static_cast<uint32_t>(reader.GetInteger("dram_structure", "rows", 1 << 16));
     columns = static_cast<uint32_t>(reader.GetInteger("dram_structure", "columns", 1 << 10));
