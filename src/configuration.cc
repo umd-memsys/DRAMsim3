@@ -102,19 +102,9 @@ Config::Config(std::string config_file)
     tRCDRD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDRD", 24));
     tRCDWR = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDWR", 20));
 
-
+    // calculated timing
     RL = AL + CL;
     WL = AL + CWL;
-
-    // set burst cycle according to protocol
-    if (protocol == DRAMProtocol::GDDR5) {
-        burst_cycle = BL/4;
-    } else if (protocol == DRAMProtocol::GDDR5X) {
-        burst_cycle = BL/8;
-    } else {
-        burst_cycle = BL/2;
-    }
-
     read_delay = RL + burst_cycle;
     write_delay = WL + burst_cycle;
 
@@ -163,7 +153,6 @@ Config::Config(std::string config_file)
     stats_file_csv = reader.Get("other", "stats_file", output_prefix + "stats.csv");
     epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", output_prefix + "epoch_stats.csv");
     histo_stats_file_csv = reader.Get("other", "histo_stat_file", output_prefix + "histo_stats.csv");
-
 
     ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));
 
@@ -254,6 +243,17 @@ void Config::ProtocolAdjust() {
             cerr << "HBM die options: 2/4/8" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
+    }
+    // set burst cycle according to protocol
+    if (protocol == DRAMProtocol::GDDR5) {
+        burst_cycle = (BL==0) ? 0 : BL / 4;
+        BL = (BL==0) ? 8 : BL;
+    } else if (protocol == DRAMProtocol::GDDR5X) {
+        burst_cycle = (BL==0) ? 0 : BL / 8;
+        BL = (BL==0) ? 8 : BL;
+    } else {
+        burst_cycle = (BL==0) ? 0 : BL / 2;
+        BL = (BL==0) ? (IsHBM()? 4 : 8) : BL;
     }
 }
 
