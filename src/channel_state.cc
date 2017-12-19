@@ -24,11 +24,11 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
         }
     }
 
-#ifdef VALIDATION_OUTPUT
-    std::string validation_output_file = config.output_prefix + "-cmd.trc"
+#ifdef GENERATE_TRACE
+    std::string validation_output_file = config.output_prefix + "-cmd.trc";
     cout << "Validation Command Trace write to "<< validation_output_file << endl;
     val_output_.open(validation_output_file, std::ofstream::out);
-#endif // VALIDATION_OUTPUT
+#endif // GENERATE_TRACE
 
 }
 
@@ -240,9 +240,9 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
 #ifdef DEBUG_OUTPUT
     cout << left << setw(8) << clk << " " << cmd << endl;
 #endif  //DEBUG_OUTPUT
-#ifdef VALIDATION_OUTPUT
+#ifdef GENERATE_TRACE
     val_output_ << left << setw(8) << clk << " " << cmd <<std::endl;
-#endif // VALIDATION_OUTPUT
+#endif // GENEREATE_TRACE
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
 

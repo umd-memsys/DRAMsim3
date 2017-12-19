@@ -37,7 +37,7 @@ public:
 private:
     const Config& config_;
     const Timing& timing_;
-#ifdef VALIDATION_OUTPUT
+#ifdef GENERATE_TRACE
     std::ofstream val_output_;
 #endif
     Statistics& stats_;
