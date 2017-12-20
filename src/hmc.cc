@@ -16,6 +16,10 @@ HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr):
     // to partition vaults to quads
     quad = vault % 4;
     switch (req_type) {
+        case HMCReqType::RD0:
+        case HMCReqType::WR0:
+            flits = 0;
+            break;
         case HMCReqType::RD16:
         case HMCReqType::RD32:
         case HMCReqType::RD48:
@@ -119,6 +123,11 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
         quad(src_quad)
     {   
         switch(req_type) {
+            case HMCReqType::RD0:
+            case HMCReqType::WR0:
+                type = HMCRespType::NONE;
+                flits = 0;
+                break;
             case HMCReqType::RD16:
                 type = HMCRespType::RD_RS;
                 flits = 2;
@@ -239,8 +248,8 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
     }
 
 
-HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback):
-    BaseMemorySystem(config_file, callback),
+HMCMemorySystem::HMCMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback):
+    BaseMemorySystem(config_file, output_dir, read_callback, write_callback),
     ref_tick_(0),
     logic_clk_(0),
     next_link_(0)
@@ -257,7 +266,7 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file, std::function<v
     vault_callback_ = std::bind(&HMCMemorySystem::VaultCallback, this, std::placeholders::_1);
     vaults_.reserve(ptr_config_->channels);
     for (int i = 0; i < ptr_config_->channels; i++) {
-        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, ptr_thermCal_, vault_callback_));
+        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, ptr_thermCal_, vault_callback_, vault_callback_));
     }
     // initialize vaults and crossbar
     // the first layer of xbar will be num_links * 4 (4 for quadrants)
@@ -332,12 +341,26 @@ inline void HMCMemorySystem::IterateNextLink() {
 }
 
 
+bool HMCMemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) { 
+    bool insertable = false;
+    for (auto link_queue = link_req_queues_.begin(); link_queue != link_req_queues_.end(); link_queue ++) {
+        if ((*link_queue).size() < queue_depth_) {
+            insertable = true;
+            break;
+        }
+    }
+    return insertable;
+}
+
 bool HMCMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     // to be compatible with other protocol we have this interface
     // when using this intreface the size of each transaction will be block_size
     HMCReqType req_type;
     if (is_write) {
         switch(ptr_config_->block_size) {
+            case 0:
+                req_type = HMCReqType::WR0;
+                break;
             case 32:
                 req_type = HMCReqType::WR32;
                 break;
@@ -357,6 +380,9 @@ bool HMCMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
         }
     } else {
         switch(ptr_config_->block_size) {
+            case 0:
+                req_type = HMCReqType::RD0;
+                break;
             case 32:
                 req_type = HMCReqType::RD32;
                 break;
@@ -392,6 +418,8 @@ bool HMCMemorySystem::InsertReqToLink(HMCRequest* req, int link) {
         HMCResponse *resp = new HMCResponse(req->mem_operand, req->type, link, req->quad);
         resp_lookup_table.insert(std::pair<uint64_t, HMCResponse*>(resp->resp_id, resp));
         link_age_counter[link] = 1;
+        ptr_stats_->interarrival_latency.AddValue(clk_ - last_req_clk_);
+        last_req_clk_ = clk_;
         return true;
     } else {
         return false;
@@ -437,7 +465,11 @@ void HMCMemorySystem::LogicClockTickPre() {
         if (!link_resp_queues_[i].empty()) {
             HMCResponse* resp = link_resp_queues_[i].front();
             if (resp->exit_time <= logic_clk_) {
-                callback_(resp->resp_id);
+                if (resp->type == HMCRespType::RD_RS) {
+                    read_callback_(resp->resp_id);
+                } else {
+                    write_callback_(resp->resp_id);
+                }
                 delete(resp);
                 link_resp_queues_[i].erase(link_resp_queues_[i].begin());
                 ptr_stats_->hmc_reqs_done++;
@@ -493,7 +525,12 @@ void HMCMemorySystem::DRAMClockTick() {
         vault->ClockTick();
     }
     if (clk_ % ptr_config_->epoch_period == 0) {
-        ptr_stats_->UpdatePreEpoch(clk_);
+        int queue_usage_total = 0;
+        for (auto vault:vaults_) {
+            queue_usage_total += vault->QueueUsage();
+        }
+        ptr_stats_->queue_usage.epoch_value = static_cast<double>(queue_usage_total);
+        ptr_stats_->PreEpochCompute(clk_);
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }
@@ -611,6 +648,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
     Request *dram_req;
     int64_t dummy_id = 0;  // TODO use a dummy id for Request constructor...
     switch(req->type) {
+        case HMCReqType::RD0:
         case HMCReqType::RD16:
         case HMCReqType::RD32:
         case HMCReqType::RD48:
@@ -625,6 +663,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
             dram_req = new Request(CommandType::READ_PRECHARGE, req->mem_operand, clk_, dummy_id);
             vaults_[req->vault]->InsertReq(dram_req);
             break;
+        case HMCReqType::WR0:
         case HMCReqType::WR16:
         case HMCReqType::WR32:
         case HMCReqType::P_WR16:

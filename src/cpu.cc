@@ -26,11 +26,14 @@ void RandomCPU::ClockTick() {
         last_addr_ = gen();
     }
     bool is_write = (gen() % 3 == 0);  // R/W ratio 2:1
-    get_next_ = memory_system_.InsertReq(last_addr_, is_write);
+    bool get_next_ = memory_system_.IsReqInsertable(last_addr_, is_write);
+    if(get_next_) {
+        memory_system_.InsertReq(last_addr_, is_write);
+    }
     return;
 }
 
-void StreamCPU::ClockTick() {
+void StreamCPU::ClockTick() { //TODO - @shawn - Will fail assertion in the current form. Incorporate IsReqInsertable() function
     // stream-add, read 2 arrays, add them up to the third array
     // this is a very simple approximate but should be able to produce 
     // enough buffer hits
@@ -79,8 +82,10 @@ void TraceBasedCPU::ClockTick() {
             trace_file_ >> access_;
         }
         if(access_.time_ <= clk_) {
-            if(memory_system_.InsertReq(access_.hex_addr_, access_.access_type_ == "WRITE")) {
-                get_next_ = true;
+            bool is_write = access_.access_type_ == "WRITE";
+            bool get_next_ = memory_system_.IsReqInsertable(access_.hex_addr_, is_write);
+            if(get_next_) {
+                memory_system_.InsertReq(access_.hex_addr_, is_write);
             }
         }
     }

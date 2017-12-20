@@ -677,10 +677,10 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
         cout << "begin sampling!\n";
         // add the background energy
         if (config_.IsHMC() || config_.IsHBM()){
-            double pre_stb_sum = Statistics::Sum(stats_.pre_stb_energy);
-            double act_stb_sum = Statistics::Sum(stats_.act_stb_energy);
-            double pre_pd_sum = Statistics::Sum(stats_.pre_pd_energy);
-            double sref_sum = Statistics::Sum(stats_.sref_energy);
+            double pre_stb_sum = Statistics::Stats2DCumuSum(stats_.pre_stb_energy);
+            double act_stb_sum = Statistics::Stats2DCumuSum(stats_.act_stb_energy);
+            double pre_pd_sum = Statistics::Stats2DCumuSum(stats_.pre_pd_energy);
+            double sref_sum = Statistics::Stats2DCumuSum(stats_.sref_energy);
             double extra_energy = sref_sum + pre_stb_sum + act_stb_sum + pre_pd_sum - sref_energy_prev[0] - pre_stb_energy_prev[0] - act_stb_energy_prev[0] - pre_pd_energy_prev[0];
             extra_energy = extra_energy / (dimX * dimY * numP);
             sref_energy_prev[0] = sref_sum;
@@ -697,12 +697,12 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
             for (int jch = 0; jch < config_.channels; jch ++){
                 for (int jrk = 0; jrk < config_.ranks; jrk ++){
                     case_id = jch*config_.ranks+jrk; // case_id is determined by the channel and rank index 
-                    double extra_energy = stats_.sref_energy[jch][jrk].value + stats_.pre_stb_energy[jch][jrk].value + stats_.act_stb_energy[jch][jrk].value + stats_.pre_pd_energy[jch][jrk].value - sref_energy_prev[case_id] - pre_stb_energy_prev[case_id] - act_stb_energy_prev[case_id] - pre_pd_energy_prev[case_id];
+                    double extra_energy = stats_.sref_energy[jch][jrk].cumulative_value + stats_.pre_stb_energy[jch][jrk].cumulative_value + stats_.act_stb_energy[jch][jrk].cumulative_value + stats_.pre_pd_energy[jch][jrk].cumulative_value - sref_energy_prev[case_id] - pre_stb_energy_prev[case_id] - act_stb_energy_prev[case_id] - pre_pd_energy_prev[case_id];
                     extra_energy = extra_energy / (dimX * dimY * numP);
-                    sref_energy_prev[case_id] = stats_.sref_energy[jch][jrk].value;
-                    pre_stb_energy_prev[case_id] = stats_.pre_stb_energy[jch][jrk].value;
-                    act_stb_energy_prev[case_id] = stats_.act_stb_energy[jch][jrk].value;
-                    pre_pd_energy_prev[case_id] = stats_.pre_pd_energy[jch][jrk].value;
+                    sref_energy_prev[case_id] = stats_.sref_energy[jch][jrk].cumulative_value;
+                    pre_stb_energy_prev[case_id] = stats_.pre_stb_energy[jch][jrk].cumulative_value;
+                    act_stb_energy_prev[case_id] = stats_.act_stb_energy[jch][jrk].cumulative_value;
+                    pre_pd_energy_prev[case_id] = stats_.pre_pd_energy[jch][jrk].cumulative_value;
                     for (int i = 0; i < dimX * dimY * numP; i ++){
                         cur_Pmap[i][case_id] += extra_energy / 1000 / device_scale; 
                     }
@@ -742,7 +742,7 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
     
     // first add the background energy
     if (config_.IsHMC() || config_.IsHBM()){
-        double extra_energy = (Statistics::Sum(stats_.act_stb_energy) + Statistics::Sum(stats_.pre_stb_energy) + Statistics::Sum(stats_.sref_energy) + Statistics::Sum(stats_.pre_pd_energy)) / (dimX * dimY * numP);
+        double extra_energy = (Statistics::Stats2DCumuSum(stats_.act_stb_energy) + Statistics::Stats2DCumuSum(stats_.pre_stb_energy) + Statistics::Stats2DCumuSum(stats_.sref_energy) + Statistics::Stats2DCumuSum(stats_.pre_pd_energy)) / (dimX * dimY * numP);
         for (int i = 0; i < dimX * dimY * numP; i++)
             for (int j = 0; j < num_case; j++)
                 accu_Pmap[i][j] += extra_energy / 1000 / device_scale;
@@ -753,7 +753,7 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
         for (int jch = 0; jch < config_.channels; jch ++){
             for (int jrk = 0; jrk < config_.ranks; jrk ++){
                 case_id = jch*config_.ranks+jrk; // case_id is determined by the channel and rank index 
-                extra_energy = (stats_.sref_energy[jch][jrk].value + stats_.pre_stb_energy[jch][jrk].value + stats_.act_stb_energy[jch][jrk].value + stats_.pre_pd_energy[jch][jrk].value) / (dimX * dimY * numP);
+                extra_energy = (stats_.sref_energy[jch][jrk].cumulative_value + stats_.pre_stb_energy[jch][jrk].cumulative_value + stats_.act_stb_energy[jch][jrk].cumulative_value + stats_.pre_pd_energy[jch][jrk].cumulative_value) / (dimX * dimY * numP);
                 cout << "background energy " << extra_energy * (dimX * dimY * numP) << endl;
                 double sum_energy = 0.0;
                 for (int i = 0; i < dimX * dimY * numP; i++) {

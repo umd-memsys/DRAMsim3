@@ -28,7 +28,6 @@ Config::Config(std::string config_file)
     enable_self_refresh = reader.GetBoolean("system", "enable_self_refresh", false);
     idle_cycles_for_self_refresh = static_cast<uint32_t>(reader.GetInteger("system", "idle_cycles_for_self_refresh", 1000));
     aggressive_precharging_enabled = reader.GetBoolean("system", "aggressive_precharging_enabled", false);
-    req_buffering_enabled = reader.GetBoolean("system", "req_buffering_enabled", false);
 
     // DRAM organization
     bankgroups = static_cast<uint32_t>(reader.GetInteger("dram_structure", "bankgroups", 2));
@@ -39,6 +38,8 @@ Config::Config(std::string config_file)
         banks_per_group *= bankgroups;
         bankgroups = 1;
     }
+    enable_hbm_dual_cmd = reader.GetBoolean("dram_structure", "hbm_dual_cmd", true);
+    enable_hbm_dual_cmd &= IsHBM();  // Make sure only HBM enables this
     banks = bankgroups * banks_per_group;
     rows = static_cast<uint32_t>(reader.GetInteger("dram_structure", "rows", 1 << 16));
     columns = static_cast<uint32_t>(reader.GetInteger("dram_structure", "columns", 1 << 10));
@@ -101,19 +102,9 @@ Config::Config(std::string config_file)
     tRCDRD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDRD", 24));
     tRCDWR = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDWR", 20));
 
-
+    // calculated timing
     RL = AL + CL;
     WL = AL + CWL;
-
-    // set burst cycle according to protocol
-    if (protocol == DRAMProtocol::GDDR5) {
-        burst_cycle = BL/4;
-    } else if (protocol == DRAMProtocol::GDDR5X) {
-        burst_cycle = BL/8;
-    } else {
-        burst_cycle = BL/2;
-    }
-
     read_delay = RL + burst_cycle;
     write_delay = WL + burst_cycle;
 
@@ -145,17 +136,24 @@ Config::Config(std::string config_file)
     pre_pd_energy_inc = VDD * IDD2P * devices;
     sref_energy_inc = VDD * IDD6x * devices;
 
+    // determine how much output we want:
+    // -1: no file output at all
+    // 0: no epoch file output, only outputs the summary in the end
+    // 1: default value, adds epoch CSV output on level 0
+    // 2: adds histogram epoch outputs in a different CSV format
+    // 3: excessive output, adds epoch text output on level 2
+    output_level = reader.GetInteger("other", "output_level", 1);
     // Other Parameters
     // give a prefix instead of specify the output name one by one... 
     // this would allow outputing to a directory and you can always override these values
-    output_prefix = reader.Get("other", "output_prefix", "dramsim3-output-");
+    output_prefix = reader.Get("other", "output_prefix", "dramsim_");
     epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
     stats_file = reader.Get("other", "stats_file", output_prefix + "stats.txt");
-    cummulative_stats_file = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative-stats.txt");
-    epoch_stats_file = reader.Get("other", "epoch_stats_file", output_prefix + "epoch-stats.txt");
+    epoch_stats_file = reader.Get("other", "epoch_stats_file", output_prefix + "epoch_stats.txt");
     stats_file_csv = reader.Get("other", "stats_file", output_prefix + "stats.csv");
-    cummulative_stats_file_csv = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative_stats.csv");
-    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", output_prefix + "epoch-stats.csv");
+    // cummulative_stats_file_csv = reader.Get("other", "cummulative_stats_file", output_prefix + "cummulative_stats.csv");
+    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file", output_prefix + "epoch_stats.csv");
+    histo_stats_file_csv = reader.Get("other", "histo_stat_file", output_prefix + "histo_stats.csv");
 
     // Thermal simulation parameters 
     power_epoch_period = static_cast<uint32_t>(reader.GetInteger("thermal", "power_epoch_period", 100000));
@@ -248,7 +246,8 @@ void Config::ProtocolAdjust() {
             cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
-        if (block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {
+        // block_size = 0 to simulate ideal bandwidth situation
+        if (block_size != 0 && block_size != 32 && block_size != 64 && block_size != 128 && block_size != 256) {
             cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
@@ -285,6 +284,17 @@ void Config::ProtocolAdjust() {
             cerr << "HBM die options: 2/4/8" << endl;
             AbruptExit(__FILE__, __LINE__);
         }
+    }
+    // set burst cycle according to protocol
+    if (protocol == DRAMProtocol::GDDR5) {
+        burst_cycle = (BL==0) ? 0 : BL / 4;
+        BL = (BL==0) ? 8 : BL;
+    } else if (protocol == DRAMProtocol::GDDR5X) {
+        burst_cycle = (BL==0) ? 0 : BL / 8;
+        BL = (BL==0) ? 8 : BL;
+    } else {
+        burst_cycle = (BL==0) ? 0 : BL / 2;
+        BL = (BL==0) ? (IsHBM()? 4 : 8) : BL;
     }
 }
 
@@ -432,3 +442,4 @@ void Config::SetAddressMapping() {
         return Address(channel, rank, bankgroup, bank, row, column);
     };
 }
+

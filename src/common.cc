@@ -91,12 +91,38 @@ void AbruptExit(const std::string& file, int line) {
     exit(-1);
 }
 
-//Dummy callback function for use when the simulator is not integrated with zsim,SST or other frontend feeders
-void callback_func(uint64_t addr) {
+//Dummy callback functions for use when the simulator is not integrated with a frontend feeders
+void read_callback_func(uint64_t addr) {
 #ifdef LOG_REQUESTS
-    cout << "Request with address = " << addr << " is returned" << endl;
+    cout << "Read Request with address = " << addr << " is returned" << endl;
 #endif
     return;
+}
+
+void write_callback_func(uint64_t addr) {
+#ifdef LOG_REQUESTS
+    cout << "Write Request with address = " << addr << " is returned" << endl;
+#endif
+}
+
+bool DirExist(std::string dir) {
+    // courtesy to stackoverflow
+    struct stat info;
+    if ( stat( dir.c_str(), &info) != 0 ) {
+        return false;
+    } else if ( info.st_mode & S_IFDIR ) {
+        return true;
+    } else {  // exists but is file
+        return false;
+    }
+} 
+
+std::string RenameFileWithNumber(const std::string file_name, int number) {
+    int last_dot_index = file_name.find_last_of(".");
+    std::string prefix = file_name.substr(0, last_dot_index);
+    std::string postfix = file_name.substr(last_dot_index, file_name.size());
+    std::string result = prefix + "_" + std::to_string(number) + postfix;
+    return result;
 }
 
 }

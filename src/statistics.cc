@@ -95,143 +95,155 @@ void DoubleStat::PrintEpochCSVFormat(std::ostream& where) const {
     return;
 }
 
-NonCumulativeStat::NonCumulativeStat(std::string name, std::string desc):
-    BaseStat(name, desc)
+DoubleComputeStat::DoubleComputeStat(std::string name, std::string desc):
+    BaseStat(name, desc),
+    epoch_value(0),
+    cumulative_value(0)
 {}
 
-void NonCumulativeStat::Print(std::ostream& where) const {
-    PrintNameValueDesc(where, name_, value, description_);
+void DoubleComputeStat::Print(std::ostream& where) const {
+    PrintNameValueDesc(where, name_, cumulative_value, description_);
     return;
 }
 
 
-void NonCumulativeStat::UpdateEpoch() {}
+void DoubleComputeStat::UpdateEpoch() {}
 
-void NonCumulativeStat::PrintEpoch(std::ostream& where) const {
-    PrintNameValueDesc(where, name_, value, description_);
+void DoubleComputeStat::PrintEpoch(std::ostream& where) const {
+    PrintNameValueDesc(where, name_, epoch_value, description_);
     return;
 }
 
-void NonCumulativeStat::PrintCSVHeader(std::ostream& where) const {
+void DoubleComputeStat::PrintCSVHeader(std::ostream& where) const {
     where << fmt::format("{},", name_);
     return;
 }
 
 
-void NonCumulativeStat::PrintCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", value );
+void DoubleComputeStat::PrintCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", cumulative_value );
     return;
 }
 
-void NonCumulativeStat::PrintEpochCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", value);
+void DoubleComputeStat::PrintEpochCSVFormat(std::ostream& where) const {
+    where << fmt::format("{},", epoch_value);
     return;
 }
-
 
 HistogramStat::HistogramStat(int start, int end, uint32_t numb_bins, std::string name, std::string desc):
     BaseStat(name, desc),
     start_(start),
     end_(end),
     numb_bins_(numb_bins),
-    neg_outlier_count_(0),
-    pos_outlier_count_(0),
-    last_epoch_neg_outlier_count_(0),
-    last_epoch_pos_outlier_count_(0)
+    epoch_count_(0)
 {
     if(start_ >= end_ || numb_bins <= 0) {
-        cout << "Hisogram stat improperly specified" << endl;
+        cout << "Histogram stat improperly specified" << endl;
         AbruptExit(__FILE__, __LINE__);
     }
-    bin_count_.resize(numb_bins);
-    last_epoch_bin_count_.resize(numb_bins);
 }
 
 void HistogramStat::AddValue(int val) {
-    if( val >= start_ && val <= end_) {
-        auto bin_index = (val*numb_bins_)/(end_ - start_); //TODO - Could be made better
-        bin_count_[bin_index]++;
+    if ( bins_.count(val) <= 0 ) {
+        bins_[val] = 1;
+    } else {
+        bins_[val] += 1;
     }
-    else if( val < start_) {
-        neg_outlier_count_++;
+}
+
+std::vector<uint64_t> HistogramStat::GetAggregatedBins() const {
+    int bin_width = (end_ - start_)/numb_bins_;
+    // 2 extra slots to insert positive and negative outliers
+    std::vector<uint64_t> aggr_bins(numb_bins_ + 2, 0);
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        if (i->first < start_) {
+            aggr_bins.front() += i->second;
+        } else if (i->first > end_) {
+            aggr_bins.back() += i->second;
+        } else {
+            int bin_index = (i->first - start_) / bin_width + 1;  // +1 to offset the negative outlier
+            aggr_bins[bin_index] += i->second;
+        }
     }
-    else if ( val > end_) {
-        pos_outlier_count_++;
+    return aggr_bins;
+}
+
+uint64_t HistogramStat::AccuSum() const {
+    uint64_t sum = 0;
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        sum += i->first * i->second;
     }
-    return;
+    return sum;
+}
+
+uint64_t HistogramStat::CountSum() const {
+    uint64_t count = 0;
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        count += i->second;
+    }
+    return count;
+}
+
+double HistogramStat::GetAverage() const {
+    uint64_t sum = AccuSum();
+    uint64_t count = CountSum();
+    return static_cast<double>(sum) / static_cast<double>(count);
 }
 
 void HistogramStat::Print(std::ostream& where) const {
-    auto bin_width = (end_ - start_)/numb_bins_;
+    // ONLY print aggregated histograms in the final text output
     PrintNameValueDesc(where, name_, " ", description_);
-    auto bin_str = fmt::format("[ < {} ]", start_);
-    PrintNameValue(where, bin_str, neg_outlier_count_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        auto bin_start = start_ + i*bin_width;
-        auto bin_end = start_ + (i+1)*bin_width - 1;
-        auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        PrintNameValue(where, bin_str, bin_count_[i]);
+    std::vector<uint64_t> aggr_bins = GetAggregatedBins();
+
+    // get strings
+    std::vector<std::string> bin_strs;
+    std::string bin_str = fmt::format("[ < {} ]", start_);
+    bin_strs.push_back(bin_str);
+    int bin_width = (end_ - start_)/numb_bins_;
+    for (unsigned i = 1; i < numb_bins_ + 1; i++) {
+        auto bin_start = start_ + (i - 1) * bin_width;
+        auto bin_end = start_ + i * bin_width - 1;
+        bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
+        bin_strs.push_back(bin_str);
     }
-    bin_str = fmt::format("[ > {} ]", end_);
-    PrintNameValue(where, bin_str, pos_outlier_count_);
+    bin_str = fmt::format("[ > {} ]", end_);     
+    bin_strs.push_back(bin_str);
+
+    for (unsigned i =0; i < aggr_bins.size(); i++) {
+        PrintNameValue(where, bin_strs[i], aggr_bins[i]);
+    }
     return;
 }
 
 void HistogramStat::UpdateEpoch() {
-    last_epoch_neg_outlier_count_ = neg_outlier_count_;
-    last_epoch_pos_outlier_count_ = pos_outlier_count_;
-    for(auto i = 0; i < numb_bins_; i++) {
-        last_epoch_bin_count_[i] = bin_count_[i];
-    }
-    return;
-}
-
-void HistogramStat::PrintEpoch(std::ostream& where) const {
-    //TODO - Think of ways to avoid code duplication - Currently CTRL+C,CTRL+V of Print with epoch subtraction
-    auto bin_width = (end_ - start_)/numb_bins_;
-    PrintNameValueDesc(where, name_, " ", description_);
-    auto bin_str = fmt::format("[ < {} ]", start_);
-    PrintNameValue(where, bin_str, neg_outlier_count_ - last_epoch_neg_outlier_count_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        auto bin_start = start_ + i*bin_width;
-        auto bin_end = start_ + (i+1)*bin_width - 1;
-        auto bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        PrintNameValue(where, bin_str, bin_count_[i] - last_epoch_bin_count_[i]);
-    }
-    bin_str = fmt::format("[ > {} ]", end_);
-    PrintNameValue(where, bin_str, pos_outlier_count_ - last_epoch_pos_outlier_count_);
+    last_epoch_bins_ = bins_;
+    epoch_count_ ++;
     return;
 }
 
 
 void HistogramStat::PrintCSVHeader(std::ostream& where) const {
-    auto bin_width = (end_ - start_)/numb_bins_;
-    where << fmt::format("{}[<{}],", name_, start_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        auto bin_start = start_ + i*bin_width;
-        auto bin_end = start_ + (i+1)*bin_width - 1;
-        where << fmt::format("{}[{}-{}],", name_, bin_start, bin_end);
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        where << fmt::format("{}-{},", name_,i->first);
     }
-    where << fmt::format("{}[>{}],", name_, end_);
     return;
 }
 
 void HistogramStat::PrintCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", neg_outlier_count_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        where << fmt::format("{},", bin_count_[i]);
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        where << fmt::format("{},", i->second);
     }
-    where << fmt::format("{},", pos_outlier_count_);
     return;
 }
 
 
 void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
-    where << fmt::format("{},", neg_outlier_count_ - last_epoch_neg_outlier_count_);
-    for(auto i = 0; i < numb_bins_; i++) {
-        where << fmt::format("{},", bin_count_[i] - last_epoch_bin_count_[i]);
+    // if (epoch_count_ == 0) {
+    //     where << "name,value,count,epoch" << endl;
+    // }
+    for (auto i = bins_.begin(); i != bins_.end(); i++) {
+        where << fmt::format("{},{},{},{}",name_, i->first, i->second, epoch_count_) << endl;
     }
-    where << fmt::format("{},", pos_outlier_count_ - last_epoch_pos_outlier_count_);
     return;
 }
 
@@ -242,15 +254,14 @@ Statistics::Statistics(const Config& config):
 {
     //TODO - Should stats be global?
     numb_read_reqs_issued = CounterStat("numb_read_reqs_issued", "Number of read requests issued");
-    numb_write_reqs_issued = CounterStat("numb_of_write_reqs_issued", "Number of write requests issued");
+    numb_write_reqs_issued = CounterStat("numb_write_reqs_issued", "Number of write requests issued");
     hmc_reqs_done = CounterStat("hmc_reqs_done", "HMC Requests finished");
-    numb_row_hits = CounterStat("numb_of_row_hits", "Number of row hits");
+    numb_row_hits = CounterStat("numb_row_hits", "Number of row hits");
     numb_read_row_hits = CounterStat("numb_read_row_hits", "Number of read row hits");
     numb_write_row_hits = CounterStat("numb_write_row_hits", "Number of write row hits");
     numb_aggressive_precharges = CounterStat("numb_aggressive_precharges", "Number of aggressive precharges issued");
     numb_ondemand_precharges = CounterStat("numb_ondemand_precharges", "Number of on demand precharges issued");
-    dramcycles = CounterStat("Cycles", "Total number of DRAM execution cycles");
-    access_latency = HistogramStat(0, 80, 10, "access_latency", "Histogram of access latencies");
+    dramcycles = CounterStat("cycles", "Total number of DRAM execution cycles");
     numb_buffered_requests = CounterStat("numb_buffered_requests", "Number of buffered requests because queues were full");
     hbm_dual_command_issue_cycles = CounterStat("hbm_dual_command_issue_cycles", "Number of cycles in which two commands were issued");
     hbm_dual_non_rw_cmd_attempt_cycles = CounterStat("hbm_dual_non_rw_cmd_attempt_cycles", "Number of cycles during which an opportunity to issue a read/write is possibly missed");
@@ -263,27 +274,39 @@ Statistics::Statistics(const Config& config):
     numb_self_refresh_enter_cmds_issued = CounterStat("numb_self_refresh_enter_cmds_issued", "Number of self-refresh mode enter commands issued");
     numb_self_refresh_exit_cmds_issued = CounterStat("numb_self_refresh_exit_cmds_issued", "Number of self-refresh mode exit commands issued");
     numb_rw_rowhits_pending_refresh = CounterStat("numb_rw_rowhits_pending_refresh", "Number of read/write row hits issued while a refresh was pending");
-#ifdef DEBUG_POWER
-    all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all banks are idle");
-    active_cycles = CounterStat("rank active cycles", "Number of cycles the rank ramins active");
-#endif // DEBUG_POWER
+#ifdef DEBUG_HMC
+    logic_clk CounterStat("hmc_logic_clk", "HMC logic clock");
+    stats_list.push_back(&logic_clk);
+#endif  // DEBUG_HMC
+    Init2DStats(sref_cycles, config_.channels, config_.ranks, "channel", "rank", "sref_cycles", "Cycles in self-refresh state");
+    Init2DStats(all_bank_idle_cycles, config_.channels, config_.ranks, "channel", "rank","all_bank_idle_cycles", "Cycles of all banks are idle");
+    Init2DStats(active_cycles, config_.channels, config_.ranks, "channel", "rank", "rank_active_cycles", "Number of cycles the rank ramains active");
+    // sref_cycles = CounterStat("sref_cycles", "Cycles in self-refresh state");
+    // all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all banks are idle");
+    // active_cycles = CounterStat("rank_active_cycles", "Number of cycles the rank ramains active");
     // energy and power stats
-    act_energy = DoubleStat(config_.act_energy_inc, "act_energy", "ACT energy");
-    read_energy = DoubleStat(config_.read_energy_inc, "read_energy", "READ energy (not including IO)");
-    write_energy = DoubleStat(config_.write_energy_inc, "write_energy", "WRITE energy (not including IO)");
-    ref_energy = DoubleStat(config_.ref_energy_inc, "ref_energy", "Refresh energy");
-    refb_energy = DoubleStat(config_.refb_energy_inc, "refb_energy", "Bank-Refresh energy");
-    InitStatsPerRank(act_stb_energy, config_.act_stb_energy_inc,
-                     "act_stb_energy", "Active standby energy");
-    InitStatsPerRank(pre_stb_energy, config_.pre_stb_energy_inc, 
-                     "pre_pd_energy", "Precharge standby energy");
-    InitStatsPerRank(pre_pd_energy, config_.pre_pd_energy_inc,
-                     "pre_pd_energy", "Precharge powerdown energy");
-    InitStatsPerRank(sref_energy, config_.sref_energy_inc, 
-                     "sref_energy", "Self-refresh energy");
-    total_energy = DoubleStat(0.0, "total_energy", "(pJ) Total energy consumed");
-    average_power = NonCumulativeStat ("average_power", "(mW) Average Power for all devices");
-    average_bandwidth = NonCumulativeStat("average_bandwidth", "(GB/s) Average Aggregated Bandwidths");
+    act_energy = DoubleComputeStat("act_energy", "ACT energy");
+    read_energy = DoubleComputeStat("read_energy", "READ energy (not including IO)");
+    write_energy = DoubleComputeStat("write_energy", "WRITE energy (not including IO)");
+    ref_energy = DoubleComputeStat("ref_energy", "Refresh energy");
+    refb_energy = DoubleComputeStat("refb_energy", "Bank-Refresh energy");
+    Init2DStats(act_stb_energy, config_.channels, config_.ranks, "channel", "rank", "act_stb_energy", "Active standby Energy");
+    Init2DStats(pre_stb_energy, config_.channels, config_.ranks, "channel", "rank", "pre_stb_energy", "Precharge standby energy");
+    Init2DStats(pre_pd_energy, config_.channels, config_.ranks, "channel", "rank", "pre_pd_energy", "Precharge powerdown energy");
+    Init2DStats(sref_energy, config_.channels, config_.ranks, "channel", "rank", "sref_energy", "Self-refresh energy");
+    // act_stb_energy = DoubleComputeStat("act_stb_energy", "Active standby energy");
+    // pre_stb_energy = DoubleComputeStat("pre_stb_energy", "Precharge standby energy");
+    // pre_pd_energy = DoubleComputeStat("pre_pd_energy", "Precharge powerdown energy");
+    // sref_energy = DoubleComputeStat("sref_energy", "Self-refresh energy");
+    total_energy = DoubleComputeStat("total_energy", "(pJ) Total energy consumed");
+    queue_usage = DoubleComputeStat("queue_usage", "average overall command queue usage");
+    average_power = DoubleComputeStat("average_power", "(mW) Average Power for all devices");
+    average_bandwidth = DoubleComputeStat("average_bandwidth", "(GB/s) Average Aggregate Bandwidth");
+    average_latency = DoubleComputeStat("average_latency", "Average latency in DRAM cycles");
+    average_interarrival = DoubleComputeStat("average_interarrival", "Average interarrival latency of requests");
+    // histogram stats
+    access_latency = HistogramStat(0, 200, 10, "access_latency", "Histogram of access latencies");
+    interarrival_latency = HistogramStat(0, 100, 10, "interarrival_latency", "Histogram of interarrival latencies");
 
     stats_list.push_back(&numb_read_reqs_issued);
     stats_list.push_back(&numb_write_reqs_issued);
@@ -294,7 +317,6 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&numb_aggressive_precharges);
     stats_list.push_back(&numb_ondemand_precharges);
     stats_list.push_back(&dramcycles);
-    stats_list.push_back(&access_latency);
     stats_list.push_back(&numb_buffered_requests);
     stats_list.push_back(&hbm_dual_command_issue_cycles);
     stats_list.push_back(&hbm_dual_non_rw_cmd_attempt_cycles);
@@ -307,10 +329,8 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&numb_self_refresh_enter_cmds_issued);
     stats_list.push_back(&numb_self_refresh_exit_cmds_issued);
     stats_list.push_back(&numb_rw_rowhits_pending_refresh);
-#ifdef DEBUG_POWER
-    stats_list.push_back(&all_bank_idle_cycles);
-    stats_list.push_back(&active_cycles);
-#endif // DEBUG_POWER
+    // stats_list.push_back(&all_bank_idle_cycles);
+    // stats_list.push_back(&active_cycles);
     stats_list.push_back(&act_energy);
     stats_list.push_back(&read_energy);
     stats_list.push_back(&write_energy);
@@ -318,37 +338,87 @@ Statistics::Statistics(const Config& config):
     stats_list.push_back(&refb_energy);
 
     // push vectorized stats to list
-    PushStatsVecToList(act_stb_energy);
-    PushStatsVecToList(pre_stb_energy);
-    PushStatsVecToList(pre_pd_energy);
-    PushStatsVecToList(sref_energy);
+    Push2DStatsToList(all_bank_idle_cycles);
+    Push2DStatsToList(active_cycles);
+    Push2DStatsToList(sref_cycles);
+    Push2DStatsToList(act_stb_energy);
+    Push2DStatsToList(pre_stb_energy);
+    Push2DStatsToList(pre_pd_energy);
+    Push2DStatsToList(sref_energy);
     stats_list.push_back(&total_energy);
+    stats_list.push_back(&queue_usage);
     stats_list.push_back(&average_power);
     stats_list.push_back(&average_bandwidth);
+    stats_list.push_back(&average_latency);
+    stats_list.push_back(&average_interarrival);
+    histo_stats_list.push_back(&access_latency);
+    histo_stats_list.push_back(&interarrival_latency);
 }
 
 
-void Statistics::UpdatePreEpoch(uint64_t clk) {
-    // this is used to calculate the stats that are dependent on other stats before each epoch print
-    // like total energy, power, bandwith
-    total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
-                   ref_energy.value + refb_energy.value + Sum(act_stb_energy) + \
-                   Sum(pre_stb_energy) + Sum(pre_pd_energy) + Sum(sref_energy);
-    average_power.value = (total_energy.value - total_energy.last_epoch_value) / static_cast<double>(clk - last_clk_);
-    uint64_t reqs_issued;
-    if (hmc_reqs_done.Count() > 0) {
-        reqs_issued = hmc_reqs_done.Count() - hmc_reqs_done.LastCount();
+void Statistics::PreEpochCompute(uint64_t clk) {
+    // because HMC requests != read commands,
+    uint64_t reqs_issued_epoch, reqs_issued;
+    if(!config_.IsHMC()) {
+        reqs_issued_epoch = numb_read_reqs_issued.Count() - numb_read_reqs_issued.LastCount()
+                            + numb_write_reqs_issued.Count() - numb_write_reqs_issued.LastCount();
+        reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count();
     } else {
-        reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count() - \
-                           numb_read_reqs_issued.LastCount() - numb_write_reqs_issued.LastCount(); 
+        reqs_issued_epoch = hmc_reqs_done.Count() - hmc_reqs_done.LastCount();
+        reqs_issued = hmc_reqs_done.Count();
     }
-    double gb_transfereed = static_cast<double>(reqs_issued) * config_.request_size_bytes;
-    double ns_passed = static_cast<double>(clk - last_clk_) * config_.tCK;
-    average_bandwidth.value = gb_transfereed / ns_passed;
+
+    //Epoch level compute stats
+    act_energy.epoch_value = (numb_activate_cmds_issued.Count() - numb_activate_cmds_issued.LastCount()) * config_.act_energy_inc;
+    read_energy.epoch_value = (numb_read_cmds_issued.Count() - numb_read_cmds_issued.LastCount()) * config_.read_energy_inc;
+    write_energy.epoch_value = (numb_write_cmds_issued.Count() - numb_write_cmds_issued.LastCount()) * config_.write_energy_inc;
+    ref_energy.epoch_value = (numb_refresh_cmds_issued.Count() - numb_refresh_cmds_issued.LastCount()) * config_.ref_energy_inc;
+    refb_energy.epoch_value = (numb_refresh_bank_cmds_issued.Count() - numb_refresh_bank_cmds_issued.LastCount()) * config_.refb_energy_inc;
+    for (int i = 0; i < config_.channels; i++) {
+        for (int j = 0; j < config_.channels; j++) {
+            act_stb_energy[i][j].epoch_value = (active_cycles[i][j].Count() - active_cycles[i][j].LastCount()) * config_.act_energy_inc;
+            pre_stb_energy[i][j].epoch_value = (all_bank_idle_cycles[i][j].Count() - all_bank_idle_cycles[i][j].LastCount()) * config_.pre_stb_energy_inc;
+            sref_energy[i][j].epoch_value = (sref_cycles[i][j].Count() - sref_cycles[i][j].LastCount()) * config_.sref_energy_inc;
+        }
+    }
+    total_energy.epoch_value = act_energy.epoch_value + read_energy.epoch_value + write_energy.epoch_value
+                               + ref_energy.epoch_value + refb_energy.epoch_value + Stats2DEpochSum(act_stb_energy)
+                               + Stats2DEpochSum(pre_stb_energy) + Stats2DEpochSum(pre_pd_energy) + Stats2DEpochSum(sref_energy);
+    average_power.epoch_value = total_energy.epoch_value / (clk - last_clk_);
+    average_bandwidth.epoch_value = (reqs_issued_epoch * config_.request_size_bytes) / ((clk - last_clk_) * config_.tCK);
+
+    //cumulative compute stats
+    act_energy.cumulative_value = numb_activate_cmds_issued.Count() * config_.act_energy_inc;
+    read_energy.cumulative_value = numb_read_cmds_issued.Count() * config_.read_energy_inc;
+    write_energy.cumulative_value = numb_write_cmds_issued.Count() * config_.write_energy_inc;
+    ref_energy.cumulative_value = numb_refresh_cmds_issued.Count() * config_.ref_energy_inc;
+    refb_energy.cumulative_value = numb_refresh_bank_cmds_issued.Count() * config_.refb_energy_inc;
+    for (int i = 0; i < config_.channels; i++) {
+        for (int j = 0; j < config_.channels; j++) {
+            act_stb_energy[i][j].cumulative_value = active_cycles[i][j].Count() * config_.act_stb_energy_inc;
+            pre_stb_energy[i][j].cumulative_value = all_bank_idle_cycles[i][j].Count() * config_.pre_stb_energy_inc;
+            sref_energy[i][j].cumulative_value = sref_cycles[i][j].Count() * config_.sref_energy_inc;
+        }
+    }
+    total_energy.cumulative_value = act_energy.cumulative_value + read_energy.cumulative_value + write_energy.cumulative_value
+                                     + ref_energy.cumulative_value + refb_energy.cumulative_value + Stats2DCumuSum(act_stb_energy)
+                                     + Stats2DCumuSum(pre_stb_energy) + Stats2DCumuSum(pre_pd_energy) + Stats2DCumuSum(sref_energy);
+    double last_queue_usage = static_cast<double>(queue_usage.epoch_value);
+    double avg_queue_usage = (last_queue_usage * static_cast<double>(last_clk_) 
+                                  + queue_usage.epoch_value) / static_cast<double>(clk);
+    queue_usage.cumulative_value = avg_queue_usage;
+    average_power.cumulative_value = total_energy.cumulative_value / clk;
+    average_bandwidth.cumulative_value = (reqs_issued * config_.request_size_bytes) / ((clk) * config_.tCK);
+
+    average_latency.cumulative_value = access_latency.GetAverage();
+    average_interarrival.cumulative_value = interarrival_latency.GetAverage();
 }
 
 void Statistics::PrintStats(std::ostream &where) const {
     for(auto stat : stats_list) {
+        stat->Print(where);
+    }
+    for(auto stat : histo_stats_list) {
         stat->Print(where);
     }
 }
@@ -358,21 +428,10 @@ void Statistics::UpdateEpoch(uint64_t clk) {
     for(auto stat : stats_list) {
         stat->UpdateEpoch();
     }
-    last_clk_ = clk;
-    // override the value after each update so that in the last epoch 
-    // we get the overall value of these non-cumulatve stats
-    total_energy.value = act_energy.value + read_energy.value + write_energy.value + \
-                   ref_energy.value + refb_energy.value + Sum(act_stb_energy) + 
-                   Sum(pre_stb_energy) + Sum(pre_pd_energy) + Sum(sref_energy);
-    uint64_t reqs_issued;
-    if (hmc_reqs_done.Count() > 0) {
-        reqs_issued = hmc_reqs_done.Count();
-    } else {
-        reqs_issued = numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count();
+    for(auto stat : histo_stats_list) {
+        stat->UpdateEpoch();
     }
-    average_bandwidth.value = static_cast<double>(reqs_issued) * \
-                              config_.request_size_bytes / static_cast<double>(last_clk_) / config_.tCK;
-    average_power.value = total_energy.value / static_cast<double>(last_clk_);
+    last_clk_ = clk;
     return;
 }
 
@@ -388,12 +447,18 @@ void Statistics::PrintStatsCSVHeader(std::ostream& where) const {
     for(auto stat : stats_list) {
         stat->PrintCSVHeader(where);
     }
+    for(auto stat : histo_stats_list) {
+        stat->PrintCSVHeader(where);
+    }
     where << endl;
     return;
 }
 
 void Statistics::PrintStatsCSVFormat(std::ostream& where) const {
     for(auto stat : stats_list) {
+        stat->PrintCSVFormat(where);
+    }
+    for(auto stat : histo_stats_list) {
         stat->PrintCSVFormat(where);
     }
     where << endl;
@@ -409,18 +474,27 @@ void Statistics::PrintEpochStatsCSVFormat(std::ostream& where) const {
 }
 
 
-double Statistics::Sum(const std::vector<std::vector<DoubleStat>>& stats_vector) {
+double Statistics::Stats2DEpochSum(const std::vector<std::vector<DoubleComputeStat>>& stats_vector) {
     double stats_sum = 0.0;
     for (unsigned i = 0; i < stats_vector.size(); i++) {
         for (unsigned j = 0; j < stats_vector[i].size(); j++) {
-            stats_sum += stats_vector[i][j].value;
+            stats_sum += stats_vector[i][j].epoch_value;
         }
     }
     return stats_sum;
 }
 
+double Statistics::Stats2DCumuSum(const std::vector<std::vector<DoubleComputeStat>>& stats_vector) {
+    double stats_sum = 0.0;
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        for (unsigned j = 0; j < stats_vector[i].size(); j++) {
+            stats_sum += stats_vector[i][j].cumulative_value;
+        }
+    }
+    return stats_sum;
+}
 template<class T>
-void Statistics::PushStatsVecToList(std::vector<std::vector<T>>& stats_vector) {
+void Statistics::Push2DStatsToList(std::vector<std::vector<T>>& stats_vector) {
     for (unsigned i = 0; i < stats_vector.size(); i++) {
         for (unsigned j = 0; j < stats_vector[i].size(); j++) {
             stats_list.push_back(&(stats_vector[i][j]));
@@ -428,18 +502,29 @@ void Statistics::PushStatsVecToList(std::vector<std::vector<T>>& stats_vector) {
     }
 }
 
-void Statistics::InitStatsPerRank(std::vector<std::vector<DoubleStat>>& stats_vector,
-                                  double inc_value, std::string stat_name, std::string stat_desc) {
-    for (unsigned i = 0; i < config_.channels; i++) {
-        std::vector<DoubleStat> channel_stats;
-        for (unsigned j = 0; j < config_.ranks; j++) {
+template<class T>
+void Statistics::Init2DStats(std::vector<std::vector<T>> &stats_vector, int shape_x, int shape_y, std::string x_string, std::string y_string, std::string stat_name, std::string stat_desc) {
+    // std::vector<std::vector<T>> stats_vector;
+    for (unsigned i = 0; i < shape_x; i++) {
+        std::vector<T> x_stats;
+        for (unsigned j = 0; j < shape_y; j++) {
             std::string short_desc = stat_name + "_" + std::to_string(i) + "_" + std::to_string(j);
-            std::string long_desc = stat_desc + " of channel " + std::to_string(i) + " rank " + std::to_string(j);
-            DoubleStat rank_stat = DoubleStat(inc_value, short_desc, long_desc);
-            channel_stats.push_back(rank_stat);
+            std::string long_desc = stat_desc + x_string + std::to_string(i) + y_string + std::to_string(j);
+            T stat = T(short_desc, long_desc);
+            x_stats.push_back(stat);
         }
-        stats_vector.push_back(channel_stats);
+        stats_vector.push_back(x_stats);
     }
+}
+
+void Statistics::PrintEpochHistoStatsCSVFormat(std::ostream& where) const {
+    if (last_clk_ == 0) {
+        where << "name,value,count,epoch" << endl;
+    }
+    for (auto stat : histo_stats_list) {
+        stat->PrintEpochCSVFormat(where);
+    }
+    return;
 }
 
 namespace dramcore {

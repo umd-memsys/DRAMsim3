@@ -4,13 +4,14 @@
 using namespace std;
 using namespace dramcore;
 
-Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator *thermcalc, std::function<void(uint64_t)>& callback) :
-    callback_(callback),
+Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator *thermcalc, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
+    read_callback_(read_callback),
+    write_callback_(write_callback),
     channel_id_(channel),
     clk_(0),
     config_(config),
     channel_state_(config, timing, stats, thermcalc),
-    cmd_queue_(channel_id_, config, channel_state_, stats, callback_), //TODO - Isn't it really a request_queue. Why call it command_queue?
+    cmd_queue_(channel_id_, config, channel_state_, stats), //TODO - Isn't it really a request_queue. Why call it command_queue?
     refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
     stats_(stats)
 {
@@ -27,7 +28,12 @@ void Controller::ClockTick() {
         if(clk_ > issued_req->exit_time_) {
             //Return request to cpu
             stats_.access_latency.AddValue(clk_ - issued_req->arrival_time_);
-            callback_(issued_req->hex_addr_);
+            if(issued_req->cmd_.IsRead())
+                read_callback_(issued_req->hex_addr_);
+            else if(issued_req->cmd_.IsWrite())
+                write_callback_(issued_req->hex_addr_);
+            else
+                AbruptExit(__FILE__, __LINE__);
             delete(issued_req);
             cmd_queue_.issued_req_.erase(req_itr++);
             break; // Returning one request per cycle. TODO - Make this a knob?
@@ -38,19 +44,16 @@ void Controller::ClockTick() {
     // if we have rank states it would make life easier
     for (unsigned i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
-            stats_.sref_energy[channel_id_][i]++;
+            // stats_.sref_energy[channel_id_][i]++;
+            stats_.sref_cycles[channel_id_][i]++;
         } else {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
-#ifdef DEBUG_POWER
-                stats_.all_bank_idle_cycles++;
-#endif // DEBUG_POWER
-                stats_.pre_stb_energy[channel_id_][i]++;
+                stats_.all_bank_idle_cycles[channel_id_][i]++;
+                // stats_.pre_stb_energy[channel_id_][i]++;
             } else {
-#ifdef DEBUG_POWER
-                stats_.active_cycles++;
-#endif // DEBUG_POWER
-                stats_.act_stb_energy[channel_id_][i]++;
+                stats_.active_cycles[channel_id_][i]++;
+                // stats_.act_stb_energy[channel_id_][i]++;
             }
         }
     }
@@ -107,7 +110,7 @@ void Controller::ClockTick() {
     if(cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
         
-        if (config_.IsHBM()){ //TODO - Current implementation doesn't do dual command issue during refresh
+        if (config_.enable_hbm_dual_cmd) { //TODO - Current implementation doesn't do dual command issue during refresh
             auto second_cmd = cmd_queue_.GetCommandToIssue();
             if (second_cmd.IsValid()) {
                 if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {
@@ -133,6 +136,15 @@ void Controller::ClockTick() {
     
 }
 
+bool Controller::IsReqInsertable(Request* req) {
+    return cmd_queue_.IsReqInsertable(req);
+}
+
 bool Controller::InsertReq(Request* req) {
     return cmd_queue_.InsertReq(req);
 }
+
+int Controller::QueueUsage() const {
+    return cmd_queue_.QueueUsage();
+}
+

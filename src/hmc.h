@@ -8,6 +8,7 @@
 namespace dramcore {
 
 enum class HMCReqType {
+    RD0,
     RD16,
     RD32,
     RD48,
@@ -17,6 +18,7 @@ enum class HMCReqType {
     RD112,
     RD128,
     RD256,
+    WR0,
     WR16,
     WR32,
     WR48,
@@ -108,7 +110,7 @@ public:
 
 class HMCMemorySystem : public BaseMemorySystem {
 public:
-    HMCMemorySystem(const std::string &config_file, std::function<void(uint64_t)> callback);
+    HMCMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback);
     ~HMCMemorySystem();
     // assuming there are 2 clock domains one for logic die one for DRAM
     // we can unify them as one but then we'll have to convert all the 
@@ -118,6 +120,7 @@ public:
     void LogicClockTickPost();
     void DRAMClockTick();
     // had to have 3 insert interfaces cuz HMC is so different...
+    bool IsReqInsertable(uint64_t hex_addr, bool is_write) override ;
     bool InsertReq(uint64_t hex_addr, bool is_write) override ;
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);

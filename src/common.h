@@ -9,6 +9,8 @@
 #include <vector>
 #include <iterator>
 #include <sstream>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 namespace dramcore {
 
@@ -38,7 +40,10 @@ void StringSplit(const std::string &s, char delim, Out result);
 
 uint32_t LogBase2(uint32_t power_of_two);
 void AbruptExit(const std::string& file, int line);
-void callback_func(uint64_t req_id);
+void read_callback_func(uint64_t req_id);
+void write_callback_func(uint64_t req_id);
+bool DirExist(std::string dir);
+std::string RenameFileWithNumber(const std::string file_name, int number);
 
 enum class State {
     OPEN,

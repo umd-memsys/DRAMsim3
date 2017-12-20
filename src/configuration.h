@@ -118,17 +118,17 @@ public:
     bool enable_self_refresh;
     uint32_t idle_cycles_for_self_refresh;
     bool aggressive_precharging_enabled;
-    bool req_buffering_enabled;
+    bool enable_hbm_dual_cmd;
 
     std::string output_prefix;
 
     uint32_t epoch_period;
+    int output_level;
     std::string stats_file;
-    std::string cummulative_stats_file;
     std::string epoch_stats_file;
     std::string stats_file_csv;
-    std::string cummulative_stats_file_csv;
     std::string epoch_stats_file_csv;
+    std::string histo_stats_file_csv;
 
     //Computed parameters
     uint32_t request_size_bytes;

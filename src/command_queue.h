@@ -19,13 +19,14 @@ enum class QueueStructure {
 
 class CommandQueue {
 public:
-    CommandQueue(uint32_t channel_id, const Config &config, const ChannelState &channel_state, Statistics &stats, std::function<void(uint64_t)> &callback);
+    CommandQueue(uint32_t channel_id, const Config &config, const ChannelState &channel_state, Statistics &stats);
     Command GetCommandToIssue();
     Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
     Command AggressivePrecharge();
-    std::function<void(uint64_t)>& callback_;
     void IssueRequest(std::list<Request*>& queue, std::list<Request*>::iterator req_itr);
+    bool IsReqInsertable(Request* req);
     bool InsertReq(Request* req);
+    int QueueUsage() const;
     std::list<Request*>& GetQueue(int rank, int bankgroup, int bank);
     uint64_t clk_;
     std::list<Request*> issued_req_; //TODO - Here or in the controller or main?
