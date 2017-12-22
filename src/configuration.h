@@ -156,6 +156,8 @@ public:
     int matY;
     int bank_order; // 0: x-direction priority, 1: y-direction priority
     int bank_layer_order; // 0; low-layer priority, 1: high-layer priority
+    int RowTile; 
+    int TileRowNum;
     double bank_asr; // the aspect ratio of a bank: #row_bits / #col_bits
     std::string epoch_power_file_csv; 
     std::string epoch_temperature_file_csv;

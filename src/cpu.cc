@@ -91,3 +91,44 @@ void TraceBasedCPU::ClockTick() {
     }
     return;
 }
+
+ThermalCPU::ThermalCPU(BaseMemorySystem& memory_system):
+    CPU(memory_system),
+    curr_index_(0),
+    sent_successful_(true)
+{
+    //                    |----row-----|ba|---col|--|
+    uint64_t base_addr = 0b01000000000000101000001000000000;
+    uint64_t one_row  =  0b01000000000010000000000000000000;
+    uint64_t one_bank  = 0b00000000000000010000000000000000; 
+    uint64_t one_col  =  0b00000000000000000000001000000000;
+    int pattern[] = {
+        base_addr,
+        base_addr + one_col,
+        base_addr + one_col * 2,
+        base_addr + one_col * 3,
+        base_addr + one_bank,
+        base_addr - one_bank,
+    };
+    pattern_len_ = sizeof(pattern) / sizeof(pattern[0]);
+    for (int i = 0; i < pattern_len_; i++) {
+        addr_pattern_.push_back(pattern[i]);
+    }
+}
+
+void ThermalCPU::ClockTick() {
+    // keep repeating an access pattern and hope to break something
+    if (sent_successful_) {
+        auto next_addr = addr_pattern_[curr_index_];
+        sent_successful_ = memory_system_.IsReqInsertable(next_addr, false);
+        if (sent_successful_) {
+            memory_system_.InsertReq(next_addr, false);
+            curr_index_ ++;
+            if (curr_index_ == pattern_len_) {
+                curr_index_ = 0;
+            }
+        }
+    }
+    clk_ ++;
+}
+

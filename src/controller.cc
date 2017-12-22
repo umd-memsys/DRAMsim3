@@ -4,13 +4,13 @@
 using namespace std;
 using namespace dramcore;
 
-Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator *thermcalc, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
+Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator *thermalcalc, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
     read_callback_(read_callback),
     write_callback_(write_callback),
     channel_id_(channel),
     clk_(0),
     config_(config),
-    channel_state_(config, timing, stats, thermcalc),
+    channel_state_(config, timing, stats, thermalcalc),
     cmd_queue_(channel_id_, config, channel_state_, stats), //TODO - Isn't it really a request_queue. Why call it command_queue?
     refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
     stats_(stats)
