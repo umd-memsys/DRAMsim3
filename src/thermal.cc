@@ -90,9 +90,12 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     cout << "size of refresh_count is " << refresh_count.size() << endl;
 
     // Initialize the output file
-    epoch_temperature_file_csv_.open(config_.epoch_temperature_file_csv);
-    final_temperature_file_csv_.open(config_.final_temperature_file_csv);
-    bank_position_csv_.open(config_.bank_position_csv);
+    std::string epoch_temp_file_name(config_.output_dir + config_.epoch_temperature_file_csv);
+    std::string final_temp_file_name(config_.output_dir + config_.final_temperature_file_csv);
+    std::string bank_pos_file_name(config_.output_dir + config_.bank_position_csv);
+    epoch_temperature_file_csv_.open(epoch_temp_file_name);
+    final_temperature_file_csv_.open(final_temp_file_name);
+    bank_position_csv_.open(bank_pos_file_name);
 
     // print header to csv files
     PrintCSVHeader_trans(epoch_temperature_file_csv_);

@@ -124,6 +124,7 @@ public:
 
     uint32_t epoch_period;
     int output_level;
+    std::string output_dir;
     std::string stats_file;
     std::string epoch_stats_file;
     std::string stats_file_csv;

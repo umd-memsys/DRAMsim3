@@ -37,8 +37,8 @@ public:
 private:
     const Config& config_;
     const Timing& timing_;
-#ifdef VALIDATION_OUTPUT
-    std::ofstream val_output_;
+#ifdef GENERATE_TRACE
+    std::ofstream cmd_trace_;
 #endif
     Statistics& stats_;
     ThermalCalculator *thermcalc_;
