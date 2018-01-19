@@ -22,7 +22,6 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
     ptr_config_ = new Config(config_file);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics(*ptr_config_);
-    ptr_thermCal_ = new ThermalCalculator(*ptr_config_, *ptr_stats_);
 
     //Stats output files
     std::string output_dir_path;
@@ -32,12 +31,18 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
     } else {
         output_dir_path = output_dir + "/";
     }
+    ptr_config_->output_dir = output_dir_path;
+
+    // Init thermal calculator after output is configured
+    ptr_thermCal_ = new ThermalCalculator(*ptr_config_, *ptr_stats_);
 
     std::string stats_file_name(output_dir_path + ptr_config_->stats_file);
     std::string epoch_stats_file_name(output_dir_path + ptr_config_->epoch_stats_file);
     std::string stats_file_csv_name(output_dir_path + ptr_config_->stats_file_csv);
     std::string epoch_stats_file_csv_name(output_dir_path + ptr_config_->epoch_stats_file_csv);
     std::string histo_stats_file_csv_name(output_dir_path + ptr_config_->histo_stats_file_csv);
+
+
     if (mem_sys_id_ > 0) {
         // if there are more than one memory_systems then rename the output to preven being overwritten
         stats_file_name = RenameFileWithNumber(stats_file_name, mem_sys_id_);
@@ -64,9 +69,9 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
         epoch_stats_file_.open(epoch_stats_file_name);
     }
 
-
 #ifdef GENERATE_TRACE
-    address_trace_.open("address.trace");
+    std::string addr_trace_name(output_dir_path + "addr.trace");
+    address_trace_.open(addr_trace_name);
 #endif
 }
 
@@ -83,6 +88,7 @@ BaseMemorySystem::~BaseMemorySystem() {
     epoch_stats_file_.close();
     stats_file_csv_.close();
     epoch_stats_file_csv_.close();
+
 #ifdef GENERATE_TRACE
     address_trace_.close();
 #endif
@@ -161,7 +167,8 @@ bool MemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) {
 bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     //Record trace - Record address trace for debugging or other purposes
 #ifdef GENERATE_TRACE
-    address_trace_ << fmt::format("{:#x} {} {}\n", hex_addr, is_write ? "WRITE" : "READ", clk_);
+    address_trace_  << left << setw(18) << clk_ << " " << setw(6) << std::hex 
+        << (is_write ? "WRITE " : "READ ") << hex_addr << std::dec << endl;
 #endif
 
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;

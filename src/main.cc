@@ -65,6 +65,9 @@ int main(int argc, const char **argv)
     else if(cpu_type == "stream") {
         cpu = new StreamCPU(*memory_system);
     }
+    else if(cpu_type == "thermal") {
+        cpu = new ThermalCPU(*memory_system);
+    }
     else {
         cout << "Unknown cpu type" << endl;
         AbruptExit(__FILE__, __LINE__);

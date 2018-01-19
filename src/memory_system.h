@@ -45,7 +45,7 @@ protected:
     std::ofstream histo_stats_file_csv_;
 #ifdef GENERATE_TRACE
     std::ofstream address_trace_;
-#endif
+#endif // GENERATE_TRACE
 };
 
 
