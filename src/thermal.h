@@ -83,6 +83,7 @@ class ThermalCalculator
     void PrintCSV_bank(ofstream &csvfile);
 
   public:
+    ThermalCalculator() {}
     ThermalCalculator(const Config &config, Statistics &stats);
     ~ThermalCalculator();
     void UpdatePower(const Command &cmd, uint64_t clk);
