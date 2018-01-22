@@ -79,9 +79,7 @@ void StringSplit(const std::string &s, char delim, Out result) {
     while (std::getline(ss, item, delim)) {
         if (!item.empty()) {
             *(result++) = item;
-        } else {
-            *(result++) = "";
-        }
+        } 
     }
 }
 
