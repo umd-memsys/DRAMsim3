@@ -4,7 +4,11 @@
 using namespace dramcore;
 
 ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file, uint64_t repeat):
-    repeat_(repeat)
+    config_(config_file),
+    stats_(config_),
+    thermal_calc_(config_, stats_),
+    repeat_(repeat),
+    last_clk_(0)
 {
     trace_file_.open(trace_name);
     if (!trace_file_) {
@@ -12,13 +16,24 @@ ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file, ui
         exit(1);
     }
 
-    Config config(config_file);
-    Statistics stats(config);
-    thermal_calc_ = new ThermalCalculator(config, stats);
+    // Initialize bank states, for power calculation we only need to know
+    // if it's active
+    for (int i = 0; i < config_.channels; i++) {
+        std::vector<std::vector<std::vector<bool>>> chan_vec;
+        for (int j = 0; j < config_.ranks; j++) {
+            std::vector<std::vector<bool>> rank_vec;
+            for (int k = 0; k < config_.bankgroups; k++) {
+                std::vector<bool> bank_vec(config_.banks_per_group, false);
+                rank_vec.push_back(bank_vec);
+            }
+            chan_vec.push_back(rank_vec);
+        }
+        bank_active_.push_back(chan_vec);
+    }
 }
 
+
 ThermalReplay::~ThermalReplay() {
-    delete(thermal_calc_);
     trace_file_.close();
 }
 
@@ -30,16 +45,15 @@ void ThermalReplay::Run(){
         while (std::getline(trace_file_, line)) {
             Command cmd;
             ParseLine(line, clk, cmd);            
-            cout << "epoch " << i << " " << clk + clk_offset << " " << cmd << endl;
-            // TODO need to update stats before final calculation
-            thermal_calc_->UpdatePower(cmd, clk + clk_offset);
+            ProcessCMD(cmd, clk);
+            thermal_calc_.UpdatePower(cmd, clk + clk_offset);
         }
         trace_file_.clear();
         trace_file_.seekg(0);
         clk_offset += clk;
-        thermal_calc_->PrintTransPT(clk);
+        thermal_calc_.PrintTransPT(clk);
     }
-    thermal_calc_->PrintFinalPT(clk_offset);
+    thermal_calc_.PrintFinalPT(clk_offset);
 }
 
 void ThermalReplay::ParseLine(std::string line, uint64_t &clk, Command &cmd) {
@@ -80,6 +94,73 @@ void ThermalReplay::ParseLine(std::string line, uint64_t &clk, Command &cmd) {
     return;
 }
 
+
+void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
+    // calculate background power
+    // TODO add self-ref later
+    uint64_t past_clks = clk - last_clk_;
+    for (int i = 0; i < config_.channels; i++) {
+        for (int j = 0; j < config_.ranks; j++) {
+            if (IsRankActive(i, j)) {
+                stats_.active_cycles[i][j] = (stats_.active_cycles[i][j].Count() + past_clks);
+            } else {
+                stats_.all_bank_idle_cycles[i][j] = (stats_.all_bank_idle_cycles[i][j].Count() + past_clks);
+            }
+        }
+    }
+
+    // update cmd count
+    switch(cmd.cmd_type_) {
+        case CommandType::READ:
+        case CommandType::READ_PRECHARGE:
+            stats_.numb_read_cmds_issued++;
+            break;
+        case CommandType::WRITE:
+        case CommandType::WRITE_PRECHARGE:
+            stats_.numb_write_cmds_issued++;
+            break;
+        case CommandType::ACTIVATE:
+            stats_.numb_activate_cmds_issued++;
+            break;
+        case CommandType::PRECHARGE:
+            stats_.numb_precharge_cmds_issued++;
+            break;
+        case CommandType::REFRESH:
+            stats_.numb_refresh_cmds_issued++;
+            break;
+        case CommandType::REFRESH_BANK:
+            stats_.numb_refresh_bank_cmds_issued++;
+            break;
+        case CommandType::SELF_REFRESH_ENTER:
+            stats_.numb_self_refresh_enter_cmds_issued++;
+            break;
+        case CommandType::SELF_REFRESH_EXIT:
+            stats_.numb_self_refresh_exit_cmds_issued++;
+            break;
+        default:
+            AbruptExit(__FILE__, __LINE__);
+    }
+
+    // update stats
+    stats_.PreEpochCompute(clk);
+    stats_.UpdateEpoch(clk);
+    last_clk_ = clk;
+    return;
+}
+
+
+bool ThermalReplay::IsRankActive(int channel, int rank) {
+    std::vector<std::vector<bool>> &rank_active = bank_active_[channel][rank];
+    for (size_t i = 0; i < rank_active.size(); i++) {
+        std::vector<bool> &bg_active = rank_active[i];
+        for (size_t j = 0; j < bg_active.size(); j++) {
+            if (bg_active[j]) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 int main(int argc, const char **argv) {
     args::ArgumentParser parser("Thermal Replay Module", "");

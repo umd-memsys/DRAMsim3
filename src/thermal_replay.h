@@ -17,11 +17,16 @@ public:
     ~ThermalReplay();
     void Run();
 private:
-    ThermalCalculator *thermal_calc_;    
-    std::string trace_name_;
     std::ifstream trace_file_;
+    Config config_;
+    Statistics stats_;
+    ThermalCalculator thermal_calc_;    
     uint64_t repeat_;
+    uint64_t last_clk_;
+    std::vector<std::vector<std::vector<std::vector<bool>>>> bank_active_;
     void ParseLine(std::string line, uint64_t &clk, Command &cmd);
+    void ProcessCMD(Command &cmd, uint64_t clk);
+    bool IsRankActive(int channel, int rank);
 };
 
 }
