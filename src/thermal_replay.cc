@@ -51,7 +51,7 @@ void ThermalReplay::Run(){
         trace_file_.clear();
         trace_file_.seekg(0);
         clk_offset += clk;
-        thermal_calc_.PrintTransPT(clk);
+        thermal_calc_.PrintTransPT(clk_offset);
     }
     thermal_calc_.PrintFinalPT(clk_offset);
 }
@@ -139,6 +139,20 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
             break;
         default:
             AbruptExit(__FILE__, __LINE__);
+    }
+
+    // update bank states
+    switch(cmd.cmd_type_) {
+        case CommandType::ACTIVATE:
+            bank_active_[cmd.Channel()][cmd.Rank()][cmd.Bankgroup()][cmd.Bank()] = true;
+            break;
+        case CommandType::READ_PRECHARGE:
+        case CommandType::WRITE_PRECHARGE:
+        case CommandType::PRECHARGE:
+            bank_active_[cmd.Channel()][cmd.Rank()][cmd.Bankgroup()][cmd.Bank()] = false;
+            break;
+        default:
+            break;
     }
 
     // update stats
