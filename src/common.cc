@@ -90,12 +90,12 @@ bool DirExist(std::string dir) {
     }
 } 
 
-std::string RenameFileWithNumber(const std::string file_name, int number) {
+void RenameFileWithNumber(std::string &file_name, int number) {
     int last_dot_index = file_name.find_last_of(".");
     std::string prefix = file_name.substr(0, last_dot_index);
     std::string postfix = file_name.substr(last_dot_index, file_name.size());
-    std::string result = prefix + "_" + std::to_string(number) + postfix;
-    return result;
+    file_name = prefix + "_" + std::to_string(number) + postfix;
+    return;
 }
 
 }

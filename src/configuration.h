@@ -26,7 +26,7 @@ enum class DRAMProtocol {
 
 class Config {
 public:
-    Config(std::string config_file);
+    Config(std::string config_file, std::string out_dir);
 
     //DRAM physical structure
     DRAMProtocol protocol;
@@ -124,6 +124,7 @@ public:
 
     uint32_t epoch_period;
     int output_level;
+    std::string output_dir;
     std::string stats_file;
     std::string epoch_stats_file;
     std::string stats_file_csv;

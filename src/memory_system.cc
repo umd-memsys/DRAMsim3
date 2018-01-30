@@ -19,53 +19,40 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
 {
     mem_sys_id_ = num_mems_;
     num_mems_ += 1;
-    ptr_config_ = new Config(config_file);
+    ptr_config_ = new Config(config_file, output_dir);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics(*ptr_config_);
 
-    //Stats output files
-    std::string output_dir_path;
-    if ( !DirExist(output_dir) ) {
-        cout << "WARNING: Output directory " << output_dir << " not exists! Using current directory for output!" << endl;
-        output_dir_path = "./";
-    } else {
-        output_dir_path = output_dir + "/";
-    }
-
-    std::string stats_file_name(output_dir_path + ptr_config_->stats_file);
-    std::string epoch_stats_file_name(output_dir_path + ptr_config_->epoch_stats_file);
-    std::string stats_file_csv_name(output_dir_path + ptr_config_->stats_file_csv);
-    std::string epoch_stats_file_csv_name(output_dir_path + ptr_config_->epoch_stats_file_csv);
-    std::string histo_stats_file_csv_name(output_dir_path + ptr_config_->histo_stats_file_csv);
     if (mem_sys_id_ > 0) {
         // if there are more than one memory_systems then rename the output to preven being overwritten
-        stats_file_name = RenameFileWithNumber(stats_file_name, mem_sys_id_);
-        epoch_stats_file_name = RenameFileWithNumber(epoch_stats_file_name, mem_sys_id_);
-        stats_file_csv_name = RenameFileWithNumber(stats_file_csv_name, mem_sys_id_);
-        epoch_stats_file_csv_name = RenameFileWithNumber(epoch_stats_file_csv_name, mem_sys_id_);
+        RenameFileWithNumber(ptr_config_->stats_file, mem_sys_id_);
+        RenameFileWithNumber(ptr_config_->epoch_stats_file, mem_sys_id_);
+        RenameFileWithNumber(ptr_config_->stats_file_csv, mem_sys_id_);
+        RenameFileWithNumber(ptr_config_->epoch_stats_file_csv, mem_sys_id_);
     } 
 
     if (ptr_config_->output_level >= 0) {
-        stats_file_.open(stats_file_name);
-        stats_file_csv_.open(stats_file_csv_name);
+        stats_file_.open(ptr_config_->stats_file);
+        stats_file_csv_.open(ptr_config_->stats_file_csv);
     }
 
     if (ptr_config_->output_level >= 1) {
-        epoch_stats_file_csv_.open(epoch_stats_file_csv_name);
+        epoch_stats_file_csv_.open(ptr_config_->epoch_stats_file);
         ptr_stats_->PrintStatsCSVHeader(epoch_stats_file_csv_);
     }
 
     if (ptr_config_->output_level >= 2) {
-        histo_stats_file_csv_.open(histo_stats_file_csv_name);
+        histo_stats_file_csv_.open(ptr_config_->histo_stats_file_csv);
     }
 
     if (ptr_config_->output_level >= 3) {
-        epoch_stats_file_.open(epoch_stats_file_name);
+        epoch_stats_file_.open(ptr_config_->epoch_stats_file);
     }
 
 
 #ifdef GENERATE_TRACE
-    address_trace_.open("address.trace");
+    std::string addr_trace_name(ptr_config_->output_prefix + "addr.trace");
+    address_trace_.open(addr_trace_name);
 #endif
 }
 
