@@ -124,8 +124,7 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
     {   
         switch(req_type) {
             case HMCReqType::RD0:
-            case HMCReqType::WR0:
-                type = HMCRespType::NONE;
+                type = HMCRespType::RD_RS;
                 flits = 0;
                 break;
             case HMCReqType::RD16:
@@ -163,6 +162,10 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link, int sr
             case HMCReqType::RD256:
                 type = HMCRespType::RD_RS;
                 flits = 17;
+                break;
+            case HMCReqType::WR0:
+                flits = 0;
+                type = HMCRespType::WR_RS;
                 break;
             case HMCReqType::WR16:
             case HMCReqType::WR32:
@@ -524,7 +527,7 @@ void HMCMemorySystem::DRAMClockTick() {
     for (auto vault:vaults_) {
         vault->ClockTick();
     }
-    if (clk_ % ptr_config_->epoch_period == 0) {
+    if (clk_ % ptr_config_->epoch_period == 0 && clk_ != 0) {
         int queue_usage_total = 0;
         for (auto vault:vaults_) {
             queue_usage_total += vault->QueueUsage();
