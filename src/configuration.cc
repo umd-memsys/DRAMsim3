@@ -7,7 +7,8 @@ using namespace dramcore;
 
 std::function<Address(uint64_t)> dramcore::AddressMapping;
 
-Config::Config(std::string config_file)
+Config::Config(std::string config_file, std::string out_dir):
+    output_dir(out_dir)
 {
     INIReader reader(config_file);
 
@@ -136,6 +137,7 @@ Config::Config(std::string config_file)
     pre_pd_energy_inc = VDD * IDD2P * devices;
     sref_energy_inc = VDD * IDD6x * devices;
 
+    epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
     // determine how much output we want:
     // -1: no file output at all
     // 0: no epoch file output, only outputs the summary in the end
@@ -146,8 +148,13 @@ Config::Config(std::string config_file)
     // Other Parameters
     // give a prefix instead of specify the output name one by one... 
     // this would allow outputing to a directory and you can always override these values
-    output_prefix = reader.Get("other", "output_prefix", "dramsim_");
-    epoch_period = static_cast<uint32_t>(reader.GetInteger("other", "epoch_period", 100000));
+    if ( !DirExist(output_dir) ) {
+        cout << "WARNING: Output directory " << output_dir << " not exists! Using current directory for output!" << endl;
+        output_dir = "./";
+    } else {
+        output_dir = output_dir + "/";
+    }
+    output_prefix = output_dir +  reader.Get("other", "output_prefix", "dramsim_");
     stats_file = reader.Get("other", "stats_file", output_prefix + "stats.txt");
     epoch_stats_file = reader.Get("other", "epoch_stats_file", output_prefix + "epoch_stats.txt");
     stats_file_csv = reader.Get("other", "stats_file", output_prefix + "stats.csv");
