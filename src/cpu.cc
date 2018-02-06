@@ -118,15 +118,13 @@ ThermalCPU::ThermalCPU(BaseMemorySystem& memory_system):
 
 void ThermalCPU::ClockTick() {
     // keep repeating an access pattern and hope to break something
+    auto next_addr = addr_pattern_[curr_index_];
+    sent_successful_ = memory_system_.IsReqInsertable(next_addr, false);
     if (sent_successful_) {
-        auto next_addr = addr_pattern_[curr_index_];
-        sent_successful_ = memory_system_.IsReqInsertable(next_addr, false);
-        if (sent_successful_) {
-            memory_system_.InsertReq(next_addr, false);
-            curr_index_ ++;
-            if (curr_index_ == pattern_len_) {
-                curr_index_ = 0;
-            }
+        memory_system_.InsertReq(next_addr, false);
+        curr_index_ ++;
+        if (curr_index_ == pattern_len_) {
+            curr_index_ = 0;
         }
     }
     clk_ ++;
