@@ -22,6 +22,7 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
     ptr_config_ = new Config(config_file, output_dir);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics(*ptr_config_);
+    ptr_thermCal_ = new ThermalCalculator(*ptr_config_, *ptr_stats_);
 
     if (mem_sys_id_ > 0) {
         // if there are more than one memory_systems then rename the output to preven being overwritten
