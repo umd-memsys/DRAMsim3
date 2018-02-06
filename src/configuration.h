@@ -26,7 +26,7 @@ enum class DRAMProtocol {
 
 class Config {
 public:
-    Config(std::string config_file);
+    Config(std::string config_file, std::string out_dir);
 
     //DRAM physical structure
     DRAMProtocol protocol;

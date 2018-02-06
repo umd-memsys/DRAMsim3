@@ -25,9 +25,9 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
     }
 
 #ifdef GENERATE_TRACE
-    std::string trace_file_name(config_.output_dir + "cmd.trace");
+    std::string trace_file_name = config.output_prefix + "cmd.trace";
     cout << "Command Trace write to "<< trace_file_name << endl;
-    cmd_trace_.open(trace_file_name);
+    cmd_trace_.open(trace_file_name, std::ofstream::out);
 #endif // GENERATE_TRACE
 
 }
@@ -241,19 +241,12 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
     cout << left << setw(8) << clk << " " << cmd << endl;
 #endif  //DEBUG_OUTPUT
 #ifdef GENERATE_TRACE
-    cmd_trace_ << left << setw(18) << clk << " " << cmd <<std::endl;
+    cmd_trace_ << left << setw(18) << clk << " " << cmd << endl;
 #endif // GENERATE_TRACE
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
-
-
-    //cout << "clk = " << clk << " start UpdatePower .... ";  
-    //thermcalc_->DummyFunc(cmd, clk);
     thermcalc_->UpdatePower(cmd, clk);
-    //cout << "end UpdatePower! ....";
     UpdateCommandIssueStats(cmd);
-    //cout << "Finish All!\n";
-
     return;
 }
 

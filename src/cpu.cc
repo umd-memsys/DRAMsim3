@@ -33,33 +33,41 @@ void RandomCPU::ClockTick() {
     return;
 }
 
-void StreamCPU::ClockTick() { //TODO - @shawn - Will fail assertion in the current form. Incorporate IsReqInsertable() function
+void StreamCPU::ClockTick() { 
     // stream-add, read 2 arrays, add them up to the third array
     // this is a very simple approximate but should be able to produce 
     // enough buffer hits
-    if (next_location_) {
-        // jump to a new location and start
-        next_location_ = false;
+
+    // moving on to next set of arrays
+    if (offset_ >= array_size_) {
         addr_a_ = gen();
         addr_b_ = gen();
         addr_c_ = gen();
         offset_ = 0;
     }
-    if (next_element_) {
-        bool inserted_a = memory_system_.InsertReq(addr_a_ + offset_, false);
-        bool inserted_b = memory_system_.InsertReq(addr_b_ + offset_, false);
-        bool inserted_c = memory_system_.InsertReq(addr_c_ + offset_, true);
-        offset_ += 8;
-        all_inserted_ = inserted_a && inserted_b && inserted_c;
+
+    if (!inserted_a_ && memory_system_.IsReqInsertable(addr_a_ + offset_, false)){
+        memory_system_.InsertReq(addr_a_ + offset_, false);
+        inserted_a_ = true;
     } else {
-        if (all_inserted_) {
-            next_element_ = (gen() % 50 == 0); 
-        } else {
-            next_element_ = (gen() % 20 == 0);
-        }
+        inserted_a_ = false;
     }
-    if (offset_ >= array_size_) {
-        next_location_ = true;
+    if (!inserted_b_ && memory_system_.IsReqInsertable(addr_b_ + offset_, false)){
+        memory_system_.InsertReq(addr_b_ + offset_, false);
+        inserted_b_ = true;
+    } else {
+        inserted_b_ = false;
+    }
+    if (!inserted_c_ && memory_system_.IsReqInsertable(addr_c_ + offset_, true)){
+        memory_system_.InsertReq(addr_c_ + offset_, true);
+        inserted_c_ = true;
+    } else {
+        inserted_c_ = false;
+    }
+
+    // moving on to next element
+    if (inserted_a_ && inserted_b_ && inserted_c_) {
+        offset_ += stride_;
     }
 }
 

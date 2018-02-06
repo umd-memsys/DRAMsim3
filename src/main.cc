@@ -13,7 +13,7 @@ int main(int argc, const char **argv)
     args::HelpFlag help(parser, "help", "Display the help menu", {"h", "help"});
     args::ValueFlag<uint64_t > numb_cycles_arg(parser, "numb_cycles", "Number of cycles to simulate", {'n', "numb-cycles"}, 100000);
     args::ValueFlag<std::string> config_arg(parser, "config", "The config file", {'c', "config-file"});
-    args::ValueFlag<std::string> output_dir_arg(parser, "output-dir", "Output directory for stats files", {'o', "output-dir"}, "results");
+    args::ValueFlag<std::string> output_dir_arg(parser, "output-dir", "Output directory for stats files", {'o', "output-dir"}, ".");
     args::ValueFlag<std::string> cpu_arg(parser, "cpu-type", "Type of cpu - random, trace, stream", {"cpu-type"}, "random");
     args::ValueFlag<std::string> memory_type_arg(parser, "memory_type", "Type of memory system - default, hmc, ideal", {"memory-type"}, "default");
     args::ValueFlag<std::string> trace_file_arg(parser, "trace", "The trace file", {"trace-file"});

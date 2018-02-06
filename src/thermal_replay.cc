@@ -3,8 +3,8 @@
 
 using namespace dramcore;
 
-ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file, uint64_t repeat):
-    config_(config_file),
+ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file, std::string output_dir, uint64_t repeat):
+    config_(config_file, output_dir),
     stats_(config_),
     thermal_calc_(config_, stats_),
     repeat_(repeat),
@@ -206,7 +206,7 @@ int main(int argc, const char **argv) {
     trace_file = args::get(trace_file_arg);
     memory_system_type = args::get(memory_type_arg);
 
-    ThermalReplay thermal_replay(trace_file, config_file, repeats);
+    ThermalReplay thermal_replay(trace_file, config_file, output_dir, repeats);
 
     thermal_replay.Run();
 

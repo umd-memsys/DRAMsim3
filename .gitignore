@@ -39,6 +39,8 @@ googletest
 cmake-build*
 release
 .idea
+*.pyc
+*.vh
 
 # IDEs
 .vscode/settings.json

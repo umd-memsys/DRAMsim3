@@ -13,7 +13,7 @@ namespace dramcore {
 
 class ThermalReplay {
 public:
-    ThermalReplay(std::string trace_name, std::string config_file, uint64_t repeat);
+    ThermalReplay(std::string trace_name, std::string config_file, std::string output_dir, uint64_t repeat);
     ~ThermalReplay();
     void Run();
 private:
