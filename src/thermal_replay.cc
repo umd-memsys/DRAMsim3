@@ -38,22 +38,34 @@ ThermalReplay::~ThermalReplay() {
 }
 
 void ThermalReplay::Run(){
-    uint64_t clk_offset = 0;
+    uint64_t clk = 0;
     for (int i = 0; i < repeat_ ; i++) {
         std::string line;
-        uint64_t clk;
+        uint64_t clk_offset = 0;
         while (std::getline(trace_file_, line)) {
             Command cmd;
-            ParseLine(line, clk, cmd);            
-            ProcessCMD(cmd, clk);
+            ParseLine(line, clk_offset, cmd);            
+            ProcessCMD(cmd, clk + clk_offset);
             thermal_calc_.UpdatePower(cmd, clk + clk_offset);
         }
         trace_file_.clear();
         trace_file_.seekg(0);
-        clk_offset += clk;
-        thermal_calc_.PrintTransPT(clk_offset);
+        clk += clk_offset;
+        // thermal_calc_.PrintTransPT(clk_offset);
+
+        // reset bank states
+        for (int c = 0; c < config_.channels; c++) {
+            for (int r = 0; r < config_.ranks; r++) {
+                for (int g = 0; g < config_.bankgroups; g++) {
+                    for (int b = 0; b < config_.banks_per_group; b++) {
+                        bank_active_[c][r][g][b] = false;
+                    }
+                }
+            }
+        }
+
     }
-    thermal_calc_.PrintFinalPT(clk_offset);
+    thermal_calc_.PrintFinalPT(clk);
 }
 
 void ThermalReplay::ParseLine(std::string line, uint64_t &clk, Command &cmd) {

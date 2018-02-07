@@ -107,5 +107,4 @@ def sub_options(config_file, sec, opt, new_value, inplace=False):
     else:
         with open(config_file, "wb") as fp:
             config.write(fp)
-            config.close()
 
