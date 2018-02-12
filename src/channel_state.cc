@@ -4,7 +4,7 @@
 using namespace std;
 using namespace dramcore;
 
-ChannelState::ChannelState(const Config &config, const Timing &timing, Statistics &stats) :
+ChannelState::ChannelState(const Config &config, int channel_id, const Timing &timing, Statistics &stats) :
     need_to_update_refresh_waiting_status_(true),
     rank_in_self_refresh_mode_(std::vector<bool>(config.ranks, false)),
     config_(config),
@@ -25,6 +25,7 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
 
 #ifdef GENERATE_TRACE
     std::string trace_file_name = config.output_prefix + "cmd.trace";
+    RenameFileWithNumber(trace_file_name, channel_id);
     cout << "Command Trace write to "<< trace_file_name << endl;
     cmd_trace_.open(trace_file_name, std::ofstream::out);
 #endif // GENERATE_TRACE

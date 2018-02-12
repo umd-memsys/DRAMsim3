@@ -12,7 +12,7 @@ namespace  dramcore {
 
 class ChannelState {
 public:
-    ChannelState(const Config &config, const Timing &timing, Statistics &stats);
+    ChannelState(const Config &config, int channel_id, const Timing &timing, Statistics &stats);
     Command GetRequiredCommand(const Command& cmd) const;
     bool IsReady(const Command& cmd, uint64_t clk) const;
     void UpdateState(const Command& cmd);
