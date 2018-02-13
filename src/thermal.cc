@@ -722,7 +722,6 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
 
 
         
-
         PrintTransPT(clk);
         cur_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(num_case, 0));
         sample_id++;
@@ -753,6 +752,7 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
     // first add the background energy
     if (config_.IsHMC() || config_.IsHBM()){
         double extra_energy = (Statistics::Stats2DCumuSum(stats_.act_stb_energy) + Statistics::Stats2DCumuSum(stats_.pre_stb_energy) + Statistics::Stats2DCumuSum(stats_.sref_energy) + Statistics::Stats2DCumuSum(stats_.pre_pd_energy)) / (dimX * dimY * numP);
+        cout << "background energy " << extra_energy * (dimX * dimY * numP) << endl;
         for (int i = 0; i < dimX * dimY * numP; i++)
             for (int j = 0; j < num_case; j++)
                 accu_Pmap[i][j] += extra_energy / 1000 / device_scale;

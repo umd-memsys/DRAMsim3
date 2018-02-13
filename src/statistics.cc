@@ -375,7 +375,7 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     ref_energy.epoch_value = (numb_refresh_cmds_issued.Count() - numb_refresh_cmds_issued.LastCount()) * config_.ref_energy_inc;
     refb_energy.epoch_value = (numb_refresh_bank_cmds_issued.Count() - numb_refresh_bank_cmds_issued.LastCount()) * config_.refb_energy_inc;
     for (int i = 0; i < config_.channels; i++) {
-        for (int j = 0; j < config_.channels; j++) {
+        for (int j = 0; j < config_.ranks; j++) {
             act_stb_energy[i][j].epoch_value = (active_cycles[i][j].Count() - active_cycles[i][j].LastCount()) * config_.act_energy_inc;
             pre_stb_energy[i][j].epoch_value = (all_bank_idle_cycles[i][j].Count() - all_bank_idle_cycles[i][j].LastCount()) * config_.pre_stb_energy_inc;
             sref_energy[i][j].epoch_value = (sref_cycles[i][j].Count() - sref_cycles[i][j].LastCount()) * config_.sref_energy_inc;
@@ -394,7 +394,7 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     ref_energy.cumulative_value = numb_refresh_cmds_issued.Count() * config_.ref_energy_inc;
     refb_energy.cumulative_value = numb_refresh_bank_cmds_issued.Count() * config_.refb_energy_inc;
     for (int i = 0; i < config_.channels; i++) {
-        for (int j = 0; j < config_.channels; j++) {
+        for (int j = 0; j < config_.ranks; j++) {
             act_stb_energy[i][j].cumulative_value = active_cycles[i][j].Count() * config_.act_stb_energy_inc;
             pre_stb_energy[i][j].cumulative_value = all_bank_idle_cycles[i][j].Count() * config_.pre_stb_energy_inc;
             sref_energy[i][j].cumulative_value = sref_cycles[i][j].Count() * config_.sref_energy_inc;
