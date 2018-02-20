@@ -723,6 +723,8 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     for (iit = 0; iit < iter; iit ++)
     {
         // main calculation of the new T
+        // try unroll this loop...
+        #pragma omp for
         for (j = 0; j < MidxSize; j ++)
         {
             idx0 = (int) (Midx[j][0] + 0.01); 

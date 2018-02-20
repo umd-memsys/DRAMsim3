@@ -31,6 +31,11 @@ if (THERMAL)
         message("Adding thermal module...")
         add_definitions(-DTHERMAL)
 
+        # check dependency
+        find_package(Threads REQUIRED)
+        find_package(BLAS REQUIRED)
+        find_package(OpenMP REQUIRED)
+
         # since SuperLU has a build system already, I don't want to 
         # rewirte the entire make system so here's the solution...
         if (NOT SUPERLU_ROOT)
@@ -82,6 +87,10 @@ set(SOURCES
 
 if (THERMAL)
         set(SOURCES ${SOURCES} src/thermal.cc src/sp_ienv.c src/thermal_solver.c)
+        if (OPENMP_FOUND)
+            message("adding openmp flag")
+            set_source_files_properties(src/thermal_solver.c PROPERTIES COMPILE_FLAGS ${OpenMP_C_FLAGS})
+        endif(OPENMP_FOUND)
 endif (THERMAL)
 
 set(SOURCES_TEST
@@ -96,9 +105,7 @@ include_directories(src ext/headers)
 add_library(dramcore SHARED ${SOURCES})
 
 if (THERMAL)
-        find_package(Threads REQUIRED)
-        find_package(BLAS REQUIRED)
-        target_link_libraries(dramcore inih fmt superlu_mt ${CMAKE_THREAD_LIBS_INIT} m f77blas atlas)
+        target_link_libraries(dramcore inih fmt superlu_mt ${CMAKE_THREAD_LIBS_INIT} m f77blas atlas ${OpenMP_C_FLAGS})
         add_executable(thermalreplay src/thermal_replay.cc)
         target_link_libraries(thermalreplay dramcore)
 else (THERMAL)
