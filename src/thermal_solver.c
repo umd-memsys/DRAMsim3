@@ -715,7 +715,7 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
             }
 
     ////////////// iteratively update the temperature /////////////////
-    int iit, idx0, idx1, idxC; 
+    int iit; 
     double maxT; 
 
     printf("dt = %.10f\n", dt);
@@ -724,32 +724,30 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     {
         // main calculation of the new T
         // try unroll this loop...
-        #pragma omp for
+        #pragma omp parallel for shared(T) private(j)
         for (j = 0; j < MidxSize; j ++)
         {
-            idx0 = (int) (Midx[j][0] + 0.01); 
-            idx1 = (int) (Midx[j][1] + 0.01); 
-            idxC = idx0 / (dimX * dimZ); 
-
-        
+            int idx0 = (int) (Midx[j][0] + 0.01); 
+            int idx1 = (int) (Midx[j][1] + 0.01); 
+            int idxC = idx0 / (dimX * dimZ);        
             
             if (idx0 == idx1){
                 if (1-Midx[j][2]*dt/Cap[idxC] < 0)
                     printf("NEGATIVE: idx0 = %d\n", idx0);
-                T[idx0] += (1-Midx[j][2] * dt/Cap[idxC]) * Tp[idx1] + P[idx0] * dt/Cap[idxC];
+                double tmp_a = 1-Midx[j][2] * dt/Cap[idxC];
+                double tmp_b = tmp_a * Tp[idx1] + P[idx0] * dt / Cap[idxC];
+                T[idx0] += tmp_b;
             }
-            else
-                T[idx0] -= Midx[j][2] * Tp[idx1] * dt/Cap[idxC]; 
-
-            //if (iit == 0)
-                //printf("%d: idx0 = %d, idx1 = %d, idxC = %d, g = %.6f, cap = %.6f, P = %.2f, T[%d] = %.2f\n", j, idx0, idx1, idxC, Midx[j][2], Cap[idxC], P[idx0], idx0, T[idx0]);
+            else {
+                double tmp_a = Midx[j][2] * Tp[idx1] * dt/Cap[idxC];
+                T[idx0] -= tmp_a;
+            }
         }
 
 
         // give value for the next T
         Tt = Tp; Tp = T; T = Tt; // let Tp = T
-        for (i = 0; i < dimX * dimZ * (numLayer+1); i ++)
-            T[i] = 0;
+        memset(T, 0, dimX * dimZ * (numLayer+1) * sizeof(*T)); 
     }
 
     // free the space 
