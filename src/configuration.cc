@@ -62,7 +62,6 @@ Config::Config(std::string config_file, std::string out_dir):
 
     SetAddressMapping();
 
-
     // Timing Parameters
     // TODO there is no need to keep all of these variables, they should just be temporary
     // ultimately we only need cmd to cmd Timing instead of these     
@@ -102,6 +101,8 @@ Config::Config(std::string config_file, std::string out_dir):
     t32AW = static_cast<uint32_t>(reader.GetInteger("timing", "t32AW", 330));
     tRCDRD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDRD", 24));
     tRCDWR = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDWR", 20));
+
+    ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));
 
     // calculated timing
     RL = AL + CL;
@@ -211,7 +212,6 @@ Config::Config(std::string config_file, std::string out_dir):
         std::cout << "No Need to Tile Rows\n";
     }
 
-    ideal_memory_latency = static_cast<uint32_t>(reader.GetInteger("timing", "ideal_memory_latency", 10));
 
     // Thermal simulation parameters 
     loc_mapping = reader.Get("thermal", "loc_mapping", "");
