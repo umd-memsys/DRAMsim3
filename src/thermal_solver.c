@@ -657,85 +657,64 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
 }
 
 
-
-
-
-
-
 double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int MidxSize, double *Cap, int CapSize, double time, int iter, double *T_trans, double Tamb)
 {
-    double *Tp, *T, *P; 
-    double *Tt; // for swap the storage between T and Tp
-    double dt = time / (double) iter; 
     int numLayer = numP * 3; 
-    int i, j, l; // indicators 
-
-    double Wsink, Lsink, Hsink, Ksink; 
-    double Rsinky, Ramb;
-    double gridXsink, gridZsink; 
     int *layerP;
 
     clock_t init_begin, init_end, loop_begin, loop_end, finish_begin, finish_end;
-
     init_begin = clock();
+
     // define the active layer array 
     if ( !(layerP = intMalloc(numP)) ) SUPERLU_ABORT("Malloc fails for numP[].");
-    for(l = 0; l < numP; l++)
+    for(int l = 0; l < numP; l++)
         layerP[l] = l * 3; 
 
-    Wsink = W; 
-    Lsink = Lc; 
-    Hsink = Hhs; 
-    Ksink = Khs; 
-    gridXsink = Wsink / dimX; gridZsink = Lsink / dimZ; 
-    Rsinky = Hsink / Ksink / gridXsink / gridZsink; // y direction
-    Ramb = Rsinky / 2; 
+    double Wsink = W; 
+    double Lsink = Lc; 
+    double Hsink = Hhs; 
+    double Ksink = Khs; 
+    double gridXsink = Wsink / dimX; 
+    double gridZsink = Lsink / dimZ; 
+    double Rsinky = Hsink / Ksink / gridXsink / gridZsink; // y direction
+    double Ramb = Rsinky / 2; 
 
+    double *Tp = T_trans; 
+    double *T, *P; 
+    int T_size = dimX * dimZ * (numLayer+1);
+    if ( !(T = doubleMalloc(T_size)) ) SUPERLU_ABORT("Malloc fails for rhs[].");
+    if ( !(P = doubleMalloc(T_size)) ) SUPERLU_ABORT("Malloc fails for rhs[].");
 
-    //for (i=0;i<MidxSize;i++)
-    //    printf("%f\t%f\t%f\n", Midx[i][0], Midx[i][1], Midx[i][2]);
+    // initialize T and P
+    memset(T, 0, T_size * sizeof(*T)); 
+    memset(P, 0, T_size * sizeof(*T)); 
 
-
-
-    Tp = T_trans; 
-    if ( !(T = doubleMalloc(dimX * dimZ * (numLayer + 1))) ) SUPERLU_ABORT("Malloc fails for rhs[].");
-    if ( !(P = doubleMalloc(dimX*dimZ*(numLayer+1))) ) SUPERLU_ABORT("Malloc fails for rhs[].");
-
-    // initialize T
-    for (i = 0; i < dimX * dimZ * (numLayer+1); i ++)
-        T[i] = 0;
-    
-    // assign values to B 
-    for (i = 0; i < dimX * dimZ * (numLayer+1); i++) // initialize rhs to 0
-        P[i] = 0; 
-    for (i = 0; i < dimX * dimZ; i++)
+    for (int i = 0; i < dimX * dimZ; i++)
         P[i] = Tamb / Ramb; 
-    for (l = 0; l < numP; l ++)
-        for (j = 0; j < dimZ; j ++)
-            for (i = 0; i < dimX; i++)
+    for (int l = 0; l < numP; l ++)
+        for (int j = 0; j < dimZ; j ++)
+            for (int i = 0; i < dimX; i++)
             {
-                //P[dimX*dimZ*(layerP[l]+1) + j*dimX + i] = powerM[i][j][l]; 
                 P[dimX*dimZ*(layerP[l]+1) + i*dimZ + j] = powerM[i][j][l]; 
                 //printf("%.6f\n", powerM[i][j][l]);
             }
 
     init_end = clock();
 
+    double dt = time / (double) iter; 
     printf("dt = %.10f\n", dt);
     
     loop_begin = clock();
     ////////////// iteratively update the temperature /////////////////
-    int iit; 
-    double maxT; 
     static int printed = 0;
-    for (iit = 0; iit < iter; iit ++)
-    {
+    
+    for (int iit = 0; iit < iter; iit ++) {
         // main calculation of the new T
         // try unroll this loop...
-        #pragma omp parallel shared(T, Tp, Cap, P, Midx) private(j)  
+        #pragma omp parallel shared(T)
         {
             #pragma omp for nowait schedule(static, 1024)
-            for (j = 0; j < MidxSize; j ++) { 
+            for (int j = 0; j < MidxSize; j ++) { 
                 int idx0 = (int) (Midx[j][0] + 0.01); 
                 int idx1 = (int) (Midx[j][1] + 0.01); 
                 int idxC = idx0 / (dimX * dimZ);        
@@ -760,8 +739,8 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
         }
        
 
-
         // give value for the next T
+        double *Tt; // for swap the storage between T and Tp
         Tt = Tp; Tp = T; T = Tt; // let Tp = T
         memset(T, 0, dimX * dimZ * (numLayer+1) * sizeof(*T)); 
     }
@@ -771,9 +750,9 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     finish_begin = clock();
 
     // free the space 
-    for (i = 0; i < dimX; i++)
+    for (int i = 0; i < dimX; i++)
     {
-        for (j = 0; j < dimZ; j++)
+        for (int j = 0; j < dimZ; j++)
         {
             free(powerM[i][j]);
         }
@@ -794,10 +773,7 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     printf("init time %.10f\n", init_time);
     printf("loop time %.10f\n", loop_time);
     printf("finn time %.10f\n", finish_time);
-    //maxT = get_maxT(Tp, dimX*dimZ*(numLayer+1));
-    //printf("maxT = %.3f\n", maxT - T0);
     return Tp;
-
 }
 
 
