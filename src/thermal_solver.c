@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <math.h>
 #include <stdio.h>
+#include <omp.h>
+#include <time.h>
 #include "thermal_config.h"
 
 //#define DEBUG
@@ -673,6 +675,9 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     double gridXsink, gridZsink; 
     int *layerP;
 
+    clock_t init_begin, init_end, loop_begin, loop_end, finish_begin, finish_end;
+
+    init_begin = clock();
     // define the active layer array 
     if ( !(layerP = intMalloc(numP)) ) SUPERLU_ABORT("Malloc fails for numP[].");
     for(l = 0; l < numP; l++)
@@ -714,41 +719,56 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
                 //printf("%.6f\n", powerM[i][j][l]);
             }
 
+    init_end = clock();
+
+    printf("dt = %.10f\n", dt);
+    
+    loop_begin = clock();
     ////////////// iteratively update the temperature /////////////////
     int iit; 
     double maxT; 
-
-    printf("dt = %.10f\n", dt);
-
+    static int printed = 0;
     for (iit = 0; iit < iter; iit ++)
     {
         // main calculation of the new T
         // try unroll this loop...
-        #pragma omp parallel for shared(T) private(j)
-        for (j = 0; j < MidxSize; j ++)
+        #pragma omp parallel shared(T, Tp, Cap, P, Midx) private(j)  
         {
-            int idx0 = (int) (Midx[j][0] + 0.01); 
-            int idx1 = (int) (Midx[j][1] + 0.01); 
-            int idxC = idx0 / (dimX * dimZ);        
-            
-            if (idx0 == idx1){
-                if (1-Midx[j][2]*dt/Cap[idxC] < 0)
-                    printf("NEGATIVE: idx0 = %d\n", idx0);
-                double tmp_a = 1-Midx[j][2] * dt/Cap[idxC];
-                double tmp_b = tmp_a * Tp[idx1] + P[idx0] * dt / Cap[idxC];
-                T[idx0] += tmp_b;
-            }
-            else {
-                double tmp_a = Midx[j][2] * Tp[idx1] * dt/Cap[idxC];
-                T[idx0] -= tmp_a;
-            }
+            #pragma omp for nowait schedule(static, 1024)
+            for (j = 0; j < MidxSize; j ++) { 
+                int idx0 = (int) (Midx[j][0] + 0.01); 
+                int idx1 = (int) (Midx[j][1] + 0.01); 
+                int idxC = idx0 / (dimX * dimZ);        
+
+                if (printed == 0) {
+                    int t_id = omp_get_thread_num();
+                    printf("thread %d is handling %d idx0=%d\n", t_id, j, idx0);
+                    printed = 1;
+                }
+                if (idx0 == idx1){
+                    //if (1-Midx[j][2]*dt/Cap[idxC] < 0)
+                    //    printf("NEGATIVE: idx0 = %d\n", idx0);
+                    double tmp_a = 1-Midx[j][2] * dt/Cap[idxC];
+                    double tmp_b = tmp_a * Tp[idx1] + P[idx0] * dt / Cap[idxC];
+                    T[idx0] += tmp_b;
+                }
+                else {
+                    double tmp_a = Midx[j][2] * Tp[idx1] * dt/Cap[idxC];
+                    T[idx0] -= tmp_a;
+                }
+            } 
         }
+       
 
 
         // give value for the next T
         Tt = Tp; Tp = T; T = Tt; // let Tp = T
         memset(T, 0, dimX * dimZ * (numLayer+1) * sizeof(*T)); 
     }
+
+    loop_end = clock();
+
+    finish_begin = clock();
 
     // free the space 
     for (i = 0; i < dimX; i++)
@@ -766,6 +786,14 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     SUPERLU_FREE(P);
     SUPERLU_FREE(T);
 
+    finish_end = clock();
+
+    double init_time = (double)(init_end - init_begin) / CLOCKS_PER_SEC;
+    double loop_time = (double)(loop_end - loop_begin) / CLOCKS_PER_SEC;
+    double finish_time = (double)(finish_end - finish_begin) / CLOCKS_PER_SEC;
+    printf("init time %.10f\n", init_time);
+    printf("loop time %.10f\n", loop_time);
+    printf("finn time %.10f\n", finish_time);
     //maxT = get_maxT(Tp, dimX*dimZ*(numLayer+1));
     //printf("maxT = %.3f\n", maxT - T0);
     return Tp;

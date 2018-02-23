@@ -9,7 +9,7 @@ const double R_TSV = 5e-6; // [m]
 const double Ksi = 148.0; // Silicon
 const double Kcu = 401.0; // Copper
 const double Kin = 1.5;  // insulator 
-const double Khs = 5.0; // Heat sink 
+const double Khs = 3.0; // Heat sink 
 
 /* Thermal capacitance */
 const double Csi = 1.66e6; // Silicon
