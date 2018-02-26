@@ -87,27 +87,27 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) : 
     InitialParameters();
 
     refresh_count = vector<vector<uint32_t> > (config_.channels * config_.ranks, vector<uint32_t> (config_.banks, 0));
-    cout << "size of refresh_count is " << refresh_count.size() << endl;
 
     // Initialize the output file
-    epoch_temperature_file_csv_.open(config_.epoch_temperature_file_csv);
     final_temperature_file_csv_.open(config_.final_temperature_file_csv);
-    bank_position_csv_.open(config_.bank_position_csv);
-
-    // print header to csv files
-    PrintCSVHeader_trans(epoch_temperature_file_csv_);
     PrintCSVHeader_final(final_temperature_file_csv_);
+    
     // print bank position
+    bank_position_csv_.open(config_.bank_position_csv);
     PrintCSV_bank(bank_position_csv_); 
 
-
-    //cout << "done thermal calculator\n";
+    epoch_max_temp_file_csv_.open(config_.epoch_max_temp_file_csv);
+    PrintCSVHeader_trans(epoch_max_temp_file_csv_);
+    
+    // print header to csv files
+    if (config_.output_level >= 2) {
+        epoch_temperature_file_csv_.open(config_.epoch_temperature_file_csv);
+        PrintCSVHeader_trans(epoch_temperature_file_csv_);
+    }
 }
 
 ThermalCalculator::~ThermalCalculator()
-{
-    //cout << "Print the final temperature \n";
-}
+{}
 
 void ThermalCalculator::SetPhyAddressMapping() {
     std::string mapping_string = config_.loc_mapping;
@@ -317,11 +317,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 
                 temp_addr.column_ ++; 
             }
-            //cout << "cmd.Row() = " << cmd.Row() << "; cmd.Column() = " << endl;
-            //cout << "bank_id = " << bank_id << "; row_id = " << row_id << "; col_id = " << col_id << endl;
-            //cout << "(" << *x << ", " << *y << ")\n";
         }
-
     }
     else
     {
@@ -416,8 +412,6 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd, int bank
                 
                 temp_addr.column_ ++; 
             }
-            //cout << "bank_id = " << bank_id << "; row_id = " << row_id << endl;
-            //cout << "(" << *x << ", " << *y << ")\n";
         }
     }
 }
@@ -570,16 +564,12 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
             grid_id_y = col_id / config_.matY + col_tile_id * (config_.numYgrids / config_.RowTile);
             x = bank_id_x * config_.numXgrids + grid_id_x;
             y = bank_id_y * config_.numYgrids + grid_id_y;
-            //cout << "bank_id = " << bank_id << "; row_id = " << row_id << endl;
-            //cout << "(" << *x << ", " << *y << ")\n";
         }
     }
 
     // y is the baseline y
     for (int i = 0; i < config_.numYgrids; i ++)
     {
-        //cout << "y = " << y << endl;
-        
         accu_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
         cur_Pmap[z * (dimX * dimY) + y * dimX + x][caseID_] += add_energy;
         y ++;
@@ -594,7 +584,6 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
 void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
 {
     //cout << "Enter UpdatePower()\n";
-    int x, y, z = 0; // 3D-dimension of the current cell
     double energy = 0.0;
     int row_s, ir, ib; // for refresh
     int case_id;
@@ -616,10 +605,6 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
 
     if (cmd.cmd_type_ == CommandType::REFRESH)
     {
-        //cout << "REFRESH!\n"; 
-        //cout << "rank = " << rank << "; channel = " << channel << endl;
-        // update refresh_count
-        //cout << "refresh count = " << refresh_count[channel * config_.ranks + rank][0] << "; Row " << refresh_count[channel * config_.ranks + rank][0] * config_.numRowRefresh << " ~ Row " << refresh_count[channel * config_.ranks + rank][0] * config_.numRowRefresh  + config_.numRowRefresh-1 << endl;
         for (ib = 0; ib < config_.banks; ib ++){
             row_s = refresh_count[channel * config_.ranks + rank][ib] * config_.numRowRefresh;
             refresh_count[channel * config_.ranks + rank][ib] ++; 
@@ -633,7 +618,6 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
     }
     else if (cmd.cmd_type_ == CommandType::REFRESH_BANK)
     {
-        //cout << "REFRESH_BANK!\n";
         ib = cmd.Bank(); 
         row_s = refresh_count[channel * config_.ranks + rank][ib] * config_.numRowRefresh;
         refresh_count[channel * config_.ranks + rank][ib] ++; 
@@ -646,9 +630,6 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
     }
     else
     {
-        //cout << "normal\n";
-        //cout << "cmd.Row() = " << cmd.Row() << "; cmd.Column() = " << cmd.Column() << endl;
-            
         switch (cmd.cmd_type_)
         {
         case CommandType::ACTIVATE:
@@ -674,12 +655,8 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
             energy /= config_.BL;
             LocationMappingANDaddEnergy(cmd, -1, -1, case_id, energy / 1000.0 / device_scale);
         }
-        //LocationMapping(cmd, -1, -1, &x, &y, &z);
-        //accu_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
-        //cur_Pmap[z * (dimX * dimY) + y * dimX + x][case_id] += energy / 1000.0 / device_scale;
     }
 
-    //cout << "Finish UpdatePower()\n";
 
     // print transient power and temperature
     if (clk > (sample_id + 1) * config_.power_epoch_period)
@@ -719,8 +696,6 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
                 }
             }
         }
-
-
         
         PrintTransPT(clk);
         cur_Pmap = vector<vector<double>>(numP * dimX * dimY, vector<double>(num_case, 0));
@@ -736,8 +711,13 @@ void ThermalCalculator::PrintTransPT(uint64_t clk)
         CalcTransT(ir);
         double maxT = GetMaxT(T_trans, ir);
         cout << "MaxT of case " << ir << " is " << maxT - T0 << " [C]\n";
-        // print to file
-        PrintCSV_trans(epoch_temperature_file_csv_, cur_Pmap, T_trans, ir, config_.power_epoch_period);
+        
+        // write MaxT of the epoch to save time & space
+        epoch_max_temp_file_csv_ << "-,-,-,-," << maxT - T0 << "," << ir << endl;
+        // only outputs full file when output level >= 2
+        if (config_.output_level >= 2) {
+            PrintCSV_trans(epoch_temperature_file_csv_, cur_Pmap, T_trans, ir, config_.power_epoch_period);
+        }
     }
 }
 
@@ -778,7 +758,6 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
     }
     
     
-
     // calculate the final temperature for each case
     for (int ir = 0; ir < num_case; ir++)
     {
@@ -791,9 +770,12 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
 
     // close all the csv files
     final_temperature_file_csv_.close();
-    //final_power_file_csv_.close();
-    epoch_temperature_file_csv_.close();
-    //epoch_power_file_csv_.close();
+    
+    epoch_max_temp_file_csv_.close();
+
+    if (config_.output_level >= 2) {
+        epoch_temperature_file_csv_.close();
+    }
 }
 
 void ThermalCalculator::CalcTransT(int case_id)
@@ -962,7 +944,6 @@ void ThermalCalculator::calculate_time_step()
 {
     double dt = 100.0;
     int layer_dim = (dimX+num_dummy) * (dimY + num_dummy);
-    //cout << "CapSize = " << CapSize << "; MidxSize = " << MidxSize << "; layer_dim = " << layer_dim << endl;
 
     for (int j = 0; j < MidxSize; j++)
     {
@@ -974,7 +955,6 @@ void ThermalCalculator::calculate_time_step()
         {
             double g = Midx[j][2];
             double c = Cap[idxC];
-            //cout << "c = " << c << "; g = " << g << endl;
             if (c / g < dt)
                 dt = c / g;
         }

@@ -159,9 +159,8 @@ public:
     int RowTile; 
     int TileRowNum;
     double bank_asr; // the aspect ratio of a bank: #row_bits / #col_bits
-    std::string epoch_power_file_csv; 
+    std::string epoch_max_temp_file_csv;
     std::string epoch_temperature_file_csv;
-    std::string final_power_file_csv;
     std::string final_temperature_file_csv;
     std::string bank_position_csv;
 

@@ -222,6 +222,7 @@ Config::Config(std::string config_file, std::string out_dir):
     ChipY = reader.GetReal("thermal", "ChipY", 0.01);
     Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
     epoch_temperature_file_csv = reader.Get("other", "epoch_temperature_file", output_prefix + "epoch_power_temperature.csv");
+    epoch_max_temp_file_csv = reader.Get("other", "epoch_max_temp_file", output_prefix + "epoch_max_temp.csv");
     final_temperature_file_csv = reader.Get("other", "final_temperature_file", output_prefix + "final_power_temperature.csv");
     bank_position_csv = reader.Get("other", "final_temperature_file", output_prefix + "bank_position.csv");
 

@@ -59,6 +59,7 @@ class ThermalCalculator
     vector<int> layerP;
 
     // Output files
+    ofstream epoch_max_temp_file_csv_;
     ofstream epoch_temperature_file_csv_;
     ofstream final_temperature_file_csv_;
     ofstream bank_position_csv_;
@@ -82,7 +83,7 @@ class ThermalCalculator
     void PrintCSVHeader_final(ofstream &csvfile);
     void PrintCSV_bank(ofstream &csvfile);
 
-  public:
+public:
     ThermalCalculator(const Config &config, Statistics &stats);
     ~ThermalCalculator();
     void UpdatePower(const Command &cmd, uint64_t clk);
