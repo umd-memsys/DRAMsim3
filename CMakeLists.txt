@@ -90,7 +90,7 @@ if (THERMAL)
         set(SOURCES ${SOURCES} src/thermal.cc src/sp_ienv.c src/thermal_solver.c)
         if (OPENMP_FOUND)
             message("adding openmp flag")
-            set_source_files_properties(src/thermal_solver.c PROPERTIES COMPILE_FLAGS ${OpenMP_C_FLAGS})
+            set_source_files_properties(src/thermal_solver.c PROPERTIES COMPILE_FLAGS "${OpenMP_C_FLAGS} -O2")
         endif(OPENMP_FOUND)
 endif (THERMAL)
 
