@@ -706,42 +706,41 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     
     loop_begin = clock();
     ////////////// iteratively update the temperature /////////////////
-    static int printed = 0;
     
+    const int block_size = 8;
     for (int iit = 0; iit < iter; iit ++) {
         // main calculation of the new T
         // try unroll this loop...
         #pragma omp parallel shared(T)
         {
-            #pragma omp for nowait schedule(static, 1024)
-            for (int j = 0; j < MidxSize; j ++) { 
-                int idx0 = (int) (Midx[j][0] + 0.01); 
-                int idx1 = (int) (Midx[j][1] + 0.01); 
-                int idxC = idx0 / (dimX * dimZ);        
-
-                if (printed == 0) {
-                    int t_id = omp_get_thread_num();
-                    printf("thread %d is handling %d idx0=%d\n", t_id, j, idx0);
-                    printed = 1;
-                }
-                if (idx0 == idx1){
-                    //if (1-Midx[j][2]*dt/Cap[idxC] < 0)
-                    //    printf("NEGATIVE: idx0 = %d\n", idx0);
-                    double tmp_a = 1-Midx[j][2] * dt/Cap[idxC];
-                    double tmp_b = tmp_a * Tp[idx1] + P[idx0] * dt / Cap[idxC];
-                    T[idx0] += tmp_b;
-                }
-                else {
-                    double tmp_a = Midx[j][2] * Tp[idx1] * dt/Cap[idxC];
-                    T[idx0] -= tmp_a;
-                }
+            #pragma omp for nowait schedule(static)
+            for (int j = 0; j < MidxSize; j += block_size) { 
+                int bound = j + block_size < MidxSize? (j + block_size) : MidxSize;
+                for (int b = j; b < bound; b++) {
+                    int idx0 = (int) (Midx[b][0] + 0.01); 
+                    int idx1 = (int) (Midx[b][1] + 0.01); 
+                    double tmp_c = Midx[b][2];
+                    int idxC = idx0 / (dimX * dimZ);        
+ 
+                    if (idx0 == idx1){
+                        //if (1-Midx[j][2]*dt/Cap[idxC] < 0)
+                        //    printf("NEGATIVE: idx0 = %d\n", idx0);
+                        double tmp_a = 1 - tmp_c * dt/Cap[idxC];
+                        double tmp_b = tmp_a * Tp[idx1] + P[idx0] * dt / Cap[idxC];
+                        T[idx0] += tmp_b;
+                    }
+                    else {
+                        double tmp_a = tmp_c * Tp[idx1] * dt/Cap[idxC];
+                        T[idx0] -= tmp_a;
+                    }
+                } 
             } 
         }
        
 
         // give value for the next T
         double *Tt; // for swap the storage between T and Tp
-        Tt = Tp; Tp = T; T = Tt; // let Tp = T
+        Tt = Tp; Tp = T; T = Tt; // exchange T, Tp
         memset(T, 0, dimX * dimZ * (numLayer+1) * sizeof(*T)); 
     }
 
