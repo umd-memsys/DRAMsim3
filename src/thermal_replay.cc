@@ -10,12 +10,7 @@ ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file, st
     repeat_(repeat),
     last_clk_(0)
 {
-    trace_file_.open(trace_name);
-    if (!trace_file_) {
-        std::cout << "cannot open trace file " << trace_name << std::endl;
-        exit(1);
-    }
-
+    
     // Initialize bank states, for power calculation we only need to know
     // if it's active
     for (int i = 0; i < config_.channels; i++) {
@@ -30,28 +25,41 @@ ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file, st
         }
         bank_active_.push_back(chan_vec);
     }
+
+    // read commands into memory
+    std::ifstream trace_file(trace_name);
+    if (!trace_file) {
+        std::cout << "cannot open trace file " << trace_name << std::endl;
+        exit(1);
+    }
+
+    std::string line;
+    uint64_t clk = 0;
+    while (std::getline(trace_file, line)) {
+        Command cmd;
+        ParseLine(line, clk, cmd);            
+        timed_commands_.push_back(std::pair<uint64_t, Command>(clk, cmd));
+    }
+    trace_file.close();
 }
 
 
-ThermalReplay::~ThermalReplay() {
-    trace_file_.close();
-}
+ThermalReplay::~ThermalReplay() {}
 
 void ThermalReplay::Run(){
     uint64_t clk = 0;
     for (int i = 0; i < repeat_ ; i++) {
-        std::string line;
         uint64_t clk_offset = 0;
-        while (std::getline(trace_file_, line)) {
-            Command cmd;
-            ParseLine(line, clk_offset, cmd);            
+        for (int j = 0; j < timed_commands_.size(); j++) {
+        // for (int j = 0; j < cmds_.size(); j++) {
+            // Command &cmd = cmds_[j]; 
+            // clk_offset = clks_[j];
+            clk_offset = timed_commands_[j].first;
+            Command &cmd = timed_commands_[j].second;
             ProcessCMD(cmd, clk + clk_offset);
             thermal_calc_.UpdatePower(cmd, clk + clk_offset);
-        }
-        trace_file_.clear();
-        trace_file_.seekg(0);
+        } 
         clk += clk_offset;
-        // thermal_calc_.PrintTransPT(clk_offset);
 
         // reset bank states
         for (int c = 0; c < config_.channels; c++) {
@@ -68,6 +76,8 @@ void ThermalReplay::Run(){
     thermal_calc_.PrintFinalPT(clk);
 }
 
+
+// parsing line from trace file into a command
 void ThermalReplay::ParseLine(std::string line, uint64_t &clk, Command &cmd) {
     std::map<std::string, CommandType> cmd_map = {
         {"read", CommandType::READ},

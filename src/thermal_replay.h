@@ -3,6 +3,7 @@
 
 #include <string>
 #include <fstream>
+#include <vector>
 
 #include "common.h"
 #include "configuration.h"
@@ -17,7 +18,7 @@ public:
     ~ThermalReplay();
     void Run();
 private:
-    std::ifstream trace_file_;
+    std::vector<std::pair<uint64_t, Command>> timed_commands_;
     Config config_;
     Statistics stats_;
     ThermalCalculator thermal_calc_;    
