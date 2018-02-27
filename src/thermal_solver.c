@@ -448,27 +448,21 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
 double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count, double Tamb)
 //main(int argc, char *argv[])
 {
-    int numLayer; 
-    double Wsink, Lsink, Hsink, Ksink, Ktsv; 
-    double Rsinky, Ramb;
-    double gridXsink, gridZsink; 
+    int numLayer = numP * 3;
     int *layerP;
-    int l, i, j; // indicator
-
-    numLayer = numP * 3;
-
     // define the active layer array 
     if ( !(layerP = intMalloc(numP)) ) SUPERLU_ABORT("Malloc fails for numP[].");
-    for(l = 0; l < numP; l++)
+    for(int l = 0; l < numP; l++)
         layerP[l] = l * 3; 
 
-    Wsink = W; 
-    Lsink = Lc; 
-    Hsink = Hhs; 
-    Ksink = Khs; 
-    gridXsink = Wsink / dimX; gridZsink = Lsink / dimZ; 
-    Rsinky = Hsink / Ksink / gridXsink / gridZsink; // y direction
-    Ramb = Rsinky / 2; 
+    double Wsink = W; 
+    double Lsink = Lc; 
+    double Hsink = Hhs; 
+    double Ksink = Khs; 
+    double gridXsink = Wsink / dimX; 
+    double gridZsink = Lsink / dimZ; 
+    double Rsinky = Hsink / Ksink / gridXsink / gridZsink; // y direction
+    double Ramb = Rsinky / 2; 
 
 /* convert the values to the SuperMatrix format 
  */ 
@@ -490,7 +484,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
 
     nrhs              = 1;
     trans             = NOTRANS;
-    nprocs             = 6;
+    nprocs             = omp_get_max_threads();
     b                 = 1;
     panel_size        = sp_ienv(1);
     relax             = sp_ienv(2);
@@ -505,7 +499,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
 
     /* assign values to the arrays: a, asub and xa */ 
     int row = -1;
-    for (i = 0; i < count; i ++)
+    for (int i = 0; i < count; i ++)
     {
         if (Midx[i][0] > row)
         {
@@ -530,13 +524,13 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     if ( !(rhs = doubleMalloc(m * nrhs)) ) SUPERLU_ABORT("Malloc fails for rhs[].");
     
     // assign values to B 
-    for (i = 0; i < m; i++) // initialize rhs to 0
+    for (int i = 0; i < m; i++) // initialize rhs to 0
         rhs[i] = 0; 
-    for (i = 0; i < dimX * dimZ; i++)
+    for (int i = 0; i < dimX * dimZ; i++)
         rhs[i] = Tamb / Ramb; 
-    for (l = 0; l < numP; l ++)
-        for (i = 0; i < dimX; i ++)
-            for (j = 0; j < dimZ; j++)
+    for (int l = 0; l < numP; l ++)
+        for (int i = 0; i < dimX; i ++)
+            for (int j = 0; j < dimZ; j++)
             {
                 rhs[dimX*dimZ*(layerP[l]+1) + j*dimX + i] = powerM[i][j][l]; 
                 //rhs[dimX*dimZ*(layerP[l]+1) + i*dimZ + j] = powerM[i][j][l]; 
@@ -548,9 +542,9 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
         printf("%.5f\n", rhs[i]);
 */
     // free the space 
-    for (i = 0; i < dimX; i++)
+    for (int i = 0; i < dimX; i++)
     {
-        for (j = 0; j < dimZ; j++)
+        for (int j = 0; j < dimZ; j++)
         {
             free(powerM[i][j]);
         }
@@ -597,7 +591,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     if (!(Tt = (double *)malloc(dimX * dimZ * (numP * 3 +1) * sizeof(double))) ) printf("Malloc fails for Tt\n");
     Ttp = (double *) Astore->nzval;
     printf("B.nrow is %d\n", B.nrow);
-    for (i = 0; i < B.nrow; ++i)
+    for (int i = 0; i < B.nrow; ++i)
     {
         Tt[i] = Ttp[i]-T0;
         //printf("Tt[%d] = %.2f\n", i, Tt[i]);
