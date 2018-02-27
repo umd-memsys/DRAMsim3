@@ -163,8 +163,6 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     printf("------------------------------------------------------------\n\n");
 
 
-
-
     // define the TSV array (3D-int array!)
     if ( !(TSV = (int ***)malloc(dimX * sizeof(int **))) ) printf("Malloc fails for TSV[].\n"); 
     for (i = 0; i < dimX; i++)
@@ -184,8 +182,7 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
                 TSV[i][j][k] = 0; 
 
 
-/* generate the G matrix following
- */ 
+    // generate the G matrix following 
   double gridX, gridZ, gridXsink, gridZsink;     
   double Rsinkx, Rsinky, Rsinkz, Ramb;
   double ***Rvert; // vertical resistance 
@@ -438,15 +435,11 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     SUPERLU_FREE(layerP);
 
     *MidxSize = count; 
-    return Midx;
-    
-
-
+    return Midx; 
 }
 
 
 double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int count, double Tamb)
-//main(int argc, char *argv[])
 {
     int numLayer = numP * 3;
     int *layerP;
@@ -464,9 +457,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     double Rsinky = Hsink / Ksink / gridXsink / gridZsink; // y direction
     double Ramb = Rsinky / 2; 
 
-/* convert the values to the SuperMatrix format 
- */ 
-
+    // convert the values to the SuperMatrix format  
     SuperMatrix   A, L, U, B;
     double   *a;
     int_t      *asub, *xa;
@@ -537,10 +528,6 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
                 //printf("%.6f\n", powerM[i][j][l]);
             }
 
-/*    printf("rhs:\n");
-    for (i = 0; i < m; i ++)
-        printf("%.5f\n", rhs[i]);
-*/
     // free the space 
     for (int i = 0; i < dimX; i++)
     {
@@ -581,7 +568,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
 
     //dPrint_Dense_Matrix("B", &B);
 
-    /* extract the Temperature from B */ 
+    // extract the Temperature from B 
     DNformat *Astore = (DNformat *) B.Store; 
     //double *Tt; // vector stores the temperature for all grids 
     double ***T; // matrix stores the temperature for active layers 
@@ -627,12 +614,9 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     }
 
 
-
     /* De-allocate storage */
     // free the arrays defined by myself
     SUPERLU_FREE(layerP);
-
-
     SUPERLU_FREE (rhs);
     SUPERLU_FREE (perm_r);
     SUPERLU_FREE (perm_c);
@@ -654,12 +638,9 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
 double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ, double **Midx, int MidxSize, double *Cap, int CapSize, double time, int iter, double *T_trans, double Tamb)
 {
     int numLayer = numP * 3; 
-    int *layerP;
-
-    clock_t init_begin, init_end, loop_begin, loop_end, finish_begin, finish_end;
-    init_begin = clock();
 
     // define the active layer array 
+    int *layerP;
     if ( !(layerP = intMalloc(numP)) ) SUPERLU_ABORT("Malloc fails for numP[].");
     for(int l = 0; l < numP; l++)
         layerP[l] = l * 3; 
@@ -693,54 +674,46 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
                 //printf("%.6f\n", powerM[i][j][l]);
             }
 
-    init_end = clock();
-
     double dt = time / (double) iter; 
     printf("dt = %.10f\n", dt);
     
-    loop_begin = clock();
     ////////////// iteratively update the temperature /////////////////
     
+    // tried to optimize the following code
+    // multi-threading won't work unless you figure out T[idx0] access patterns
+    // also tried a variety of loop tiling technique, on our server block_size=8 or 4
+    // yields best performance, so let it be...
     const int block_size = 8;
     for (int iit = 0; iit < iter; iit ++) {
         // main calculation of the new T
-        // try unroll this loop...
-        #pragma omp parallel shared(T)
-        {
-            #pragma omp for nowait schedule(static)
-            for (int j = 0; j < MidxSize; j += block_size) { 
-                int bound = j + block_size < MidxSize? (j + block_size) : MidxSize;
-                for (int b = j; b < bound; b++) {
-                    int idx0 = (int) (Midx[b][0] + 0.01); 
-                    int idx1 = (int) (Midx[b][1] + 0.01); 
-                    double tmp_c = Midx[b][2];
-                    int idxC = idx0 / (dimX * dimZ);        
- 
-                    if (idx0 == idx1){
-                        //if (1-Midx[j][2]*dt/Cap[idxC] < 0)
-                        //    printf("NEGATIVE: idx0 = %d\n", idx0);
-                        double tmp_a = 1 - tmp_c * dt/Cap[idxC];
-                        double tmp_b = tmp_a * Tp[idx1] + P[idx0] * dt / Cap[idxC];
-                        T[idx0] += tmp_b;
-                    }
-                    else {
-                        double tmp_a = tmp_c * Tp[idx1] * dt/Cap[idxC];
-                        T[idx0] -= tmp_a;
-                    }
-                } 
-            } 
-        }
-       
+        for (int j = 0; j < MidxSize; j += block_size) { 
+            int bound = j + block_size < MidxSize? (j + block_size) : MidxSize;
+            for (int b = j; b < bound; b++) {
+                int idx0 = (int) (Midx[b][0] + 0.01); 
+                int idx1 = (int) (Midx[b][1] + 0.01); 
+                double tmp_c = Midx[b][2];
+                int idxC = idx0 / (dimX * dimZ);        
 
+                if (idx0 == idx1){
+                    //if (1-Midx[j][2]*dt/Cap[idxC] < 0)
+                    //    printf("NEGATIVE: idx0 = %d\n", idx0);
+                    double tmp_a = 1 - tmp_c * dt/Cap[idxC];
+                    double tmp_b = tmp_a * Tp[idx1] + P[idx0] * dt / Cap[idxC];
+                    T[idx0] += tmp_b;
+                }
+                else {
+                    double tmp_a = tmp_c * Tp[idx1] * dt/Cap[idxC];
+                    T[idx0] -= tmp_a;
+                }
+            } 
+        } 
+       
         // give value for the next T
         double *Tt; // for swap the storage between T and Tp
         Tt = Tp; Tp = T; T = Tt; // exchange T, Tp
         memset(T, 0, dimX * dimZ * (numLayer+1) * sizeof(*T)); 
     }
 
-    loop_end = clock();
-
-    finish_begin = clock();
 
     // free the space 
     for (int i = 0; i < dimX; i++)
@@ -758,14 +731,6 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     SUPERLU_FREE(P);
     SUPERLU_FREE(T);
 
-    finish_end = clock();
-
-    double init_time = (double)(init_end - init_begin) / CLOCKS_PER_SEC;
-    double loop_time = (double)(loop_end - loop_begin) / CLOCKS_PER_SEC;
-    double finish_time = (double)(finish_end - finish_begin) / CLOCKS_PER_SEC;
-    printf("init time %.10f\n", init_time);
-    printf("loop time %.10f\n", loop_time);
-    printf("finn time %.10f\n", finish_time);
     return Tp;
 }
 
