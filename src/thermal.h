@@ -34,7 +34,9 @@ class ThermalCalculator
     double **Midx;		   // Midx storing thermal conductance
     double *Cap;		   // Cap storing the thermal capacitance
     int MidxSize, CapSize; // first dimension size of Midx and Cap
-    vector<vector<double>> T_trans, T_final;
+    int T_size;
+    // vector<vector<double>> T_final;
+    double **T_trans, **T_final;
     //double *T_trans; // T_trans storing the transient temperature array
     //double *T_final; // T_final storing the final temperature array
 
@@ -71,14 +73,16 @@ class ThermalCalculator
 
     void CalcTransT(int case_id);
     void CalcFinalT(int case_id, uint64_t clk);
+    double*** InitPowerM(int case_id, uint64_t clk);
+    double GetTotalPower(double*** powerM);
     void InitialParameters();
     int square_array(int total_grids_);
     int determineXY(double xd, double yd, int total_grids_);
-    double GetMaxT(vector<vector<double>> T_, int case_id);
+    double GetMaxT(double** T_, int case_id);
     void calculate_time_step();
     // print to csv-files
-    void PrintCSV_trans(ofstream &csvfile, vector<vector<double>> P_, vector<vector<double>> T_, int id, uint64_t scale);
-    void PrintCSV_final(ofstream &csvfile, vector<vector<double>> P_, vector<vector<double>> T_, int id, uint64_t scale);
+    void PrintCSV_trans(ofstream &csvfile, vector<vector<double>> P_, double** T_, int id, uint64_t scale);
+    void PrintCSV_final(ofstream &csvfile, vector<vector<double>> P_, double** T_, int id, uint64_t scale);
     void PrintCSVHeader_trans(ofstream &csvfile);
     void PrintCSVHeader_final(ofstream &csvfile);
     void PrintCSV_bank(ofstream &csvfile);
