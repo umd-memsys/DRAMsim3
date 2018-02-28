@@ -713,12 +713,12 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
         PrintTransPT(clk);
         auto trans_end = std::chrono::high_resolution_clock::now();
         cur_Pmap = vector<vector<double>>(num_case, vector<double> (numP * dimX * dimY, 0));
-        std::chrono::duration<double> init_time = init_end - init_start;
-        std::chrono::duration<double> sample_time = sample_end - sample_start;
-        std::chrono::duration<double> trans_time = trans_end - trans_start;
-        std::cout << "Init time: " << init_time.count() << endl;
-        std::cout << "Sample time: " << sample_time.count() << endl;
-        std::cout << "Trans time: " << trans_time.count() << endl;
+        // std::chrono::duration<double> init_time = init_end - init_start;
+        // std::chrono::duration<double> sample_time = sample_end - sample_start;
+        // std::chrono::duration<double> trans_time = trans_end - trans_start;
+        // std::cout << "Init time: " << init_time.count() << endl;
+        // std::cout << "Sample time: " << sample_time.count() << endl;
+        // std::cout << "Trans time: " << trans_time.count() << endl;
         sample_id++;
     }
 }
@@ -801,24 +801,12 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
 void ThermalCalculator::CalcTransT(int case_id)
 {
     double time = config_.power_epoch_period * config_.tCK * 1e-9; 
-
-    auto pre_start = std::chrono::high_resolution_clock::now();
-
     double ***powerM = InitPowerM(case_id, 0);
-
-    double totP = GetTotalPower(powerM);
-    
+    double totP = GetTotalPower(powerM); 
     cout << "total Power is " << totP * 1000 << " [mW]\n";
 
-    auto pre_end = std::chrono::high_resolution_clock::now();
     T_trans[case_id] = transient_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Midx, MidxSize, Cap, CapSize, time, time_iter, T_trans[case_id], Tamb);
 
-    auto trans_end = std::chrono::high_resolution_clock::now();
-
-    std::chrono::duration<double> pre_time = pre_end - pre_start;
-    std::chrono::duration<double> trans_time = trans_end - pre_end;
-    // std::cout << "Pre time        " << pre_time.count() << endl;
-    // std::cout << "Trans time      " << trans_time.count() << endl;
 }
 
 void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk)
