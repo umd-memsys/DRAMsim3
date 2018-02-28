@@ -83,7 +83,6 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     T_final = new double*[num_case];
     for (int i = 0; i < num_case; i++) {
         T_trans[i] = new double[T_size];
-        T_final[i] = new double[T_size];
     }
     // T_trans = vector<vector<double>>(num_case, vector<double>((numP * 3 + 1) * (dimX+num_dummy) * (dimY+num_dummy), 0));
     // T_final = vector<vector<double>>(num_case, vector<double>((numP * 3 + 1) * (dimX+num_dummy) * (dimY+num_dummy), 0));
@@ -691,8 +690,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
             for (int j = 0; j < num_case; j++)
                 for (int i = 0; i < dimX * dimY * numP; i++)
                     cur_Pmap[j][i] += extra_energy / 1000 / device_scale;
-        }
-        else{
+        } else {
             int case_id;  
             for (int jch = 0; jch < config_.channels; jch ++){
                 for (int jrk = 0; jrk < config_.ranks; jrk ++){
@@ -812,10 +810,8 @@ void ThermalCalculator::CalcTransT(int case_id)
     
     cout << "total Power is " << totP * 1000 << " [mW]\n";
 
-    double *T = T_trans[case_id];
-
     auto pre_end = std::chrono::high_resolution_clock::now();
-    T = transient_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Midx, MidxSize, Cap, CapSize, time, time_iter, T, Tamb);
+    T_trans[case_id] = transient_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Midx, MidxSize, Cap, CapSize, time, time_iter, T_trans[case_id], Tamb);
 
     auto trans_end = std::chrono::high_resolution_clock::now();
 
@@ -823,12 +819,10 @@ void ThermalCalculator::CalcTransT(int case_id)
     std::chrono::duration<double> trans_time = trans_end - pre_end;
     // std::cout << "Pre time        " << pre_time.count() << endl;
     // std::cout << "Trans time      " << trans_time.count() << endl;
-    // free(T);
 }
 
 void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk)
 {
-    exit(0);
     double ***powerM = InitPowerM(case_id, clk); 
     double totP = GetTotalPower(powerM);
     
@@ -837,14 +831,7 @@ void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk)
     double *T;
     T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Midx, MidxSize, Tamb);
 
-    // assign the value to T_final
-    for (int i = 0; i < T_size; i++)
-    {
-        T_final[case_id][i] = T[i];
-        //cout << "T_final[" << i << "][" << case_id << "] = " << T_final[i][case_id] << endl;
-    }
-
-    free(T);
+    T_final[case_id] = T; 
 }
 
 
@@ -989,7 +976,6 @@ double ThermalCalculator::GetMaxT(double** T_, int case_id)
     double maxT = 0;
     for (int i = 0; i < T_size; i++)
     {
-        ///cout << T_[i][case_id] << endl;
         if (T_[case_id][i] > maxT)
         {
             maxT = T_[case_id][i];
