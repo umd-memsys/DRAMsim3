@@ -1,5 +1,4 @@
 #include "thermal.h"
-#include <chrono>
 
 using namespace dramcore;
 using namespace std;
@@ -400,7 +399,6 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd, int b
 
 void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
 {
-    auto init_start = std::chrono::high_resolution_clock::now();
     double energy = 0.0;
     int row_s, ir, ib; // for refresh
     int case_id;
@@ -475,14 +473,11 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
     }
 
 
-    auto init_end = std::chrono::high_resolution_clock::now();
 
     // print transient power and temperature
     if (clk > (sample_id + 1) * config_.power_epoch_period)
     {
         cout << "begin sampling!\n";
-
-        auto sample_start = std::chrono::high_resolution_clock::now();
         // add the background energy
         if (config_.IsHMC() || config_.IsHBM()){
             double pre_stb_sum = Statistics::Stats2DCumuSum(stats_.pre_stb_energy);
@@ -516,18 +511,9 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
                 }
             }
         }
-        auto sample_end = std::chrono::high_resolution_clock::now();
         
-        auto trans_start = std::chrono::high_resolution_clock::now();
         PrintTransPT(clk);
-        auto trans_end = std::chrono::high_resolution_clock::now();
-        cur_Pmap = vector<vector<double>>(num_case, vector<double> (numP * dimX * dimY, 0));
-        // std::chrono::duration<double> init_time = init_end - init_start;
-        // std::chrono::duration<double> sample_time = sample_end - sample_start;
-        // std::chrono::duration<double> trans_time = trans_end - trans_start;
-        // std::cout << "Init time: " << init_time.count() << endl;
-        // std::cout << "Sample time: " << sample_time.count() << endl;
-        // std::cout << "Trans time: " << trans_time.count() << endl;
+        cur_Pmap = vector<vector<double>>(num_case, vector<double> (numP * dimX * dimY, 0)); 
         sample_id++;
     }
 }
