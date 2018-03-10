@@ -32,7 +32,6 @@ if (THERMAL)
         add_definitions(-DTHERMAL)
 
         # check dependency
-        find_package(Threads REQUIRED)
         find_package(BLAS REQUIRED)
         find_package(OpenMP REQUIRED)
 
@@ -44,9 +43,8 @@ if (THERMAL)
         endif (NOT SUPERLU_ROOT)
         set(SUPERLU_PLAT OPENMP)
         set(SUPERLU_LIB ${SUPERLU_ROOT}/lib/libsuperlu_mt_${SUPERLU_PLAT}.a)
-        add_library(superlu_mt SHARED IMPORTED)
+        add_library(superlu_mt STATIC IMPORTED)
         
-        # add_library(superlu_blas STATIC IMPORTED)
         set_target_properties(superlu_mt 
                               PROPERTIES IMPORTED_LOCATION ${SUPERLU_LIB})
         add_custom_target(build_superlu_mt
@@ -106,7 +104,7 @@ include_directories(src ext/headers)
 add_library(dramcore SHARED ${SOURCES})
 
 if (THERMAL)
-        target_link_libraries(dramcore inih fmt superlu_mt ${CMAKE_THREAD_LIBS_INIT} m f77blas atlas ${OpenMP_C_FLAGS})
+        target_link_libraries(dramcore inih fmt superlu_mt f77blas atlas m ${OpenMP_C_FLAGS})
         add_executable(thermalreplay src/thermal_replay.cc)
         target_link_libraries(thermalreplay dramcore)
 else (THERMAL)
