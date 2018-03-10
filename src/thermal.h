@@ -43,6 +43,8 @@ class ThermalCalculator
     int sample_id;	 // index of the sampling power
     uint64_t save_clk; // saved clk
 
+    double logicP; 
+
     vector<vector<double>> accu_Pmap; // accumulative power map
     vector<vector<double>> cur_Pmap;  // current power map
 
@@ -98,6 +100,8 @@ public:
 
     void PrintTransPT(uint64_t clk);
     void PrintFinalPT(uint64_t clk);
+
+    void update_logicP(double new_logicP);
 };
 }
 

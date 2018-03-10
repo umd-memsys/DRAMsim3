@@ -17,7 +17,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     config_(config),
     stats_(stats),
     sample_id(0),
-    save_clk(0)
+    save_clk(0),
+    logicP(50.0)
 {
     // Initialize dimX, dimY, numP
     // The dimension of the chip is determined such that the floorplan is
@@ -26,7 +27,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     if (config_.IsHMC())
     {
         double xd, yd; 
-        numP = config_.num_dies;
+        numP = config_.num_dies + 1; // add logic layer for HMC
         bank_x = 1; bank_y = 2;
 
         xd = bank_x * config_.bank_asr; 
@@ -41,7 +42,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     }
     else if (config_.IsHBM())
     {
-        numP = config_.num_dies; 
+        numP = config_.num_dies + 1; // add logic layer for HBM 
         bank_x = 8; bank_y = 2; 
         vault_x = 1; vault_y = 2; 
         dimX = vault_x * bank_x * config_.numXgrids; 
@@ -485,15 +486,41 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
             double pre_pd_sum = Statistics::Stats2DCumuSum(stats_.pre_pd_energy);
             double sref_sum = Statistics::Stats2DCumuSum(stats_.sref_energy);
             double extra_energy = sref_sum + pre_stb_sum + act_stb_sum + pre_pd_sum - sref_energy_prev[0] - pre_stb_energy_prev[0] - act_stb_energy_prev[0] - pre_pd_energy_prev[0];
-            extra_energy = extra_energy / (dimX * dimY * numP);
+            extra_energy = extra_energy / (dimX * dimY * (numP-1));
             sref_energy_prev[0] = sref_sum;
             pre_stb_energy_prev[0] = pre_stb_sum;
             act_stb_energy_prev[0] = act_stb_sum;
             pre_pd_energy_prev[0] = pre_pd_sum;
 
-            for (int j = 0; j < num_case; j++)
-                for (int i = 0; i < dimX * dimY * numP; i++)
-                    cur_Pmap[j][i] += extra_energy / 1000 / device_scale;
+            if (config_.IsHMC()){
+                for (int j = 0; j < num_case; j++){
+                    for (int i = 0; i < dimX * dimY * numP; i++){
+                        if (config_.bank_layer_order == 0){
+                            if (i < dimX * dimY * (numP-1))
+                                cur_Pmap[j][i] += extra_energy / 1000 / device_scale; 
+                            else
+                                cur_Pmap[j][i] = logicP / dimX / dimY * (double)config_.power_epoch_period; 
+                        }
+                        else{
+                            if (i < dimX * dimY)
+                                cur_Pmap[j][i] = logicP / dimX / dimY * (double)config_.power_epoch_period;
+                            else
+                                cur_Pmap[j][i] += extra_energy / 1000 / device_scale; 
+                        }
+                    }
+                }
+            }
+            else{
+                for (int j = 0; j < num_case; j++){
+                    for (int i = 0; i < dimX * dimY * numP; i++){
+                        if (i < dimX * dimY * (numP-1))
+                            cur_Pmap[j][i] += extra_energy / 1000 / device_scale;
+                        else
+                            cur_Pmap[j][i] += logicP / dimX / dimY * (double)config_.power_epoch_period; 
+                    }
+                }
+            }
+
         } else {
             int case_id;  
             for (int jch = 0; jch < config_.channels; jch ++){
@@ -515,6 +542,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
         PrintTransPT(clk);
         cur_Pmap = vector<vector<double>>(num_case, vector<double> (numP * dimX * dimY, 0)); 
         sample_id++;
+
     }
 }
 
@@ -546,11 +574,37 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
     
     // first add the background energy
     if (config_.IsHMC() || config_.IsHBM()){
-        double extra_energy = (Statistics::Stats2DCumuSum(stats_.act_stb_energy) + Statistics::Stats2DCumuSum(stats_.pre_stb_energy) + Statistics::Stats2DCumuSum(stats_.sref_energy) + Statistics::Stats2DCumuSum(stats_.pre_pd_energy)) / (dimX * dimY * numP);
+        double extra_energy = (Statistics::Stats2DCumuSum(stats_.act_stb_energy) + Statistics::Stats2DCumuSum(stats_.pre_stb_energy) + Statistics::Stats2DCumuSum(stats_.sref_energy) + Statistics::Stats2DCumuSum(stats_.pre_pd_energy)) / (dimX * dimY * (numP-1));
         cout << "background energy " << extra_energy * (dimX * dimY * numP) << endl;
-        for (int j = 0; j < num_case; j++)
-            for (int i = 0; i < dimX * dimY * numP; i++)
-                accu_Pmap[j][i] += extra_energy / 1000 / device_scale;
+        
+        if (config_.IsHMC()){
+            for (int j = 0; j < num_case; j++){
+                for (int i = 0; i < dimX * dimY * numP; i++){
+                    if (config_.bank_layer_order == 0){
+                        if (i < dimX * dimY * (numP-1))
+                            accu_Pmap[j][i] += extra_energy / 1000 / device_scale; 
+                        else
+                            accu_Pmap[j][i] = logicP / dimX / dimY * (double) clk; 
+                    }
+                    else{
+                        if (i < dimX * dimY)
+                            accu_Pmap[j][i] = logicP / dimX / dimY * (double) clk; 
+                        else
+                            accu_Pmap[j][i] += extra_energy / 1000 / device_scale; 
+                    }
+                }
+            }
+        }
+        else{
+            for (int j = 0; j < num_case; j++){
+                for (int i = 0; i < dimX * dimY * numP; i++){
+                    if (i < dimX * dimY * (numP-1))
+                        accu_Pmap[j][i] += extra_energy / 1000 / device_scale;
+                    else
+                        accu_Pmap[j][i] += logicP / dimX / dimY * (double) clk; 
+                }
+            }
+        }
     }
     else{
         double extra_energy; 
@@ -992,4 +1046,8 @@ void ThermalCalculator::PrintCSVHeader_trans(ofstream &csvfile)
 void ThermalCalculator::PrintCSVHeader_final(ofstream &csvfile)
 {
     csvfile << "rank_channel_index,x,y,z,power,temperature" << endl;
+}
+
+void ThermalCalculator::update_logicP(double new_logicP){
+    logicP = new_logicP;
 }
