@@ -70,9 +70,9 @@ class ThermalCalculator
 
     /* private methods */
     void SetPhyAddressMapping();
-    std::pair<int, int> MapToVault(const Command& cmd);
-    std::pair<int, int> MapToBank(const Command& cmd);
-    int MapToZ(const Command& cmd);
+    std::pair<int, int> MapToVault(int channel_id);
+    std::pair<int, int> MapToBank(int bankgroup_id, int bank_id);
+    int MapToZ(int channel_id, int bank_id);
     std::pair<vector<int>, vector<int>> MapToXY(const Command& cmd, int vault_id_x, int vault_id_y, int bank_id_x, int bank_id_y);
     void LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0, int caseID_, double add_energy);
     void LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0, int caseID_, double add_energy);
