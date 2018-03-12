@@ -292,7 +292,7 @@ int ThermalCalculator::MapToZ(const Command& cmd) {
         if (config_.bank_layer_order == 0)
             z = bank_id / num_bank_per_layer;
         else
-            z = numP - bank_id / num_bank_per_layer - 1;
+            z = numP - bank_id / num_bank_per_layer - 2;
     } else if (config_.IsHBM()) {
         z = cmd.Channel() /  2;
     } else {
@@ -492,35 +492,14 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk)
             act_stb_energy_prev[0] = act_stb_sum;
             pre_pd_energy_prev[0] = pre_pd_sum;
 
-            if (config_.IsHMC()){
-                for (int j = 0; j < num_case; j++){
-                    for (int i = 0; i < dimX * dimY * numP; i++){
-                        if (config_.bank_layer_order == 0){
-                            if (i < dimX * dimY * (numP-1))
-                                cur_Pmap[j][i] += extra_energy / 1000 / device_scale; 
-                            else
-                                cur_Pmap[j][i] = logicP / dimX / dimY * (double)config_.power_epoch_period; 
-                        }
-                        else{
-                            if (i < dimX * dimY)
-                                cur_Pmap[j][i] = logicP / dimX / dimY * (double)config_.power_epoch_period;
-                            else
-                                cur_Pmap[j][i] += extra_energy / 1000 / device_scale; 
-                        }
-                    }
+            for (int j = 0; j < num_case; j ++){
+                for (int i = 0; i < dimX * dimY * numP; i ++){
+                    if (i < dimX * dimY * (numP-1))
+                        cur_Pmap[j][i] += extra_energy / 1000 / device_scale; 
+                    else
+                        cur_Pmap[j][i] = logicP / dimX / dimY * (double)config_.power_epoch_period; 
                 }
             }
-            else{
-                for (int j = 0; j < num_case; j++){
-                    for (int i = 0; i < dimX * dimY * numP; i++){
-                        if (i < dimX * dimY * (numP-1))
-                            cur_Pmap[j][i] += extra_energy / 1000 / device_scale;
-                        else
-                            cur_Pmap[j][i] += logicP / dimX / dimY * (double)config_.power_epoch_period; 
-                    }
-                }
-            }
-
         } else {
             int case_id;  
             for (int jch = 0; jch < config_.channels; jch ++){
@@ -576,35 +555,17 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk)
     if (config_.IsHMC() || config_.IsHBM()){
         double extra_energy = (Statistics::Stats2DCumuSum(stats_.act_stb_energy) + Statistics::Stats2DCumuSum(stats_.pre_stb_energy) + Statistics::Stats2DCumuSum(stats_.sref_energy) + Statistics::Stats2DCumuSum(stats_.pre_pd_energy)) / (dimX * dimY * (numP-1));
         cout << "background energy " << extra_energy * (dimX * dimY * numP) << endl;
+
+        // adding the logic layer
+        for (int j = 0; j < num_case; j ++){
+            for (int i = 0; i < dimX * dimY * numP; i ++){
+                if (i < dimX * dimY * (numP-1))
+                    accu_Pmap[j][i] += extra_energy / 1000 / device_scale;
+                else
+                    accu_Pmap[j][i] += logicP / dimX / dimY * (double) clk; 
+            }
+        }
         
-        if (config_.IsHMC()){
-            for (int j = 0; j < num_case; j++){
-                for (int i = 0; i < dimX * dimY * numP; i++){
-                    if (config_.bank_layer_order == 0){
-                        if (i < dimX * dimY * (numP-1))
-                            accu_Pmap[j][i] += extra_energy / 1000 / device_scale; 
-                        else
-                            accu_Pmap[j][i] = logicP / dimX / dimY * (double) clk; 
-                    }
-                    else{
-                        if (i < dimX * dimY)
-                            accu_Pmap[j][i] = logicP / dimX / dimY * (double) clk; 
-                        else
-                            accu_Pmap[j][i] += extra_energy / 1000 / device_scale; 
-                    }
-                }
-            }
-        }
-        else{
-            for (int j = 0; j < num_case; j++){
-                for (int i = 0; i < dimX * dimY * numP; i++){
-                    if (i < dimX * dimY * (numP-1))
-                        accu_Pmap[j][i] += extra_energy / 1000 / device_scale;
-                    else
-                        accu_Pmap[j][i] += logicP / dimX / dimY * (double) clk; 
-                }
-            }
-        }
     }
     else{
         double extra_energy; 
@@ -886,7 +847,7 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile)
                         if (config_.bank_layer_order == 0)
                             z = bank_id / num_bank_per_layer;
                         else
-                            z = numP - bank_id / num_bank_per_layer - 1; 
+                            z = numP - bank_id / num_bank_per_layer - 2; 
                         bank_same_layer = bank_id % num_bank_per_layer;
                         bank_id_x = bank_same_layer / bank_y;
                         bank_id_y = bank_same_layer % bank_y;
