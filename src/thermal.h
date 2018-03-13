@@ -76,7 +76,7 @@ class ThermalCalculator
     std::pair<vector<int>, vector<int>> MapToXY(const Command& cmd, int vault_id_x, int vault_id_y, int bank_id_x, int bank_id_y);
     void LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0, int caseID_, double add_energy);
     void LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0, int caseID_, double add_energy);
-
+    void UpdatePowerMaps(double add_energy, bool trans, uint64_t clk);
     void CalcTransT(int case_id);
     void CalcFinalT(int case_id, uint64_t clk);
     double*** InitPowerM(int case_id, uint64_t clk);
