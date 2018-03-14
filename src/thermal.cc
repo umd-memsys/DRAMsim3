@@ -18,7 +18,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     stats_(stats),
     sample_id(0),
     save_clk(0),
-    logicP(50.0)
+    logicP(10.0)
 {
     // Initialize dimX, dimY, numP
     // The dimension of the chip is determined such that the floorplan is
@@ -88,6 +88,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     InitialParameters();
 
     refresh_count = vector<vector<uint32_t> > (config_.channels * config_.ranks, vector<uint32_t> (config_.banks, 0)); 
+
     // Initialize the output file
     final_temperature_file_csv_.open(config_.final_temperature_file_csv);
     PrintCSVHeader_final(final_temperature_file_csv_);
@@ -96,13 +97,14 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     bank_position_csv_.open(config_.bank_position_csv);
     PrintCSV_bank(bank_position_csv_); 
 
+    // a quick preview of max temperature for each layer of each epoch
     epoch_max_temp_file_csv_.open(config_.epoch_max_temp_file_csv);
-    PrintCSVHeader_trans(epoch_max_temp_file_csv_);
+    epoch_max_temp_file_csv_ << "layer, power, max_temp, epoch_time" << endl;
     
     // print header to csv files
     if (config_.output_level >= 2) {
         epoch_temperature_file_csv_.open(config_.epoch_temperature_file_csv);
-        PrintCSVHeader_trans(epoch_temperature_file_csv_);
+        epoch_temperature_file_csv_ << "rank_channel_index,x,y,z,power,temperature,epoch" << endl;
     }
 }
 
@@ -224,19 +226,11 @@ std::pair<int, int> ThermalCalculator::MapToVault(int channel_id) {
 
 // bank_id is the bank_id within a group, capped at config_.bankg_per_group
 std::pair<int, int> ThermalCalculator::MapToBank(int bankgroup_id, int bank_id) {
-    int bank_id_x, bank_id_y, abs_bank_id;
-    // abs_bank_id means a flat bank id within a rank
-    if (bankgroup_id < 0) {
-        abs_bank_id = bank_id;
-    } else {
-        abs_bank_id = bankgroup_id * config_.banks_per_group + bank_id;
-    }
-
-    int bank_factor = bank_y;
-    if (config_.bank_order == 0) {
-        bank_factor = bank_x;
-    }
-
+    int bank_id_x, bank_id_y;
+    // we're gonna assume bankgroup_id and bank_id are valid input
+    int abs_bank_id = bankgroup_id * config_.banks_per_group + bank_id;
+    int bank_factor = config_.bank_order ? bank_y : bank_x;
+    
     if (config_.IsHMC()) {
         int num_bank_per_layer = config_.banks / config_.num_dies;
         int bank_same_layer = abs_bank_id % num_bank_per_layer;
@@ -464,7 +458,6 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
 
     // print transient power and temperature
     if (clk > (sample_id + 1) * config_.power_epoch_period) {
-        cout << "begin sampling!\n";
         // add the background energy
         if (config_.IsHMC() || config_.IsHBM()) {
             double pre_stb_sum = Statistics::Stats2DCumuSum(stats_.pre_stb_energy);
@@ -505,13 +498,17 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
 }
 
 void ThermalCalculator::PrintTransPT(uint64_t clk) {
-    cout << "============== At " << clk * config_.tCK * 1e-6 << "[ms] =============\n";
+    double ms = clk * config_.tCK * 1e-6;
     for (int ir = 0; ir < num_case; ir++) {
         CalcTransT(ir);
-        double maxT = GetMaxT(T_trans, ir);
-        cout << "MaxT of case " << ir << " is " << maxT - T0 << " [C]\n";
-        // write MaxT of the epoch to save time & space
-        epoch_max_temp_file_csv_ << "-,-,-,-," << maxT - T0 << "," << ir << endl;
+        double maxT = 0;
+        for (int layer = 0; layer < numP; layer++) {
+            double maxT_layer = GetMaxTofCaseLayer(T_trans, ir, layer);
+            epoch_max_temp_file_csv_ << layer << "," << "-," << maxT_layer << "," << ms << endl;
+            cout << "MaxT of case " << ir << " in layer " << layer << " is " << maxT_layer << " [C]\n";
+            maxT = maxT > maxT_layer? maxT : maxT_layer;
+        }
+        cout << "MaxT of case " << ir << " is " << maxT << " [C] at " << ms << " ms\n";
         // only outputs full file when output level >= 2
         if (config_.output_level >= 2) {
             PrintCSV_trans(epoch_temperature_file_csv_, cur_Pmap, T_trans, ir, config_.power_epoch_period);
@@ -553,7 +550,7 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk) {
     // calculate the final temperature for each case
     for (int ir = 0; ir < num_case; ir++) {
         CalcFinalT(ir, clk);
-        double maxT = GetMaxT(T_final, ir);
+        double maxT = GetMaxTofCase(T_final, ir);
         cout << "MaxT of case " << ir << " is " << maxT << " [C]\n";
         // print to file
         PrintCSV_final(final_temperature_file_csv_, accu_Pmap, T_final, ir, clk);
@@ -571,18 +568,14 @@ void ThermalCalculator::CalcTransT(int case_id) {
     double time = config_.power_epoch_period * config_.tCK * 1e-9; 
     double ***powerM = InitPowerM(case_id, 0);
     double totP = GetTotalPower(powerM); 
-    cout << "total trans power is " << totP * 1000 << " [mW]\n";
-
+    cout << "total trans power is " << totP * 1000 << " [mW]" << endl;
     T_trans[case_id] = transient_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Midx, MidxSize, Cap, CapSize, time, time_iter, T_trans[case_id], Tamb);
 }
 
-void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk)
-{
+void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk) {
     double ***powerM = InitPowerM(case_id, clk); 
     double totP = GetTotalPower(powerM);
-    
-    cout << "total final power is " << totP * 1000 << " [mW]\n";
-
+    cout << "total final power is " << totP * 1000 << " [mW]" << endl;
     double *T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Midx, MidxSize, Tamb);
     T_final[case_id] = T; 
 }
@@ -638,13 +631,12 @@ void ThermalCalculator::InitialParameters() {
     Cap = calculate_Cap_array(config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, &CapSize);
     calculate_time_step();
 
-    double *T;
     for (int ir = 0; ir < num_case; ir++) {
-        T = initialize_Temperature(config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Tamb);
+        double *T = initialize_Temperature(config_.ChipX, config_.ChipY, numP, dimX+num_dummy, dimY+num_dummy, Tamb);
         for (int i = 0; i < T_size; i++)
             T_trans[ir][i] = T[i];
+        free(T);
     }
-    free(T);
 }
 
 int ThermalCalculator::square_array(int total_grids_) {
@@ -705,11 +697,23 @@ void ThermalCalculator::calculate_time_step() {
     cout << "time_iter = " << time_iter << endl;
 }
 
-double ThermalCalculator::GetMaxT(double** T_, int case_id) {
+double ThermalCalculator::GetMaxTofCase(double** temp_map, int case_id) {
     double maxT = 0;
     for (int i = 0; i < T_size; i++) {
-        if (T_[case_id][i] > maxT) {
-            maxT = T_[case_id][i];
+        if (temp_map[case_id][i] > maxT) {
+            maxT = temp_map[case_id][i];
+        }
+    }
+    return maxT;
+}
+
+double ThermalCalculator::GetMaxTofCaseLayer(double** temp_map, int case_id, int layer) {
+    double maxT = 0;
+    int layer_pos_offset = (layerP[layer] + 1) * ((dimX + num_dummy) * (dimY + num_dummy));
+    for (int j = num_dummy / 2; j < dimY + num_dummy / 2; j++) {
+        for (int i = num_dummy / 2; i < dimX + num_dummy / 2; i++) {
+            double t = temp_map[case_id][layer_pos_offset + j * (dimX + num_dummy) + i] - T0;
+            maxT = maxT > t ? maxT : t;
         }
     }
     return maxT;
@@ -717,12 +721,8 @@ double ThermalCalculator::GetMaxT(double** T_, int case_id) {
 
 void ThermalCalculator::PrintCSV_trans(ofstream &csvfile, vector<vector<double>> P_, double** T_, int id, uint64_t scale) {
     for (int l = 0; l < numP; l++) {
-        for (int j = 0; j < dimY+num_dummy; j++) {
-            if (j < num_dummy/2 || j >= dimY+num_dummy/2)
-                continue; 
-            for (int i = 0; i < dimX+num_dummy; i++) { 
-                if (i < num_dummy/2 || i >= dimX+num_dummy/2)
-                    continue; 
+        for (int j = num_dummy / 2; j < dimY + num_dummy / 2; j++) {
+            for (int i = num_dummy / 2; i < dimX + num_dummy / 2; i++) {
                 double pw = P_[id][l * ((dimX) * (dimY)) + (j-num_dummy/2) * (dimX) + (i-num_dummy/2)] / (double)scale;
                 double tm = T_[id][(layerP[l] + 1) * ((dimX+num_dummy) * (dimY+num_dummy)) + j * (dimX+num_dummy) + i] - T0;
                 csvfile << id << "," << i-num_dummy/2 << "," << j-num_dummy/2 << "," << l << "," << pw << "," << tm << "," << sample_id << endl;
@@ -733,12 +733,8 @@ void ThermalCalculator::PrintCSV_trans(ofstream &csvfile, vector<vector<double>>
 
 void ThermalCalculator::PrintCSV_final(ofstream &csvfile, vector<vector<double>> P_, double** T_, int id, uint64_t scale) {
     for (int l = 0; l < numP; l++) {
-        for (int j = 0; j < dimY+num_dummy; j++) {
-            if (j < num_dummy/2 || j >= dimY+num_dummy/2)
-                continue; 
-            for (int i = 0; i < dimX+num_dummy; i++) {
-                if (i < num_dummy/2 || i >= dimX + num_dummy/2)
-                    continue; 
+        for (int j = num_dummy / 2; j < dimY + num_dummy / 2; j++ ) {
+            for (int i = num_dummy /2; i < dimX + num_dummy / 2; i++) {
                 double pw = P_[id][l * (dimX * dimY) + (j-num_dummy/2) * dimX + (i-num_dummy/2)] / (double)scale;
                 double tm = T_[id][(layerP[l] + 1) * ((dimX+num_dummy) * (dimY+num_dummy)) + j * (dimX+num_dummy) + i];
                 csvfile << id << "," << i-num_dummy/2 << "," << j-num_dummy/2 << "," << l << "," << pw << "," << tm << endl;
@@ -775,10 +771,6 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile) {
     } 
 }
 
-
-void ThermalCalculator::PrintCSVHeader_trans(ofstream &csvfile) {
-    csvfile << "rank_channel_index,x,y,z,power,temperature,epoch" << endl;
-}
 
 void ThermalCalculator::PrintCSVHeader_final(ofstream &csvfile) {
     csvfile << "rank_channel_index,x,y,z,power,temperature" << endl;

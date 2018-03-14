@@ -675,7 +675,6 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
             }
 
     double dt = time / (double) iter; 
-    printf("dt = %.10f\n", dt);
     
     ////////////// iteratively update the temperature /////////////////
     

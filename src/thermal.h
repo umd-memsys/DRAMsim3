@@ -84,12 +84,12 @@ class ThermalCalculator
     void InitialParameters();
     int square_array(int total_grids_);
     int determineXY(double xd, double yd, int total_grids_);
-    double GetMaxT(double** T_, int case_id);
+    double GetMaxTofCase(double** temp_map, int case_id);
+    double GetMaxTofCaseLayer(double** temp_map, int case_id, int layer);
     void calculate_time_step();
     // print to csv-files
     void PrintCSV_trans(ofstream &csvfile, vector<vector<double>> P_, double** T_, int id, uint64_t scale);
     void PrintCSV_final(ofstream &csvfile, vector<vector<double>> P_, double** T_, int id, uint64_t scale);
-    void PrintCSVHeader_trans(ofstream &csvfile);
     void PrintCSVHeader_final(ofstream &csvfile);
     void PrintCSV_bank(ofstream &csvfile);
 
