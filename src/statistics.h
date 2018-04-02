@@ -35,6 +35,7 @@ public:
     uint64_t Count() { return count_; }
     double CountDouble() {return static_cast<double>(count_); }
     uint64_t LastCount() { return last_epoch_count_; }
+    uint64_t EpochCount() {return count_ - last_epoch_count_;}
     CounterStat& operator++() { count_++; return *this; }
     CounterStat& operator++(int) { count_++; return *this; }
     CounterStat& operator--() { count_--; return *this; }

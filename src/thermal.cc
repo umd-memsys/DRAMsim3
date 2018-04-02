@@ -18,7 +18,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     stats_(stats),
     sample_id(0),
     save_clk(0),
-    logicP(10.0)
+    max_logic_power_(18.0)
 {
     // Initialize dimX, dimY, numP
     // The dimension of the chip is determined such that the floorplan is
@@ -387,8 +387,9 @@ void ThermalCalculator::UpdatePowerMaps(double add_energy, bool trans, uint64_t 
             p_map[j][i] += add_energy;
         }
         // update logic power map
+        UpdateLogicPower();
         for (int i = dimX * dimY * (numP - 1); i < dimX * dimY * numP; i++) {
-            p_map[j][i] += logicP / dimX / dimY * period; 
+            p_map[j][i] += avg_logic_power_ / dimX / dimY * period; 
         }
     }
 }
@@ -403,7 +404,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
         device_scale = 1; 
         case_id = 0;
     }
-    else{
+    else {
         device_scale = (double)config_.devices_per_rank;
         case_id = channel * config_.ranks + rank;
     }
@@ -776,6 +777,14 @@ void ThermalCalculator::PrintCSVHeader_final(ofstream &csvfile) {
     csvfile << "rank_channel_index,x,y,z,power,temperature" << endl;
 }
 
-void ThermalCalculator::update_logicP(double new_logicP) {
-    logicP = new_logicP;
+void ThermalCalculator::UpdateLogicPower() {
+    // suppose the logic power is linearly corellated with bandwidth usage
+    // and if max bandwidth <-> max power + constant background power
+    const double const_bg_power = 3.0;
+    uint64_t num_reads = stats_.numb_read_cmds_issued.EpochCount();
+    uint64_t num_writes = stats_.numb_write_cmds_issued.EpochCount();
+    uint64_t total_rw = (num_reads + num_writes) * config_.burst_cycle/config_.channels ;
+    // a little problem here: the epoch period is not necessarily power epoch
+    double utilization = static_cast<double>(total_rw) / static_cast<double>(config_.epoch_period);
+    avg_logic_power_ = max_logic_power_ * utilization + const_bg_power;
 }

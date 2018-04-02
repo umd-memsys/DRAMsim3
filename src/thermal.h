@@ -35,15 +35,13 @@ class ThermalCalculator
     double *Cap;		   // Cap storing the thermal capacitance
     int MidxSize, CapSize; // first dimension size of Midx and Cap
     int T_size;
-    // vector<vector<double>> T_final;
     double **T_trans, **T_final;
-    //double *T_trans; // T_trans storing the transient temperature array
-    //double *T_final; // T_final storing the final temperature array
 
     int sample_id;	 // index of the sampling power
     uint64_t save_clk; // saved clk
 
-    double logicP; 
+    double avg_logic_power_;
+    double max_logic_power_;
 
     vector<vector<double>> accu_Pmap; // accumulative power map
     vector<vector<double>> cur_Pmap;  // current power map
@@ -101,7 +99,7 @@ public:
     void PrintTransPT(uint64_t clk);
     void PrintFinalPT(uint64_t clk);
 
-    void update_logicP(double new_logicP);
+    void UpdateLogicPower();
 };
 }
 
