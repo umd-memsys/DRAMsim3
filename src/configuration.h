@@ -87,8 +87,6 @@ public:
     uint32_t tRCDRD;
     uint32_t tRCDWR;
 
-    
-
     // pre calculated power parameters
     double act_energy_inc;
     double pre_energy_inc;
@@ -100,7 +98,6 @@ public:
     double pre_stb_energy_inc;
     double pre_pd_energy_inc;
     double sref_energy_inc;
-
     
     // HMC 
     uint32_t num_links;
@@ -133,7 +130,7 @@ public:
 
     //Computed parameters
     uint32_t request_size_bytes;
-    uint32_t channel_width, rank_width, bankgroup_width, bank_width, row_width, column_width, throwaway_bits;
+    uint32_t channel_width, rank_width, bankgroup_width, bank_width, row_width, column_width;
 
     bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
     bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}
