@@ -18,7 +18,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     stats_(stats),
     sample_id(0),
     save_clk(0),
-    logicP(50.0)
+    logicP(10.0)
 {
     // Initialize dimX, dimY, numP
     // The dimension of the chip is determined such that the floorplan is
@@ -71,8 +71,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     SetPhyAddressMapping();
 
     // Initialize the vectors
-    accu_Pmap = vector<vector<double>>(num_case, vector<double>(numP * dimX * dimY, 0));
-    cur_Pmap = vector<vector<double>>(num_case, vector<double>(numP * dimX * dimY, 0));
+    accu_Pmap = vector< vector<double> >(num_case, vector<double>(numP * dimX * dimY, 0));
+    cur_Pmap = vector<vector<double> >(num_case, vector<double>(numP * dimX * dimY, 0));
     T_size = (numP * 3 + 1) * (dimX+num_dummy) * (dimY+num_dummy);
     T_trans = new double*[num_case];
     T_final = new double*[num_case];
