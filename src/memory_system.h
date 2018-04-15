@@ -22,6 +22,10 @@ public:
     virtual void ClockTick() = 0;
     virtual void PrintIntermediateStats();
     virtual void PrintStats();
+    double GetTCK() const;
+    unsigned GetQueueSize() const;
+    unsigned GetBusBits() const;
+    unsigned GetBurstLength() const;
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
     std::vector<Controller*> ctrls_;
     Config* ptr_config_;

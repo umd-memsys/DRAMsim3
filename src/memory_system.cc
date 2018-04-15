@@ -111,6 +111,24 @@ void BaseMemorySystem::PrintStats() {
     return;
 }
 
+
+double BaseMemorySystem::GetTCK() const {
+    return ptr_config_->tCK;
+}
+
+unsigned BaseMemorySystem::GetQueueSize() const {
+    return ptr_config_->queue_size;
+}
+
+unsigned BaseMemorySystem::GetBusBits() const {
+    return ptr_config_->bus_width;
+}
+
+unsigned BaseMemorySystem::GetBurstLength() const {
+    return ptr_config_->BL;
+}
+
+
 MemorySystem::MemorySystem(const string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
     BaseMemorySystem(config_file, output_dir, read_callback, write_callback)
 {
@@ -201,7 +219,6 @@ void MemorySystem::ClockTick() {
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }
-    
     clk_++;
     ptr_stats_->dramcycles++;
     return;
@@ -263,7 +280,7 @@ void IdealMemorySystem::ClockTick() {
 // Basically just an entry in the symbol table
 extern "C"
 {
-void libdramcore_is_present(void)
+void libdramsim3_is_present(void)
 {
     ;
 }
