@@ -8,8 +8,8 @@ All rights reserved.
 The source code is distributed under BSD license, see the file License.txt
 at the top-level directory.
 */
-#include "slu_mt_machines.h"
-#include "slu_mt_ddefs.h"
+#include "../ext/SuperLU_MT_3.1/SRC/slu_mt_machines.h"
+#include "../ext/SuperLU_MT_3.1/SRC/slu_mt_ddefs.h"
 
 int_t
 sp_ienv(int_t ispec)
