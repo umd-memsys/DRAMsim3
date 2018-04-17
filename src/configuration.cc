@@ -58,7 +58,21 @@ Config::Config(std::string config_file, std::string out_dir):
     ProtocolAdjust();
     
     // calculate rank and re-calculate channel_size
-    CalculateSize();
+    devices_per_rank = bus_width / device_width;
+    int page_size = columns * device_width / 8;  // page size in bytes
+    int megs_per_bank = page_size * (rows / 1024) / 1024;
+    int megs_per_rank = megs_per_bank * banks * devices_per_rank;
+
+    if (megs_per_rank > channel_size) {
+        std::cout<< "WARNING: Cannot create memory system of size " << channel_size 
+            << "MB with given device choice! Using default size " << megs_per_rank 
+            << " instead!" << std::endl;
+        ranks = 1;
+        channel_size = megs_per_rank;
+    } else {
+        ranks = channel_size / megs_per_rank;
+        channel_size = ranks * megs_per_rank;  // reset in case users inputs a weird number
+    }
 
     SetAddressMapping();
 
@@ -115,7 +129,7 @@ Config::Config(std::string config_file, std::string out_dir):
     double IDD0 = reader.GetReal("power", "IDD0", 48);
     double IDD2P = reader.GetReal("power", "IDD2P", 25);
     double IDD2N = reader.GetReal("power", "IDD2N", 34);
-    double IDD3P = reader.GetReal("power", "IDD3P", 37);
+    // double IDD3P = reader.GetReal("power", "IDD3P", 37);
     double IDD3N = reader.GetReal("power", "IDD3N", 43);
     double IDD4W = reader.GetReal("power", "IDD4W", 123);
     double IDD4R = reader.GetReal("power", "IDD4R", 135);
@@ -173,26 +187,8 @@ Config::Config(std::string config_file, std::string out_dir):
     // RowTile = static_cast<int>(reader.GetInteger("thermal", "RowTile", 1));
     numXgrids = rows / matX;
     TileRowNum = rows; 
-    if (IsGDDR()) {
-        // For GDDR5(x), each column access gives you device_width * BL bits 
-        numYgrids = columns * device_width / matY;
-        //bank_asr = (double) rows / (columns * device_width * RowTile); 
-    } else if (IsHBM()) {
-        // Similar to GDDR5(x), but HBM has both BL2 and BL4, and only 1 device_width, 
-        // meaning it will have different prefetch length and burst length
-        // so we will use the prefetch length of 2 here
-        numYgrids = columns * device_width / matY;
-        //bank_asr = (double)rows / (columns * device_width * RowTile); 
-    } else if (IsHMC()) {
-        // had to hard code here since it has nothing to do with the width
-        numYgrids = 256 * 8 / matY;  // 256B page size
-        //bank_asr = (double)rows / (256 * 8 * RowTile); 
-    } else {
-        // shift 20 bits first so that we won't have an overflow problem...
-        numYgrids = columns * device_width / matY;
-        //bank_asr = (double)rows / (columns * device_width * RowTile);
-    }
 
+    numYgrids = columns * device_width / matY;
     bank_asr = (double) numXgrids / numYgrids; 
     RowTile = 1; 
     if (bank_asr > 4 && banks_per_group == 1){ 
@@ -248,15 +244,21 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
         AbruptExit(__FILE__, __LINE__);
     }
 
-#ifdef DEBUG_OUTPUT
-    cout << "DRAM Procotol " << protocol_str << endl;
-#endif 
     return protocol_pairs[protocol_str];
 }
 
 
 void Config::ProtocolAdjust() {
-    // Sanity check for different protocols, mostly HBM/HMC
+    // Sanity checks and adjust parameters for different protocols
+    // The most messed up thing that has to be done here is that
+    // every protocol has a different defination of "column",
+    // in DDR3/4, each column is exactly device_width bits, 
+    // but in GDDR5, a column is device_width * BL bits
+    // and for HBM each column is device_width * 2 (prefetch)
+    // as a result, different protocol has different method of calculating
+    // page size, and address mapping...
+    // To make life easier, we regulate the use of the term "column"
+    // to only represent physical column (device width) 
     if (IsHMC()) {
         if (num_links !=2 && num_links != 4) {
             cerr << "HMC can only have 2 or 4 links!" << endl;
@@ -293,7 +295,6 @@ void Config::ProtocolAdjust() {
         // A lot of the following parameters are not configurable 
         // according to the spec, so we just set them here
         rows = 65536;
-        columns = 64;
         // meaning that for each column access, 
         // and the (min) block size is 32, which is exactly BL = 8, and BL can be up to 64... really?
         device_width = 32; 
@@ -325,56 +326,17 @@ void Config::ProtocolAdjust() {
         burst_cycle = (BL==0) ? 0 : BL / 2;
         BL = (BL==0) ? (IsHBM()? 4 : 8) : BL;
     }
-}
 
-
-void Config::CalculateSize() {
-    devices_per_rank = bus_width / device_width;
-
-    // The calculation for different protocols are different,
-    // Some take into account of the prefetch/burst length in columns some don't
-    // So instead of hard coding it into the ini files, 
-    // calculating them here would be a better option
-    uint32_t megs_per_bank, megs_per_rank;
-    
+    // re-adjust columns from spec columns to actual columns
     if (IsGDDR()) {
-        // For GDDR5(x), each column access gives you device_width * BL bits 
-        megs_per_bank = ((rows * columns * BL) >> 20)  * device_width / 8;
-        megs_per_rank = megs_per_bank * banks * devices_per_rank;
+        columns *= BL;
     } else if (IsHBM()) {
-        // Similar to GDDR5(x), but HBM has both BL2 and BL4, and only 1 device_width, 
-        // meaning it will have different prefetch length and burst length
-        // so we will use the prefetch length of 2 here
-        megs_per_bank = ((rows * columns * 2) >> 20)  * device_width / 8;
-        megs_per_rank = megs_per_bank * banks * devices_per_rank;
-    } else if (IsHMC()) {
-        // had to hard code here since it has nothing to do with the width
-        megs_per_bank = (rows * 256) >> 20 ;  // 256B page size
-        megs_per_rank = megs_per_bank * banks * devices_per_rank;
-    } else {
-        // shift 20 bits first so that we won't have an overflow problem...
-        megs_per_bank = ((rows * columns) >> 20) * device_width / 8;
-        megs_per_rank = megs_per_bank * banks * devices_per_rank;
+        columns *= 2;
+    } else if (IsHMC()) { // 256B pages
+        columns = 256 * 8 / device_width;
     }
-    
-    
-#ifdef DEBUG_OUTPUT
-    cout << "Meg Bytes per bank " << megs_per_bank << endl;
-    cout << "Meg Bytes per rank " << megs_per_rank << endl;
-#endif 
-
-    if (megs_per_rank > channel_size) {
-        std::cout<< "WARNING: Cannot create memory system of size " << channel_size 
-            << "MB with given device choice! Using default size " << megs_per_rank 
-            << " instead!" << std::endl;
-        ranks = 1;
-        channel_size = megs_per_rank;
-    } else {
-        ranks = channel_size / megs_per_rank;
-        channel_size = ranks * megs_per_rank;  // reset this in case users inputs a weird number...
-    }
-    return;
 }
+
 
 void Config::SetAddressMapping() {
     // has to strictly follow the order of chan, rank, bg, bank, row, col
@@ -383,20 +345,13 @@ void Config::SetAddressMapping() {
     bankgroup_width = LogBase2(bankgroups);
     bank_width = LogBase2(banks_per_group);
     row_width = LogBase2(rows);
-    // add BL bits for GDDR
-    if (IsGDDR() || IsHBM()) {
-        columns *= BL;  
-    } 
     column_width = LogBase2(columns);
-    uint32_t bytes_offset = LogBase2(bus_width / 8);
-    request_size_bytes = bus_width / 8 * BL;  // transaction size in bytes
-    // for each address given, because we're transimitting trascation_size bytes per transcation
-    // therefore there will be throwaway_bits not used in the address
-    // part of it is due to the bytes offset, the other part is the burst len 
-    // (same as column auto increment)
-    // so effectively the last (throwaway_bits - bytes_offsets) are masked to 0
-    throwaway_bits = LogBase2(request_size_bytes);
-    int masked_col_bits = throwaway_bits - bytes_offset;
+
+    // memory addresses are byte addressable, but each request comes with
+    // multiple bytes because of bus width, and burst length
+    uint32_t bus_offset = LogBase2(bus_width / 8);
+    request_size_bytes = bus_width / 8 * BL;
+    int masked_col_bits = LogBase2(BL);
     unsigned col_mask = (0xFFFFFFFF <<  masked_col_bits);
 
 #ifdef DEBUG_OUTPUT
@@ -425,7 +380,8 @@ void Config::SetAddressMapping() {
         fields.push_back(token);
     }
 
-    int pos = throwaway_bits;
+    // starting position ignores those caused by bus width
+    int pos = bus_offset;
     for (int i = fields.size() - 1; i >=0 ; i--) {
         // do this in reverse order so that it matches the 
         // sequence of the input string

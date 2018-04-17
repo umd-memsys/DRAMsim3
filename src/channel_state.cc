@@ -26,6 +26,7 @@ ChannelState::ChannelState(const Config &config, const Timing &timing, Statistic
 
 #ifdef GENERATE_TRACE
     std::string trace_file_name = config.output_prefix + "cmd.trace";
+    RenameFileWithNumber(trace_file_name, channel_id);
     cout << "Command Trace write to "<< trace_file_name << endl;
     cmd_trace_.open(trace_file_name, std::ofstream::out);
 #endif // GENERATE_TRACE

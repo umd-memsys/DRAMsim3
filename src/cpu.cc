@@ -21,7 +21,6 @@ void RandomCPU::ClockTick() {
     // Create random CPU requests at full speed
     // this is useful to exploit the parallelism of a DRAM protocol
     // and is also immune to address mapping and scheduling policies
-    clk_++;
     if (get_next_) {
         last_addr_ = gen();
     }
@@ -30,6 +29,7 @@ void RandomCPU::ClockTick() {
     if(get_next_) {
         memory_system_.InsertReq(last_addr_, is_write);
     }
+    clk_++;
     return;
 }
 
@@ -39,7 +39,7 @@ void StreamCPU::ClockTick() {
     // enough buffer hits
 
     // moving on to next set of arrays
-    if (offset_ >= array_size_) {
+    if (offset_ >= array_size_ || clk_ == 0) {
         addr_a_ = gen();
         addr_b_ = gen();
         addr_c_ = gen();
@@ -69,6 +69,8 @@ void StreamCPU::ClockTick() {
     if (inserted_a_ && inserted_b_ && inserted_c_) {
         offset_ += stride_;
     }
+    clk_ ++;
+    return;
 }
 
 
@@ -83,7 +85,6 @@ TraceBasedCPU::TraceBasedCPU(BaseMemorySystem& memory_system, std::string trace_
 }
 
 void TraceBasedCPU::ClockTick() {
-    clk_++;
     if(!trace_file_.eof()) {
         if(get_next_) {
             get_next_ = false;
@@ -97,6 +98,7 @@ void TraceBasedCPU::ClockTick() {
             }
         }
     }
+    clk_++;
     return;
 }
 
