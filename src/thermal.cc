@@ -71,8 +71,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats) :
     SetPhyAddressMapping();
 
     // Initialize the vectors
-    accu_Pmap = vector<vector<double>>(num_case, vector<double>(numP * dimX * dimY, 0));
-    cur_Pmap = vector<vector<double>>(num_case, vector<double>(numP * dimX * dimY, 0));
+    accu_Pmap = vector< vector<double> >(num_case, vector<double>(numP * dimX * dimY, 0));
+    cur_Pmap = vector<vector<double> >(num_case, vector<double>(numP * dimX * dimY, 0));
     T_size = (numP * 3 + 1) * (dimX+num_dummy) * (dimY+num_dummy);
     T_trans = new double*[num_case];
     T_final = new double*[num_case];

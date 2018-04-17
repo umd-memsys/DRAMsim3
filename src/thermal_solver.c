@@ -2,7 +2,7 @@
  * based on superLU 
  * zhiyuan yang 
  */
-#include "slu_mt_ddefs.h"
+#include "../ext/SuperLU_MT_3.1/SRC/slu_mt_ddefs.h"
 #include <stdbool.h>
 #include <math.h>
 #include <stdio.h>
@@ -14,7 +14,7 @@
 //#define DEBUGMIDX
 //#define DEBUGMAT
 
-//#define M_PI 3.141592653
+#define M_PI 3.141592653
 double get_maxT(double *T, int Tsize);
 
 
@@ -39,7 +39,6 @@ double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, i
     double Wsink, Lsink, Hsink;
     int numLayer; 
     double *C, *H, Csink;
-    int i,j,k,l; // iterators
 
     // initialize the parameters 
     numLayer = numP * 3; 
@@ -51,7 +50,7 @@ double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, i
     // define the thermal capacitance and height array 
     if ( !(C = doubleMalloc(numLayer+1)) ) SUPERLU_ABORT("Malloc fails for K[].");
     if ( !(H = doubleMalloc(numLayer)) ) SUPERLU_ABORT("Malloc fails for H[].");
-    for (i = 0 ; i < numLayer ; i ++)
+    for (int i = 0 ; i < numLayer ; i ++)
     {
         switch (i % 3)
         {
@@ -74,7 +73,7 @@ double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, i
     double gridX, gridZ, gridXsink, gridZsink; 
     gridX = W / dimX; gridZ = Lc / dimZ; 
     gridXsink = Wsink / dimX; gridZsink = Lsink / dimZ; 
-    for (i = 0; i < numLayer + 1; i ++)
+    for (int i = 0; i < numLayer + 1; i ++)
     {
         if (i == 0)
             C[i] = C[i] * Hsink * gridXsink * gridZsink; 
@@ -83,9 +82,7 @@ double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, i
     }
 
     *CapSize = numLayer + 1; 
-    return C; 
-
-
+    return C;
 }
 
 
