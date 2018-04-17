@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.0)
 
 project(dramcore)
 
-add_subdirectory(ext/inih)
-add_subdirectory(ext/fmt)
-
 # self-defined flgas that help debugging
 # use cmake -DGENERATE_TRACE=ON or 1 to enbale this
 if (NO_BACKPRESSURE)
@@ -51,6 +48,10 @@ set(SOURCES
         src/statistics.cc
         src/timing.cc
         src/memory_system.cc
+
+        ext/fmt/src/format.cc
+        ext/inih/src/ini.c
+        ext/inih/src/INIReader.cpp
         )
 
 set(SOURCES_TEST
@@ -61,7 +62,6 @@ set(SOURCES_TEST
 include_directories(src ext/headers)
 
 add_library(dramcore SHARED ${SOURCES})
-target_link_libraries(dramcore inih fmt)
 set_target_properties(dramcore PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(dramcoremain src/main.cc)
