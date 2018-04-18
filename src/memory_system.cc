@@ -25,7 +25,10 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file,
     ptr_config_ = new Config(config_file, output_dir);
     ptr_timing_ = new Timing(*ptr_config_);
     ptr_stats_ = new Statistics(*ptr_config_);
+
+#ifdef THERMAL
     ptr_thermCal_ = new ThermalCalculator(*ptr_config_, *ptr_stats_);
+#endif
 
     if (mem_sys_id_ > 0) {
         // if there are more than one memory_systems then rename the output to
@@ -65,7 +68,9 @@ BaseMemorySystem::~BaseMemorySystem() {
     delete (ptr_stats_);
     delete (ptr_timing_);
     delete (ptr_config_);
+#ifdef THERMAL
     delete (ptr_thermCal_);
+#endif  // THERMAL
 
     stats_file_.close();
     epoch_stats_file_.close();
@@ -117,7 +122,9 @@ void BaseMemorySystem::PrintStats() {
         // because histogram headers are only known at the end
         ptr_stats_->PrintStatsCSVHeader(stats_file_csv_);
         ptr_stats_->PrintStatsCSVFormat(stats_file_csv_);
+#ifdef THERMAL
         ptr_thermCal_->PrintFinalPT(clk_);
+#endif  // THERMAL
     }
     return;
 }
@@ -135,8 +142,13 @@ MemorySystem::MemorySystem(const string &config_file,
     ctrls_.resize(ptr_config_->channels);
     for (auto i = 0; i < ptr_config_->channels; i++) {
         ctrls_[i] =
+#ifdef THERMAL
             new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
                            ptr_thermCal_, read_callback_, write_callback_);
+#else
+            new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
+                           read_callback_, write_callback_);
+#endif  // THERMAL
     }
 }
 

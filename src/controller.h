@@ -14,10 +14,16 @@ namespace dramcore {
 
 class Controller {
    public:
+#ifdef THERMAL
     Controller(int channel, const Config &config, const Timing &timing,
                Statistics &stats, ThermalCalculator *thermalcalc,
                std::function<void(uint64_t)> read_callback,
                std::function<void(uint64_t)> write_callback);
+#else
+    Controller(int channel, const Config &config, const Timing &timing,
+               Statistics &stats, std::function<void(uint64_t)> read_callback,
+               std::function<void(uint64_t)> write_callback);
+#endif  // THERMAL
     ~Controller(){};
     void ClockTick();
     bool IsReqInsertable(Request *req);

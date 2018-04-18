@@ -9,8 +9,11 @@
 #include "configuration.h"
 #include "controller.h"
 #include "statistics.h"
-#include "thermal.h"
 #include "timing.h"
+
+#ifdef THERMAL
+#include "thermal.h"
+#endif  // THERMAL
 
 namespace dramcore {
 

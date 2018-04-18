@@ -4,21 +4,31 @@
 using namespace std;
 using namespace dramcore;
 
+#ifdef THERMAL
 Controller::Controller(int channel, const Config &config, const Timing &timing,
                        Statistics &stats, ThermalCalculator *thermalcalc,
                        std::function<void(uint64_t)> read_callback,
                        std::function<void(uint64_t)> write_callback)
+#else
+Controller::Controller(int channel, const Config &config, const Timing &timing,
+                       Statistics &stats,
+                       std::function<void(uint64_t)> read_callback,
+                       std::function<void(uint64_t)> write_callback)
+#endif  // THERMAL
     : read_callback_(read_callback),
       write_callback_(write_callback),
       channel_id_(channel),
       clk_(0),
       config_(config),
+#ifdef THERMAL
       channel_state_(config, timing, stats, thermalcalc),
-      cmd_queue_(channel_id_, config, channel_state_,
-                 stats),  // TODO - Isn't it really a request_queue. Why call it
-                          // command_queue?
+#else
+      channel_state_(config, timing, stats),
+#endif  // THERMAL
+      cmd_queue_(channel_id_, config, channel_state_, stats),
       refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
-      stats_(stats) {}
+      stats_(stats) {
+}
 
 void Controller::ClockTick() {
     clk_++;

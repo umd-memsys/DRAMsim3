@@ -4,14 +4,21 @@
 using namespace std;
 using namespace dramcore;
 
+#ifdef THERMAL
 ChannelState::ChannelState(const Config& config, const Timing& timing,
                            Statistics& stats, ThermalCalculator* thermcalc)
+#else
+ChannelState::ChannelState(const Config& config, const Timing& timing,
+                           Statistics& stats)
+#endif  // THERMAL
     : need_to_update_refresh_waiting_status_(true),
       rank_in_self_refresh_mode_(std::vector<bool>(config.ranks, false)),
       config_(config),
       timing_(timing),
       stats_(stats),
+#ifdef THERMAL
       thermcalc_(thermcalc),
+#endif  // THERMAL
       bank_states_(config_.ranks,
                    std::vector<std::vector<BankState*> >(
                        config_.bankgroups,
@@ -292,7 +299,9 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
 #endif  // GENERATE_TRACE
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
+#ifdef THERMAL
     thermcalc_->UpdatePower(cmd, clk);
+#endif  // THERMAL
     UpdateCommandIssueStats(cmd);
     return;
 }
