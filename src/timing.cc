@@ -14,10 +14,10 @@ Timing::Timing(const Config& config)
     int read_to_read_s = std::max(config.burst_cycle, config.tCCD_S);
     int read_to_read_o = config.burst_cycle + config.tRTRS;
     int read_to_write = config.RL + config.burst_cycle - config.WL +
-                             config.tRPRE +
-                             config.tRTRS;  // refer page 94 of DDR4 spec
+                        config.tRPRE +
+                        config.tRTRS;  // refer page 94 of DDR4 spec
     int read_to_write_o = config.read_delay + config.burst_cycle +
-                               config.tRTRS - config.write_delay;
+                          config.tRTRS - config.write_delay;
     int read_to_precharge = config.AL + config.tRTP;
     int readp_to_act =
         config.AL + config.burst_cycle + config.tRTP + config.tRP;
@@ -25,7 +25,7 @@ Timing::Timing(const Config& config)
     int write_to_read_l = config.write_delay + config.tWTR_L;
     int write_to_read_s = config.write_delay + config.tWTR_S;
     int write_to_read_o = config.write_delay + config.burst_cycle +
-                               config.tRTRS - config.read_delay;
+                          config.tRTRS - config.read_delay;
     int write_to_write_l = std::max(config.burst_cycle, config.tCCD_L);
     int write_to_write_s = std::max(config.burst_cycle, config.tCCD_S);
     int write_to_write_o = config.burst_cycle + config.tWPRE;
@@ -54,8 +54,7 @@ Timing::Timing(const Config& config)
     // TODO: deal with different refresh rate
     int refresh_to_refresh =
         config.tREFI;  // refresh intervals (per rank level)
-    int refresh_to_activate =
-        config.tRFC;  // tRFC is defined as ref to act
+    int refresh_to_activate = config.tRFC;  // tRFC is defined as ref to act
     int refresh_to_activate_bank = config.tRFCb;
 
     int self_refresh_entry_to_exit = config.tCKESR;

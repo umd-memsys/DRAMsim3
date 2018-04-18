@@ -69,8 +69,10 @@ class ThermalCalculator {
     std::pair<int, int> MapToBank(int bankgroup_id, int bank_id);
     int MapToZ(int channel_id, int bank_id);
     std::pair<std::vector<int>, std::vector<int>> MapToXY(const Command &cmd,
-                                                int vault_id_x, int vault_id_y,
-                                                int bank_id_x, int bank_id_y);
+                                                          int vault_id_x,
+                                                          int vault_id_y,
+                                                          int bank_id_x,
+                                                          int bank_id_y);
     void LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0,
                                         int caseID_, double add_energy);
     void LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0,
@@ -87,10 +89,12 @@ class ThermalCalculator {
     double GetMaxTofCaseLayer(double **temp_map, int case_id, int layer);
     void calculate_time_step();
     // print to csv-files
-    void PrintCSV_trans(std::ofstream &csvfile, std::vector<std::vector<double>> P_,
-                        double **T_, int id, uint64_t scale);
-    void PrintCSV_final(std::ofstream &csvfile, std::vector<std::vector<double>> P_,
-                        double **T_, int id, uint64_t scale);
+    void PrintCSV_trans(std::ofstream &csvfile,
+                        std::vector<std::vector<double>> P_, double **T_,
+                        int id, uint64_t scale);
+    void PrintCSV_final(std::ofstream &csvfile,
+                        std::vector<std::vector<double>> P_, double **T_,
+                        int id, uint64_t scale);
     void PrintCSVHeader_final(std::ofstream &csvfile);
     void PrintCSV_bank(std::ofstream &csvfile);
 

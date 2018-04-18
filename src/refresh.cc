@@ -149,8 +149,7 @@ bool Refresh::ReadWritesToFinish(int rank, int bankgroup, int bank) {
            channel_state_.RowHitCount(rank, bankgroup, bank) == 0;
 }
 
-Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup,
-                                        int bank) {
+Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup, int bank) {
     auto &queue = cmd_queue_.GetQueue(rank, bankgroup, bank);
     for (auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
         auto req = *req_itr;

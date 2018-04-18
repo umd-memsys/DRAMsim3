@@ -18,12 +18,10 @@ Config::Config(std::string config_file, std::string out_dir)
     // System/controller Parameters
     protocol =
         GetDRAMProtocol(reader.Get("dram_structure", "protocol", "DDR3"));
-    channel_size = static_cast<int>(
-        reader.GetInteger("system", "channel_size", 1024));
-    channels =
-        static_cast<int>(reader.GetInteger("system", "channels", 1));
-    bus_width =
-        static_cast<int>(reader.GetInteger("system", "bus_width", 64));
+    channel_size =
+        static_cast<int>(reader.GetInteger("system", "channel_size", 1024));
+    channels = static_cast<int>(reader.GetInteger("system", "channels", 1));
+    bus_width = static_cast<int>(reader.GetInteger("system", "bus_width", 64));
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
     queue_size =
@@ -38,8 +36,8 @@ Config::Config(std::string config_file, std::string out_dir)
         reader.GetBoolean("system", "aggressive_precharging_enabled", false);
 
     // DRAM organization
-    bankgroups = static_cast<int>(
-        reader.GetInteger("dram_structure", "bankgroups", 2));
+    bankgroups =
+        static_cast<int>(reader.GetInteger("dram_structure", "bankgroups", 2));
     banks_per_group = static_cast<int>(
         reader.GetInteger("dram_structure", "banks_per_group", 2));
     bool bankgroup_enable =
@@ -53,8 +51,8 @@ Config::Config(std::string config_file, std::string out_dir)
         reader.GetBoolean("dram_structure", "hbm_dual_cmd", true);
     enable_hbm_dual_cmd &= IsHBM();  // Make sure only HBM enables this
     banks = bankgroups * banks_per_group;
-    rows = static_cast<int>(
-        reader.GetInteger("dram_structure", "rows", 1 << 16));
+    rows =
+        static_cast<int>(reader.GetInteger("dram_structure", "rows", 1 << 16));
     columns = static_cast<int>(
         reader.GetInteger("dram_structure", "columns", 1 << 10));
     device_width = static_cast<int>(
@@ -178,8 +176,8 @@ Config::Config(std::string config_file, std::string out_dir)
     pre_pd_energy_inc = VDD * IDD2P * devices;
     sref_energy_inc = VDD * IDD6x * devices;
 
-    epoch_period = static_cast<int>(
-        reader.GetInteger("other", "epoch_period", 100000));
+    epoch_period =
+        static_cast<int>(reader.GetInteger("other", "epoch_period", 100000));
     // determine how much output we want:
     // -1: no file output at all
     // 0: no epoch file output, only outputs the summary in the end
@@ -252,8 +250,7 @@ Config::Config(std::string config_file, std::string out_dir)
         static_cast<int>(reader.GetInteger("thermal", "bank_order", 1));
     bank_layer_order =
         static_cast<int>(reader.GetInteger("thermal", "bank_layer_order", 0));
-    numRowRefresh =
-        static_cast<int>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
+    numRowRefresh = static_cast<int>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
     ChipX = reader.GetReal("thermal", "ChipX", 0.01);
     ChipY = reader.GetReal("thermal", "ChipY", 0.01);
     Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
@@ -430,7 +427,7 @@ void Config::SetAddressMapping() {
     for (size_t i = fields.size(); i > 0; i--) {
         // do this in reverse order so that it matches the
         // sequence of the input string
-        auto field_str = fields[i-1];
+        auto field_str = fields[i - 1];
         if (field_str == "ch") {
             field_pos[0] = pos;
             field_widths[0] = channel_width;
@@ -462,8 +459,7 @@ void Config::SetAddressMapping() {
     }
 
     AddressMapping = [field_pos, field_widths, col_mask](uint64_t hex_addr) {
-        int channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0,
-                 column = 0;
+        int channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0, column = 0;
         channel = ModuloWidth(hex_addr, field_widths[0], field_pos[0]);
         rank = ModuloWidth(hex_addr, field_widths[1], field_pos[1]);
         bankgroup = ModuloWidth(hex_addr, field_widths[2], field_pos[2]);
