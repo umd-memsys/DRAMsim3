@@ -1,8 +1,6 @@
 #include "refresh.h"
 
-using namespace std;
-using namespace dramcore;
-
+namespace dramcore {
 Refresh::Refresh(const uint32_t channel_id, const Config &config,
                  const ChannelState &channel_state, CommandQueue &cmd_queue,
                  Statistics &stats)
@@ -12,10 +10,10 @@ Refresh::Refresh(const uint32_t channel_id, const Config &config,
       channel_state_(channel_state),
       cmd_queue_(cmd_queue),
       stats_(stats),
-      last_bank_refresh_(config_.ranks,
-                         std::vector<vector<uint64_t>>(
-                             config_.bankgroups,
-                             vector<uint64_t>(config_.banks_per_group, 0))),
+      last_bank_refresh_(config_.ranks, std::vector<std::vector<uint64_t>>(
+                                            config_.bankgroups,
+                                            std::vector<uint64_t>(
+                                                config_.banks_per_group, 0))),
       last_rank_refresh_(config_.ranks, 0),
       next_rank_(0),
       next_bankgroup_(0),
@@ -113,7 +111,7 @@ void Refresh::InsertRefresh() {
 }
 
 Command Refresh::GetRefreshOrAssociatedCommand(
-    list<Request *>::iterator refresh_itr) {
+    std::list<Request *>::iterator refresh_itr) {
     auto refresh_req = *refresh_itr;
     // TODO - Strict round robin search of queues?
     if (refresh_req->cmd_.cmd_type_ == CommandType::REFRESH) {
@@ -193,3 +191,5 @@ inline void Refresh::IterateNext() {
             return;
     }
 }
+
+}  // namespace dramcore

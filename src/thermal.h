@@ -13,8 +13,6 @@
 #include "thermal_config.h"
 #include "timing.h"
 
-using namespace std;
-
 namespace dramcore {
 
 extern std::function<Address(const Address &addr)> GetPhyAddress;
@@ -41,36 +39,36 @@ class ThermalCalculator {
     double avg_logic_power_;
     double max_logic_power_;
 
-    vector<vector<double>> accu_Pmap;  // accumulative power map
-    vector<vector<double>> cur_Pmap;   // current power map
+    std::vector<std::vector<double>> accu_Pmap;  // accumulative power map
+    std::vector<std::vector<double>> cur_Pmap;   // current power map
 
-    vector<vector<uint32_t>> refresh_count;
+    std::vector<std::vector<uint32_t>> refresh_count;
 
     // previous background energy
-    vector<double> sref_energy_prev;
-    vector<double> pre_stb_energy_prev;
-    vector<double> act_stb_energy_prev;
-    vector<double> pre_pd_energy_prev;
+    std::vector<double> sref_energy_prev;
+    std::vector<double> pre_stb_energy_prev;
+    std::vector<double> act_stb_energy_prev;
+    std::vector<double> pre_pd_energy_prev;
 
     // other intermediate parameters
     // not need to be defined here but it will be easy to use if it is defined
     int vault_x, vault_y, bank_x, bank_y;
     int num_case;  // number of different cases where the thermal simulation is
                    // performed
-    vector<int> layerP;
+    std::vector<int> layerP;
 
     // Output files
-    ofstream epoch_max_temp_file_csv_;
-    ofstream epoch_temperature_file_csv_;
-    ofstream final_temperature_file_csv_;
-    ofstream bank_position_csv_;
+    std::ofstream epoch_max_temp_file_csv_;
+    std::ofstream epoch_temperature_file_csv_;
+    std::ofstream final_temperature_file_csv_;
+    std::ofstream bank_position_csv_;
 
     /* private methods */
     void SetPhyAddressMapping();
     std::pair<int, int> MapToVault(int channel_id);
     std::pair<int, int> MapToBank(int bankgroup_id, int bank_id);
     int MapToZ(int channel_id, int bank_id);
-    std::pair<vector<int>, vector<int>> MapToXY(const Command &cmd,
+    std::pair<std::vector<int>, std::vector<int>> MapToXY(const Command &cmd,
                                                 int vault_id_x, int vault_id_y,
                                                 int bank_id_x, int bank_id_y);
     void LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0,
@@ -89,12 +87,12 @@ class ThermalCalculator {
     double GetMaxTofCaseLayer(double **temp_map, int case_id, int layer);
     void calculate_time_step();
     // print to csv-files
-    void PrintCSV_trans(ofstream &csvfile, vector<vector<double>> P_,
+    void PrintCSV_trans(std::ofstream &csvfile, std::vector<std::vector<double>> P_,
                         double **T_, int id, uint64_t scale);
-    void PrintCSV_final(ofstream &csvfile, vector<vector<double>> P_,
+    void PrintCSV_final(std::ofstream &csvfile, std::vector<std::vector<double>> P_,
                         double **T_, int id, uint64_t scale);
-    void PrintCSVHeader_final(ofstream &csvfile);
-    void PrintCSV_bank(ofstream &csvfile);
+    void PrintCSVHeader_final(std::ofstream &csvfile);
+    void PrintCSV_bank(std::ofstream &csvfile);
 
    public:
     ThermalCalculator(const Config &config, Statistics &stats);

@@ -1,9 +1,7 @@
 #include "channel_state.h"
 #include "../ext/fmt/src/format.h"
 
-using namespace std;
-using namespace dramcore;
-
+namespace dramcore {
 #ifdef THERMAL
 ChannelState::ChannelState(const Config& config, const Timing& timing,
                            Statistics& stats, ThermalCalculator* thermcalc)
@@ -37,7 +35,7 @@ ChannelState::ChannelState(const Config& config, const Timing& timing,
 #ifdef GENERATE_TRACE
     std::string trace_file_name = config.output_prefix + "cmd.trace";
     RenameFileWithNumber(trace_file_name, channel_id);
-    cout << "Command Trace write to " << trace_file_name << endl;
+    std::cout << "Command Trace write to " << trace_file_name << std::endl;
     cmd_trace_.open(trace_file_name, std::ofstream::out);
 #endif  // GENERATE_TRACE
 }
@@ -292,10 +290,10 @@ void ChannelState::UpdateSameRankTiming(
 
 void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
 #ifdef DEBUG_OUTPUT
-    cout << left << setw(8) << clk << " " << cmd << endl;
+    std::cout << left << setw(8) << clk << " " << cmd << std::endl;
 #endif  // DEBUG_OUTPUT
 #ifdef GENERATE_TRACE
-    cmd_trace_ << left << setw(18) << clk << " " << cmd << endl;
+    cmd_trace_ << left << setw(18) << clk << " " << cmd << std::endl;
 #endif  // GENERATE_TRACE
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
@@ -403,3 +401,5 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
     }
     return;
 }
+
+}  // namespace dramcore

@@ -2,12 +2,11 @@
 #include "../ext/fmt/src/format.h"
 #include "common.h"
 
-using namespace std;
-using namespace dramcore;
+namespace dramcore {
 
 template <class T>
 void PrintNameValue(std::ostream& where, std::string name, T value) {
-    where << fmt::format("{:^40}{:^5}{:>12}", name, " = ", value) << endl;
+    where << fmt::format("{:^40}{:^5}{:>12}", name, " = ", value) << std::endl;
     return;
 }
 
@@ -18,7 +17,7 @@ void PrintNameValueDesc(std::ostream& where, std::string name, T value,
     // power & bw later, which are not BaseStat members
     where << fmt::format("{:<40}{:^5}{:>12}{:>8}{}", name, " = ", value, " # ",
                          description)
-          << endl;
+          << std::endl;
     return;
 }
 
@@ -126,7 +125,7 @@ HistogramStat::HistogramStat(int start, int end, uint32_t numb_bins,
       numb_bins_(numb_bins),
       epoch_count_(0) {
     if (start_ >= end_ || numb_bins <= 0) {
-        cout << "Histogram stat improperly specified" << endl;
+        std::cout << "Histogram stat improperly specified" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 }
@@ -226,12 +225,12 @@ void HistogramStat::PrintCSVFormat(std::ostream& where) const {
 
 void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
     // if (epoch_count_ == 0) {
-    //     where << "name,value,count,epoch" << endl;
+    //     where << "name,value,count,epoch" << std::endl;
     // }
     for (auto i = bins_.begin(); i != bins_.end(); i++) {
         where << fmt::format("{},{},{},{}", name_, i->first, i->second,
                              epoch_count_)
-              << endl;
+              << std::endl;
     }
     return;
 }
@@ -519,7 +518,7 @@ void Statistics::PrintStatsCSVHeader(std::ostream& where) const {
     for (auto stat : histo_stats_list) {
         stat->PrintCSVHeader(where);
     }
-    where << endl;
+    where << std::endl;
     return;
 }
 
@@ -530,7 +529,7 @@ void Statistics::PrintStatsCSVFormat(std::ostream& where) const {
     for (auto stat : histo_stats_list) {
         stat->PrintCSVFormat(where);
     }
-    where << endl;
+    where << std::endl;
     return;
 }
 
@@ -538,7 +537,7 @@ void Statistics::PrintEpochStatsCSVFormat(std::ostream& where) const {
     for (auto stat : stats_list) {
         stat->PrintEpochCSVFormat(where);
     }
-    where << endl;
+    where << std::endl;
     return;
 }
 
@@ -594,7 +593,7 @@ void Statistics::Init2DStats(std::vector<std::vector<T>>& stats_vector,
 
 void Statistics::PrintEpochHistoStatsCSVFormat(std::ostream& where) const {
     if (last_clk_ == 0) {
-        where << "name,value,count,epoch" << endl;
+        where << "name,value,count,epoch" << std::endl;
     }
     for (auto stat : histo_stats_list) {
         stat->PrintEpochCSVFormat(where);
@@ -602,9 +601,7 @@ void Statistics::PrintEpochHistoStatsCSVFormat(std::ostream& where) const {
     return;
 }
 
-namespace dramcore {
-
-ostream& operator<<(ostream& os, Statistics& stats) {
+std::ostream& operator<<(std::ostream& os, Statistics& stats) {
     stats.PrintStats(os);
     return os;
 }

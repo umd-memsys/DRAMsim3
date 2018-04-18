@@ -5,8 +5,7 @@
 #include "../ext/fmt/src/format.h"
 #endif  // GENERATE_TRACE
 
-using namespace std;
-using namespace dramcore;
+namespace dramcore {
 
 // alternative way is to assign the id in constructor but this is less
 // destructive
@@ -64,7 +63,7 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file,
 }
 
 BaseMemorySystem::~BaseMemorySystem() {
-    cout << "come to delete BaseMemorySystem\n";
+    std::cout << "come to delete BaseMemorySystem" << std::endl;
     delete (ptr_stats_);
     delete (ptr_timing_);
     delete (ptr_config_);
@@ -93,15 +92,18 @@ void BaseMemorySystem::PrintIntermediateStats() {
 
     if (ptr_config_->output_level >= 3) {
         epoch_stats_file_
-            << "-----------------------------------------------------" << endl;
+            << "-----------------------------------------------------"
+            << std::endl;
         epoch_stats_file_ << "Epoch stats from clock = "
                           << clk_ - ptr_config_->epoch_period << " to " << clk_
-                          << endl;
+                          << std::endl;
         epoch_stats_file_
-            << "-----------------------------------------------------" << endl;
+            << "-----------------------------------------------------"
+            << std::endl;
         ptr_stats_->PrintEpochStats(epoch_stats_file_);
         epoch_stats_file_
-            << "-----------------------------------------------------" << endl;
+            << "-----------------------------------------------------"
+            << std::endl;
     }
     return;
 }
@@ -110,12 +112,15 @@ void BaseMemorySystem::PrintStats() {
     // update one last time before print
     ptr_stats_->PreEpochCompute(clk_);
     ptr_stats_->UpdateEpoch(clk_);
-    cout << "-----------------------------------------------------" << endl;
-    cout << "Printing final stats of MemorySystem " << mem_sys_id_ << " -- "
-         << endl;
-    cout << "-----------------------------------------------------" << endl;
-    cout << *ptr_stats_;
-    cout << "-----------------------------------------------------" << endl;
+    std::cout << "-----------------------------------------------------"
+         << std::endl;
+    std::cout << "Printing final stats of MemorySystem " << mem_sys_id_ << " -- "
+         << std::endl;
+    std::cout << "-----------------------------------------------------"
+         << std::endl;
+    std::cout << *ptr_stats_;
+    std::cout << "-----------------------------------------------------"
+         << std::endl;
     if (ptr_config_->output_level >= 0) {
         ptr_stats_->PrintStats(stats_file_);
         // had to print the header here instead of the constructor
@@ -129,13 +134,14 @@ void BaseMemorySystem::PrintStats() {
     return;
 }
 
-MemorySystem::MemorySystem(const string &config_file,
+MemorySystem::MemorySystem(const std::string &config_file,
                            const std::string &output_dir,
                            std::function<void(uint64_t)> read_callback,
                            std::function<void(uint64_t)> write_callback)
     : BaseMemorySystem(config_file, output_dir, read_callback, write_callback) {
     if (ptr_config_->IsHMC()) {
-        cerr << "Initialized a memory system with an HMC config file!" << endl;
+        std::cerr << "Initialized a memory system with an HMC config file!"
+             << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -153,7 +159,7 @@ MemorySystem::MemorySystem(const string &config_file,
 }
 
 MemorySystem::~MemorySystem() {
-    // cout << "come to delete MemorySystem\n";
+    // std::cout << "come to delete MemorySystem\n";
     for (auto i = 0; i < ptr_config_->channels; i++) {
         delete (ctrls_[i]);
     }
@@ -174,7 +180,7 @@ bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
 #ifdef GENERATE_TRACE
     address_trace_ << left << setw(18) << clk_ << " " << setw(6) << std::hex
                    << (is_write ? "WRITE " : "READ ") << hex_addr << std::dec
-                   << endl;
+                   << std::endl;
 #endif
 
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
@@ -291,6 +297,8 @@ void IdealMemorySystem::ClockTick() {
     }
     return;
 }
+
+}  // namespace dramcore
 
 // This function can be used by autoconf AC_CHECK_LIB since
 // apparently it can't detect C++ functions.

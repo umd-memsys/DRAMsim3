@@ -2,17 +2,16 @@
 #include "../ext/inih/src/INIReader.h"
 #include "common.h"
 
-using namespace std;
-using namespace dramcore;
+namespace dramcore {
 
-std::function<Address(uint64_t)> dramcore::AddressMapping;
+std::function<Address(uint64_t)> AddressMapping;
 
 Config::Config(std::string config_file, std::string out_dir)
     : output_dir(out_dir) {
     INIReader reader(config_file);
 
     if (reader.ParseError() < 0) {
-        std::cerr << "Can't load config file - " << config_file << endl;
+        std::cerr << "Can't load config file - " << config_file << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -193,8 +192,9 @@ Config::Config(std::string config_file, std::string out_dir)
     // this would allow outputing to a directory and you can always override
     // these values
     if (!DirExist(output_dir)) {
-        cout << "WARNING: Output directory " << output_dir
-             << " not exists! Using current directory for output!" << endl;
+        std::cout << "WARNING: Output directory " << output_dir
+                  << " not exists! Using current directory for output!"
+                  << std::endl;
         output_dir = "./";
     } else {
         output_dir = output_dir + "/";
@@ -278,8 +278,8 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
         {"HBM2", DRAMProtocol::HBM2},     {"HMC", DRAMProtocol::HMC}};
 
     if (protocol_pairs.find(protocol_str) == protocol_pairs.end()) {
-        cout << "Unkwown/Unsupported DRAM Protocol: " << protocol_str
-             << " Aborting!" << endl;
+        std::cout << "Unkwown/Unsupported DRAM Protocol: " << protocol_str
+                  << " Aborting!" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -299,33 +299,36 @@ void Config::ProtocolAdjust() {
     // to only represent physical column (device width)
     if (IsHMC()) {
         if (num_links != 2 && num_links != 4) {
-            cerr << "HMC can only have 2 or 4 links!" << endl;
+            std::cerr << "HMC can only have 2 or 4 links!" << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
         if (num_dies != 4 && num_dies != 8) {
-            cerr << "HMC can only have 4/8 layers of dies!" << endl;
+            std::cerr << "HMC can only have 4/8 layers of dies!" << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
         if (link_width != 4 && link_width != 8 && link_width != 16) {
-            cerr << "HMC link width can only be 4 (quater), 8 (half) or 16 "
-                    "(full)!"
-                 << endl;
+            std::cerr
+                << "HMC link width can only be 4 (quater), 8 (half) or 16 "
+                   "(full)!"
+                << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
         if (link_speed != 10000 && link_speed != 12500 && link_speed != 15000 &&
             link_speed != 25000 && link_speed != 28000 && link_speed != 30000) {
-            cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps" << endl;
+            std::cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps"
+                      << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
         // block_size = 0 to simulate ideal bandwidth situation
         if (block_size != 0 && block_size != 32 && block_size != 64 &&
             block_size != 128 && block_size != 256) {
-            cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!" << endl;
+            std::cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!"
+                      << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
         if (channels != 16 && channels != 32) {
             // vaults are basically channels here
-            cerr << "HMC channel options: 16/32" << endl;
+            std::cerr << "HMC channel options: 16/32" << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
         // the BL for is determined by max block_size, which is a multiple of
@@ -353,7 +356,7 @@ void Config::ProtocolAdjust() {
     } else if (IsHBM()) {
         // HBM is more flexible layout
         if (num_dies != 2 && num_dies != 4 && num_dies != 8) {
-            cerr << "HBM die options: 2/4/8" << endl;
+            std::cerr << "HBM die options: 2/4/8" << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
     }
@@ -396,21 +399,21 @@ void Config::SetAddressMapping() {
     unsigned col_mask = (0xFFFFFFFF << masked_col_bits);
 
 #ifdef DEBUG_OUTPUT
-    cout << "Address bits:" << endl;
-    cout << setw(10) << "Channel " << channel_width << endl;
-    cout << setw(10) << "Rank " << rank_width << endl;
-    cout << setw(10) << "Bankgroup " << bankgroup_width << endl;
-    cout << setw(10) << "Bank " << bank_width << endl;
-    cout << setw(10) << "Row " << row_width << endl;
-    cout << setw(10) << "Column " << column_width << endl;
+    std::cout << "Address bits:" << std::endl;
+    std::cout << setw(10) << "Channel " << channel_width << std::endl;
+    std::cout << setw(10) << "Rank " << rank_width << std::endl;
+    std::cout << setw(10) << "Bankgroup " << bankgroup_width << std::endl;
+    std::cout << setw(10) << "Bank " << bank_width << std::endl;
+    std::cout << setw(10) << "Row " << row_width << std::endl;
+    std::cout << setw(10) << "Column " << column_width << std::endl;
 #endif
 
     int field_pos[] = {0, 0, 0, 0, 0, 0};
     int field_widths[] = {0, 0, 0, 0, 0, 0};
 
     if (address_mapping.size() != 12) {
-        cerr << "Unknown address mapping (6 fields each 2 chars required)"
-             << endl;
+        std::cerr << "Unknown address mapping (6 fields each 2 chars required)"
+                  << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -452,7 +455,7 @@ void Config::SetAddressMapping() {
             field_widths[5] = column_width;
             pos += column_width;
         } else {
-            cerr << "Unrecognized field: " << fields[i] << endl;
+            std::cerr << "Unrecognized field: " << fields[i] << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
     }
@@ -470,3 +473,5 @@ void Config::SetAddressMapping() {
         return Address(channel, rank, bankgroup, bank, row, column);
     };
 }
+
+}  // namespace dramcore

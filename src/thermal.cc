@@ -1,8 +1,5 @@
 #include "thermal.h"
 
-using namespace dramcore;
-using namespace std;
-
 extern "C" double *steady_thermal_solver(double ***powerM, double W, double Lc,
                                          int numP, int dimX, int dimZ,
                                          double **Midx, int count,
@@ -21,7 +18,9 @@ extern "C" double *calculate_Cap_array(double W, double Lc, int numP, int dimX,
 extern "C" double *initialize_Temperature(double W, double Lc, int numP,
                                           int dimX, int dimZ, double Tamb_);
 
-std::function<Address(const Address &addr)> dramcore::GetPhyAddress;
+namespace dramcore {
+
+std::function<Address(const Address &addr)> GetPhyAddress;
 
 ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
     : time_iter0(10),
@@ -71,24 +70,26 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
 
     Tamb = config_.Tamb0 + T0;
 
-    cout << "bank aspect ratio = " << config_.bank_asr << endl;
-    // cout << "#rows = " << config_.rows << "; #columns = " << config_.rows /
-    // config_.bank_asr << endl;
-    cout << "numXgrids = " << config_.numXgrids
-         << "; numYgrids = " << config_.numYgrids << endl;
-    cout << "vault_x = " << vault_x << "; vault_y = " << vault_y << endl;
-    cout << "bank_x = " << bank_x << "; bank_y = " << bank_y << endl;
-    cout << "dimX = " << dimX << "; dimY = " << dimY << "; numP = " << numP
-         << endl;
-    cout << "number of devices is " << config_.devices_per_rank << endl;
+    std::cout << "bank aspect ratio = " << config_.bank_asr << std::endl;
+    // std::cout << "#rows = " << config_.rows << "; #columns = " <<
+    // config_.rows / config_.bank_asr << std::endl;
+    std::cout << "numXgrids = " << config_.numXgrids
+              << "; numYgrids = " << config_.numYgrids << std::endl;
+    std::cout << "vault_x = " << vault_x << "; vault_y = " << vault_y
+              << std::endl;
+    std::cout << "bank_x = " << bank_x << "; bank_y = " << bank_y << std::endl;
+    std::cout << "dimX = " << dimX << "; dimY = " << dimY << "; numP = " << numP
+              << std::endl;
+    std::cout << "number of devices is " << config_.devices_per_rank
+              << std::endl;
 
     SetPhyAddressMapping();
 
     // Initialize the vectors
-    accu_Pmap =
-        vector<vector<double>>(num_case, vector<double>(numP * dimX * dimY, 0));
-    cur_Pmap =
-        vector<vector<double>>(num_case, vector<double>(numP * dimX * dimY, 0));
+    accu_Pmap = std::vector<std::vector<double>>(
+        num_case, std::vector<double>(numP * dimX * dimY, 0));
+    cur_Pmap = std::vector<std::vector<double>>(
+        num_case, std::vector<double>(numP * dimX * dimY, 0));
     T_size = (numP * 3 + 1) * (dimX + num_dummy) * (dimY + num_dummy);
     T_trans = new double *[num_case];
     T_final = new double *[num_case];
@@ -96,15 +97,16 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
         T_trans[i] = new double[T_size];
     }
 
-    sref_energy_prev = vector<double>(num_case, 0);
-    pre_stb_energy_prev = vector<double>(num_case, 0);
-    act_stb_energy_prev = vector<double>(num_case, 0);
-    pre_pd_energy_prev = vector<double>(num_case, 0);
+    sref_energy_prev = std::vector<double>(num_case, 0);
+    pre_stb_energy_prev = std::vector<double>(num_case, 0);
+    act_stb_energy_prev = std::vector<double>(num_case, 0);
+    pre_pd_energy_prev = std::vector<double>(num_case, 0);
 
     InitialParameters();
 
-    refresh_count = vector<vector<uint32_t>>(
-        config_.channels * config_.ranks, vector<uint32_t>(config_.banks, 0));
+    refresh_count = std::vector<std::vector<uint32_t>>(
+        config_.channels * config_.ranks,
+        std::vector<uint32_t>(config_.banks, 0));
 
     // Initialize the output file
     final_temperature_file_csv_.open(config_.final_temperature_file_csv);
@@ -116,13 +118,14 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
 
     // a quick preview of max temperature for each layer of each epoch
     epoch_max_temp_file_csv_.open(config_.epoch_max_temp_file_csv);
-    epoch_max_temp_file_csv_ << "layer, power, max_temp, epoch_time" << endl;
+    epoch_max_temp_file_csv_ << "layer, power, max_temp, epoch_time"
+                             << std::endl;
 
     // print header to csv files
     if (config_.output_level >= 2) {
         epoch_temperature_file_csv_.open(config_.epoch_temperature_file_csv);
         epoch_temperature_file_csv_
-            << "rank_channel_index,x,y,z,power,temperature,epoch" << endl;
+            << "rank_channel_index,x,y,z,power,temperature,epoch" << std::endl;
     }
 }
 
@@ -138,8 +141,8 @@ void ThermalCalculator::SetPhyAddressMapping() {
     }
     std::vector<std::string> bit_fields = StringSplit(mapping_string, ',');
     if (bit_fields.size() != 6) {
-        cerr << "loc_mapping should have 6 fields!" << endl;
-        exit(1);
+        std::cerr << "loc_mapping should have 6 fields!" << std::endl;
+        std::exit(1);
     }
     std::vector<std::vector<int>> mapped_pos(bit_fields.size(),
                                              std::vector<int>());
@@ -174,14 +177,14 @@ void ThermalCalculator::SetPhyAddressMapping() {
     }
 
 #ifdef DEBUG_LOC_MAPPING
-    cout << "final mapped pos:";
+    std::cout << "final mapped pos:";
     for (unsigned i = 0; i < mapped_pos.size(); i++) {
         for (unsigned j = 0; j < mapped_pos[i].size(); j++) {
-            cout << mapped_pos[i][j] << " ";
+            std::cout << mapped_pos[i][j] << " ";
         }
-        cout << endl;
+        std::cout << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
 #endif  // DEBUG_LOC_MAPPING
 
     int column_offset = LogBase2(config_.BL);
@@ -200,8 +203,9 @@ void ThermalCalculator::SetPhyAddressMapping() {
                 uint64_t new_bit = (this_bit << mapped_pos[i][j]);
                 new_hex |= new_bit;
 #ifdef DEBUG_LOC_MAPPING
-                cout << "mapping " << this_bit << " to " << mapped_pos[i][j]
-                     << ", result:" << std::hex << new_hex << std::dec << endl;
+                std::cout << "mapping " << this_bit << " to "
+                          << mapped_pos[i][j] << ", result:" << std::hex
+                          << new_hex << std::dec << std::endl;
 #endif  // DEBUG_LOC_MAPPING
             }
         }
@@ -213,18 +217,19 @@ void ThermalCalculator::SetPhyAddressMapping() {
         }
 
 #ifdef DEBUG_LOC_MAPPING
-        cout << "new channel " << new_pos[0] << " vs old channel "
-             << addr.channel_ << endl;
-        cout << "new rank " << new_pos[1] << " vs old rank " << addr.rank_
-             << endl;
-        cout << "new bg " << new_pos[2] << " vs old bg " << addr.bankgroup_
-             << endl;
-        cout << "new bank " << new_pos[3] << " vs old bank " << addr.bank_
-             << endl;
-        cout << "new row " << new_pos[4] << " vs old row " << addr.row_ << endl;
-        cout << "new col " << new_pos[5] << " vs old col " << addr.column_
-             << endl;
-        cout << std::dec;
+        std::cout << "new channel " << new_pos[0] << " vs old channel "
+                  << addr.channel_ << std::endl;
+        std::cout << "new rank " << new_pos[1] << " vs old rank " << addr.rank_
+                  << std::endl;
+        std::cout << "new bg " << new_pos[2] << " vs old bg " << addr.bankgroup_
+                  << std::endl;
+        std::cout << "new bank " << new_pos[3] << " vs old bank " << addr.bank_
+                  << std::endl;
+        std::cout << "new row " << new_pos[4] << " vs old row " << addr.row_
+                  << std::endl;
+        std::cout << "new col " << new_pos[5] << " vs old col " << addr.column_
+                  << std::endl;
+        std::cout << std::dec;
 #endif
 
         return Address(new_pos[0], new_pos[1], new_pos[2], new_pos[3],
@@ -312,11 +317,11 @@ int ThermalCalculator::MapToZ(int channel_id, int bank_id) {
     return z;
 }
 
-std::pair<vector<int>, vector<int>> ThermalCalculator::MapToXY(
+std::pair<std::vector<int>, std::vector<int>> ThermalCalculator::MapToXY(
     const Command &cmd, int vault_id_x, int vault_id_y, int bank_id_x,
     int bank_id_y) {
-    vector<int> x;
-    vector<int> y;
+    std::vector<int> x;
+    std::vector<int> y;
 
     int row_id = cmd.Row();
     int col_tile_id = row_id / config_.TileRowNum;
@@ -578,13 +583,14 @@ void ThermalCalculator::PrintTransPT(uint64_t clk) {
         for (int layer = 0; layer < numP; layer++) {
             double maxT_layer = GetMaxTofCaseLayer(T_trans, ir, layer);
             epoch_max_temp_file_csv_ << layer << ","
-                                     << "-," << maxT_layer << "," << ms << endl;
-            cout << "MaxT of case " << ir << " in layer " << layer << " is "
-                 << maxT_layer << " [C]\n";
+                                     << "-," << maxT_layer << "," << ms
+                                     << std::endl;
+            std::cout << "MaxT of case " << ir << " in layer " << layer
+                      << " is " << maxT_layer << " [C]\n";
             maxT = maxT > maxT_layer ? maxT : maxT_layer;
         }
-        cout << "MaxT of case " << ir << " is " << maxT << " [C] at " << ms
-             << " ms\n";
+        std::cout << "MaxT of case " << ir << " is " << maxT << " [C] at " << ms
+                  << " ms\n";
         // only outputs full file when output level >= 2
         if (config_.output_level >= 2) {
             PrintCSV_trans(epoch_temperature_file_csv_, cur_Pmap, T_trans, ir,
@@ -606,8 +612,8 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk) {
              Statistics::Stats2DCumuSum(stats_.sref_energy) +
              Statistics::Stats2DCumuSum(stats_.pre_pd_energy)) /
             (dimX * dimY * (numP - 1));
-        cout << "background energy " << extra_energy * (dimX * dimY * numP)
-             << endl;
+        std::cout << "background energy " << extra_energy * (dimX * dimY * numP)
+                  << std::endl;
         UpdatePowerMaps(extra_energy / 1000 / device_scale, false, clk);
     } else {
         double extra_energy;
@@ -623,14 +629,14 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk) {
                      stats_.act_stb_energy[jch][jrk].cumulative_value +
                      stats_.pre_pd_energy[jch][jrk].cumulative_value) /
                     (dimX * dimY * numP);
-                cout << "background energy "
-                     << extra_energy * (dimX * dimY * numP) << endl;
+                std::cout << "background energy "
+                          << extra_energy * (dimX * dimY * numP) << std::endl;
                 double sum_energy = 0.0;
                 for (int i = 0; i < dimX * dimY * numP; i++) {
                     sum_energy += accu_Pmap[case_id][i];
                 }
-                cout << "other energy " << sum_energy * 1000.0 * device_scale
-                     << endl;
+                std::cout << "other energy "
+                          << sum_energy * 1000.0 * device_scale << std::endl;
                 for (int i = 0; i < dimX * dimY * numP; i++) {
                     accu_Pmap[case_id][i] += extra_energy / 1000 / device_scale;
                 }
@@ -642,7 +648,7 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk) {
     for (int ir = 0; ir < num_case; ir++) {
         CalcFinalT(ir, clk);
         double maxT = GetMaxTofCase(T_final, ir);
-        cout << "MaxT of case " << ir << " is " << maxT << " [C]\n";
+        std::cout << "MaxT of case " << ir << " is " << maxT << " [C]\n";
         // print to file
         PrintCSV_final(final_temperature_file_csv_, accu_Pmap, T_final, ir,
                        clk);
@@ -660,7 +666,7 @@ void ThermalCalculator::CalcTransT(int case_id) {
     double time = config_.power_epoch_period * config_.tCK * 1e-9;
     double ***powerM = InitPowerM(case_id, 0);
     double totP = GetTotalPower(powerM);
-    cout << "total trans power is " << totP * 1000 << " [mW]" << endl;
+    std::cout << "total trans power is " << totP * 1000 << " [mW]" << std::endl;
     T_trans[case_id] = transient_thermal_solver(
         powerM, config_.ChipX, config_.ChipY, numP, dimX + num_dummy,
         dimY + num_dummy, Midx, MidxSize, Cap, CapSize, time, time_iter,
@@ -670,7 +676,7 @@ void ThermalCalculator::CalcTransT(int case_id) {
 void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk) {
     double ***powerM = InitPowerM(case_id, clk);
     double totP = GetTotalPower(powerM);
-    cout << "total final power is " << totP * 1000 << " [mW]" << endl;
+    std::cout << "total final power is " << totP * 1000 << " [mW]" << std::endl;
     double *T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY,
                                       numP, dimX + num_dummy, dimY + num_dummy,
                                       Midx, MidxSize, Tamb);
@@ -720,7 +726,7 @@ double ThermalCalculator::GetTotalPower(double ***powerM) {
 }
 
 void ThermalCalculator::InitialParameters() {
-    layerP = vector<int>(numP, 0);
+    layerP = std::vector<int>(numP, 0);
     for (int l = 0; l < numP; l++) layerP[l] = l * 3;
     Midx = calculate_Midx_array(config_.ChipX, config_.ChipY, numP,
                                 dimX + num_dummy, dimY + num_dummy, &MidxSize,
@@ -756,8 +762,8 @@ int ThermalCalculator::determineXY(double xd, double yd, int total_grids_) {
             // total_grids_ can be factored by x and y
             asr = (x * xd >= y * yd) ? (x * xd / y / yd) : (y * yd / x / xd);
             if (asr < asr_re) {
-                cout << "asr = " << asr << "; x = " << x << "; y = " << y
-                     << "; xd = " << xd << endl;
+                std::cout << "asr = " << asr << "; x = " << x << "; y = " << y
+                          << "; xd = " << xd << std::endl;
                 x_re = total_grids_ / y;
                 asr_re = asr;
             }
@@ -782,16 +788,16 @@ void ThermalCalculator::calculate_time_step() {
         }
     }
 
-    cout << "maximum dt is " << dt << endl;
+    std::cout << "maximum dt is " << dt << std::endl;
 
     // calculate time_iter
     double power_epoch_time =
         config_.power_epoch_period * config_.tCK * 1e-9;  // [s]
-    cout << "power_epoch_time = " << power_epoch_time << endl;
+    std::cout << "power_epoch_time = " << power_epoch_time << std::endl;
     time_iter = time_iter0;
     while (power_epoch_time / time_iter >= dt) time_iter++;
     // time_iter += 10;
-    cout << "time_iter = " << time_iter << endl;
+    std::cout << "time_iter = " << time_iter << std::endl;
 }
 
 double ThermalCalculator::GetMaxTofCase(double **temp_map, int case_id) {
@@ -820,9 +826,9 @@ double ThermalCalculator::GetMaxTofCaseLayer(double **temp_map, int case_id,
     return maxT;
 }
 
-void ThermalCalculator::PrintCSV_trans(ofstream &csvfile,
-                                       vector<vector<double>> P_, double **T_,
-                                       int id, uint64_t scale) {
+void ThermalCalculator::PrintCSV_trans(std::ofstream &csvfile,
+                                       std::vector<std::vector<double>> P_,
+                                       double **T_, int id, uint64_t scale) {
     for (int l = 0; l < numP; l++) {
         for (int j = num_dummy / 2; j < dimY + num_dummy / 2; j++) {
             for (int i = num_dummy / 2; i < dimX + num_dummy / 2; i++) {
@@ -836,15 +842,15 @@ void ThermalCalculator::PrintCSV_trans(ofstream &csvfile,
                             T0;
                 csvfile << id << "," << i - num_dummy / 2 << ","
                         << j - num_dummy / 2 << "," << l << "," << pw << ","
-                        << tm << "," << sample_id << endl;
+                        << tm << "," << sample_id << std::endl;
             }
         }
     }
 }
 
-void ThermalCalculator::PrintCSV_final(ofstream &csvfile,
-                                       vector<vector<double>> P_, double **T_,
-                                       int id, uint64_t scale) {
+void ThermalCalculator::PrintCSV_final(std::ofstream &csvfile,
+                                       std::vector<std::vector<double>> P_,
+                                       double **T_, int id, uint64_t scale) {
     for (int l = 0; l < numP; l++) {
         for (int j = num_dummy / 2; j < dimY + num_dummy / 2; j++) {
             for (int i = num_dummy / 2; i < dimX + num_dummy / 2; i++) {
@@ -857,15 +863,15 @@ void ThermalCalculator::PrintCSV_final(ofstream &csvfile,
                                    j * (dimX + num_dummy) + i];
                 csvfile << id << "," << i - num_dummy / 2 << ","
                         << j - num_dummy / 2 << "," << l << "," << pw << ","
-                        << tm << endl;
+                        << tm << std::endl;
             }
         }
     }
 }
 
-void ThermalCalculator::PrintCSV_bank(ofstream &csvfile) {
+void ThermalCalculator::PrintCSV_bank(std::ofstream &csvfile) {
     // header
-    csvfile << "vault_id,bank_id,start_x,end_x,start_y,end_y,z" << endl;
+    csvfile << "vault_id,bank_id,start_x,end_x,start_y,end_y,z" << std::endl;
 
     for (int vault_id = 0; vault_id < config_.channels; vault_id++) {
         int vault_id_x, vault_id_y;
@@ -890,14 +896,14 @@ void ThermalCalculator::PrintCSV_bank(ofstream &csvfile) {
                             (bank_id_y + 1) * config_.numYgrids - 1;
                 csvfile << vault_id << "," << abs_bank_id << "," << start_x
                         << "," << end_x << "," << start_y << "," << end_y << ","
-                        << z << endl;
+                        << z << std::endl;
             }
         }
     }
 }
 
-void ThermalCalculator::PrintCSVHeader_final(ofstream &csvfile) {
-    csvfile << "rank_channel_index,x,y,z,power,temperature" << endl;
+void ThermalCalculator::PrintCSVHeader_final(std::ofstream &csvfile) {
+    csvfile << "rank_channel_index,x,y,z,power,temperature" << std::endl;
 }
 
 void ThermalCalculator::UpdateLogicPower() {
@@ -913,3 +919,5 @@ void ThermalCalculator::UpdateLogicPower() {
                          static_cast<double>(config_.epoch_period);
     avg_logic_power_ = max_logic_power_ * utilization + const_bg_power;
 }
+
+}  // namespace dramcore

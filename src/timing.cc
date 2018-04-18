@@ -1,8 +1,9 @@
 #include "timing.h"
+#include <algorithm>
 #include <utility>
 
-using namespace std;
-using namespace dramcore;
+
+namespace dramcore {
 
 Timing::Timing(const Config& config)
     : same_bank(static_cast<int>(CommandType::SIZE)),
@@ -211,7 +212,7 @@ Timing::Timing(const Config& config)
             {CommandType::SELF_REFRESH_ENTER, precharge_to_activate}};
 
     // for those who need tPPD
-    if (config.IsGDDR() or config.protocol == DRAMProtocol::LPDDR4) {
+    if (config.IsGDDR() || config.protocol == DRAMProtocol::LPDDR4) {
         other_banks_same_bankgroup[static_cast<int>(CommandType::PRECHARGE)] =
             std::list<std::pair<CommandType, uint32_t> >{
                 {CommandType::PRECHARGE, precharge_to_precharge},
@@ -265,3 +266,5 @@ Timing::Timing(const Config& config)
             {CommandType::REFRESH_BANK, self_refresh_exit},
             {CommandType::SELF_REFRESH_ENTER, self_refresh_exit}};
 }
+
+}  // namespace dramcore

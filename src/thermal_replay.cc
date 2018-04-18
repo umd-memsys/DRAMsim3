@@ -1,6 +1,7 @@
 #include "thermal_replay.h"
 #include "./../ext/headers/args.hxx"
 
+// this will not be used in a library file so it's ok to do this
 using namespace dramcore;
 
 ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file,
@@ -29,7 +30,7 @@ ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file,
     std::ifstream trace_file(trace_name);
     if (!trace_file) {
         std::cout << "cannot open trace file " << trace_name << std::endl;
-        exit(1);
+        std::exit(1);
     }
 
     std::string line;
@@ -93,7 +94,7 @@ void ThermalReplay::ParseLine(std::string line, uint64_t &clk, Command &cmd) {
 
     // basic sanity check
     if (tokens.size() != 8) {
-        std::cerr << "Check trace format!" << endl;
+        std::cerr << "Check trace format!" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -214,11 +215,11 @@ int main(int argc, const char **argv) {
     try {
         parser.ParseCLI(argc, argv);
     } catch (args::Help) {
-        cout << parser;
+        std::cout << parser;
         return 0;
     } catch (args::ParseError e) {
-        cerr << e.what() << endl;
-        cerr << parser;
+        std::cerr << e.what() << std::endl;
+        std::cerr << parser;
         return 1;
     }
 
@@ -235,3 +236,4 @@ int main(int argc, const char **argv) {
 
     return 0;
 }
+

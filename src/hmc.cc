@@ -1,7 +1,6 @@
 #include "hmc.h"
 
-using namespace std;
-using namespace dramcore;
+namespace dramcore {
 
 uint64_t gcd(uint64_t x, uint64_t y);
 uint64_t lcm(uint64_t x, uint64_t y);
@@ -255,7 +254,8 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
       next_link_(0) {
     // sanity check, this constructor should only be intialized using HMC
     if (!ptr_config_->IsHMC()) {
-        cerr << "Initialzed an HMC system without an HMC config file!" << endl;
+        std::cerr << "Initialzed an HMC system without an HMC config file!"
+                  << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -335,8 +335,8 @@ void HMCMemorySystem::SetClockRatio() {
     clk_tick_product_ = dram_clk_ticks_ * logic_clk_ticks_;
 
 #ifdef DEBUG_OUTPUT
-    cout << "HMC Logic clock speed " << dram_clk_ticks_ << endl;
-    cout << "HMC DRAM clock speed " << logic_clk_ticks_ << endl;
+    std::cout << "HMC Logic clock speed " << dram_clk_ticks_ << std::endl;
+    std::cout << "HMC DRAM clock speed " << logic_clk_ticks_ << std::endl;
 #endif
 
     return;
@@ -792,3 +792,5 @@ uint64_t gcd(uint64_t x, uint64_t y) {
 }
 
 uint64_t lcm(uint64_t x, uint64_t y) { return (x * y) / gcd(x, y); }
+
+}  // namespace dramcore

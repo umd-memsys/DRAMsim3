@@ -1,14 +1,11 @@
 #include "common.h"
-#include <iomanip>
 #include <vector>
 #include "../ext/fmt/src/format.h"
 
-using namespace std;
-
 namespace dramcore {
 
-ostream& operator<<(ostream& os, const Command& cmd) {
-    vector<string> command_string = {
+std::ostream& operator<<(std::ostream& os, const Command& cmd) {
+    std::vector<std::string> command_string = {
         "read",
         "read_p",
         "write",
@@ -27,19 +24,20 @@ ostream& operator<<(ostream& os, const Command& cmd) {
     return os;
 }
 
-ostream& operator<<(ostream& os, const Request& req) {
+std::ostream& operator<<(std::ostream& os, const Request& req) {
     os << "(" << req.arrival_time_ << "," << req.exit_time_ << "," << req.id_
        << ")"
        << " " << req.cmd_;
     return os;
 }  // TODO - Unused code. Remove?
 
-istream& operator>>(istream& is, Access& access) {
-    is >> hex >> access.hex_addr_ >> access.access_type_ >> dec >> access.time_;
+std::istream& operator>>(std::istream& is, Access& access) {
+    is >> std::hex >> access.hex_addr_ >> access.access_type_ >> std::dec >>
+        access.time_;
     return is;
 }
 
-ostream& operator<<(ostream& os, const Access& access) { return os; }
+std::ostream& operator<<(std::ostream& os, const Access& access) { return os; }
 
 uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
     addr >>= pos;
@@ -83,22 +81,24 @@ void StringSplit(const std::string& s, char delim, Out result) {
 }
 
 void AbruptExit(const std::string& file, int line) {
-    std::cerr << "Exiting Abruptly - " << file << ":" << line << endl;
-    exit(-1);
+    std::cerr << "Exiting Abruptly - " << file << ":" << line << std::endl;
+    std::exit(-1);
 }
 
 // Dummy callback functions for use when the simulator is not integrated with a
 // frontend feeders
 void read_callback_func(uint64_t addr) {
 #ifdef LOG_REQUESTS
-    cout << "Read Request with address = " << addr << " is returned" << endl;
+    std::cout << "Read Request with address = " << addr << " is returned"
+              << std::endl;
 #endif
     return;
 }
 
 void write_callback_func(uint64_t addr) {
 #ifdef LOG_REQUESTS
-    cout << "Write Request with address = " << addr << " is returned" << endl;
+    std::cout << "Write Request with address = " << addr << " is returned"
+              << std::endl;
 #endif
 }
 

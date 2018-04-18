@@ -1,13 +1,12 @@
 #include "command_queue.h"
 #include "statistics.h"
 
-using namespace std;
-using namespace dramcore;
+namespace dramcore {
 
 CommandQueue::CommandQueue(uint32_t channel_id, const Config& config,
                            const ChannelState& channel_state, Statistics& stats)
     : clk_(0),
-      rank_queues_empty(vector<bool>(config.ranks, true)),
+      rank_queues_empty(std::vector<bool>(config.ranks, true)),
       rank_queues_empty_from_time_(std::vector<uint64_t>(config.ranks, 0)),
       config_(config),
       channel_state_(channel_state),
@@ -25,8 +24,8 @@ CommandQueue::CommandQueue(uint32_t channel_id, const Config& config,
         queue_structure_ = QueueStructure::PER_RANK;
         num_queues = config_.ranks;
     } else {
-        cerr << "Unsupportted queueing structure " << config_.queue_structure
-             << endl;
+        std::cerr << "Unsupportted queueing structure "
+                  << config_.queue_structure << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -196,7 +195,7 @@ inline void CommandQueue::IterateNext() {
     } else if (queue_structure_ == QueueStructure::PER_RANK) {
         next_rank_ = (next_rank_ + 1) % config_.ranks;
     } else {
-        cerr << "Unknown queue structure\n";
+        std::cerr << "Unknown queue structure" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
     next_queue_index_ = GetQueueIndex(next_rank_, next_bankgroup_, next_bank_);
@@ -229,7 +228,7 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue,
         req->exit_time_ = clk_ + config_.write_delay;
         stats_.numb_write_reqs_issued++;
     } else {
-        cerr << "Unknown request type\n" << endl;
+        std::cerr << "Unknown request type\n" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
     issued_req_.splice(issued_req_.end(), queue, req_itr);
@@ -270,3 +269,5 @@ int CommandQueue::QueueUsage() const {
     }
     return usage;
 }
+
+}  // namespace dramcore

@@ -1,7 +1,6 @@
 #include "cpu.h"
 
-using namespace std;
-using namespace dramcore;
+namespace dramcore {
 
 CPU::CPU(BaseMemorySystem& memory_system)
     : memory_system_(memory_system), clk_(0) {}
@@ -74,7 +73,7 @@ TraceBasedCPU::TraceBasedCPU(BaseMemorySystem& memory_system,
     : CPU(memory_system) {
     trace_file_.open(trace_file);
     if (trace_file_.fail()) {
-        cerr << "Trace file does not exist" << endl;
+        std::cerr << "Trace file does not exist" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 }
@@ -132,3 +131,5 @@ void ThermalCPU::ClockTick() {
     }
     clk_++;
 }
+
+}  // namespace dramcore

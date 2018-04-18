@@ -4,7 +4,7 @@
 #include "hmc.h"
 #include "memory_system.h"
 
-using namespace std;
+// only exception of namespace as this will never collide with other namespaces
 using namespace dramcore;
 
 int main(int argc, const char **argv) {
@@ -30,11 +30,11 @@ int main(int argc, const char **argv) {
     try {
         parser.ParseCLI(argc, argv);
     } catch (args::Help) {
-        cout << parser;
+        std::cout << parser;
         return 0;
     } catch (args::ParseError e) {
-        cerr << e.what() << endl;
-        cerr << parser;
+        std::cerr << e.what() << std::endl;
+        std::cerr << parser;
         return 1;
     }
 
@@ -58,7 +58,8 @@ int main(int argc, const char **argv) {
         memory_system = new IdealMemorySystem(
             config_file, output_dir, read_callback_func, write_callback_func);
     } else {
-        cout << "Unknown memory system type" << endl;
+        memory_system = nullptr;
+        std::cout << "Unknown memory system type" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -72,7 +73,8 @@ int main(int argc, const char **argv) {
     } else if (cpu_type == "thermal") {
         cpu = new ThermalCPU(*memory_system);
     } else {
-        cout << "Unknown cpu type" << endl;
+        cpu = nullptr;
+        std::cout << "Unknown cpu type" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 

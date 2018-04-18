@@ -1,8 +1,8 @@
 #include "bankstate.h"
+#include <algorithm>
 #include "statistics.h"
 
-using namespace std;
-using namespace dramcore;
+namespace dramcore {
 
 BankState::BankState(Statistics& stats)
     : stats_(stats),
@@ -34,7 +34,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
-                    cout << "In unknown state" << endl;
+                    std::cout << "In unknown state" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
         case CommandType::READ_PRECHARGE:
@@ -47,7 +47,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
-                    cout << "In unknown state" << endl;
+                    std::cout << "In unknown state" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
         case CommandType::WRITE:
@@ -60,7 +60,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
-                    cout << "In unknown state" << endl;
+                    std::cout << "In unknown state" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
         case CommandType::WRITE_PRECHARGE:
@@ -73,7 +73,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
-                    cout << "In unknown state" << endl;
+                    std::cout << "In unknown state" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
         case CommandType::REFRESH_BANK:
@@ -85,7 +85,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
-                    cout << "In unknown state" << endl;
+                    std::cout << "In unknown state" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
         case CommandType::REFRESH:
@@ -97,7 +97,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::SELF_REFRESH:
                     return CommandType::SELF_REFRESH_EXIT;
                 default:
-                    cout << "In unknown state" << endl;
+                    std::cout << "In unknown state" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
         case CommandType::SELF_REFRESH_ENTER:
@@ -108,7 +108,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                     return CommandType::PRECHARGE;
                 case State::SELF_REFRESH:
                 default:
-                    cout << "In unknown state" << endl;
+                    std::cout << "In unknown state" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
         case CommandType::SELF_REFRESH_EXIT:
@@ -118,7 +118,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
                 case State::CLOSED:
                 case State::OPEN:
                 default:
-                    cout << "In unknown state" << endl;
+                    std::cout << "In unknown state" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
         // ACTIVATE and PRECHARGE are on demand commands
@@ -210,6 +210,8 @@ void BankState::UpdateState(const Command& cmd) {
 
 void BankState::UpdateTiming(CommandType cmd_type, uint64_t time) {
     cmd_timing_[static_cast<int>(cmd_type)] =
-        max(cmd_timing_[static_cast<int>(cmd_type)], time);
+        std::max(cmd_timing_[static_cast<int>(cmd_type)], time);
     return;
 }
+
+}  // namespace dramcore
