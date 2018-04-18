@@ -42,7 +42,7 @@ class ThermalCalculator {
     std::vector<std::vector<double>> accu_Pmap;  // accumulative power map
     std::vector<std::vector<double>> cur_Pmap;   // current power map
 
-    std::vector<std::vector<uint32_t>> refresh_count;
+    std::vector<std::vector<int>> refresh_count;
 
     // previous background energy
     std::vector<double> sref_energy_prev;

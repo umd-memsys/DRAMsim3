@@ -15,7 +15,7 @@ enum class QueueStructure { PER_RANK, PER_BANK, SIZE };
 
 class CommandQueue {
    public:
-    CommandQueue(uint32_t channel_id, const Config& config,
+    CommandQueue(int channel_id, const Config& config,
                  const ChannelState& channel_state, Statistics& stats);
     Command GetCommandToIssue();
     Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
@@ -39,7 +39,7 @@ class CommandQueue {
     Statistics& stats_;
     int next_rank_, next_bankgroup_, next_bank_, next_queue_index_;
     std::vector<std::list<Request*>> queues_;
-    uint32_t channel_id_;
+    int channel_id_;
 
     void IterateNext();
     int GetQueueIndex(int rank, int bankgroup, int bank);

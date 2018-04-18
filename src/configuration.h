@@ -30,63 +30,63 @@ class Config {
 
     // DRAM physical structure
     DRAMProtocol protocol;
-    uint32_t channel_size;
-    uint32_t channels;
-    uint32_t ranks;
-    uint32_t banks;
-    uint32_t bankgroups;
-    uint32_t banks_per_group;
-    uint32_t rows;
-    uint32_t columns;
-    uint32_t device_width;
-    uint32_t bus_width;
-    uint32_t devices_per_rank;
-    uint32_t BL;
+    int channel_size;
+    int channels;
+    int ranks;
+    int banks;
+    int bankgroups;
+    int banks_per_group;
+    int rows;
+    int columns;
+    int device_width;
+    int bus_width;
+    int devices_per_rank;
+    int BL;
 
     // Generic DRAM timing parameters
     double tCK;
-    uint32_t
+    int
         burst_cycle;  // seperate BL with timing since fot GDDRx it's not BL/2
-    uint32_t AL;
-    uint32_t CL;
-    uint32_t CWL;
-    uint32_t RL;
-    uint32_t WL;
-    uint32_t tCCD_L;
-    uint32_t tCCD_S;
-    uint32_t tRTRS;
-    uint32_t tRTP;
-    uint32_t tWTR_L;
-    uint32_t tWTR_S;
-    uint32_t tWR;
-    uint32_t tRP;
-    uint32_t tRRD_L;
-    uint32_t tRRD_S;
-    uint32_t tRAS;
-    uint32_t tRCD;
-    uint32_t tRFC;
-    uint32_t tRC;
+    int AL;
+    int CL;
+    int CWL;
+    int RL;
+    int WL;
+    int tCCD_L;
+    int tCCD_S;
+    int tRTRS;
+    int tRTP;
+    int tWTR_L;
+    int tWTR_S;
+    int tWR;
+    int tRP;
+    int tRRD_L;
+    int tRRD_S;
+    int tRAS;
+    int tRCD;
+    int tRFC;
+    int tRC;
     // tCKSRE and tCKSRX are only useful for changing clock freq after entering
     // SRE mode we are not doing that, so tCKESR is sufficient
-    uint32_t tCKE;
-    uint32_t tCKESR;
-    uint32_t tXS;
-    uint32_t tXP;
-    uint32_t tRFCb;
-    uint32_t tREFI;
-    uint32_t tREFIb;
-    uint32_t tFAW;
-    uint32_t tRPRE;  // read preamble and write preamble are important
-    uint32_t tWPRE;
-    uint32_t read_delay;
-    uint32_t write_delay;
+    int tCKE;
+    int tCKESR;
+    int tXS;
+    int tXP;
+    int tRFCb;
+    int tREFI;
+    int tREFIb;
+    int tFAW;
+    int tRPRE;  // read preamble and write preamble are important
+    int tWPRE;
+    int read_delay;
+    int write_delay;
 
     // LPDDR4 and GDDR5
-    uint32_t tPPD;
+    int tPPD;
     // GDDR5
-    uint32_t t32AW;
-    uint32_t tRCDRD;
-    uint32_t tRCDWR;
+    int t32AW;
+    int tRCDRD;
+    int tRCDWR;
 
     // pre calculated power parameters
     double act_energy_inc;
@@ -101,26 +101,26 @@ class Config {
     double sref_energy_inc;
 
     // HMC
-    uint32_t num_links;
-    uint32_t num_dies;
-    uint32_t link_width;
-    uint32_t link_speed;
-    uint32_t num_vaults;
-    uint32_t block_size;  // block size in bytes
-    uint32_t xbar_queue_depth;
+    int num_links;
+    int num_dies;
+    int link_width;
+    int link_speed;
+    int num_vaults;
+    int block_size;  // block size in bytes
+    int xbar_queue_depth;
 
     std::string address_mapping;
     std::string queue_structure;
-    uint32_t queue_size;
+    int queue_size;
     std::string refresh_strategy;
     bool enable_self_refresh;
-    uint32_t idle_cycles_for_self_refresh;
+    int idle_cycles_for_self_refresh;
     bool aggressive_precharging_enabled;
     bool enable_hbm_dual_cmd;
 
     std::string output_prefix;
 
-    uint32_t epoch_period;
+    int epoch_period;
     int output_level;
     std::string output_dir;
     std::string stats_file;
@@ -130,8 +130,8 @@ class Config {
     std::string histo_stats_file_csv;
 
     // Computed parameters
-    uint32_t request_size_bytes;
-    uint32_t channel_width, rank_width, bankgroup_width, bank_width, row_width,
+    int request_size_bytes;
+    int channel_width, rank_width, bankgroup_width, bank_width, row_width,
         column_width;
 
     bool IsGDDR() const {
@@ -146,12 +146,12 @@ class Config {
     // yzy: add another function
     bool IsDDR4() const { return (protocol == DRAMProtocol::DDR4); }
 
-    uint32_t ideal_memory_latency;
+    int ideal_memory_latency;
 
     // thermal simulator
     std::string loc_mapping;
-    uint32_t power_epoch_period;
-    uint32_t numRowRefresh;  // number of rows to be refreshed for one time
+    int power_epoch_period;
+    int numRowRefresh;  // number of rows to be refreshed for one time
     double ChipX;
     double ChipY;
     double Tamb0;  // the ambient temperature in [C]

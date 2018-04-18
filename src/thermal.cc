@@ -104,9 +104,9 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
 
     InitialParameters();
 
-    refresh_count = std::vector<std::vector<uint32_t>>(
+    refresh_count = std::vector<std::vector<int>>(
         config_.channels * config_.ranks,
-        std::vector<uint32_t>(config_.banks, 0));
+        std::vector<int>(config_.banks, 0));
 
     // Initialize the output file
     final_temperature_file_csv_.open(config_.final_temperature_file_csv);
@@ -192,8 +192,8 @@ void ThermalCalculator::SetPhyAddressMapping() {
     GetPhyAddress = [mapped_pos, column_offset](const Address &addr) {
         uint64_t new_hex = 0;
         // ch - ra - bg - ba - ro - co
-        int origin_pos[] = {addr.channel_, addr.rank_, addr.bankgroup_,
-                            addr.bank_,    addr.row_,  addr.column_};
+        int origin_pos[] = {addr.channel, addr.rank, addr.bankgroup,
+                            addr.bank,    addr.row,  addr.column};
         int new_pos[] = {0, 0, 0, 0, 0, 0};
         for (unsigned i = 0; i < mapped_pos.size(); i++) {
             int field_width = mapped_pos[i].size();
@@ -218,16 +218,16 @@ void ThermalCalculator::SetPhyAddressMapping() {
 
 #ifdef DEBUG_LOC_MAPPING
         std::cout << "new channel " << new_pos[0] << " vs old channel "
-                  << addr.channel_ << std::endl;
-        std::cout << "new rank " << new_pos[1] << " vs old rank " << addr.rank_
+                  << addr.channel << std::endl;
+        std::cout << "new rank " << new_pos[1] << " vs old rank " << addr.rank
                   << std::endl;
-        std::cout << "new bg " << new_pos[2] << " vs old bg " << addr.bankgroup_
+        std::cout << "new bg " << new_pos[2] << " vs old bg " << addr.bankgroup
                   << std::endl;
         std::cout << "new bank " << new_pos[3] << " vs old bank " << addr.bank_
                   << std::endl;
-        std::cout << "new row " << new_pos[4] << " vs old row " << addr.row_
+        std::cout << "new row " << new_pos[4] << " vs old row " << addr.row
                   << std::endl;
-        std::cout << "new col " << new_pos[5] << " vs old col " << addr.column_
+        std::cout << "new col " << new_pos[5] << " vs old col " << addr.column
                   << std::endl;
         std::cout << std::dec;
 #endif
@@ -327,10 +327,10 @@ std::pair<std::vector<int>, std::vector<int>> ThermalCalculator::MapToXY(
     int col_tile_id = row_id / config_.TileRowNum;
     int grid_id_x = row_id / config_.matX / config_.RowTile;
 
-    Address temp_addr = Address(cmd.addr_);
+    Address temp_addr = Address(cmd.addr);
     for (int i = 0; i < config_.BL; i++) {
         Address phy_loc = GetPhyAddress(temp_addr);
-        int col_id = phy_loc.column_ * config_.device_width;
+        int col_id = phy_loc.column * config_.device_width;
         int bank_x_offset = bank_x * config_.numXgrids;
         int bank_y_offset = bank_y * config_.numYgrids;
         for (int j = 0; j < config_.device_width; j++) {
@@ -344,7 +344,7 @@ std::pair<std::vector<int>, std::vector<int>> ThermalCalculator::MapToXY(
             y.push_back(temp_y);
             col_id++;
         }
-        temp_addr.column_++;
+        temp_addr.column++;
     }
     return std::make_pair(x, y);
 }
@@ -389,10 +389,10 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd,
     // reverse it
     int bankgroup_id = bank0 / config_.banks_per_group;
     int bank_id = bank0 % config_.banks_per_group;
-    Address new_addr = Address(cmd.addr_);
-    new_addr.row_ = row0;
-    new_addr.bankgroup_ = bankgroup_id;
-    new_addr.bank_ = bank_id;
+    Address new_addr = Address(cmd.addr);
+    new_addr.row = row0;
+    new_addr.bankgroup = bankgroup_id;
+    new_addr.bank = bank_id;
 
     int vault_id_x, vault_id_y;
     std::tie(vault_id_x, vault_id_y) = MapToVault(cmd.Channel());
@@ -405,7 +405,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd,
 
     Address phy_addr = GetPhyAddress(new_addr);  // actual row after mapping
     // calculate x y z
-    int row_id = phy_addr.row_;
+    int row_id = phy_addr.row;
     int col_id = 0;  // refresh all units
     int col_tile_id = row_id / config_.TileRowNum;
     int grid_id_x = row_id / config_.matX / config_.RowTile;
@@ -446,8 +446,8 @@ void ThermalCalculator::UpdatePowerMaps(double add_energy, bool trans,
 
 void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
     save_clk = clk;
-    uint32_t rank = cmd.Rank();
-    uint32_t channel = cmd.Channel();
+    int rank = cmd.Rank();
+    int channel = cmd.Channel();
     int case_id;
     double device_scale;
     if (config_.IsHMC() || config_.IsHBM()) {
@@ -459,7 +459,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
     }
 
     double energy = 0.0;
-    if (cmd.cmd_type_ == CommandType::REFRESH) {
+    if (cmd.cmd_type == CommandType::REFRESH) {
         int rank_idx = channel * config_.ranks + rank;
         for (int ib = 0; ib < config_.banks; ib++) {
             int row_s = refresh_count[rank_idx][ib] * config_.numRowRefresh;
@@ -474,7 +474,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
                                                energy / 1000.0 / device_scale);
             }
         }
-    } else if (cmd.cmd_type_ == CommandType::REFRESH_BANK) {
+    } else if (cmd.cmd_type == CommandType::REFRESH_BANK) {
         int ib = cmd.Bank();
         int rank_idx = channel * config_.ranks + rank;
         int row_s = refresh_count[rank_idx][ib] * config_.numRowRefresh;
@@ -488,7 +488,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
                                            energy / 1000.0 / device_scale);
         }
     } else {
-        switch (cmd.cmd_type_) {
+        switch (cmd.cmd_type) {
             case CommandType::ACTIVATE:
                 energy = config_.act_energy_inc;
                 break;

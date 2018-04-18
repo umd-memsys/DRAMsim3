@@ -88,7 +88,7 @@ class IdealMemorySystem : public BaseMemorySystem {
     void ClockTick() override;
 
    private:
-    uint32_t latency_;
+    int latency_;
     std::list<Request *> infinite_buffer_q_;
 };
 

@@ -117,7 +117,7 @@ void DoubleComputeStat::PrintEpochCSVFormat(std::ostream& where) const {
     return;
 }
 
-HistogramStat::HistogramStat(int start, int end, uint32_t numb_bins,
+HistogramStat::HistogramStat(int start, int end, int numb_bins,
                              std::string name, std::string desc)
     : BaseStat(name, desc),
       start_(start),

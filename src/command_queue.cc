@@ -3,7 +3,7 @@
 
 namespace dramcore {
 
-CommandQueue::CommandQueue(uint32_t channel_id, const Config& config,
+CommandQueue::CommandQueue(int channel_id, const Config& config,
                            const ChannelState& channel_state, Statistics& stats)
     : clk_(0),
       rank_queues_empty(std::vector<bool>(config.ranks, true)),
@@ -75,7 +75,7 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
                         IssueRequest(queue, req_itr);
                         return cmd;
                     }
-                } else if (cmd.cmd_type_ == CommandType::PRECHARGE) {
+                } else if (cmd.cmd_type == CommandType::PRECHARGE) {
                     // Attempt to issue a precharge only if
                     // 1. There are no prior requests to the same bank in the
                     // queue (and)

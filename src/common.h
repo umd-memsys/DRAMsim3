@@ -14,35 +14,29 @@
 
 namespace dramcore {
 
-class Address {
-   public:
+struct Address {
     Address()
-        : channel_(-1),
-          rank_(-1),
-          bankgroup_(-1),
-          bank_(-1),
-          row_(-1),
-          column_(-1) {}
+        : channel(-1), rank(-1), bankgroup(-1), bank(-1), row(-1), column(-1) {}
     Address(int channel, int rank, int bankgroup, int bank, int row, int column)
-        : channel_(channel),
-          rank_(rank),
-          bankgroup_(bankgroup),
-          bank_(bank),
-          row_(row),
-          column_(column) {}
+        : channel(channel),
+          rank(rank),
+          bankgroup(bankgroup),
+          bank(bank),
+          row(row),
+          column(column) {}
     Address(const Address& addr)
-        : channel_(addr.channel_),
-          rank_(addr.rank_),
-          bankgroup_(addr.bankgroup_),
-          bank_(addr.bank_),
-          row_(addr.row_),
-          column_(addr.column_) {}
-    int32_t channel_;
-    int32_t rank_;
-    int32_t bankgroup_;
-    int32_t bank_;
-    int32_t row_;
-    int32_t column_;
+        : channel(addr.channel),
+          rank(addr.rank),
+          bankgroup(addr.bankgroup),
+          bank(addr.bank),
+          row(addr.row),
+          column(addr.column) {}
+    int channel;
+    int rank;
+    int bankgroup;
+    int bank;
+    int row;
+    int column;
 };
 
 uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos);
@@ -76,43 +70,36 @@ enum class CommandType {
     SIZE
 };
 
-class Command {
-   public:
-    Command() : cmd_type_(CommandType::SIZE) {}
+struct Command {
+    Command() : cmd_type(CommandType::SIZE) {}
     Command(CommandType cmd_type, const Address& addr)
-        : cmd_type_(cmd_type), addr_(addr) {}
+        : cmd_type(cmd_type), addr(addr) {}
 
-    bool IsValid() const { return cmd_type_ != CommandType::SIZE; }
+    bool IsValid() const { return cmd_type != CommandType::SIZE; }
     bool IsRefresh() const {
-        return cmd_type_ == CommandType::REFRESH ||
-               cmd_type_ == CommandType::REFRESH_BANK;
+        return cmd_type == CommandType::REFRESH ||
+               cmd_type == CommandType::REFRESH_BANK;
     }
     bool IsRead() const {
-        return cmd_type_ == CommandType::READ ||
-               cmd_type_ == CommandType ::READ_PRECHARGE;
+        return cmd_type == CommandType::READ ||
+               cmd_type == CommandType ::READ_PRECHARGE;
     }
     bool IsWrite() const {
-        return cmd_type_ == CommandType ::WRITE ||
-               cmd_type_ == CommandType ::WRITE_PRECHARGE;
+        return cmd_type == CommandType ::WRITE ||
+               cmd_type == CommandType ::WRITE_PRECHARGE;
     }
-    bool IsReadWrite() const {
-        return cmd_type_ == CommandType::READ ||
-               cmd_type_ == CommandType::READ_PRECHARGE ||
-               cmd_type_ == CommandType::WRITE ||
-               cmd_type_ == CommandType::WRITE_PRECHARGE;
-    }
-    CommandType cmd_type_;
-    Address addr_;
+    bool IsReadWrite() const { return IsRead() || IsWrite(); }
+    CommandType cmd_type;
+    Address addr;
 
-    int32_t Channel() const { return addr_.channel_; }
-    int32_t Rank() const { return addr_.rank_; }
-    int32_t Bankgroup() const { return addr_.bankgroup_; }
-    int32_t Bank() const { return addr_.bank_; }
-    int32_t Row() const { return addr_.row_; }
-    int32_t Column() const { return addr_.column_; }
+    int Channel() const { return addr.channel; }
+    int Rank() const { return addr.rank; }
+    int Bankgroup() const { return addr.bankgroup; }
+    int Bank() const { return addr.bank; }
+    int Row() const { return addr.row; }
+    int Column() const { return addr.column; }
 
     friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
-    void print(std::ofstream& val_file);  // TODO - Remove?
 };
 
 class Request {

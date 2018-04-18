@@ -74,7 +74,7 @@ class CounterStat : public BaseStat {
 class HistogramStat : public BaseStat {
    public:
     HistogramStat() : BaseStat() {}
-    HistogramStat(int start, int end, uint32_t numb_bins, std::string name,
+    HistogramStat(int start, int end, int numb_bins, std::string name,
                   std::string desc);
     void AddValue(int val);
     void Print(std::ostream& where) const override;
@@ -92,7 +92,7 @@ class HistogramStat : public BaseStat {
    private:
     int start_;
     int end_;
-    uint32_t numb_bins_;
+    int numb_bins_;
     std::map<int, uint64_t> bins_;
     std::map<int, uint64_t> last_epoch_bins_;
     uint64_t epoch_count_;

@@ -20,7 +20,7 @@ enum class RefreshStrategy {
 
 class Refresh {
    public:
-    Refresh(const uint32_t channel_id, const Config& config,
+    Refresh(const int channel_id, const Config& config,
             const ChannelState& channel_state, CommandQueue& cmd_queue,
             Statistics& stats);
     std::list<Request*> refresh_q_;  // Queue of refresh commands
@@ -30,7 +30,7 @@ class Refresh {
 
    private:
     uint64_t clk_;
-    uint32_t channel_id_;
+    int channel_id_;
     const Config& config_;
     const ChannelState& channel_state_;
     CommandQueue& cmd_queue_;
@@ -55,8 +55,8 @@ class Refresh {
     void IterateNext();
 
     bool ReadWritesToFinish(int rank, int bankgroup, int bank);
-    Command GetReadWritesToOpenRow(uint32_t rank, uint32_t bankgroup,
-                                   uint32_t bank);
+    Command GetReadWritesToOpenRow(int rank, int bankgroup,
+                                   int bank);
 };
 
 }  // namespace dramcore

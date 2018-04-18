@@ -113,14 +113,14 @@ void BaseMemorySystem::PrintStats() {
     ptr_stats_->PreEpochCompute(clk_);
     ptr_stats_->UpdateEpoch(clk_);
     std::cout << "-----------------------------------------------------"
-         << std::endl;
-    std::cout << "Printing final stats of MemorySystem " << mem_sys_id_ << " -- "
-         << std::endl;
+              << std::endl;
+    std::cout << "Printing final stats of MemorySystem " << mem_sys_id_
+              << " -- " << std::endl;
     std::cout << "-----------------------------------------------------"
-         << std::endl;
+              << std::endl;
     std::cout << *ptr_stats_;
     std::cout << "-----------------------------------------------------"
-         << std::endl;
+              << std::endl;
     if (ptr_config_->output_level >= 0) {
         ptr_stats_->PrintStats(stats_file_);
         // had to print the header here instead of the constructor
@@ -141,7 +141,7 @@ MemorySystem::MemorySystem(const std::string &config_file,
     : BaseMemorySystem(config_file, output_dir, read_callback, write_callback) {
     if (ptr_config_->IsHMC()) {
         std::cerr << "Initialized a memory system with an HMC config file!"
-             << std::endl;
+                  << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
@@ -272,9 +272,9 @@ void IdealMemorySystem::ClockTick() {
          req_itr != infinite_buffer_q_.end(); req_itr++) {
         auto req = *req_itr;
         if (clk_ - req->arrival_time_ >= latency_) {
-            if (req->cmd_.cmd_type_ == CommandType::READ) {
+            if (req->cmd_.cmd_type == CommandType::READ) {
                 ptr_stats_->numb_read_reqs_issued++;
-            } else if (req->cmd_.cmd_type_ == CommandType::WRITE) {
+            } else if (req->cmd_.cmd_type == CommandType::WRITE) {
                 ptr_stats_->numb_write_reqs_issued++;
             }
             ptr_stats_->access_latency.AddValue(clk_ - req->arrival_time_);

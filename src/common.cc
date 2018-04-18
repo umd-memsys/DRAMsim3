@@ -18,7 +18,7 @@ std::ostream& operator<<(std::ostream& os, const Command& cmd) {
         "self_refresh_exit",
         "WRONG"};
     os << fmt::format("{:<20} {:>3} {:>3} {:>3} {:>3} {:>#8x} {:>#8x}",
-                      command_string[static_cast<int>(cmd.cmd_type_)],
+                      command_string[static_cast<int>(cmd.cmd_type)],
                       cmd.Channel(), cmd.Rank(), cmd.Bankgroup(), cmd.Bank(),
                       cmd.Row(), cmd.Column());
     return os;

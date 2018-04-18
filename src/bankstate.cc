@@ -23,7 +23,7 @@ BankState::BankState(Statistics& stats)
 }
 
 CommandType BankState::GetRequiredCommandType(const Command& cmd) {
-    switch (cmd.cmd_type_) {
+    switch (cmd.cmd_type) {
         case CommandType::READ:
             switch (state_) {
                 case State::CLOSED:
@@ -134,14 +134,14 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) {
 void BankState::UpdateState(const Command& cmd) {
     switch (state_) {
         case State::OPEN:
-            switch (cmd.cmd_type_) {
+            switch (cmd.cmd_type) {
                 case CommandType::READ:
                 case CommandType::WRITE:
                     if (row_hit_count_ != 0) {
                         stats_.numb_row_hits++;
-                        if (cmd.cmd_type_ == CommandType::READ)
+                        if (cmd.cmd_type == CommandType::READ)
                             stats_.numb_read_row_hits++;
-                        if (cmd.cmd_type_ == CommandType::WRITE)
+                        if (cmd.cmd_type == CommandType::WRITE)
                             stats_.numb_write_row_hits++;
                     }
                     row_hit_count_++;
@@ -163,7 +163,7 @@ void BankState::UpdateState(const Command& cmd) {
             }
             break;
         case State::CLOSED:
-            switch (cmd.cmd_type_) {
+            switch (cmd.cmd_type) {
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
                     break;
@@ -185,7 +185,7 @@ void BankState::UpdateState(const Command& cmd) {
             }
             break;
         case State::SELF_REFRESH:
-            switch (cmd.cmd_type_) {
+            switch (cmd.cmd_type) {
                 case CommandType::SELF_REFRESH_EXIT:
                     state_ = State::CLOSED;
                     break;

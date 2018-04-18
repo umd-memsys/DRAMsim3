@@ -36,7 +36,7 @@ class ChannelState {
     }
     bool IsAllBankIdleInRank(int rank) const;
     bool IsRankSelfRefreshing(int rank) const { return is_selfrefresh_[rank]; }
-    uint32_t OpenRow(int rank, int bankgroup, int bank) const {
+    int OpenRow(int rank, int bankgroup, int bank) const {
         return bank_states_[rank][bankgroup][bank]->OpenRow();
     }
     int RowHitCount(int rank, int bankgroup, int bank) const {
@@ -66,32 +66,32 @@ class ChannelState {
     // Update timing of the bank the command corresponds to
     void UpdateSameBankTiming(
         const Address& addr,
-        const std::list<std::pair<CommandType, uint32_t> >& cmd_timing_list,
+        const std::list<std::pair<CommandType, int> >& cmd_timing_list,
         uint64_t clk);
 
     // Update timing of the other banks in the same bankgroup as the command
     void UpdateOtherBanksSameBankgroupTiming(
         const Address& addr,
-        const std::list<std::pair<CommandType, uint32_t> >& cmd_timing_list,
+        const std::list<std::pair<CommandType, int> >& cmd_timing_list,
         uint64_t clk);
 
     // Update timing of banks in the same rank but different bankgroup as the
     // command
     void UpdateOtherBankgroupsSameRankTiming(
         const Address& addr,
-        const std::list<std::pair<CommandType, uint32_t> >& cmd_timing_list,
+        const std::list<std::pair<CommandType, int> >& cmd_timing_list,
         uint64_t clk);
 
     // Update timing of banks in a different rank as the command
     void UpdateOtherRanksTiming(
         const Address& addr,
-        const std::list<std::pair<CommandType, uint32_t> >& cmd_timing_list,
+        const std::list<std::pair<CommandType, int> >& cmd_timing_list,
         uint64_t clk);
 
     // Update timing of the entire rank (for rank level commands)
     void UpdateSameRankTiming(
         const Address& addr,
-        const std::list<std::pair<CommandType, uint32_t> >& cmd_timing_list,
+        const std::list<std::pair<CommandType, int> >& cmd_timing_list,
         uint64_t clk);
 
     void UpdateCommandIssueStats(const Command& cmd) const;

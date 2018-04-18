@@ -1,7 +1,7 @@
 #include "refresh.h"
 
 namespace dramcore {
-Refresh::Refresh(const uint32_t channel_id, const Config &config,
+Refresh::Refresh(const int channel_id, const Config &config,
                  const ChannelState &channel_state, CommandQueue &cmd_queue,
                  Statistics &stats)
     : clk_(0),
@@ -45,8 +45,8 @@ void Refresh::InsertRefresh() {
                 for (auto i = 0; i < config_.ranks; i++) {
                     if (!channel_state_.rank_in_self_refresh_mode_[i]) {
                         auto addr = Address();
-                        addr.channel_ = channel_id_;
-                        addr.rank_ = i;
+                        addr.channel = channel_id_;
+                        addr.rank = i;
                         refresh_q_.push_back(
                             new Request(CommandType::REFRESH, addr));
                     }
@@ -58,8 +58,8 @@ void Refresh::InsertRefresh() {
             if (clk_ % (config_.tREFI / config_.ranks) == 0) {
                 if (!channel_state_.rank_in_self_refresh_mode_[next_rank_]) {
                     auto addr = Address();
-                    addr.channel_ = channel_id_;
-                    addr.rank_ = next_rank_;
+                    addr.channel = channel_id_;
+                    addr.rank = next_rank_;
                     refresh_q_.push_back(
                         new Request(CommandType::REFRESH, addr));
                 }
@@ -75,10 +75,10 @@ void Refresh::InsertRefresh() {
                     for (auto k = 0; k < config_.banks_per_group; k++) {
                         for (auto j = 0; j < config_.bankgroups; j++) {
                             auto addr = Address();
-                            addr.channel_ = channel_id_;
-                            addr.rank_ = next_rank_;
-                            addr.bankgroup_ = j;
-                            addr.bank_ = k;
+                            addr.channel = channel_id_;
+                            addr.rank = next_rank_;
+                            addr.bankgroup = j;
+                            addr.bank = k;
                             refresh_q_.push_back(
                                 new Request(CommandType::REFRESH_BANK, addr));
                         }
@@ -94,10 +94,10 @@ void Refresh::InsertRefresh() {
             if (clk_ % config_.tREFIb == 0) {
                 if (!channel_state_.rank_in_self_refresh_mode_[next_rank_]) {
                     auto addr = Address();
-                    addr.channel_ = channel_id_;
-                    addr.rank_ = next_rank_;
-                    addr.bankgroup_ = next_bankgroup_;
-                    addr.bank_ = next_bank_;
+                    addr.channel = channel_id_;
+                    addr.rank = next_rank_;
+                    addr.bankgroup = next_bankgroup_;
+                    addr.bank = next_bank_;
                     refresh_q_.push_back(
                         new Request(CommandType::REFRESH_BANK, addr));
                 }
@@ -114,7 +114,7 @@ Command Refresh::GetRefreshOrAssociatedCommand(
     std::list<Request *>::iterator refresh_itr) {
     auto refresh_req = *refresh_itr;
     // TODO - Strict round robin search of queues?
-    if (refresh_req->cmd_.cmd_type_ == CommandType::REFRESH) {
+    if (refresh_req->cmd_.cmd_type == CommandType::REFRESH) {
         for (auto k = 0; k < config_.banks_per_group; k++) {
             for (auto j = 0; j < config_.bankgroups; j++) {
                 if (ReadWritesToFinish(refresh_req->Rank(), j, k)) {
@@ -122,7 +122,7 @@ Command Refresh::GetRefreshOrAssociatedCommand(
                 }
             }
         }
-    } else if (refresh_req->cmd_.cmd_type_ == CommandType::REFRESH_BANK) {
+    } else if (refresh_req->cmd_.cmd_type == CommandType::REFRESH_BANK) {
         if (ReadWritesToFinish(refresh_req->Rank(), refresh_req->Bankgroup(),
                                refresh_req->Bank())) {
             return GetReadWritesToOpenRow(refresh_req->Rank(),
@@ -149,8 +149,8 @@ bool Refresh::ReadWritesToFinish(int rank, int bankgroup, int bank) {
            channel_state_.RowHitCount(rank, bankgroup, bank) == 0;
 }
 
-Command Refresh::GetReadWritesToOpenRow(uint32_t rank, uint32_t bankgroup,
-                                        uint32_t bank) {
+Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup,
+                                        int bank) {
     auto &queue = cmd_queue_.GetQueue(rank, bankgroup, bank);
     for (auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
         auto req = *req_itr;

@@ -18,29 +18,29 @@ Config::Config(std::string config_file, std::string out_dir)
     // System/controller Parameters
     protocol =
         GetDRAMProtocol(reader.Get("dram_structure", "protocol", "DDR3"));
-    channel_size = static_cast<uint32_t>(
+    channel_size = static_cast<int>(
         reader.GetInteger("system", "channel_size", 1024));
     channels =
-        static_cast<uint32_t>(reader.GetInteger("system", "channels", 1));
+        static_cast<int>(reader.GetInteger("system", "channels", 1));
     bus_width =
-        static_cast<uint32_t>(reader.GetInteger("system", "bus_width", 64));
+        static_cast<int>(reader.GetInteger("system", "bus_width", 64));
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
     queue_size =
-        static_cast<uint32_t>(reader.GetInteger("system", "queue_size", 16));
+        static_cast<int>(reader.GetInteger("system", "queue_size", 16));
     refresh_strategy =
         reader.Get("system", "refresh_strategy", "RANK_LEVEL_STAGGERED");
     enable_self_refresh =
         reader.GetBoolean("system", "enable_self_refresh", false);
-    idle_cycles_for_self_refresh = static_cast<uint32_t>(
+    idle_cycles_for_self_refresh = static_cast<int>(
         reader.GetInteger("system", "idle_cycles_for_self_refresh", 1000));
     aggressive_precharging_enabled =
         reader.GetBoolean("system", "aggressive_precharging_enabled", false);
 
     // DRAM organization
-    bankgroups = static_cast<uint32_t>(
+    bankgroups = static_cast<int>(
         reader.GetInteger("dram_structure", "bankgroups", 2));
-    banks_per_group = static_cast<uint32_t>(
+    banks_per_group = static_cast<int>(
         reader.GetInteger("dram_structure", "banks_per_group", 2));
     bool bankgroup_enable =
         reader.GetBoolean("dram_structure", "bankgroup_enable", true);
@@ -53,13 +53,13 @@ Config::Config(std::string config_file, std::string out_dir)
         reader.GetBoolean("dram_structure", "hbm_dual_cmd", true);
     enable_hbm_dual_cmd &= IsHBM();  // Make sure only HBM enables this
     banks = bankgroups * banks_per_group;
-    rows = static_cast<uint32_t>(
+    rows = static_cast<int>(
         reader.GetInteger("dram_structure", "rows", 1 << 16));
-    columns = static_cast<uint32_t>(
+    columns = static_cast<int>(
         reader.GetInteger("dram_structure", "columns", 1 << 10));
-    device_width = static_cast<uint32_t>(
+    device_width = static_cast<int>(
         reader.GetInteger("dram_structure", "device_width", 8));
-    BL = static_cast<uint32_t>(reader.GetInteger("dram_structure", "BL", 8));
+    BL = static_cast<int>(reader.GetInteger("dram_structure", "BL", 8));
     num_dies = static_cast<unsigned int>(
         reader.GetInteger("dram_structure", "num_dies", 1));
 
@@ -102,43 +102,43 @@ Config::Config(std::string config_file, std::string out_dir)
     // TODO there is no need to keep all of these variables, they should just be
     // temporary ultimately we only need cmd to cmd Timing instead of these
     tCK = reader.GetReal("timing", "tCK", 1.0);
-    AL = static_cast<uint32_t>(reader.GetInteger("timing", "AL", 0));
-    CL = static_cast<uint32_t>(reader.GetInteger("timing", "CL", 12));
-    CWL = static_cast<uint32_t>(reader.GetInteger("timing", "CWL", 12));
-    tCCD_L = static_cast<uint32_t>(reader.GetInteger("timing", "tCCD_L", 6));
-    tCCD_S = static_cast<uint32_t>(reader.GetInteger("timing", "tCCD_S", 4));
-    tRTRS = static_cast<uint32_t>(reader.GetInteger("timing", "tRTRS", 2));
-    tRTP = static_cast<uint32_t>(reader.GetInteger("timing", "tRTP", 5));
-    tWTR_L = static_cast<uint32_t>(reader.GetInteger("timing", "tWTR_L", 5));
-    tWTR_S = static_cast<uint32_t>(reader.GetInteger("timing", "tWTR_S", 5));
-    tWR = static_cast<uint32_t>(reader.GetInteger("timing", "tWR", 10));
-    tRP = static_cast<uint32_t>(reader.GetInteger("timing", "tRP", 10));
-    tRRD_L = static_cast<uint32_t>(reader.GetInteger("timing", "tRRD_L", 4));
-    tRRD_S = static_cast<uint32_t>(reader.GetInteger("timing", "tRRD_S", 4));
-    tRAS = static_cast<uint32_t>(reader.GetInteger("timing", "tRAS", 24));
-    tRCD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCD", 10));
-    tRFC = static_cast<uint32_t>(reader.GetInteger("timing", "tRFC", 74));
+    AL = static_cast<int>(reader.GetInteger("timing", "AL", 0));
+    CL = static_cast<int>(reader.GetInteger("timing", "CL", 12));
+    CWL = static_cast<int>(reader.GetInteger("timing", "CWL", 12));
+    tCCD_L = static_cast<int>(reader.GetInteger("timing", "tCCD_L", 6));
+    tCCD_S = static_cast<int>(reader.GetInteger("timing", "tCCD_S", 4));
+    tRTRS = static_cast<int>(reader.GetInteger("timing", "tRTRS", 2));
+    tRTP = static_cast<int>(reader.GetInteger("timing", "tRTP", 5));
+    tWTR_L = static_cast<int>(reader.GetInteger("timing", "tWTR_L", 5));
+    tWTR_S = static_cast<int>(reader.GetInteger("timing", "tWTR_S", 5));
+    tWR = static_cast<int>(reader.GetInteger("timing", "tWR", 10));
+    tRP = static_cast<int>(reader.GetInteger("timing", "tRP", 10));
+    tRRD_L = static_cast<int>(reader.GetInteger("timing", "tRRD_L", 4));
+    tRRD_S = static_cast<int>(reader.GetInteger("timing", "tRRD_S", 4));
+    tRAS = static_cast<int>(reader.GetInteger("timing", "tRAS", 24));
+    tRCD = static_cast<int>(reader.GetInteger("timing", "tRCD", 10));
+    tRFC = static_cast<int>(reader.GetInteger("timing", "tRFC", 74));
     tRC = tRAS + tRP;
-    tCKE = static_cast<uint32_t>(reader.GetInteger("timing", "tCKE", 6));
-    tCKESR = static_cast<uint32_t>(reader.GetInteger("timing", "tCKESR", 12));
-    tXS = static_cast<uint32_t>(reader.GetInteger("timing", "tXS", 432));
-    tXP = static_cast<uint32_t>(reader.GetInteger("timing", "tXP", 8));
-    tRFCb = static_cast<uint32_t>(reader.GetInteger("timing", "tRFCb", 20));
-    tREFI = static_cast<uint32_t>(reader.GetInteger("timing", "tREFI", 7800));
-    tREFIb = static_cast<uint32_t>(reader.GetInteger("timing", "tREFIb", 1950));
-    tFAW = static_cast<uint32_t>(reader.GetInteger("timing", "tFAW", 50));
-    tRPRE = static_cast<uint32_t>(reader.GetInteger("timing", "tRPRE", 1));
-    tWPRE = static_cast<uint32_t>(reader.GetInteger("timing", "tWPRE", 1));
+    tCKE = static_cast<int>(reader.GetInteger("timing", "tCKE", 6));
+    tCKESR = static_cast<int>(reader.GetInteger("timing", "tCKESR", 12));
+    tXS = static_cast<int>(reader.GetInteger("timing", "tXS", 432));
+    tXP = static_cast<int>(reader.GetInteger("timing", "tXP", 8));
+    tRFCb = static_cast<int>(reader.GetInteger("timing", "tRFCb", 20));
+    tREFI = static_cast<int>(reader.GetInteger("timing", "tREFI", 7800));
+    tREFIb = static_cast<int>(reader.GetInteger("timing", "tREFIb", 1950));
+    tFAW = static_cast<int>(reader.GetInteger("timing", "tFAW", 50));
+    tRPRE = static_cast<int>(reader.GetInteger("timing", "tRPRE", 1));
+    tWPRE = static_cast<int>(reader.GetInteger("timing", "tWPRE", 1));
 
     // LPDDR4 and GDDR5
-    tPPD = static_cast<uint32_t>(reader.GetInteger("timing", "tPPD", 0));
+    tPPD = static_cast<int>(reader.GetInteger("timing", "tPPD", 0));
 
     // GDDR5 only
-    t32AW = static_cast<uint32_t>(reader.GetInteger("timing", "t32AW", 330));
-    tRCDRD = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDRD", 24));
-    tRCDWR = static_cast<uint32_t>(reader.GetInteger("timing", "tRCDWR", 20));
+    t32AW = static_cast<int>(reader.GetInteger("timing", "t32AW", 330));
+    tRCDRD = static_cast<int>(reader.GetInteger("timing", "tRCDRD", 24));
+    tRCDWR = static_cast<int>(reader.GetInteger("timing", "tRCDWR", 20));
 
-    ideal_memory_latency = static_cast<uint32_t>(
+    ideal_memory_latency = static_cast<int>(
         reader.GetInteger("timing", "ideal_memory_latency", 10));
 
     // calculated timing
@@ -178,7 +178,7 @@ Config::Config(std::string config_file, std::string out_dir)
     pre_pd_energy_inc = VDD * IDD2P * devices;
     sref_energy_inc = VDD * IDD6x * devices;
 
-    epoch_period = static_cast<uint32_t>(
+    epoch_period = static_cast<int>(
         reader.GetInteger("other", "epoch_period", 100000));
     // determine how much output we want:
     // -1: no file output at all
@@ -214,11 +214,11 @@ Config::Config(std::string config_file, std::string out_dir)
                                       output_prefix + "histo_stats.csv");
 
     // Thermal simulation parameters
-    power_epoch_period = static_cast<uint32_t>(
+    power_epoch_period = static_cast<int>(
         reader.GetInteger("thermal", "power_epoch_period", 100000));
-    // numXgrids = static_cast<uint32_t>(reader.GetInteger("thermal",
+    // numXgrids = static_cast<int>(reader.GetInteger("thermal",
     // "numXgrids", 1));  numYgrids =
-    // static_cast<uint32_t>(reader.GetInteger("thermal", "numYgrids", 1));
+    // static_cast<int>(reader.GetInteger("thermal", "numYgrids", 1));
 
     matX = static_cast<int>(reader.GetInteger("thermal", "matX", 512));
     matY = static_cast<int>(reader.GetInteger("thermal", "matY", 512));
@@ -253,7 +253,7 @@ Config::Config(std::string config_file, std::string out_dir)
     bank_layer_order =
         static_cast<int>(reader.GetInteger("thermal", "bank_layer_order", 0));
     numRowRefresh =
-        static_cast<uint32_t>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
+        static_cast<int>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
     ChipX = reader.GetReal("thermal", "ChipX", 0.01);
     ChipY = reader.GetReal("thermal", "ChipY", 0.01);
     Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
@@ -393,7 +393,7 @@ void Config::SetAddressMapping() {
 
     // memory addresses are byte addressable, but each request comes with
     // multiple bytes because of bus width, and burst length
-    uint32_t bus_offset = LogBase2(bus_width / 8);
+    int bus_offset = LogBase2(bus_width / 8);
     request_size_bytes = bus_width / 8 * BL;
     int masked_col_bits = LogBase2(BL);
     unsigned col_mask = (0xFFFFFFFF << masked_col_bits);
@@ -461,7 +461,7 @@ void Config::SetAddressMapping() {
     }
 
     AddressMapping = [field_pos, field_widths, col_mask](uint64_t hex_addr) {
-        uint32_t channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0,
+        int channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0,
                  column = 0;
         channel = ModuloWidth(hex_addr, field_widths[0], field_pos[0]);
         rank = ModuloWidth(hex_addr, field_widths[1], field_pos[1]);

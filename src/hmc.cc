@@ -8,7 +8,7 @@ uint64_t lcm(uint64_t x, uint64_t y);
 HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr)
     : type(req_type), mem_operand(hex_addr) {
     Address addr = AddressMapping(mem_operand);
-    vault = addr.channel_;
+    vault = addr.channel;
     // given that vaults could be 16 (Gen1) or 32(Gen2), using % 4
     // to partition vaults to quads
     quad = vault % 4;
@@ -307,16 +307,16 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
 }
 
 void HMCMemorySystem::SetClockRatio() {
-    uint32_t dram_speed = 1250;
-    uint32_t link_speed = ptr_config_->link_speed;
+    int dram_speed = 1250;
+    int link_speed = ptr_config_->link_speed;
 
     // 128 bits per flit, this is to calculate logic speed
     // e.g. if it takes 8 link cycles to transfer a flit
     // the logic has to be running in similar speed so that
     // the logic or the link don't have to wait for each other
-    uint32_t cycles_per_flit =
+    int cycles_per_flit =
         128 / ptr_config_->link_width;  // Unit interval per flit: 8, 16, or 32
-    uint32_t logic_speed_needed = link_speed / cycles_per_flit;
+    int logic_speed_needed = link_speed / cycles_per_flit;
 
     // In the ClockTick() we will use DRAM's 1250MHz as basic clock ticks
     // because logic clock speed should vary to reflect link speed or link width

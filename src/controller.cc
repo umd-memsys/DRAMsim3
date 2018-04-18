@@ -79,14 +79,14 @@ void Controller::ClockTick() {
                     config_.idle_cycles_for_self_refresh &&
                 !channel_state_.rank_in_self_refresh_mode_[i]) {
                 auto addr = Address();
-                addr.channel_ = channel_id_;
-                addr.rank_ = i;
+                addr.channel = channel_id_;
+                addr.rank = i;
                 auto self_refresh_enter_cmd =
                     Command(CommandType::SELF_REFRESH_ENTER, addr);
                 auto cmd =
                     channel_state_.GetRequiredCommand(self_refresh_enter_cmd);
                 if (channel_state_.IsReady(cmd, clk_))
-                    if (cmd.cmd_type_ == CommandType::SELF_REFRESH_ENTER) {
+                    if (cmd.cmd_type == CommandType::SELF_REFRESH_ENTER) {
                         // clear refresh requests from the queue for the rank
                         // that is about to go into self-refresh mode
                         for (auto refresh_req_iter =

@@ -47,9 +47,9 @@ ThermalReplay::~ThermalReplay() {}
 
 void ThermalReplay::Run() {
     uint64_t clk = 0;
-    for (int i = 0; i < repeat_; i++) {
+    for (uint64_t i = 0; i < repeat_; i++) {
         uint64_t clk_offset = 0;
-        for (int j = 0; j < timed_commands_.size(); j++) {
+        for (auto j = 0; j < timed_commands_.size(); j++) {
             // for (int j = 0; j < cmds_.size(); j++) {
             // Command &cmd = cmds_[j];
             // clk_offset = clks_[j];
@@ -107,8 +107,8 @@ void ThermalReplay::ParseLine(std::string line, uint64_t &clk, Command &cmd) {
                  std::stoi(tokens[6]), std::stoi(tokens[7]));
 
     // reassign cmd
-    cmd.addr_ = addr;
-    cmd.cmd_type_ = cmd_map[tokens[1]];
+    cmd.addr = addr;
+    cmd.cmd_type = cmd_map[tokens[1]];
     return;
 }
 
@@ -129,7 +129,7 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
     }
 
     // update cmd count
-    switch (cmd.cmd_type_) {
+    switch (cmd.cmd_type) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
             stats_.numb_read_cmds_issued++;
@@ -161,7 +161,7 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
     }
 
     // update bank states
-    switch (cmd.cmd_type_) {
+    switch (cmd.cmd_type) {
         case CommandType::ACTIVATE:
             bank_active_[cmd.Channel()][cmd.Rank()][cmd.Bankgroup()]
                         [cmd.Bank()] = true;
@@ -236,4 +236,3 @@ int main(int argc, const char **argv) {
 
     return 0;
 }
-
