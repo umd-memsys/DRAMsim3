@@ -41,8 +41,8 @@ ChannelState::ChannelState(const Config& config, const Timing& timing,
 }
 
 bool ChannelState::IsAllBankIdleInRank(int rank) const {
-    for (unsigned j = 0; j < config_.bankgroups; j++) {
-        for (unsigned k = 0; k < config_.banks_per_group; k++) {
+    for (int j = 0; j < config_.bankgroups; j++) {
+        for (int k = 0; k < config_.banks_per_group; k++) {
             if (bank_states_[rank][j][k]->IsRowOpen()) {
                 return false;
             }

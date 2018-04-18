@@ -105,8 +105,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
     InitialParameters();
 
     refresh_count = std::vector<std::vector<int>>(
-        config_.channels * config_.ranks,
-        std::vector<int>(config_.banks, 0));
+        config_.channels * config_.ranks, std::vector<int>(config_.banks, 0));
 
     // Initialize the output file
     final_temperature_file_csv_.open(config_.final_temperature_file_csv);
@@ -150,7 +149,7 @@ void ThermalCalculator::SetPhyAddressMapping() {
         std::vector<std::string> bit_pos = StringSplit(bit_fields[i], '-');
         for (unsigned j = 0; j < bit_pos.size(); j++) {
             if (!bit_pos[j].empty()) {
-                int colon_pos = bit_pos[j].find(":");
+                auto colon_pos = bit_pos[j].find(":");
                 if (colon_pos ==
                     std::string::npos) {  // no "start:end" short cuts
                     int pos = std::stoi(bit_pos[j]);
@@ -371,7 +370,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd,
     double energy = add_energy / config_.device_width;
     // add energy to engergy map
     // iterate x y (they have same size)
-    for (int i = 0; i < x.size(); i++) {
+    for (size_t i = 0; i < x.size(); i++) {
         int y_offset = y[i] * dimX;
         int idx = z_offset + y_offset + x[i];
         accu_Pmap[caseID_][idx] += energy;
@@ -512,7 +511,8 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
     }
 
     // print transient power and temperature
-    if (clk > (sample_id + 1) * config_.power_epoch_period) {
+    if (clk > static_cast<uint64_t>(sample_id + 1) *
+                  static_cast<uint64_t>(config_.power_epoch_period)) {
         // add the background energy
         if (config_.IsHMC() || config_.IsHBM()) {
             double pre_stb_sum =
@@ -568,7 +568,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
         }
 
         PrintTransPT(clk);
-        for (int i = 0; i < cur_Pmap.size(); i++) {
+        for (size_t i = 0; i < cur_Pmap.size(); i++) {
             std::fill_n(cur_Pmap[i].begin(), numP * dimX * dimY, 0.0);
         }
         sample_id++;

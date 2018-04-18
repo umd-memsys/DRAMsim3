@@ -281,7 +281,7 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
     // the second layer will be a 1:8 xbar
     // (each quadrant has 8 vaults and each quadrant can access any ohter
     // quadrant)
-    queue_depth_ = ptr_config_->xbar_queue_depth;
+    queue_depth_ = static_cast<size_t>(ptr_config_->xbar_queue_depth);
     links_ = ptr_config_->num_links;
     link_req_queues_.reserve(links_);
     link_resp_queues_.reserve(links_);

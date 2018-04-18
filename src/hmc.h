@@ -135,7 +135,7 @@ class HMCMemorySystem : public BaseMemorySystem {
 
     int next_link_;
     int links_;
-    int queue_depth_;
+    size_t queue_depth_;
     int dram_clk_ticks_;
     int logic_clk_ticks_;
     int clk_tick_product_;

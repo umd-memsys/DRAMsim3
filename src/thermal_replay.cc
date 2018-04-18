@@ -49,7 +49,7 @@ void ThermalReplay::Run() {
     uint64_t clk = 0;
     for (uint64_t i = 0; i < repeat_; i++) {
         uint64_t clk_offset = 0;
-        for (auto j = 0; j < timed_commands_.size(); j++) {
+        for (size_t j = 0; j < timed_commands_.size(); j++) {
             // for (int j = 0; j < cmds_.size(); j++) {
             // Command &cmd = cmds_[j];
             // clk_offset = clks_[j];

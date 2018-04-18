@@ -54,7 +54,7 @@ void Controller::ClockTick() {
 
     // add background power, we have to cram all ranks and banks together now...
     // if we have rank states it would make life easier
-    for (unsigned i = 0; i < config_.ranks; i++) {
+    for (int i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
             // stats_.sref_energy[channel_id_][i]++;
             stats_.sref_cycles[channel_id_][i]++;
@@ -76,7 +76,8 @@ void Controller::ClockTick() {
             // update rank idleness
             if (cmd_queue_.rank_queues_empty[i] &&
                 clk_ - cmd_queue_.rank_queues_empty_from_time_[i] >=
-                    config_.idle_cycles_for_self_refresh &&
+                    static_cast<uint64_t>(
+                        config_.idle_cycles_for_self_refresh) &&
                 !channel_state_.rank_in_self_refresh_mode_[i]) {
                 auto addr = Address();
                 addr.channel = channel_id_;

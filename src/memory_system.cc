@@ -271,7 +271,7 @@ void IdealMemorySystem::ClockTick() {
     for (auto req_itr = infinite_buffer_q_.begin();
          req_itr != infinite_buffer_q_.end(); req_itr++) {
         auto req = *req_itr;
-        if (clk_ - req->arrival_time_ >= latency_) {
+        if (clk_ - req->arrival_time_ >= static_cast<uint64_t>(latency_)) {
             if (req->cmd_.cmd_type == CommandType::READ) {
                 ptr_stats_->numb_read_reqs_issued++;
             } else if (req->cmd_.cmd_type == CommandType::WRITE) {

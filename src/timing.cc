@@ -60,8 +60,8 @@ Timing::Timing(const Config& config)
 
     int self_refresh_entry_to_exit = config.tCKESR;
     int self_refresh_exit = config.tXS;
-    int powerdown_to_exit = config.tCKE;
-    int powerdown_exit = config.tXP;
+    // int powerdown_to_exit = config.tCKE;
+    // int powerdown_exit = config.tXP;
 
     if (config.bankgroups == 1) {
         // for GDDR5 bankgroup can be disabled, in that case

@@ -420,37 +420,38 @@ void Config::SetAddressMapping() {
     // get address mapping position fields from config
     // each field must be 2 chars
     std::vector<std::string> fields;
-    for (int i = 0; i < address_mapping.size(); i += 2) {
+    for (size_t i = 0; i < address_mapping.size(); i += 2) {
         std::string token = address_mapping.substr(i, 2);
         fields.push_back(token);
     }
 
     // starting position ignores those caused by bus width
     int pos = bus_offset;
-    for (int i = fields.size() - 1; i >= 0; i--) {
+    for (size_t i = fields.size(); i > 0; i--) {
         // do this in reverse order so that it matches the
         // sequence of the input string
-        if (fields[i] == "ch") {
+        auto field_str = fields[i-1];
+        if (field_str == "ch") {
             field_pos[0] = pos;
             field_widths[0] = channel_width;
             pos += channel_width;
-        } else if (fields[i] == "ra") {
+        } else if (field_str == "ra") {
             field_pos[1] = pos;
             field_widths[1] = rank_width;
             pos += rank_width;
-        } else if (fields[i] == "bg") {
+        } else if (field_str == "bg") {
             field_pos[2] = pos;
             field_widths[2] = bankgroup_width;
             pos += bankgroup_width;
-        } else if (fields[i] == "ba") {
+        } else if (field_str == "ba") {
             field_pos[3] = pos;
             field_widths[3] = bank_width;
             pos += bank_width;
-        } else if (fields[i] == "ro") {
+        } else if (field_str == "ro") {
             field_pos[4] = pos;
             field_widths[4] = row_width;
             pos += row_width;
-        } else if (fields[i] == "co") {
+        } else if (field_str == "co") {
             field_pos[5] = pos;
             field_widths[5] = column_width;
             pos += column_width;

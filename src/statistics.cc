@@ -188,7 +188,7 @@ void HistogramStat::Print(std::ostream& where) const {
     std::string bin_str = fmt::format("[ < {} ]", start_);
     bin_strs.push_back(bin_str);
     int bin_width = (end_ - start_) / numb_bins_;
-    for (unsigned i = 1; i < numb_bins_ + 1; i++) {
+    for (int i = 1; i < numb_bins_ + 1; i++) {
         auto bin_start = start_ + (i - 1) * bin_width;
         auto bin_end = start_ + i * bin_width - 1;
         bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
@@ -576,10 +576,9 @@ void Statistics::Init2DStats(std::vector<std::vector<T>>& stats_vector,
                              int shape_x, int shape_y, std::string x_string,
                              std::string y_string, std::string stat_name,
                              std::string stat_desc) {
-    // std::vector<std::vector<T>> stats_vector;
-    for (unsigned i = 0; i < shape_x; i++) {
+    for (int i = 0; i < shape_x; i++) {
         std::vector<T> x_stats;
-        for (unsigned j = 0; j < shape_y; j++) {
+        for (int j = 0; j < shape_y; j++) {
             std::string short_desc =
                 stat_name + "_" + std::to_string(i) + "_" + std::to_string(j);
             std::string long_desc = stat_desc + x_string + std::to_string(i) +

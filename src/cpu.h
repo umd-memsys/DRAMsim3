@@ -57,17 +57,5 @@ class TraceBasedCPU : public CPU {
     bool get_next_ = true;
 };
 
-class ThermalCPU : public CPU {
-   public:
-    ThermalCPU(BaseMemorySystem& memory_system);
-    void ClockTick() override;
-
-   private:
-    std::vector<uint64_t> addr_pattern_;
-    size_t curr_index_;
-    int pattern_len_;
-    bool sent_successful_;
-};
-
 }  // namespace dramcore
 #endif

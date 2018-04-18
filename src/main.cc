@@ -70,8 +70,6 @@ int main(int argc, const char **argv) {
         cpu = new TraceBasedCPU(*memory_system, trace_file);
     } else if (cpu_type == "stream") {
         cpu = new StreamCPU(*memory_system);
-    } else if (cpu_type == "thermal") {
-        cpu = new ThermalCPU(*memory_system);
     } else {
         cpu = nullptr;
         std::cout << "Unknown cpu type" << std::endl;

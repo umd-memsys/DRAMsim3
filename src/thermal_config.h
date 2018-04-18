@@ -1,6 +1,10 @@
 #ifndef THERMALCONFIG_H
 #define THERMALCONFIG_H
 
+#ifndef M_PI
+const double M_PI = 3.141592653;
+#endif
+
 const double T0 = 273.15;  // [C]
 
 const double R_TSV = 5e-6;  // [m]

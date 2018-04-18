@@ -15,6 +15,7 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
       next_bankgroup_(0),
       next_bank_(0),
       next_queue_index_(0),
+      queue_size_(static_cast<size_t>(config_.queue_size)),
       channel_id_(channel_id) {
     int num_queues = 0;
     if (config_.queue_structure == "PER_BANK") {
@@ -166,13 +167,13 @@ Command CommandQueue::AggressivePrecharge() {
 bool CommandQueue::IsReqInsertable(Request* req) {
     std::list<Request*>& queue =
         GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
-    return queue.size() < config_.queue_size;
+    return queue.size() < queue_size_;
 }
 
 bool CommandQueue::InsertReq(Request* req) {
     std::list<Request*>& queue =
         GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
-    if (queue.size() < config_.queue_size) {
+    if (queue.size() < queue_size_) {
         queue.push_back(req);
         if (rank_queues_empty[req->Rank()]) {
             rank_queues_empty[req->Rank()] = false;

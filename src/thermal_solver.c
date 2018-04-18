@@ -14,7 +14,6 @@
 //#define DEBUGMIDX
 //#define DEBUGMAT
 
-#define M_PI 3.141592653
 double get_maxT(double *T, int Tsize);
 
 double *initialize_Temperature(double W, double Lc, int numP, int dimX,
@@ -92,7 +91,7 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     double Wsink, Lsink, Hsink, Ksink, rTSV, Ktsv;
     int numLayer;
     double *K, *H;
-    int *layerP, *mapTSV;
+    int_t *layerP, *mapTSV;
     int ***TSV;      // number of TSVs in each grid
     int i, j, k, l;  // iterators
 
@@ -154,10 +153,10 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
         numLayer);
     printf("NOTE: ANOTHER HEAT SINK LAYER IS ATTACHED TO THE 1st LAYER\n");
     printf("Active layer(s) is(are) on the following layer(s): ");
-    for (l = 0; l < numP; l++) printf("%d, ", layerP[l]);
+    for (l = 0; l < numP; l++) printf("%lld, ", layerP[l]);
     printf("\n");
     printf("Distribution of TSVs arcoss layers: ");
-    for (i = 0; i < numLayer; i++) printf("%d, ", mapTSV[i]);
+    for (i = 0; i < numLayer; i++) printf("%lld, ", mapTSV[i]);
     printf("\n");
     printf("The ambient temperature is %.2f C\n", Tamb - T0);
     printf("------------------------------------------------------------\n\n");
@@ -425,7 +424,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
                               int dimX, int dimZ, double **Midx, int count,
                               double Tamb) {
     int numLayer = numP * 3;
-    int *layerP;
+    int_t *layerP;
     // define the active layer array
     if (!(layerP = intMalloc(numP))) SUPERLU_ABORT("Malloc fails for numP[].");
     for (int l = 0; l < numP; l++) layerP[l] = l * 3;
@@ -485,10 +484,10 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
     }
     xa[row + 1] = count;
 
-    printf("Using %d Cores to calculate\n", nprocs);
+    printf("Using %lld Cores to calculate\n", nprocs);
     printf("Building the sparse matrix ...\n");
-    printf("Dimension of the G matrix is %d x %d\n", m, n);
-    printf("Number of non-zero entries is %d\n", nnz);
+    printf("Dimension of the G matrix is %lld x %lld\n", m, n);
+    printf("Number of non-zero entries is %lld\n", nnz);
 
     /* Create matrix A in the format expected by SuperLU. */
     dCreate_CompCol_Matrix(&A, m, n, nnz, a, asub, xa, SLU_NC, SLU_D, SLU_GE);
@@ -555,7 +554,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
     if (!(Tt = (double *)malloc(dimX * dimZ * (numP * 3 + 1) * sizeof(double))))
         printf("Malloc fails for Tt\n");
     Ttp = (double *)Astore->nzval;
-    printf("B.nrow is %d\n", B.nrow);
+    printf("B.nrow is %lld\n", B.nrow);
     for (int i = 0; i < B.nrow; ++i) {
         Tt[i] = Ttp[i] - T0;
         // printf("Tt[%d] = %.2f\n", i, Tt[i]);
@@ -617,7 +616,7 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc,
     int numLayer = numP * 3;
 
     // define the active layer array
-    int *layerP;
+    int_t *layerP;
     if (!(layerP = intMalloc(numP))) SUPERLU_ABORT("Malloc fails for numP[].");
     for (int l = 0; l < numP; l++) layerP[l] = l * 3;
 

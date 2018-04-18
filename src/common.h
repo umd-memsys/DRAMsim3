@@ -125,12 +125,12 @@ class Request {
     uint64_t exit_time_;
     uint64_t id_;
 
-    int32_t Channel() const { return cmd_.Channel(); }
-    int32_t Rank() const { return cmd_.Rank(); }
-    int32_t Bankgroup() const { return cmd_.Bankgroup(); }
-    int32_t Bank() const { return cmd_.Bank(); }
-    int32_t Row() const { return cmd_.Row(); }
-    int32_t Column() const { return cmd_.Column(); }
+    int Channel() const { return cmd_.Channel(); }
+    int Rank() const { return cmd_.Rank(); }
+    int Bankgroup() const { return cmd_.Bankgroup(); }
+    int Bank() const { return cmd_.Bank(); }
+    int Row() const { return cmd_.Row(); }
+    int Column() const { return cmd_.Column(); }
 
     friend std::ostream& operator<<(std::ostream& os, const Request& req);
 };
