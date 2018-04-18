@@ -1,27 +1,29 @@
 #ifndef __THERMAL_REPLAY_H
 #define __THERMAL_REPLAY_H
 
-#include <string>
 #include <fstream>
+#include <string>
 #include <vector>
 
 #include "common.h"
 #include "configuration.h"
-#include "thermal.h"
 #include "statistics.h"
+#include "thermal.h"
 
 namespace dramcore {
 
 class ThermalReplay {
-public:
-    ThermalReplay(std::string trace_name, std::string config_file, std::string output_dir, uint64_t repeat);
+   public:
+    ThermalReplay(std::string trace_name, std::string config_file,
+                  std::string output_dir, uint64_t repeat);
     ~ThermalReplay();
     void Run();
-private:
+
+   private:
     std::vector<std::pair<uint64_t, Command>> timed_commands_;
     Config config_;
     Statistics stats_;
-    ThermalCalculator thermal_calc_;    
+    ThermalCalculator thermal_calc_;
     uint64_t repeat_;
     uint64_t last_clk_;
     std::vector<std::vector<std::vector<std::vector<bool>>>> bank_active_;
@@ -30,7 +32,6 @@ private:
     bool IsRankActive(int channel, int rank);
 };
 
-}
-
+}  // namespace dramcore
 
 #endif

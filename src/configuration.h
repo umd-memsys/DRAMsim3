@@ -25,10 +25,10 @@ enum class DRAMProtocol {
 };
 
 class Config {
-public:
+   public:
     Config(std::string config_file, std::string out_dir);
 
-    //DRAM physical structure
+    // DRAM physical structure
     DRAMProtocol protocol;
     uint32_t channel_size;
     uint32_t channels;
@@ -43,9 +43,10 @@ public:
     uint32_t devices_per_rank;
     uint32_t BL;
 
-    //Generic DRAM timing parameters
+    // Generic DRAM timing parameters
     double tCK;
-    uint32_t burst_cycle;   // seperate BL with timing since fot GDDRx it's not BL/2
+    uint32_t
+        burst_cycle;  // seperate BL with timing since fot GDDRx it's not BL/2
     uint32_t AL;
     uint32_t CL;
     uint32_t CWL;
@@ -65,8 +66,8 @@ public:
     uint32_t tRCD;
     uint32_t tRFC;
     uint32_t tRC;
-    // tCKSRE and tCKSRX are only useful for changing clock freq after entering SRE mode
-    // we are not doing that, so tCKESR is sufficient
+    // tCKSRE and tCKSRX are only useful for changing clock freq after entering
+    // SRE mode we are not doing that, so tCKESR is sufficient
     uint32_t tCKE;
     uint32_t tCKESR;
     uint32_t tXS;
@@ -82,7 +83,7 @@ public:
 
     // LPDDR4 and GDDR5
     uint32_t tPPD;
-    // GDDR5 
+    // GDDR5
     uint32_t t32AW;
     uint32_t tRCDRD;
     uint32_t tRCDWR;
@@ -98,8 +99,8 @@ public:
     double pre_stb_energy_inc;
     double pre_pd_energy_inc;
     double sref_energy_inc;
-    
-    // HMC 
+
+    // HMC
     uint32_t num_links;
     uint32_t num_dies;
     uint32_t link_width;
@@ -128,46 +129,52 @@ public:
     std::string epoch_stats_file_csv;
     std::string histo_stats_file_csv;
 
-    //Computed parameters
+    // Computed parameters
     uint32_t request_size_bytes;
-    uint32_t channel_width, rank_width, bankgroup_width, bank_width, row_width, column_width;
+    uint32_t channel_width, rank_width, bankgroup_width, bank_width, row_width,
+        column_width;
 
-    bool IsGDDR() const {return (protocol == DRAMProtocol::GDDR5 || protocol == DRAMProtocol::GDDR5X);}
-    bool IsHBM() const {return (protocol == DRAMProtocol::HBM || protocol == DRAMProtocol::HBM2);}
-    bool IsHMC() const {return (protocol == DRAMProtocol::HMC);}
-    // yzy: add another function 
-    bool IsDDR4() const {return (protocol == DRAMProtocol::DDR4);}
+    bool IsGDDR() const {
+        return (protocol == DRAMProtocol::GDDR5 ||
+                protocol == DRAMProtocol::GDDR5X);
+    }
+    bool IsHBM() const {
+        return (protocol == DRAMProtocol::HBM ||
+                protocol == DRAMProtocol::HBM2);
+    }
+    bool IsHMC() const { return (protocol == DRAMProtocol::HMC); }
+    // yzy: add another function
+    bool IsDDR4() const { return (protocol == DRAMProtocol::DDR4); }
 
     uint32_t ideal_memory_latency;
 
     // thermal simulator
     std::string loc_mapping;
     uint32_t power_epoch_period;
-    uint32_t numRowRefresh; // number of rows to be refreshed for one time
+    uint32_t numRowRefresh;  // number of rows to be refreshed for one time
     double ChipX;
-    double ChipY; 
-    double Tamb0; // the ambient temperature in [C]
-    int numXgrids; 
-    int numYgrids; 
+    double ChipY;
+    double Tamb0;  // the ambient temperature in [C]
+    int numXgrids;
+    int numYgrids;
     int matX;
     int matY;
-    int bank_order; // 0: x-direction priority, 1: y-direction priority
-    int bank_layer_order; // 0; low-layer priority, 1: high-layer priority
-    int RowTile; 
+    int bank_order;        // 0: x-direction priority, 1: y-direction priority
+    int bank_layer_order;  // 0; low-layer priority, 1: high-layer priority
+    int RowTile;
     int TileRowNum;
-    double bank_asr; // the aspect ratio of a bank: #row_bits / #col_bits
+    double bank_asr;  // the aspect ratio of a bank: #row_bits / #col_bits
     std::string epoch_max_temp_file_csv;
     std::string epoch_temperature_file_csv;
     std::string final_temperature_file_csv;
     std::string bank_position_csv;
 
-
-private:
+   private:
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     void ProtocolAdjust();
     void CalculateSize();
     void SetAddressMapping();
 };
 
-}
+}  // namespace dramcore
 #endif

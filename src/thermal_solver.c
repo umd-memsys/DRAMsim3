@@ -17,20 +17,23 @@
 #define M_PI 3.141592653
 double get_maxT(double *T, int Tsize);
 
-double *initialize_Temperature(double W, double Lc, int numP, int dimX, int dimZ, double Tamb) {
+double *initialize_Temperature(double W, double Lc, int numP, int dimX,
+                               int dimZ, double Tamb) {
     int numLayer, l;
     double *T;
 
     numLayer = numP * 3;
 
     // define the temperature array
-    if (!(T = doubleMalloc(dimX * dimZ * (numLayer + 1)))) SUPERLU_ABORT("Malloc fails for K[].");
+    if (!(T = doubleMalloc(dimX * dimZ * (numLayer + 1))))
+        SUPERLU_ABORT("Malloc fails for K[].");
     for (l = 0; l < dimX * dimZ * (numLayer + 1); l++) T[l] = Tamb;
 
     return T;
 }
 
-double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, int *CapSize) {
+double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ,
+                            int *CapSize) {
     double Wsink, Lsink, Hsink;
     int numLayer;
     double *C, *H, Csink;
@@ -43,7 +46,8 @@ double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, i
     Csink = Chs;
 
     // define the thermal capacitance and height array
-    if (!(C = doubleMalloc(numLayer + 1))) SUPERLU_ABORT("Malloc fails for K[].");
+    if (!(C = doubleMalloc(numLayer + 1)))
+        SUPERLU_ABORT("Malloc fails for K[].");
     if (!(H = doubleMalloc(numLayer))) SUPERLU_ABORT("Malloc fails for H[].");
     for (int i = 0; i < numLayer; i++) {
         switch (i % 3) {
@@ -65,7 +69,8 @@ double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, i
     }
     C[0] = Csink;
 
-    ///////////// modify the cap vector with the physical parameters ////////////
+    ///////////// modify the cap vector with the physical parameters
+    ///////////////
     double gridX, gridZ, gridXsink, gridZsink;
     gridX = W / dimX;
     gridZ = Lc / dimZ;
@@ -82,8 +87,8 @@ double *calculate_Cap_array(double W, double Lc, int numP, int dimX, int dimZ, i
     return C;
 }
 
-double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ, int *MidxSize,
-                              double Tamb) {
+double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
+                              int *MidxSize, double Tamb) {
     double Wsink, Lsink, Hsink, Ksink, rTSV, Ktsv;
     int numLayer;
     double *K, *H;
@@ -128,7 +133,8 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     for (l = 0; l < numP; l++) layerP[l] = l * 3;
 
     // define the mapTSV array
-    if (!(mapTSV = intMalloc(numLayer))) SUPERLU_ABORT("Malloc fails for mapTSV[].");
+    if (!(mapTSV = intMalloc(numLayer)))
+        SUPERLU_ABORT("Malloc fails for mapTSV[].");
 
     for (i = 0; i < numLayer; i++) {
         if (i == 0 || i == numLayer - 1)
@@ -139,9 +145,11 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     mapTSV[numLayer - 2] = numP - 1;
 
     printf("================= STEADY TEMPERATURE SOLVER ===============\n\n");
-    printf("Dimension of the Chip: %d x %d x %d (dimX x dimZ x numP)\n", dimX, dimZ, numP);
+    printf("Dimension of the Chip: %d x %d x %d (dimX x dimZ x numP)\n", dimX,
+           dimZ, numP);
     printf(
-        "Total Number of layers: %d (each tier contains an active layer, a wire layer and a "
+        "Total Number of layers: %d (each tier contains an active layer, a "
+        "wire layer and a "
         "dielectric layer\n",
         numLayer);
     printf("NOTE: ANOTHER HEAT SINK LAYER IS ATTACHED TO THE 1st LAYER\n");
@@ -155,7 +163,8 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     printf("------------------------------------------------------------\n\n");
 
     // define the TSV array (3D-int array!)
-    if (!(TSV = (int ***)malloc(dimX * sizeof(int **)))) printf("Malloc fails for TSV[].\n");
+    if (!(TSV = (int ***)malloc(dimX * sizeof(int **))))
+        printf("Malloc fails for TSV[].\n");
     for (i = 0; i < dimX; i++) {
         if (!(TSV[i] = (int **)malloc(dimZ * sizeof(int *))))
             printf("Malloc fails for TSV[%d][].\n", i);
@@ -193,7 +202,8 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
         if (!(Rvert[i] = (double **)malloc(dimZ * sizeof(double *))))
             printf("Malloc fails for Rvert[%d][].\n", i);
         for (j = 0; j < dimZ; j++) {
-            if (!(Rvert[i][j] = (double *)malloc((numLayer + 1) * sizeof(double))))
+            if (!(Rvert[i][j] =
+                      (double *)malloc((numLayer + 1) * sizeof(double))))
                 printf("Malloc fails for Rvert[%d][%d][]. \n", i, j);
         }
     }
@@ -208,8 +218,10 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
                 if (tier)
                     Rvert[i][j][l + 1] =
                         1 / (1 / (H[l] / K[l] /
-                                  (gridX * gridZ - M_PI * rTSV * rTSV * TSV[i][j][tier - 1])) +
-                             1 / (H[l] / Ktsv / (M_PI * rTSV * rTSV * TSV[i][j][tier - 1])));
+                                  (gridX * gridZ -
+                                   M_PI * rTSV * rTSV * TSV[i][j][tier - 1])) +
+                             1 / (H[l] / Ktsv /
+                                  (M_PI * rTSV * rTSV * TSV[i][j][tier - 1])));
                 else
                     Rvert[i][j][l + 1] = H[l] / K[l] / (gridX * gridZ);
             }
@@ -261,7 +273,8 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     }
 
     // printf("count = %d\n", count);
-    // printf("Dimention is %d x %d\n", dimX*dimZ*(numLayer+1), dimX*dimZ*(numLayer+1));
+    // printf("Dimention is %d x %d\n", dimX*dimZ*(numLayer+1),
+    // dimX*dimZ*(numLayer+1));
 
     count = count + dimX * dimZ * (numLayer + 1);
     // * since the previous calculation does not count the diagonal values
@@ -281,7 +294,8 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
         for (j = 0; j < 3; j++) Midx[i][j] = 0;
 
     // fill in the off-diagnal values
-    int idx = 0, idx_re;         // idx_re records the idx of the first item of each row
+    int idx = 0,
+        idx_re;  // idx_re records the idx of the first item of each row
     double row_t, col_t, val_t;  // for swap values
     for (l = 0; l < numLayer + 1; l++) {
         for (j = 0; j < dimZ; j++) {
@@ -290,29 +304,34 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
                 if (l > 0) {
                     Midx[idx][0] = l * dimX * dimZ + j * dimX + i;
                     Midx[idx][1] = (l - 1) * dimX * dimZ + j * dimX + i;
-                    Midx[idx][2] = -1 / (Rvert[i][j][l] / 2 + Rvert[i][j][l - 1] / 2);
-                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0], Midx[idx][1], Midx[idx][2]);
+                    Midx[idx][2] =
+                        -1 / (Rvert[i][j][l] / 2 + Rvert[i][j][l - 1] / 2);
+                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0],
+                    // Midx[idx][1], Midx[idx][2]);
                     idx++;
                 }
                 if (j - 1 >= 0) {
                     Midx[idx][0] = l * dimX * dimZ + j * dimX + i;
                     Midx[idx][1] = l * dimX * dimZ + (j - 1) * dimX + i;
                     Midx[idx][2] = -1 / Rhori[l][1];
-                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0], Midx[idx][1], Midx[idx][2]);
+                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0],
+                    // Midx[idx][1], Midx[idx][2]);
                     idx++;
                 }
                 if (i - 1 >= 0) {
                     Midx[idx][0] = l * dimX * dimZ + j * dimX + i;
                     Midx[idx][1] = l * dimX * dimZ + j * dimX + i - 1;
                     Midx[idx][2] = -1 / Rhori[l][0];
-                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0], Midx[idx][1], Midx[idx][2]);
+                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0],
+                    // Midx[idx][1], Midx[idx][2]);
                     idx++;
                 }
                 if (i + 1 < dimX) {
                     Midx[idx][0] = l * dimX * dimZ + j * dimX + i;
                     Midx[idx][1] = l * dimX * dimZ + j * dimX + i + 1;
                     Midx[idx][2] = -1 / Rhori[l][0];
-                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0], Midx[idx][1], Midx[idx][2]);
+                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0],
+                    // Midx[idx][1], Midx[idx][2]);
                     idx++;
                 }
 
@@ -320,14 +339,17 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
                     Midx[idx][0] = l * dimX * dimZ + j * dimX + i;
                     Midx[idx][1] = l * dimX * dimZ + (j + 1) * dimX + i;
                     Midx[idx][2] = -1 / Rhori[l][1];
-                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0], Midx[idx][1], Midx[idx][2]);
+                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0],
+                    // Midx[idx][1], Midx[idx][2]);
                     idx++;
                 }
                 if (l < numLayer) {
                     Midx[idx][0] = l * dimX * dimZ + j * dimX + i;
                     Midx[idx][1] = (l + 1) * dimX * dimZ + j * dimX + i;
-                    Midx[idx][2] = -1 / (Rvert[i][j][l] / 2 + Rvert[i][j][l + 1] / 2);
-                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0], Midx[idx][1], Midx[idx][2]);
+                    Midx[idx][2] =
+                        -1 / (Rvert[i][j][l] / 2 + Rvert[i][j][l + 1] / 2);
+                    // printf("%d:%f\t%f\t%.5f\n", idx, Midx[idx][0],
+                    // Midx[idx][1], Midx[idx][2]);
                     idx++;
                 }
 
@@ -347,8 +369,8 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
                     // printf("Midx[idx][2] = %.6f\n", Midx[idx][2]);
                     Midx[idx][2] += 1 / Ramb;
                 }
-                // printf("%d:%f\t%f\t%.5f\t, %d\t%d\n", idx, Midx[idx][0], Midx[idx][1],
-                // Midx[idx][2], idx_re, idx);
+                // printf("%d:%f\t%f\t%.5f\t, %d\t%d\n", idx, Midx[idx][0],
+                // Midx[idx][1], Midx[idx][2], idx_re, idx);
                 idx++;
                 // sort this row
                 for (k = idx - 2; k >= idx_re; k--) {
@@ -399,8 +421,9 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
     return Midx;
 }
 
-double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX, int dimZ,
-                              double **Midx, int count, double Tamb) {
+double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
+                              int dimX, int dimZ, double **Midx, int count,
+                              double Tamb) {
     int numLayer = numP * 3;
     int *layerP;
     // define the active layer array
@@ -471,7 +494,8 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     dCreate_CompCol_Matrix(&A, m, n, nnz, a, asub, xa, SLU_NC, SLU_D, SLU_GE);
     // dPrint_CompCol_Matrix("A", &A);
     /* Create right-hand side matrix B. */
-    if (!(rhs = doubleMalloc(m * nrhs))) SUPERLU_ABORT("Malloc fails for rhs[].");
+    if (!(rhs = doubleMalloc(m * nrhs)))
+        SUPERLU_ABORT("Malloc fails for rhs[].");
 
     // assign values to B
     for (int i = 0; i < m; i++)  // initialize rhs to 0
@@ -480,7 +504,8 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     for (int l = 0; l < numP; l++)
         for (int i = 0; i < dimX; i++)
             for (int j = 0; j < dimZ; j++) {
-                rhs[dimX * dimZ * (layerP[l] + 1) + j * dimX + i] = powerM[i][j][l];
+                rhs[dimX * dimZ * (layerP[l] + 1) + j * dimX + i] =
+                    powerM[i][j][l];
                 // rhs[dimX*dimZ*(layerP[l]+1) + i*dimZ + j] = powerM[i][j][l];
                 // printf("%.6f\n", powerM[i][j][l]);
             }
@@ -558,7 +583,8 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
 
         superlu_dQuerySpace(nprocs, &L, &U, panel_size, &superlu_memusage);
         printf("L\\U MB %.3f\ttotal MB needed %.3f\texpansions " IFMT "\n",
-               superlu_memusage.for_lu / 1024 / 1024, superlu_memusage.total_needed / 1024 / 1024,
+               superlu_memusage.for_lu / 1024 / 1024,
+               superlu_memusage.total_needed / 1024 / 1024,
                superlu_memusage.expansions);
     }
 
@@ -576,14 +602,18 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP, i
     /* De-allocate other storage */
     // free(K); free(H); free(layerP); free(Tt);
 
-    printf("================= FINISH STEADY TEMPERATURE SOLVER ===============\n\n");
+    printf(
+        "================= FINISH STEADY TEMPERATURE SOLVER "
+        "===============\n\n");
 
     return Tt;
 }
 
-double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP, int dimX,
-                                 int dimZ, double **Midx, int MidxSize, double *Cap, int CapSize,
-                                 double time, int iter, double *T_trans, double Tamb) {
+double *transient_thermal_solver(double ***powerM, double W, double Lc,
+                                 int numP, int dimX, int dimZ, double **Midx,
+                                 int MidxSize, double *Cap, int CapSize,
+                                 double time, int iter, double *T_trans,
+                                 double Tamb) {
     int numLayer = numP * 3;
 
     // define the active layer array
@@ -614,7 +644,8 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
     for (int l = 0; l < numP; l++)
         for (int j = 0; j < dimZ; j++)
             for (int i = 0; i < dimX; i++) {
-                P[dimX * dimZ * (layerP[l] + 1) + i * dimZ + j] = powerM[i][j][l];
+                P[dimX * dimZ * (layerP[l] + 1) + i * dimZ + j] =
+                    powerM[i][j][l];
                 // printf("%.6f\n", powerM[i][j][l]);
             }
 
@@ -624,8 +655,8 @@ double *transient_thermal_solver(double ***powerM, double W, double Lc, int numP
 
     // tried to optimize the following code
     // multi-threading won't work unless you figure out T[idx0] access patterns
-    // also tried a variety of loop tiling technique, on our server block_size=8 or 4
-    // yields best performance, so let it be...
+    // also tried a variety of loop tiling technique, on our server block_size=8
+    // or 4 yields best performance, so let it be...
     const int block_size = 8;
     for (int iit = 0; iit < iter; iit++) {
         // main calculation of the new T

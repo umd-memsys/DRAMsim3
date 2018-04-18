@@ -1,42 +1,45 @@
-#include <iostream>
 #include "controller.h"
+#include <iostream>
 
 using namespace std;
 using namespace dramcore;
 
-Controller::Controller(int channel, const Config &config, const Timing &timing, Statistics &stats, ThermalCalculator *thermalcalc, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
-    read_callback_(read_callback),
-    write_callback_(write_callback),
-    channel_id_(channel),
-    clk_(0),
-    config_(config),
-    channel_state_(config, timing, stats, thermalcalc),
-    cmd_queue_(channel_id_, config, channel_state_, stats), //TODO - Isn't it really a request_queue. Why call it command_queue?
-    refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
-    stats_(stats)
-{
-}
-
+Controller::Controller(int channel, const Config &config, const Timing &timing,
+                       Statistics &stats, ThermalCalculator *thermalcalc,
+                       std::function<void(uint64_t)> read_callback,
+                       std::function<void(uint64_t)> write_callback)
+    : read_callback_(read_callback),
+      write_callback_(write_callback),
+      channel_id_(channel),
+      clk_(0),
+      config_(config),
+      channel_state_(config, timing, stats, thermalcalc),
+      cmd_queue_(channel_id_, config, channel_state_,
+                 stats),  // TODO - Isn't it really a request_queue. Why call it
+                          // command_queue?
+      refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
+      stats_(stats) {}
 
 void Controller::ClockTick() {
     clk_++;
     cmd_queue_.clk_++;
 
-    //Return already issued read/write requests back to the CPU
-    for( auto req_itr = cmd_queue_.issued_req_.begin(); req_itr !=  cmd_queue_.issued_req_.end(); req_itr++) {
+    // Return already issued read/write requests back to the CPU
+    for (auto req_itr = cmd_queue_.issued_req_.begin();
+         req_itr != cmd_queue_.issued_req_.end(); req_itr++) {
         auto issued_req = *req_itr;
-        if(clk_ > issued_req->exit_time_) {
-            //Return request to cpu
+        if (clk_ > issued_req->exit_time_) {
+            // Return request to cpu
             stats_.access_latency.AddValue(clk_ - issued_req->arrival_time_);
-            if(issued_req->cmd_.IsRead())
+            if (issued_req->cmd_.IsRead())
                 read_callback_(issued_req->hex_addr_);
-            else if(issued_req->cmd_.IsWrite())
+            else if (issued_req->cmd_.IsWrite())
                 write_callback_(issued_req->hex_addr_);
             else
                 AbruptExit(__FILE__, __LINE__);
-            delete(issued_req);
+            delete (issued_req);
             cmd_queue_.issued_req_.erase(req_itr++);
-            break; // Returning one request per cycle. TODO - Make this a knob?
+            break;  // Returning one request per cycle. TODO - Make this a knob?
         }
     }
 
@@ -58,23 +61,29 @@ void Controller::ClockTick() {
         }
     }
 
-    //Move idle ranks into self-refresh mode to save power
-    if(config_.enable_self_refresh) {
+    // Move idle ranks into self-refresh mode to save power
+    if (config_.enable_self_refresh) {
         for (auto i = 0; i < config_.ranks; i++) {
-            //update rank idleness
+            // update rank idleness
             if (cmd_queue_.rank_queues_empty[i] &&
-                clk_ - cmd_queue_.rank_queues_empty_from_time_[i] >= config_.idle_cycles_for_self_refresh &&
+                clk_ - cmd_queue_.rank_queues_empty_from_time_[i] >=
+                    config_.idle_cycles_for_self_refresh &&
                 !channel_state_.rank_in_self_refresh_mode_[i]) {
                 auto addr = Address();
                 addr.channel_ = channel_id_;
                 addr.rank_ = i;
-                auto self_refresh_enter_cmd = Command(CommandType::SELF_REFRESH_ENTER, addr);
-                auto cmd = channel_state_.GetRequiredCommand(self_refresh_enter_cmd);
+                auto self_refresh_enter_cmd =
+                    Command(CommandType::SELF_REFRESH_ENTER, addr);
+                auto cmd =
+                    channel_state_.GetRequiredCommand(self_refresh_enter_cmd);
                 if (channel_state_.IsReady(cmd, clk_))
                     if (cmd.cmd_type_ == CommandType::SELF_REFRESH_ENTER) {
-                        //clear refresh requests from the queue for the rank that is about to go into self-refresh mode
-                        for (auto refresh_req_iter = refresh_.refresh_q_.begin();
-                             refresh_req_iter != refresh_.refresh_q_.end(); refresh_req_iter++) {
+                        // clear refresh requests from the queue for the rank
+                        // that is about to go into self-refresh mode
+                        for (auto refresh_req_iter =
+                                 refresh_.refresh_q_.begin();
+                             refresh_req_iter != refresh_.refresh_q_.end();
+                             refresh_req_iter++) {
                             auto refresh_req = *refresh_req_iter;
                             if (refresh_req->Rank() == cmd.Rank()) {
                                 delete (refresh_req);
@@ -87,64 +96,60 @@ void Controller::ClockTick() {
         }
     }
 
-    //Refresh command is queued
+    // Refresh command is queued
     refresh_.ClockTick();
-    if( !refresh_.refresh_q_.empty()) {
+    if (!refresh_.refresh_q_.empty()) {
         auto refresh_itr = refresh_.refresh_q_.begin();
-        if(channel_state_.need_to_update_refresh_waiting_status_) {
+        if (channel_state_.need_to_update_refresh_waiting_status_) {
             channel_state_.need_to_update_refresh_waiting_status_ = false;
-            channel_state_.UpdateRefreshWaitingStatus((*refresh_itr)->cmd_, true);
+            channel_state_.UpdateRefreshWaitingStatus((*refresh_itr)->cmd_,
+                                                      true);
         }
         auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
-        if(cmd.IsValid()) { 
+        if (cmd.IsValid()) {
             channel_state_.IssueCommand(cmd, clk_);
-            if(cmd.IsRefresh()) {
+            if (cmd.IsRefresh()) {
                 channel_state_.need_to_update_refresh_waiting_status_ = true;
-                channel_state_.UpdateRefreshWaitingStatus(cmd, false); //TODO - Move this to channelstate update?
+                channel_state_.UpdateRefreshWaitingStatus(
+                    cmd, false);  // TODO - Move this to channelstate update?
             }
-            return; //TODO - What about HBM dual command issue?
+            return;  // TODO - What about HBM dual command issue?
         }
     }
 
     auto cmd = cmd_queue_.GetCommandToIssue();
-    if(cmd.IsValid()) {
+    if (cmd.IsValid()) {
         channel_state_.IssueCommand(cmd, clk_);
-        
-        if (config_.enable_hbm_dual_cmd) { //TODO - Current implementation doesn't do dual command issue during refresh
+
+        if (config_.enable_hbm_dual_cmd) {  // TODO - Current implementation
+                                            // doesn't do dual command issue
+                                            // during refresh
             auto second_cmd = cmd_queue_.GetCommandToIssue();
             if (second_cmd.IsValid()) {
                 if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {
                     channel_state_.IssueCommand(second_cmd, clk_);
                     stats_.hbm_dual_command_issue_cycles++;
                 }
-                if(!cmd.IsReadWrite() && !second_cmd.IsReadWrite()) {
+                if (!cmd.IsReadWrite() && !second_cmd.IsReadWrite()) {
                     stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
                 }
             }
         }
         return;
-    }
-    else if(config_.aggressive_precharging_enabled) {
-        //Look for closing open banks if any. (Aggressive precharing)
-        //To which no read/write requests exist in the queues
+    } else if (config_.aggressive_precharging_enabled) {
+        // Look for closing open banks if any. (Aggressive precharing)
+        // To which no read/write requests exist in the queues
         auto pre_cmd = cmd_queue_.AggressivePrecharge();
-        if(pre_cmd.IsValid()) {
+        if (pre_cmd.IsValid()) {
             channel_state_.IssueCommand(pre_cmd, clk_);
         }
     }
-
-    
 }
 
-bool Controller::IsReqInsertable(Request* req) {
+bool Controller::IsReqInsertable(Request *req) {
     return cmd_queue_.IsReqInsertable(req);
 }
 
-bool Controller::InsertReq(Request* req) {
-    return cmd_queue_.InsertReq(req);
-}
+bool Controller::InsertReq(Request *req) { return cmd_queue_.InsertReq(req); }
 
-int Controller::QueueUsage() const {
-    return cmd_queue_.QueueUsage();
-}
-
+int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }

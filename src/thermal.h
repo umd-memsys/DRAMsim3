@@ -1,50 +1,48 @@
 #ifndef __THERMAL_H
 #define __THERMAL_H
 
-#include <functional>
-#include <vector>
-#include <iostream>
 #include <time.h>
 #include <cmath>
 #include <fstream>
-#include "common.h"
+#include <functional>
+#include <iostream>
+#include <vector>
 #include "bankstate.h"
-#include "timing.h"
+#include "common.h"
 #include "configuration.h"
 #include "thermal_config.h"
+#include "timing.h"
 
 using namespace std;
 
-namespace dramcore
-{
+namespace dramcore {
 
-extern std::function<Address(const Address& addr)> GetPhyAddress;
+extern std::function<Address(const Address &addr)> GetPhyAddress;
 
-class ThermalCalculator
-{
+class ThermalCalculator {
     int time_iter0, time_iter;
-    double Tamb; // The ambient temperature in Kelvin
+    double Tamb;  // The ambient temperature in Kelvin
 
-    const int num_dummy = 2; 
+    const int num_dummy = 2;
 
     const Config &config_;
     Statistics &stats_;
 
-    int dimX, dimY, numP;  // Dimension of the memory
-    double **Midx;		   // Midx storing thermal conductance
-    double *Cap;		   // Cap storing the thermal capacitance
-    int MidxSize, CapSize; // first dimension size of Midx and Cap
+    int dimX, dimY, numP;   // Dimension of the memory
+    double **Midx;          // Midx storing thermal conductance
+    double *Cap;            // Cap storing the thermal capacitance
+    int MidxSize, CapSize;  // first dimension size of Midx and Cap
     int T_size;
     double **T_trans, **T_final;
 
-    int sample_id;	 // index of the sampling power
-    uint64_t save_clk; // saved clk
+    int sample_id;      // index of the sampling power
+    uint64_t save_clk;  // saved clk
 
     double avg_logic_power_;
     double max_logic_power_;
 
-    vector<vector<double>> accu_Pmap; // accumulative power map
-    vector<vector<double>> cur_Pmap;  // current power map
+    vector<vector<double>> accu_Pmap;  // accumulative power map
+    vector<vector<double>> cur_Pmap;   // current power map
 
     vector<vector<uint32_t>> refresh_count;
 
@@ -57,7 +55,8 @@ class ThermalCalculator
     // other intermediate parameters
     // not need to be defined here but it will be easy to use if it is defined
     int vault_x, vault_y, bank_x, bank_y;
-    int num_case; // number of different cases where the thermal simulation is performed
+    int num_case;  // number of different cases where the thermal simulation is
+                   // performed
     vector<int> layerP;
 
     // Output files
@@ -71,27 +70,33 @@ class ThermalCalculator
     std::pair<int, int> MapToVault(int channel_id);
     std::pair<int, int> MapToBank(int bankgroup_id, int bank_id);
     int MapToZ(int channel_id, int bank_id);
-    std::pair<vector<int>, vector<int>> MapToXY(const Command& cmd, int vault_id_x, int vault_id_y, int bank_id_x, int bank_id_y);
-    void LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0, int caseID_, double add_energy);
-    void LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0, int caseID_, double add_energy);
+    std::pair<vector<int>, vector<int>> MapToXY(const Command &cmd,
+                                                int vault_id_x, int vault_id_y,
+                                                int bank_id_x, int bank_id_y);
+    void LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0,
+                                        int caseID_, double add_energy);
+    void LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0,
+                                     int caseID_, double add_energy);
     void UpdatePowerMaps(double add_energy, bool trans, uint64_t clk);
     void CalcTransT(int case_id);
     void CalcFinalT(int case_id, uint64_t clk);
-    double*** InitPowerM(int case_id, uint64_t clk);
-    double GetTotalPower(double*** powerM);
+    double ***InitPowerM(int case_id, uint64_t clk);
+    double GetTotalPower(double ***powerM);
     void InitialParameters();
     int square_array(int total_grids_);
     int determineXY(double xd, double yd, int total_grids_);
-    double GetMaxTofCase(double** temp_map, int case_id);
-    double GetMaxTofCaseLayer(double** temp_map, int case_id, int layer);
+    double GetMaxTofCase(double **temp_map, int case_id);
+    double GetMaxTofCaseLayer(double **temp_map, int case_id, int layer);
     void calculate_time_step();
     // print to csv-files
-    void PrintCSV_trans(ofstream &csvfile, vector<vector<double>> P_, double** T_, int id, uint64_t scale);
-    void PrintCSV_final(ofstream &csvfile, vector<vector<double>> P_, double** T_, int id, uint64_t scale);
+    void PrintCSV_trans(ofstream &csvfile, vector<vector<double>> P_,
+                        double **T_, int id, uint64_t scale);
+    void PrintCSV_final(ofstream &csvfile, vector<vector<double>> P_,
+                        double **T_, int id, uint64_t scale);
     void PrintCSVHeader_final(ofstream &csvfile);
     void PrintCSV_bank(ofstream &csvfile);
 
-public:
+   public:
     ThermalCalculator(const Config &config, Statistics &stats);
     ~ThermalCalculator();
     void UpdatePower(const Command &cmd, uint64_t clk);
@@ -101,6 +106,6 @@ public:
 
     void UpdateLogicPower();
 };
-}
+}  // namespace dramcore
 
 #endif

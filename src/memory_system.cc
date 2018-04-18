@@ -3,20 +3,23 @@
 
 #ifdef GENERATE_TRACE
 #include "../ext/fmt/src/format.h"
-#endif // GENERATE_TRACE
+#endif  // GENERATE_TRACE
 
 using namespace std;
 using namespace dramcore;
 
-// alternative way is to assign the id in constructor but this is less destructive
+// alternative way is to assign the id in constructor but this is less
+// destructive
 int BaseMemorySystem::num_mems_ = 0;
 
-BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
-    read_callback_(read_callback),
-    write_callback_(write_callback),
-    clk_(0),
-    last_req_clk_(0)
-{
+BaseMemorySystem::BaseMemorySystem(const std::string &config_file,
+                                   const std::string &output_dir,
+                                   std::function<void(uint64_t)> read_callback,
+                                   std::function<void(uint64_t)> write_callback)
+    : read_callback_(read_callback),
+      write_callback_(write_callback),
+      clk_(0),
+      last_req_clk_(0) {
     mem_sys_id_ = num_mems_;
     num_mems_ += 1;
     ptr_config_ = new Config(config_file, output_dir);
@@ -25,12 +28,13 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
     ptr_thermCal_ = new ThermalCalculator(*ptr_config_, *ptr_stats_);
 
     if (mem_sys_id_ > 0) {
-        // if there are more than one memory_systems then rename the output to preven being overwritten
+        // if there are more than one memory_systems then rename the output to
+        // preven being overwritten
         RenameFileWithNumber(ptr_config_->stats_file, mem_sys_id_);
         RenameFileWithNumber(ptr_config_->epoch_stats_file, mem_sys_id_);
         RenameFileWithNumber(ptr_config_->stats_file_csv, mem_sys_id_);
         RenameFileWithNumber(ptr_config_->epoch_stats_file_csv, mem_sys_id_);
-    } 
+    }
 
     if (ptr_config_->output_level >= 0) {
         stats_file_.open(ptr_config_->stats_file);
@@ -56,14 +60,12 @@ BaseMemorySystem::BaseMemorySystem(const std::string &config_file, const std::st
 #endif
 }
 
-
-
 BaseMemorySystem::~BaseMemorySystem() {
     cout << "come to delete BaseMemorySystem\n";
-    delete(ptr_stats_);
-    delete(ptr_timing_);
-    delete(ptr_config_);
-    delete(ptr_thermCal_);
+    delete (ptr_stats_);
+    delete (ptr_timing_);
+    delete (ptr_config_);
+    delete (ptr_thermCal_);
 
     stats_file_.close();
     epoch_stats_file_.close();
@@ -85,26 +87,31 @@ void BaseMemorySystem::PrintIntermediateStats() {
     }
 
     if (ptr_config_->output_level >= 3) {
-        epoch_stats_file_ << "-----------------------------------------------------" << endl;
-        epoch_stats_file_ << "Epoch stats from clock = " << clk_ - ptr_config_->epoch_period << " to " << clk_<< endl;
-        epoch_stats_file_ << "-----------------------------------------------------" << endl;
+        epoch_stats_file_
+            << "-----------------------------------------------------" << endl;
+        epoch_stats_file_ << "Epoch stats from clock = "
+                          << clk_ - ptr_config_->epoch_period << " to " << clk_
+                          << endl;
+        epoch_stats_file_
+            << "-----------------------------------------------------" << endl;
         ptr_stats_->PrintEpochStats(epoch_stats_file_);
-        epoch_stats_file_ << "-----------------------------------------------------" << endl;
+        epoch_stats_file_
+            << "-----------------------------------------------------" << endl;
     }
     return;
 }
-
 
 void BaseMemorySystem::PrintStats() {
     // update one last time before print
     ptr_stats_->PreEpochCompute(clk_);
     ptr_stats_->UpdateEpoch(clk_);
     cout << "-----------------------------------------------------" << endl;
-    cout << "Printing final stats of MemorySystem "<< mem_sys_id_ << " -- " << endl;
+    cout << "Printing final stats of MemorySystem " << mem_sys_id_ << " -- "
+         << endl;
     cout << "-----------------------------------------------------" << endl;
     cout << *ptr_stats_;
     cout << "-----------------------------------------------------" << endl;
-    if (ptr_config_ ->output_level >= 0) {
+    if (ptr_config_->output_level >= 0) {
         ptr_stats_->PrintStats(stats_file_);
         // had to print the header here instead of the constructor
         // because histogram headers are only known at the end
@@ -115,55 +122,63 @@ void BaseMemorySystem::PrintStats() {
     return;
 }
 
-MemorySystem::MemorySystem(const string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback) :
-    BaseMemorySystem(config_file, output_dir, read_callback, write_callback)
-{
+MemorySystem::MemorySystem(const string &config_file,
+                           const std::string &output_dir,
+                           std::function<void(uint64_t)> read_callback,
+                           std::function<void(uint64_t)> write_callback)
+    : BaseMemorySystem(config_file, output_dir, read_callback, write_callback) {
     if (ptr_config_->IsHMC()) {
         cerr << "Initialized a memory system with an HMC config file!" << endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
     ctrls_.resize(ptr_config_->channels);
-    for(auto i = 0; i < ptr_config_->channels; i++) {
-        ctrls_[i] = new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_, ptr_thermCal_, read_callback_, write_callback_);
+    for (auto i = 0; i < ptr_config_->channels; i++) {
+        ctrls_[i] =
+            new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
+                           ptr_thermCal_, read_callback_, write_callback_);
     }
 }
 
-MemorySystem::~MemorySystem()
-{
-    //cout << "come to delete MemorySystem\n";
-    for(auto i = 0; i < ptr_config_->channels; i++) {
-        delete(ctrls_[i]);
+MemorySystem::~MemorySystem() {
+    // cout << "come to delete MemorySystem\n";
+    for (auto i = 0; i < ptr_config_->channels; i++) {
+        delete (ctrls_[i]);
     }
 }
 
 bool MemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) {
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
-    Request* temp_req = new Request(cmd_type, hex_addr, clk_, 0); //TODO - This is probably not very efficient
+    Request *temp_req =
+        new Request(cmd_type, hex_addr, clk_,
+                    0);  // TODO - This is probably not very efficient
     bool status = ctrls_[temp_req->Channel()]->IsReqInsertable(temp_req);
     delete temp_req;
     return status;
 }
 
 bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
-    //Record trace - Record address trace for debugging or other purposes
+// Record trace - Record address trace for debugging or other purposes
 #ifdef GENERATE_TRACE
-    address_trace_  << left << setw(18) << clk_ << " " << setw(6) << std::hex 
-        << (is_write ? "WRITE " : "READ ") << hex_addr << std::dec << endl;
+    address_trace_ << left << setw(18) << clk_ << " " << setw(6) << std::hex
+                   << (is_write ? "WRITE " : "READ ") << hex_addr << std::dec
+                   << endl;
 #endif
 
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
-    Request* req = new Request(cmd_type, hex_addr, clk_, id_);
+    Request *req = new Request(cmd_type, hex_addr, clk_, id_);
 
     bool is_insertable = ctrls_[req->Channel()]->InsertReq(req);
 #ifdef NO_BACKPRESSURE
-    // Some CPU simulators might not model the backpressure because queues are full.
-    // An approximate way of addressing this scenario is to buffer all such requests here in the DRAM simulator and then
-    // feed them into the actual memory controller queues as and when space becomes available.
-    // Note - This is an approximation and if the size of such buffer queue becomes large during the course of the
-    // simulation, then the accuracy sought of devolves into that of a memory address trace based simulation.
-    if((!is_insertable)) {
+    // Some CPU simulators might not model the backpressure because queues are
+    // full. An approximate way of addressing this scenario is to buffer all
+    // such requests here in the DRAM simulator and then feed them into the
+    // actual memory controller queues as and when space becomes available. Note
+    // - This is an approximation and if the size of such buffer queue becomes
+    // large during the course of the simulation, then the accuracy sought of
+    // devolves into that of a memory address trace based simulation.
+    if ((!is_insertable)) {
         buffer_q_.push_back(req);
         is_insertable = true;
         ptr_stats_->numb_buffered_requests++;
@@ -179,54 +194,55 @@ bool MemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
 }
 
 void MemorySystem::ClockTick() {
-    for( auto ctrl : ctrls_)
-        ctrl->ClockTick();
+    for (auto ctrl : ctrls_) ctrl->ClockTick();
 
 #ifdef NO_BACKPRESSURE
-    //Insert requests stored in the buffer_q as and when space is available
-    if(!buffer_q_.empty()) {
-        for(auto req_itr = buffer_q_.begin(); req_itr != buffer_q_.end(); req_itr++) {
+    // Insert requests stored in the buffer_q as and when space is available
+    if (!buffer_q_.empty()) {
+        for (auto req_itr = buffer_q_.begin(); req_itr != buffer_q_.end();
+             req_itr++) {
             auto req = *req_itr;
-            if(ctrls_[req->Channel()]->InsertReq(req)) {
+            if (ctrls_[req->Channel()]->InsertReq(req)) {
                 buffer_q_.erase(req_itr);
-                break;  // either break or set req_itr to the return value of erase()
+                break;  // either break or set req_itr to the return value of
+                        // erase()
             }
         }
     }
 #endif
 
-    if( clk_ % ptr_config_->epoch_period == 0 && clk_ != 0) {
-        // calculate queue usage each epoch 
+    if (clk_ % ptr_config_->epoch_period == 0 && clk_ != 0) {
+        // calculate queue usage each epoch
         // otherwise it would be too inefficient
         int queue_usage_total = 0;
-        for (auto ctrl:ctrls_) {
+        for (auto ctrl : ctrls_) {
             queue_usage_total += ctrl->QueueUsage();
         }
-        ptr_stats_->queue_usage.epoch_value = static_cast<double>(queue_usage_total);
+        ptr_stats_->queue_usage.epoch_value =
+            static_cast<double>(queue_usage_total);
         ptr_stats_->PreEpochCompute(clk_);
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }
-    
+
     clk_++;
     ptr_stats_->dramcycles++;
     return;
 }
 
-
-IdealMemorySystem::IdealMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback):
-    BaseMemorySystem(config_file, output_dir, read_callback, write_callback),
-    latency_(ptr_config_->ideal_memory_latency)
-{
-
-}
+IdealMemorySystem::IdealMemorySystem(
+    const std::string &config_file, const std::string &output_dir,
+    std::function<void(uint64_t)> read_callback,
+    std::function<void(uint64_t)> write_callback)
+    : BaseMemorySystem(config_file, output_dir, read_callback, write_callback),
+      latency_(ptr_config_->ideal_memory_latency) {}
 
 IdealMemorySystem::~IdealMemorySystem() {}
 
 bool IdealMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
     CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
     id_++;
-    Request* req = new Request(cmd_type, hex_addr, clk_, id_);
+    Request *req = new Request(cmd_type, hex_addr, clk_, id_);
     infinite_buffer_q_.push_back(req);
     return true;
 }
@@ -234,30 +250,30 @@ bool IdealMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
 void IdealMemorySystem::ClockTick() {
     clk_++;
     ptr_stats_->dramcycles++;
-    for(auto req_itr = infinite_buffer_q_.begin(); req_itr != infinite_buffer_q_.end(); req_itr++) {
+    for (auto req_itr = infinite_buffer_q_.begin();
+         req_itr != infinite_buffer_q_.end(); req_itr++) {
         auto req = *req_itr;
-        if(clk_ - req->arrival_time_ >= latency_) {
-            if(req->cmd_.cmd_type_ == CommandType::READ) {
+        if (clk_ - req->arrival_time_ >= latency_) {
+            if (req->cmd_.cmd_type_ == CommandType::READ) {
                 ptr_stats_->numb_read_reqs_issued++;
-            }
-            else if(req->cmd_.cmd_type_ == CommandType::WRITE) {
+            } else if (req->cmd_.cmd_type_ == CommandType::WRITE) {
                 ptr_stats_->numb_write_reqs_issued++;
             }
             ptr_stats_->access_latency.AddValue(clk_ - req->arrival_time_);
-            if(req->cmd_.IsRead())
+            if (req->cmd_.IsRead())
                 read_callback_(req->hex_addr_);
-            else if(req->cmd_.IsWrite())
+            else if (req->cmd_.IsWrite())
                 write_callback_(req->hex_addr_);
             else
                 AbruptExit(__FILE__, __LINE__);
-            delete(req);
+            delete (req);
             infinite_buffer_q_.erase(req_itr++);
-        }
-        else
-            break; //Requests are always ordered w.r.t to their arrival times, so need to check beyond.
+        } else
+            break;  // Requests are always ordered w.r.t to their arrival times,
+                    // so need to check beyond.
     }
 
-    if( clk_ % ptr_config_->epoch_period == 0) {
+    if (clk_ % ptr_config_->epoch_period == 0) {
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }
@@ -267,10 +283,6 @@ void IdealMemorySystem::ClockTick() {
 // This function can be used by autoconf AC_CHECK_LIB since
 // apparently it can't detect C++ functions.
 // Basically just an entry in the symbol table
-extern "C"
-{
-void libdramcore_is_present(void)
-{
-    ;
-}
+extern "C" {
+void libdramcore_is_present(void) { ; }
 }

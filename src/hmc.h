@@ -4,7 +4,6 @@
 #include <map>
 #include "memory_system.h"
 
-
 namespace dramcore {
 
 enum class HMCReqType {
@@ -65,24 +64,13 @@ enum class HMCReqType {
     SIZE
 };
 
-enum class HMCRespType {
-    NONE,
-    RD_RS,
-    WR_RS,
-    ERR,
-    SIZE
-};
+enum class HMCRespType { NONE, RD_RS, WR_RS, ERR, SIZE };
 
 // for future use
-enum class HMCLinkType {
-    HOST_TO_DEV,
-    DEV_TO_DEV,
-    SIZE
-};
-
+enum class HMCLinkType { HOST_TO_DEV, DEV_TO_DEV, SIZE };
 
 class HMCRequest {
-public:
+   public:
     HMCRequest(HMCReqType req_type, uint64_t hex_addr);
     HMCReqType type;
     uint64_t mem_operand;
@@ -94,9 +82,8 @@ public:
     uint64_t exit_time;
 };
 
-
 class HMCResponse {
-public:
+   public:
     HMCResponse(uint64_t id, HMCReqType reqtype, int dest_link, int src_quad);
     uint64_t resp_id;
     HMCRespType type;
@@ -107,27 +94,29 @@ public:
     uint64_t exit_time;
 };
 
-
 class HMCMemorySystem : public BaseMemorySystem {
-public:
-    HMCMemorySystem(const std::string &config_file, const std::string &output_dir, std::function<void(uint64_t)> read_callback, std::function<void(uint64_t)> write_callback);
+   public:
+    HMCMemorySystem(const std::string& config_file,
+                    const std::string& output_dir,
+                    std::function<void(uint64_t)> read_callback,
+                    std::function<void(uint64_t)> write_callback);
     ~HMCMemorySystem();
     // assuming there are 2 clock domains one for logic die one for DRAM
-    // we can unify them as one but then we'll have to convert all the 
+    // we can unify them as one but then we'll have to convert all the
     // slow dram time units to faster logic units...
-    void ClockTick() override ;
+    void ClockTick() override;
     void LogicClockTickPre();
     void LogicClockTickPost();
     void DRAMClockTick();
     // had to have 3 insert interfaces cuz HMC is so different...
-    bool IsReqInsertable(uint64_t hex_addr, bool is_write) override ;
-    bool InsertReq(uint64_t hex_addr, bool is_write) override ;
+    bool IsReqInsertable(uint64_t hex_addr, bool is_write) override;
+    bool InsertReq(uint64_t hex_addr, bool is_write) override;
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
 
-    //ThermalCalculator* ptr_thermCal_;
+    // ThermalCalculator* ptr_thermCal_;
 
-private:
+   private:
     uint64_t ref_tick_, logic_clk_;
     /*
     uint64_t logic_counter_, dram_counter_;
@@ -138,7 +127,7 @@ private:
     std::function<void(uint64_t)> vault_callback_;
 
     void SetClockRatio();
-    void InsertReqToDRAM(HMCRequest *req); 
+    void InsertReqToDRAM(HMCRequest* req);
     void VaultCallback(uint64_t req_id);
     std::vector<int> BuildAgeQueue(std::vector<int>& age_counter);
     void XbarArbitrate();
@@ -151,7 +140,8 @@ private:
     int logic_clk_ticks_;
     int clk_tick_product_;
 
-    // had to use a multimap because the controller callback return hex addr instead of unique id
+    // had to use a multimap because the controller callback return hex addr
+    // instead of unique id
     std::multimap<uint64_t, HMCResponse*> resp_lookup_table;
     // these are essentially input/output buffers for xbars
     std::vector<std::vector<HMCRequest*>> link_req_queues_;
@@ -160,17 +150,14 @@ private:
     std::vector<std::vector<HMCResponse*>> quad_resp_queues_;
 
     // input/output busy indicators, since each packet could be several
-    // flits, as long as this != 0 then they're busy 
+    // flits, as long as this != 0 then they're busy
     std::vector<int> link_busy;
     std::vector<int> quad_busy = {0, 0, 0, 0};
     // used for arbitration
     std::vector<int> link_age_counter;
     std::vector<int> quad_age_counter = {0, 0, 0, 0};
-
 };
 
-
-}
+}  // namespace dramcore
 
 #endif
-
