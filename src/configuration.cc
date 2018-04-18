@@ -235,13 +235,17 @@ Config::Config(std::string config_file, std::string out_dir)
             RowTile *= 2;
         }
         // RowTile = numXgrids / (numYgrids * 8);
+#ifdef DEBUG_OUTPUT
         std::cout << "RowTile = " << RowTile << std::endl;
+#endif  // DEBUG_OUTPUT
         numXgrids = numXgrids / RowTile;
         TileRowNum = TileRowNum / RowTile;
         numYgrids = numYgrids * RowTile;
         bank_asr = (double)numXgrids / numYgrids;
     } else {
+#ifdef DEBUG_OUTPUT
         std::cout << "No Need to Tile Rows\n";
+#endif  // DEBUG_OUTPUT
     }
 
     // Thermal simulation parameters
