@@ -40,7 +40,6 @@ class StreamCPU : public CPU {
    private:
     uint64_t addr_a_, addr_b_, addr_c_, offset_ = 0;
     std::mt19937_64 gen;
-    bool get_next_ = true;
     bool inserted_a_, inserted_b_, inserted_c_;
     const uint64_t array_size_ = 2 << 20;  // elements in array
     const int stride_ = 64;                // stride in bytes

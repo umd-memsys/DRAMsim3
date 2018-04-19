@@ -79,8 +79,7 @@ class HistogramStat : public BaseStat {
     void AddValue(int val);
     void Print(std::ostream& where) const override;
     void UpdateEpoch() override;
-    void PrintEpoch(std::ostream& where) const {
-    }  // don't print histogram, put them in csv instead
+    void PrintEpoch(std::ostream& where) const override {}
     void PrintCSVHeader(std::ostream& where) const override;
     void PrintCSVFormat(std::ostream& where) const override;
     void PrintEpochCSVFormat(std::ostream& where) const override;
@@ -171,18 +170,13 @@ class Statistics {
     class DoubleComputeStat write_energy;
     class DoubleComputeStat ref_energy;
     class DoubleComputeStat refb_energy;
-    std::vector<std::vector<DoubleComputeStat>>
-        act_stb_energy;  // active standby
-    std::vector<std::vector<DoubleComputeStat>>
-        pre_stb_energy;  // active standby
-    std::vector<std::vector<DoubleComputeStat>>
-        pre_pd_energy;                                        // active standby
-    std::vector<std::vector<DoubleComputeStat>> sref_energy;  // active standby
 
-    // class DoubleComputeStat act_stb_energy;
-    // class DoubleComputeStat pre_stb_energy;
-    // class DoubleComputeStat pre_pd_energy;
-    // class DoubleComputeStat sref_energy;
+    // per-rank based stats
+    std::vector<std::vector<DoubleComputeStat>> act_stb_energy;
+    std::vector<std::vector<DoubleComputeStat>> pre_stb_energy;
+    std::vector<std::vector<DoubleComputeStat>> pre_pd_energy;
+    std::vector<std::vector<DoubleComputeStat>> sref_energy;
+
     class DoubleComputeStat total_energy;
     class DoubleComputeStat queue_usage;
     class DoubleComputeStat average_power;
