@@ -2,12 +2,12 @@
 
 namespace dramcore {
 
-CPU::CPU(BaseMemorySystem& memory_system)
+CPU::CPU(BaseDRAMSystem& memory_system)
     : memory_system_(memory_system), clk_(0) {}
 
-RandomCPU::RandomCPU(BaseMemorySystem& memory_system) : CPU(memory_system) {}
+RandomCPU::RandomCPU(BaseDRAMSystem& memory_system) : CPU(memory_system) {}
 
-StreamCPU::StreamCPU(BaseMemorySystem& memory_system) : CPU(memory_system) {}
+StreamCPU::StreamCPU(BaseDRAMSystem& memory_system) : CPU(memory_system) {}
 
 void RandomCPU::ClockTick() {
     // Create random CPU requests at full speed
@@ -68,7 +68,7 @@ void StreamCPU::ClockTick() {
     return;
 }
 
-TraceBasedCPU::TraceBasedCPU(BaseMemorySystem& memory_system,
+TraceBasedCPU::TraceBasedCPU(BaseDRAMSystem& memory_system,
                              std::string trace_file)
     : CPU(memory_system) {
     trace_file_.open(trace_file);

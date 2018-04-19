@@ -2,7 +2,7 @@
 #include "./../ext/headers/args.hxx"
 #include "cpu.h"
 #include "hmc.h"
-#include "memory_system.h"
+#include "dram_system.h"
 
 // only exception of namespace as this will never collide with other namespaces
 using namespace dramcore;
@@ -47,15 +47,15 @@ int main(int argc, const char **argv) {
     cpu_type = args::get(cpu_arg);
     memory_system_type = args::get(memory_type_arg);
 
-    BaseMemorySystem *memory_system;
+    BaseDRAMSystem *memory_system;
     if (memory_system_type == "default") {  // TODO - Better name than default?
-        memory_system = new MemorySystem(
+        memory_system = new JedecDRAMSystem(
             config_file, output_dir, read_callback_func, write_callback_func);
     } else if (memory_system_type == "hmc") {
         memory_system = new HMCMemorySystem(
             config_file, output_dir, read_callback_func, write_callback_func);
     } else if (memory_system_type == "ideal") {
-        memory_system = new IdealMemorySystem(
+        memory_system = new IdealDRAMSystem(
             config_file, output_dir, read_callback_func, write_callback_func);
     } else {
         memory_system = nullptr;

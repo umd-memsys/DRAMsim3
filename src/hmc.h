@@ -2,7 +2,7 @@
 #define __HMC_H
 
 #include <map>
-#include "memory_system.h"
+#include "dram_system.h"
 
 namespace dramcore {
 
@@ -94,7 +94,7 @@ class HMCResponse {
     uint64_t exit_time;
 };
 
-class HMCMemorySystem : public BaseMemorySystem {
+class HMCMemorySystem : public BaseDRAMSystem {
    public:
     HMCMemorySystem(const std::string& config_file,
                     const std::string& output_dir,

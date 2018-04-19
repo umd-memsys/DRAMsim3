@@ -248,7 +248,7 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
                                  const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
-    : BaseMemorySystem(config_file, output_dir, read_callback, write_callback),
+    : BaseDRAMSystem(config_file, output_dir, read_callback, write_callback),
       ref_tick_(0),
       logic_clk_(0),
       next_link_(0) {

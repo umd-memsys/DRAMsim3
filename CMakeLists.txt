@@ -32,7 +32,7 @@ if (THERMAL)
         find_package(BLAS REQUIRED)
         find_package(OpenMP REQUIRED)
 
-        # since SuperLU has a build system already, I don't want to 
+        # since SuperLU has a build system already, I don't want to
         # rewirte the entire make system so here's the solution...
         if (NOT SUPERLU_ROOT)
                 set(SUPERLU_ROOT ${CMAKE_SOURCE_DIR}/ext/SuperLU_MT_3.1/)
@@ -41,16 +41,16 @@ if (THERMAL)
         set(SUPERLU_PLAT OPENMP)
         set(SUPERLU_LIB ${SUPERLU_ROOT}/lib/libsuperlu_mt_${SUPERLU_PLAT}.a)
         add_library(superlu_mt STATIC IMPORTED)
-        
-        set_target_properties(superlu_mt 
+
+        set_target_properties(superlu_mt
                               PROPERTIES IMPORTED_LOCATION ${SUPERLU_LIB})
         add_custom_target(build_superlu_mt
-                          COMMAND make lib 
+                          COMMAND make lib
                           WORKING_DIRECTORY ${SUPERLU_ROOT}
         )
         add_dependencies(superlu_mt build_superlu_mt)
         include_directories(${SUPERLU_ROOT}/SRC)  # header files are here..
-        
+
 endif (THERMAL)
 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-fPIC -D_LONGINT -DAdd_")
@@ -74,6 +74,7 @@ set(SOURCES
         src/configuration.cc
         src/controller.cc
         src/cpu.cc
+        src/dram_system.cc
         src/hmc.cc
         src/refresh.cc
         src/statistics.cc
