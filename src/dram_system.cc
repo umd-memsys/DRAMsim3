@@ -66,7 +66,6 @@ BaseDRAMSystem::BaseDRAMSystem(const std::string &config_file,
 }
 
 BaseDRAMSystem::~BaseDRAMSystem() {
-    std::cout << "come to delete BaseDRAMSystem" << std::endl;
     delete (ptr_stats_);
     delete (ptr_timing_);
     delete (ptr_config_);

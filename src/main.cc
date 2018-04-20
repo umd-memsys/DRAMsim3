@@ -2,7 +2,7 @@
 #include "./../ext/headers/args.hxx"
 #include "cpu.h"
 #include "hmc.h"
-#include "dram_system.h"
+#include "memory_system.h"
 
 // only exception of namespace as this will never collide with other namespaces
 using namespace dramcore;
@@ -21,9 +21,6 @@ int main(int argc, const char **argv) {
     args::ValueFlag<std::string> cpu_arg(parser, "cpu-type",
                                          "Type of cpu - random, trace, stream",
                                          {"cpu-type"}, "random");
-    args::ValueFlag<std::string> memory_type_arg(
-        parser, "memory_type", "Type of memory system - default, hmc, ideal",
-        {"memory-type"}, "default");
     args::ValueFlag<std::string> trace_file_arg(
         parser, "trace", "The trace file", {"trace-file"});
 
@@ -39,29 +36,15 @@ int main(int argc, const char **argv) {
     }
 
     uint64_t cycles = args::get(numb_cycles_arg);
-    std::string config_file, output_dir, trace_file, cpu_type,
-        memory_system_type;
+    std::string config_file, output_dir, trace_file, cpu_type;
     config_file = args::get(config_arg);
     output_dir = args::get(output_dir_arg);
     trace_file = args::get(trace_file_arg);
     cpu_type = args::get(cpu_arg);
-    memory_system_type = args::get(memory_type_arg);
 
-    BaseDRAMSystem *memory_system;
-    if (memory_system_type == "default") {  // TODO - Better name than default?
-        memory_system = new JedecDRAMSystem(
-            config_file, output_dir, read_callback_func, write_callback_func);
-    } else if (memory_system_type == "hmc") {
-        memory_system = new HMCMemorySystem(
-            config_file, output_dir, read_callback_func, write_callback_func);
-    } else if (memory_system_type == "ideal") {
-        memory_system = new IdealDRAMSystem(
-            config_file, output_dir, read_callback_func, write_callback_func);
-    } else {
-        memory_system = nullptr;
-        std::cout << "Unknown memory system type" << std::endl;
-        AbruptExit(__FILE__, __LINE__);
-    }
+    MemorySystem mem_sys(config_file, output_dir, read_callback_func,
+                         write_callback_func);
+    auto memory_system = mem_sys.GetDRAMSystem();
 
     CPU *cpu;
     if (cpu_type == "random") {
@@ -72,7 +55,7 @@ int main(int argc, const char **argv) {
         cpu = new StreamCPU(*memory_system);
     } else {
         cpu = nullptr;
-        std::cout << "Unknown cpu type" << std::endl;
+        std::cerr << "Unknown cpu type" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 

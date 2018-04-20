@@ -7,7 +7,6 @@
 #include "common.h"
 #include "configuration.h"
 #include "controller.h"
-#include "memory_system.h"
 #include "statistics.h"
 #include "timing.h"
 
