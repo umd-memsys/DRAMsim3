@@ -1,0 +1,3 @@
+[submodule "ext/SuperLU_MT_3.1"]
+	path = ext/SuperLU_MT_3.1
+	url = https://github.com/shavvn/SuperLU_MT_3.1.git

@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.0)
 
 project(dramcore)
 
-add_subdirectory(ext/inih)
-add_subdirectory(ext/fmt)
-
 # self-defined flgas that help debugging
 # use cmake -DGENERATE_TRACE=ON or 1 to enbale this
 if (NO_BACKPRESSURE)
@@ -22,17 +19,48 @@ if (DEBUG_POWER)
         add_definitions(-DDEBUG_POWER)
 endif  (DEBUG_POWER)
 
-if (DEBUG_HMC)
-        message("Adding DEBUG_HMC definition...")
-        add_definitions(-DDEBUG_HMC)
-endif (DEBUG_HMC)
 
+if (DEBUG_LOC_MAPPING)
+        add_definitions(-DDEBUG_LOC_MAPPING)
+endif (DEBUG_LOC_MAPPING)
+
+if (THERMAL)
+        message("Adding thermal module...")
+        add_definitions(-DTHERMAL)
+
+        # check dependency
+        find_package(BLAS REQUIRED)
+        find_package(OpenMP REQUIRED)
+
+        # since SuperLU has a build system already, I don't want to
+        # rewirte the entire make system so here's the solution...
+        if (NOT SUPERLU_ROOT)
+                set(SUPERLU_ROOT ${CMAKE_SOURCE_DIR}/ext/SuperLU_MT_3.1/)
+                execute_process(COMMAND git submodule update --init -- ${SUPERLU_ROOT})
+        endif (NOT SUPERLU_ROOT)
+        set(SUPERLU_PLAT OPENMP)
+        set(SUPERLU_LIB ${SUPERLU_ROOT}/lib/libsuperlu_mt_${SUPERLU_PLAT}.a)
+        add_library(superlu_mt STATIC IMPORTED)
+
+        set_target_properties(superlu_mt
+                              PROPERTIES IMPORTED_LOCATION ${SUPERLU_LIB})
+        add_custom_target(build_superlu_mt
+                          COMMAND make lib
+                          WORKING_DIRECTORY ${SUPERLU_ROOT}
+        )
+        add_dependencies(superlu_mt build_superlu_mt)
+        include_directories(${SUPERLU_ROOT}/SRC)  # header files are here..
+
+endif (THERMAL)
+
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-fPIC -D_LONGINT -DAdd_")
 set(EXTRA_CXX_FLAGS "-Wall -fPIC")
 set(EXTRA_CXX_FLAGS_DEBUG "-O0 -DDEBUG_OUTPUT")
 set(EXTRA_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(EXTRA_CXX_FLAGS_RELWITHDEBINFO "-O0 -DNDDEBUG")
 
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS_DEBUG}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS_RELEASE}")
@@ -46,12 +74,25 @@ set(SOURCES
         src/configuration.cc
         src/controller.cc
         src/cpu.cc
+        src/dram_system.cc
         src/hmc.cc
         src/refresh.cc
         src/statistics.cc
         src/timing.cc
         src/memory_system.cc
+
+        ext/fmt/src/format.cc
+        ext/inih/src/ini.c
+        ext/inih/src/INIReader.cpp
         )
+
+if (THERMAL)
+        set(SOURCES ${SOURCES} src/thermal.cc src/sp_ienv.c src/thermal_solver.c)
+        if (OPENMP_FOUND)
+            message("adding openmp flag")
+            set_source_files_properties(src/thermal_solver.c PROPERTIES COMPILE_FLAGS "${OpenMP_C_FLAGS} -O2")
+        endif(OPENMP_FOUND)
+endif (THERMAL)
 
 set(SOURCES_TEST
         test/main.cc
@@ -60,8 +101,14 @@ set(SOURCES_TEST
 
 include_directories(src ext/headers)
 
-add_library(dramcore SHARED ${SOURCES})
-target_link_libraries(dramcore inih fmt)
+add_library(dramcore STATIC ${SOURCES})
+
+if (THERMAL)
+        target_link_libraries(dramcore superlu_mt f77blas atlas m ${OpenMP_C_FLAGS})
+        add_executable(thermalreplay src/thermal_replay.cc)
+        target_link_libraries(thermalreplay dramcore)
+endif (THERMAL)
+
 set_target_properties(dramcore PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(dramcoremain src/main.cc)

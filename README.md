@@ -1,5 +1,4 @@
-[![Build Status](https://travis-ci.com/dhiraj113/dramcore.svg?token=xHbe7A99ENsj18UyEG7m&branch=master)](https://travis-ci.com/dhiraj113/dramcore)
-
+[![Build Status](https://travis-ci.com/shavvn/DRAMSim3.svg?token=pCfCJ4yBqyhn3rfWbJVF&branch=master)](https://travis-ci.com/shavvn/DRAMSim3)
 
 # dramcore
 Model the timing paramaters and memory controller behaviour for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, HBM.
@@ -21,6 +20,9 @@ cd build
 
 # Create Makefile using the CMakeLists.txt file in the parent directory
 cmake ..
+
+# Alternatively, build with thermal module
+cmake .. -DTHERMAL=1
 
 # Build dramcore and dramcoretest executables
 make -j4
