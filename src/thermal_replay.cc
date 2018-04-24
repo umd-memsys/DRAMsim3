@@ -2,7 +2,7 @@
 #include "./../ext/headers/args.hxx"
 
 // this will not be used in a library file so it's ok to do this
-using namespace dramcore;
+using namespace dramsim3;
 
 ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file,
                              std::string output_dir, uint64_t repeat)

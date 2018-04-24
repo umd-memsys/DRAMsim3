@@ -2,7 +2,7 @@
 #include <vector>
 #include "../ext/fmt/src/format.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 std::ostream& operator<<(std::ostream& os, const Command& cmd) {
     std::vector<std::string> command_string = {
@@ -122,4 +122,4 @@ void RenameFileWithNumber(std::string& file_name, int number) {
     return;
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

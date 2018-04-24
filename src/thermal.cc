@@ -18,7 +18,7 @@ extern "C" double *calculate_Cap_array(double W, double Lc, int numP, int dimX,
 extern "C" double *initialize_Temperature(double W, double Lc, int numP,
                                           int dimX, int dimZ, double Tamb_);
 
-namespace dramcore {
+namespace dramsim3 {
 
 std::function<Address(const Address &addr)> GetPhyAddress;
 
@@ -920,4 +920,4 @@ void ThermalCalculator::UpdateLogicPower() {
     avg_logic_power_ = max_logic_power_ * utilization + const_bg_power;
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

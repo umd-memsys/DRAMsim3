@@ -5,7 +5,7 @@
 #include "memory_system.h"
 
 // only exception of namespace as this will never collide with other namespaces
-using namespace dramcore;
+using namespace dramsim3;
 
 int main(int argc, const char **argv) {
     args::ArgumentParser parser("DRAM Simulator.", "");

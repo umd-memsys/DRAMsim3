@@ -8,7 +8,7 @@
 #include <vector>
 #include "configuration.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 class BaseStat {
    public:
@@ -218,5 +218,5 @@ class Statistics {
     uint64_t last_clk_;
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

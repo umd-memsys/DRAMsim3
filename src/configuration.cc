@@ -2,7 +2,7 @@
 #include "../ext/inih/src/INIReader.h"
 #include "common.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 std::function<Address(uint64_t)> AddressMapping;
 
@@ -475,4 +475,4 @@ void Config::SetAddressMapping() {
     };
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

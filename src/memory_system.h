@@ -9,7 +9,7 @@
 #include "dram_system.h"
 #include "hmc.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 // This should be the interface class that deals with CPU
 class MemorySystem {
@@ -17,14 +17,27 @@ class MemorySystem {
     MemorySystem(const std::string &config_file, const std::string &output_dir,
                  std::function<void(uint64_t)> read_callback,
                  std::function<void(uint64_t)> write_callback);
-    ~MemorySystem() { delete (dram_system_); }
+    ~MemorySystem();
+    void ClockTick();
+    void RegisterCallbacks(
+        std::function<void(uint64_t)> read_callback,
+        std::function<void(uint64_t)> write_callback);
     BaseDRAMSystem *GetDRAMSystem();
+    double GetTCK() const;
+    int GetBusBits() const;
+    int GetBurstLength() const;
+    int GetQueueSize() const;
+    bool IsInsertable() const;
+    void PrintStats() const;
+
+    bool InsertRequest(bool is_write, uint64_t addr);
 
    private:
+    Config *config_;
     BaseDRAMSystem *dram_system_;
     int num_mems_;
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 
 #endif

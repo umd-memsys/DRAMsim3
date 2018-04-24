@@ -14,15 +14,18 @@
 #include "thermal.h"
 #endif  // THERMAL
 
-namespace dramcore{
+namespace dramsim3{
 
 class BaseDRAMSystem {
    public:
     BaseDRAMSystem(const std::string &config_file,
-                     const std::string &output_dir,
-                     std::function<void(uint64_t)> read_callback,
-                     std::function<void(uint64_t)> write_callback);
+                   const std::string &output_dir,
+                   std::function<void(uint64_t)> read_callback,
+                   std::function<void(uint64_t)> write_callback);
     virtual ~BaseDRAMSystem();
+    void RegisterCallbacks(
+        std::function<void(uint64_t)> read_callback,
+        std::function<void(uint64_t)> write_callback);
     virtual bool IsReqInsertable(uint64_t hex_addr, bool is_write) = 0;
     virtual bool InsertReq(uint64_t hex_addr, bool is_write) = 0;
     virtual void ClockTick() = 0;
@@ -94,6 +97,6 @@ class IdealDRAMSystem : public BaseDRAMSystem {
     std::list<Request *> infinite_buffer_q_;
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif  // __DRAM_SYSTEM_H
 

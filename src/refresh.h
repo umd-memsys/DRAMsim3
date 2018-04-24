@@ -8,7 +8,7 @@
 #include "common.h"
 #include "configuration.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 enum class RefreshStrategy {
     RANK_LEVEL_SIMULTANEOUS,  // impractical due to high power requirement
@@ -58,6 +58,6 @@ class Refresh {
     Command GetReadWritesToOpenRow(int rank, int bankgroup, int bank);
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 
 #endif

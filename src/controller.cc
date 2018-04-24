@@ -1,7 +1,7 @@
 #include "controller.h"
 #include <iostream>
 
-namespace dramcore {
+namespace dramsim3 {
 
 #ifdef THERMAL
 Controller::Controller(int channel, const Config &config, const Timing &timing,
@@ -164,4 +164,4 @@ bool Controller::InsertReq(Request *req) { return cmd_queue_.InsertReq(req); }
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
 
-}  // namespace dramcore
+}  // namespace dramsim3

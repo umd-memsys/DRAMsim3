@@ -9,7 +9,7 @@
 #include "configuration.h"
 #include "statistics.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 enum class QueueStructure { PER_RANK, PER_BANK, SIZE };
 
@@ -46,5 +46,5 @@ class CommandQueue {
     int GetQueueIndex(int rank, int bankgroup, int bank);
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

@@ -1,6 +1,6 @@
 #include "refresh.h"
 
-namespace dramcore {
+namespace dramsim3 {
 Refresh::Refresh(const int channel_id, const Config &config,
                  const ChannelState &channel_state, CommandQueue &cmd_queue,
                  Statistics &stats)
@@ -191,4 +191,4 @@ inline void Refresh::IterateNext() {
     }
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

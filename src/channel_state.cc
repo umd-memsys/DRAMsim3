@@ -1,7 +1,7 @@
 #include "channel_state.h"
 #include "../ext/fmt/src/format.h"
 
-namespace dramcore {
+namespace dramsim3 {
 #ifdef THERMAL
 ChannelState::ChannelState(const Config& config, const Timing& timing,
                            Statistics& stats, ThermalCalculator* thermcalc)
@@ -402,4 +402,4 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
     return;
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

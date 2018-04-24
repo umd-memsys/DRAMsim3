@@ -1,7 +1,7 @@
 #include "command_queue.h"
 #include "statistics.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 CommandQueue::CommandQueue(int channel_id, const Config& config,
                            const ChannelState& channel_state, Statistics& stats)
@@ -271,4 +271,4 @@ int CommandQueue::QueueUsage() const {
     return usage;
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

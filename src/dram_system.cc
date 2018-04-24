@@ -8,7 +8,7 @@
 #include "../ext/fmt/src/format.h"
 #endif  // GENERATE_TRACE
 
-namespace dramcore {
+namespace dramsim3 {
 
 // alternative way is to assign the id in constructor but this is less
 // destructive
@@ -82,6 +82,14 @@ BaseDRAMSystem::~BaseDRAMSystem() {
     address_trace_.close();
 #endif
 }
+
+void BaseDRAMSystem::RegisterCallbacks(
+        std::function<void(uint64_t)> read_callback,
+        std::function<void(uint64_t)> write_callback) {
+    read_callback_ = read_callback;
+    write_callback_ = write_callback;
+}
+
 
 void BaseDRAMSystem::PrintIntermediateStats() {
     if (ptr_config_->output_level >= 1) {
@@ -300,6 +308,6 @@ void IdealDRAMSystem::ClockTick() {
     return;
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3
 
 

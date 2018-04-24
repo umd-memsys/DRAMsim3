@@ -2,7 +2,7 @@
 #include "../ext/fmt/src/format.h"
 #include "common.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 template <class T>
 void PrintNameValue(std::ostream& where, std::string name, T value) {
@@ -605,4 +605,4 @@ std::ostream& operator<<(std::ostream& os, Statistics& stats) {
     return os;
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

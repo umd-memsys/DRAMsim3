@@ -12,7 +12,7 @@
 #include <sstream>
 #include <vector>
 
-namespace dramcore {
+namespace dramsim3 {
 
 struct Address {
     Address()
@@ -143,5 +143,5 @@ class Access {
     friend std::istream& operator>>(std::istream& is, Access& access);
     friend std::ostream& operator<<(std::ostream& os, const Access& access);
 };
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

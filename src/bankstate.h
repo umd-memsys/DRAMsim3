@@ -7,7 +7,7 @@
 #include "common.h"
 #include "statistics.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 class BankState {
    public:
@@ -58,5 +58,5 @@ class BankState {
     bool refresh_waiting_;
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

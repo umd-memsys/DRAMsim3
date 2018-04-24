@@ -9,7 +9,7 @@
 #include "controller.h"
 #include "dram_system.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 class CPU {
    public:
@@ -56,5 +56,5 @@ class TraceBasedCPU : public CPU {
     bool get_next_ = true;
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

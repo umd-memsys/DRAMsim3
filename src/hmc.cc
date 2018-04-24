@@ -1,6 +1,6 @@
 #include "hmc.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 uint64_t gcd(uint64_t x, uint64_t y);
 uint64_t lcm(uint64_t x, uint64_t y);
@@ -793,4 +793,4 @@ uint64_t gcd(uint64_t x, uint64_t y) {
 
 uint64_t lcm(uint64_t x, uint64_t y) { return (x * y) / gcd(x, y); }
 
-}  // namespace dramcore
+}  // namespace dramsim3

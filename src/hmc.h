@@ -4,7 +4,7 @@
 #include <map>
 #include "dram_system.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 enum class HMCReqType {
     RD0,
@@ -158,6 +158,6 @@ class HMCMemorySystem : public BaseDRAMSystem {
     std::vector<int> quad_age_counter = {0, 0, 0, 0};
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 
 #endif

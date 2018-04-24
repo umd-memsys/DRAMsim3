@@ -10,7 +10,7 @@
 #include "statistics.h"
 #include "thermal.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 class ThermalReplay {
    public:
@@ -32,6 +32,6 @@ class ThermalReplay {
     bool IsRankActive(int channel, int rank);
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 
 #endif

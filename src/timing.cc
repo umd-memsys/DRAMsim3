@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace dramcore {
+namespace dramsim3 {
 
 Timing::Timing(const Config& config)
     : same_bank(static_cast<int>(CommandType::SIZE)),
@@ -265,4 +265,4 @@ Timing::Timing(const Config& config)
             {CommandType::SELF_REFRESH_ENTER, self_refresh_exit}};
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

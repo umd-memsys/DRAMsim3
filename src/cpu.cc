@@ -1,6 +1,6 @@
 #include "cpu.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 CPU::CPU(BaseDRAMSystem& memory_system)
     : memory_system_(memory_system), clk_(0) {}
@@ -97,4 +97,4 @@ void TraceBasedCPU::ClockTick() {
     return;
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

@@ -9,7 +9,7 @@
 #include "thermal.h"
 #include "timing.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 class ChannelState {
    public:
@@ -97,5 +97,5 @@ class ChannelState {
     void UpdateCommandIssueStats(const Command& cmd) const;
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

@@ -8,7 +8,7 @@
 #include <vector>
 #include "common.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 enum class DRAMProtocol {
     DDR3,
@@ -175,5 +175,5 @@ class Config {
     void SetAddressMapping();
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

@@ -10,7 +10,7 @@
 #include "statistics.h"
 #include "thermal.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 class Controller {
    public:
@@ -40,5 +40,5 @@ class Controller {
     Refresh refresh_;
     Statistics &stats_;
 };
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

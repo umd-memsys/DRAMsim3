@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "statistics.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 BankState::BankState(Statistics& stats)
     : stats_(stats),
@@ -214,4 +214,4 @@ void BankState::UpdateTiming(CommandType cmd_type, uint64_t time) {
     return;
 }
 
-}  // namespace dramcore
+}  // namespace dramsim3

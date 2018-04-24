@@ -6,7 +6,7 @@
 #include "common.h"
 #include "configuration.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 class Timing {
    public:
@@ -20,5 +20,5 @@ class Timing {
     std::vector<std::list<std::pair<CommandType, int> > > same_rank;
 };
 
-}  // namespace dramcore
+}  // namespace dramsim3
 #endif

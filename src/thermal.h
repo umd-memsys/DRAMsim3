@@ -13,7 +13,7 @@
 #include "thermal_config.h"
 #include "timing.h"
 
-namespace dramcore {
+namespace dramsim3 {
 
 extern std::function<Address(const Address &addr)> GetPhyAddress;
 
@@ -108,6 +108,6 @@ class ThermalCalculator {
 
     void UpdateLogicPower();
 };
-}  // namespace dramcore
+}  // namespace dramsim3
 
 #endif
