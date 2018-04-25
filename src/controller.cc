@@ -165,3 +165,4 @@ bool Controller::InsertReq(Request *req) { return cmd_queue_.InsertReq(req); }
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
 
 }  // namespace dramsim3
+

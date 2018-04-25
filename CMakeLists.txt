@@ -101,7 +101,7 @@ set(SOURCES_TEST
 
 include_directories(src ext/headers)
 
-add_library(dramsim3 STATIC ${SOURCES})
+add_library(dramsim3 SHARED ${SOURCES})
 
 if (THERMAL)
         target_link_libraries(dramsim3 superlu_mt f77blas atlas m ${OpenMP_C_FLAGS})
