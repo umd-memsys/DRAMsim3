@@ -94,10 +94,6 @@ if (THERMAL)
         endif(OPENMP_FOUND)
 endif (THERMAL)
 
-set(SOURCES_TEST
-        test/main.cc
-        test/test.cc
-        )
 
 include_directories(src ext/headers)
 
@@ -119,8 +115,5 @@ set_target_properties(dramsim3 PROPERTIES
 add_executable(dramsim3main src/main.cc)
 target_link_libraries(dramsim3main dramsim3)
 
-add_executable(dramsim3test ${SOURCES_TEST})
-target_link_libraries(dramsim3test dramsim3)
 
-message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 
