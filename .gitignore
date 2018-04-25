@@ -30,9 +30,9 @@
 
 # User defined
 obj
-dramcore
-dramcoretest
-dramcore.dSYM
+dramsim3
+dramsim3test
+dramsim3main
 *.log
 build*
 googletest
