@@ -101,24 +101,26 @@ set(SOURCES_TEST
 
 include_directories(src ext/headers)
 
-add_library(dramsim3 SHARED ${SOURCES})
+# prefer building static because that's what gem5 likes
+add_library(dramsim3 STATIC ${SOURCES})
+add_library(dramsim3dy SHARED EXCLUDE_FROM_ALL ${SOURCES})
 
 if (THERMAL)
         target_link_libraries(dramsim3 superlu_mt f77blas atlas m ${OpenMP_C_FLAGS})
+        target_link_libraries(dramsim3dy superlu_mt f77blas atlas m ${OpenMP_C_FLAGS})
         add_executable(thermalreplay src/thermal_replay.cc)
         target_link_libraries(thermalreplay dramsim3)
 endif (THERMAL)
 
-set_target_properties(dramsim3 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# use proj root level dir to make it easier to find
+set_target_properties(dramsim3 PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(dramsim3main src/main.cc)
 target_link_libraries(dramsim3main dramsim3)
-#set_target_properties(dramsim3 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(dramsim3test ${SOURCES_TEST})
 target_link_libraries(dramsim3test dramsim3)
-#set_target_properties(dramsim3test PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
-# set_target_properties(dramsim3 PROPERTIES DEBUG_POSTFIX "_d")
 
