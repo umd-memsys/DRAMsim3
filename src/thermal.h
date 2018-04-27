@@ -37,7 +37,9 @@ class ThermalCalculator {
     uint64_t save_clk;  // saved clk
 
     double avg_logic_power_;
-    double max_logic_power_;
+    double logic_max_power_;
+    double logic_bg_power_;
+    double bw_usage_;
 
     std::vector<std::vector<double>> accu_Pmap;  // accumulative power map
     std::vector<std::vector<double>> cur_Pmap;   // current power map

@@ -28,7 +28,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
       stats_(stats),
       sample_id(0),
       save_clk(0),
-      max_logic_power_(18.0) {
+      logic_max_power_(config_.logic_max_power),
+      logic_bg_power_(config_.logic_bg_power) {
     // Initialize dimX, dimY, numP
     // The dimension of the chip is determined such that the floorplan is
     // as square as possilbe. If a square floorplan cannot be reached,
@@ -117,7 +118,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
 
     // a quick preview of max temperature for each layer of each epoch
     epoch_max_temp_file_csv_.open(config_.epoch_max_temp_file_csv);
-    epoch_max_temp_file_csv_ << "layer, power, max_temp, epoch_time"
+    epoch_max_temp_file_csv_ << "layer,power,max_temp,bw_usage,epoch_time"
                              << std::endl;
 
     // print header to csv files
@@ -583,8 +584,9 @@ void ThermalCalculator::PrintTransPT(uint64_t clk) {
         for (int layer = 0; layer < numP; layer++) {
             double maxT_layer = GetMaxTofCaseLayer(T_trans, ir, layer);
             epoch_max_temp_file_csv_ << layer << ","
-                                     << "-," << maxT_layer << "," << ms
-                                     << std::endl;
+                                     << stats_.average_power.epoch_value << ","
+                                     << maxT_layer << "," << bw_usage_ << ","
+                                     << ms << std::endl;
             std::cout << "MaxT of case " << ir << " in layer " << layer
                       << " is " << maxT_layer << " [C]\n";
             maxT = maxT > maxT_layer ? maxT : maxT_layer;
@@ -838,8 +840,7 @@ void ThermalCalculator::PrintCSV_trans(std::ofstream &csvfile,
                     (double)scale;
                 double tm = T_[id][(layerP[l] + 1) * ((dimX + num_dummy) *
                                                       (dimY + num_dummy)) +
-                                   j * (dimX + num_dummy) + i] -
-                            T0;
+                                   j * (dimX + num_dummy) + i] - T0;
                 csvfile << id << "," << i - num_dummy / 2 << ","
                         << j - num_dummy / 2 << "," << l << "," << pw << ","
                         << tm << "," << sample_id << std::endl;
@@ -909,15 +910,14 @@ void ThermalCalculator::PrintCSVHeader_final(std::ofstream &csvfile) {
 void ThermalCalculator::UpdateLogicPower() {
     // suppose the logic power is linearly corellated with bandwidth usage
     // and if max bandwidth <-> max power + constant background power
-    const double const_bg_power = 3.0;
     uint64_t num_reads = stats_.numb_read_cmds_issued.EpochCount();
     uint64_t num_writes = stats_.numb_write_cmds_issued.EpochCount();
     uint64_t total_rw =
         (num_reads + num_writes) * config_.burst_cycle / config_.channels;
     // a little problem here: the epoch period is not necessarily power epoch
-    double utilization = static_cast<double>(total_rw) /
-                         static_cast<double>(config_.epoch_period);
-    avg_logic_power_ = max_logic_power_ * utilization + const_bg_power;
+    bw_usage_ = static_cast<double>(total_rw) / 
+                static_cast<double>(config_.epoch_period);
+    avg_logic_power_ = logic_max_power_ * bw_usage_ + logic_bg_power_;
 }
 
 }  // namespace dramsim3

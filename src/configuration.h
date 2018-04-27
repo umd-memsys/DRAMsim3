@@ -151,15 +151,20 @@ class Config {
     std::string loc_mapping;
     int power_epoch_period;
     int numRowRefresh;  // number of rows to be refreshed for one time
+    double Tamb0;  // the ambient temperature in [C]
+    double logic_bg_power;  // background power of logic layer
+    double logic_max_power;  // max power of logic layer
+
     double ChipX;
     double ChipY;
-    double Tamb0;  // the ambient temperature in [C]
     int numXgrids;
     int numYgrids;
     int matX;
     int matY;
-    int bank_order;        // 0: x-direction priority, 1: y-direction priority
-    int bank_layer_order;  // 0; low-layer priority, 1: high-layer priority
+    // 0: x-direction priority, 1: y-direction priority
+    int bank_order;        
+    // 0; low-layer priority, 1: high-layer priority
+    int bank_layer_order;  
     int RowTile;
     int TileRowNum;
     double bank_asr;  // the aspect ratio of a bank: #row_bits / #col_bits

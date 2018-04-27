@@ -156,8 +156,7 @@ Config::Config(std::string config_file, std::string out_dir)
     double IDD4R = reader.GetReal("power", "IDD4R", 135);
     double IDD5AB = reader.GetReal("power", "IDD5AB", 250);  // all-bank ref
     double IDD5PB = reader.GetReal("power", "IDD5PB", 5);    // per-bank ref
-    double IDD6x =
-        reader.GetReal("power", "IDD6x", 31);  // this changes with temp
+    double IDD6x = reader.GetReal("power", "IDD6x", 31);
 
     // energy increments per command/cycle, calculated as voltage * current *
     // time(in cycles) units are V * mA * Cycles and if we convert cycles to ns
@@ -250,6 +249,8 @@ Config::Config(std::string config_file, std::string out_dir)
 
     // Thermal simulation parameters
     loc_mapping = reader.Get("thermal", "loc_mapping", "");
+    logic_bg_power = reader.GetReal("thermal", "logic_bg_power", 1.0);
+    logic_max_power = reader.GetReal("thermal", "logic_max_power", 20.0);
     bank_order =
         static_cast<int>(reader.GetInteger("thermal", "bank_order", 1));
     bank_layer_order =
@@ -269,6 +270,7 @@ Config::Config(std::string config_file, std::string out_dir)
     bank_position_csv = reader.Get("other", "final_temperature_file",
                                    output_prefix + "bank_position.csv");
 }
+
 
 DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
     std::map<std::string, DRAMProtocol> protocol_pairs = {
