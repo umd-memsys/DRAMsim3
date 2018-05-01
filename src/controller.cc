@@ -27,28 +27,23 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       cmd_queue_(channel_id_, config, channel_state_, stats),
       refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
       stats_(stats) {
+    transaction_q_.reserve(config_.trans_queue_size);
 }
 
 void Controller::ClockTick() {
-    clk_++;
-    cmd_queue_.clk_++;
-
     // Return already issued read/write requests back to the CPU
-    for (auto req_itr = cmd_queue_.issued_req_.begin();
-         req_itr != cmd_queue_.issued_req_.end(); req_itr++) {
-        auto issued_req = *req_itr;
-        if (clk_ > issued_req->exit_time_) {
-            // Return request to cpu
-            stats_.access_latency.AddValue(clk_ - issued_req->arrival_time_);
-            if (issued_req->cmd_.IsRead())
-                read_callback_(issued_req->hex_addr_);
-            else if (issued_req->cmd_.IsWrite())
-                write_callback_(issued_req->hex_addr_);
-            else
-                AbruptExit(__FILE__, __LINE__);
-            delete (issued_req);
-            cmd_queue_.issued_req_.erase(req_itr++);
-            break;  // Returning one request per cycle. TODO - Make this a knob?
+    for (auto it = return_queue_.begin(); it != return_queue_.end();) {
+        if (clk_ >= it->complete_cycle) {
+            if (it->is_write) {
+                stats_.numb_read_reqs_issued++;
+                write_callback_(it->addr);
+            } else {
+                stats_.numb_write_reqs_issued++;
+                read_callback_(it->addr);
+            }
+            it = return_queue_.erase(it);
+        } else {
+            ++it;
         }
     }
 
@@ -112,8 +107,7 @@ void Controller::ClockTick() {
         auto refresh_itr = refresh_.refresh_q_.begin();
         if (channel_state_.need_to_update_refresh_waiting_status_) {
             channel_state_.need_to_update_refresh_waiting_status_ = false;
-            channel_state_.UpdateRefreshWaitingStatus((*refresh_itr)->cmd_,
-                                                      true);
+            channel_state_.UpdateRefreshWaitingStatus((**refresh_itr), true);
         }
         auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
         if (cmd.IsValid()) {
@@ -129,6 +123,18 @@ void Controller::ClockTick() {
 
     auto cmd = cmd_queue_.GetCommandToIssue();
     if (cmd.IsValid()) {
+        // if read/write, update pending queue and return queue
+        if (cmd.IsReadWrite()) {
+            auto it = pending_trans_.find(cmd.id);
+            if (cmd.IsRead()) {
+                it->second.complete_cycle += config_.read_delay;
+            } else {
+                it->second.complete_cycle += config_.write_delay;
+            }
+            return_queue_.push_back(it->second);
+            pending_trans_.erase(it);
+        }
+
         channel_state_.IssueCommand(cmd, clk_);
 
         if (config_.enable_hbm_dual_cmd) {  // TODO - Current implementation
@@ -154,15 +160,38 @@ void Controller::ClockTick() {
             channel_state_.IssueCommand(pre_cmd, clk_);
         }
     }
+
+    // for performance considerations, we only look at this many transactions
+    const int max_lookup_depth = 8;
+    int lookup_depth = 0;
+    for (auto it = transaction_q_.begin(); it != transaction_q_.end(); it++) {
+        if (lookup_depth >= max_lookup_depth) {
+            break;  // stop wasting time
+        }
+        auto addr = AddressMapping((*it).addr);
+        if (cmd_queue_.WillAcceptCommand(addr.rank, addr.bankgroup,
+                                            addr.bank)) {
+            CommandType cmd_type = it->is_write ? CommandType::WRITE : 
+                                    CommandType::READ;
+            cmd_queue_.AddCommand(Command(cmd_type, addr));
+        }
+    }
+
+    clk_++;
+    cmd_queue_.clk_++;
 }
 
-bool Controller::IsReqInsertable(Request *req) {
-    return cmd_queue_.IsReqInsertable(req);
+bool Controller::WillAcceptTransaction() {
+    return transaction_q_.size() < transaction_q_.capacity();
 }
 
-bool Controller::InsertReq(Request *req) { return cmd_queue_.InsertReq(req); }
+bool Controller::AddTransaction(Transaction trans) {
+    trans.added_cycle = clk_;
+    transaction_q_.push_back(trans);
+    return transaction_q_.size() <= transaction_q_.capacity();
+}
+
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
 
 }  // namespace dramsim3
-

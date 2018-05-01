@@ -24,12 +24,6 @@ std::ostream& operator<<(std::ostream& os, const Command& cmd) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Request& req) {
-    os << "(" << req.arrival_time_ << "," << req.exit_time_ << "," << req.id_
-       << ")"
-       << " " << req.cmd_;
-    return os;
-}  // TODO - Unused code. Remove?
 
 std::istream& operator>>(std::istream& is, Access& access) {
     is >> std::hex >> access.hex_addr_ >> access.access_type_ >> std::dec >>

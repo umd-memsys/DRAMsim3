@@ -17,9 +17,9 @@ void RandomCPU::ClockTick() {
         last_addr_ = gen();
     }
     bool is_write = (gen() % 3 == 0);  // R/W ratio 2:1
-    bool get_next_ = memory_system_.IsReqInsertable(last_addr_, is_write);
+    bool get_next_ = memory_system_.WillAcceptTransaction(last_addr_, is_write);
     if (get_next_) {
-        memory_system_.InsertReq(last_addr_, is_write);
+        memory_system_.AddTransaction(last_addr_, is_write);
     }
     clk_++;
     return;
@@ -39,22 +39,22 @@ void StreamCPU::ClockTick() {
     }
 
     if (!inserted_a_ &&
-        memory_system_.IsReqInsertable(addr_a_ + offset_, false)) {
-        memory_system_.InsertReq(addr_a_ + offset_, false);
+        memory_system_.WillAcceptTransaction(addr_a_ + offset_, false)) {
+        memory_system_.AddTransaction(addr_a_ + offset_, false);
         inserted_a_ = true;
     } else {
         inserted_a_ = false;
     }
     if (!inserted_b_ &&
-        memory_system_.IsReqInsertable(addr_b_ + offset_, false)) {
-        memory_system_.InsertReq(addr_b_ + offset_, false);
+        memory_system_.WillAcceptTransaction(addr_b_ + offset_, false)) {
+        memory_system_.AddTransaction(addr_b_ + offset_, false);
         inserted_b_ = true;
     } else {
         inserted_b_ = false;
     }
     if (!inserted_c_ &&
-        memory_system_.IsReqInsertable(addr_c_ + offset_, true)) {
-        memory_system_.InsertReq(addr_c_ + offset_, true);
+        memory_system_.WillAcceptTransaction(addr_c_ + offset_, true)) {
+        memory_system_.AddTransaction(addr_c_ + offset_, true);
         inserted_c_ = true;
     } else {
         inserted_c_ = false;
@@ -87,9 +87,9 @@ void TraceBasedCPU::ClockTick() {
         if (access_.time_ <= clk_) {
             bool is_write = access_.access_type_ == "WRITE";
             bool get_next_ =
-                memory_system_.IsReqInsertable(access_.hex_addr_, is_write);
+                memory_system_.WillAcceptTransaction(access_.hex_addr_, is_write);
             if (get_next_) {
-                memory_system_.InsertReq(access_.hex_addr_, is_write);
+                memory_system_.AddTransaction(access_.hex_addr_, is_write);
             }
         }
     }

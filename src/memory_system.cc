@@ -41,7 +41,7 @@ int MemorySystem::GetBurstLength() const {
 }
 
 int MemorySystem::GetQueueSize() const {
-    return config_->queue_size;
+    return config_->trans_queue_size;
 }
 
 
@@ -56,7 +56,7 @@ bool MemorySystem::IsInsertable() const {
 }
 
 bool MemorySystem::InsertRequest(bool is_write, uint64_t addr) {
-    return dram_system_->InsertReq(addr, is_write);
+    return dram_system_->AddTransaction(addr, is_write);
 }
 
 void MemorySystem::PrintStats() const {

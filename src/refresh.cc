@@ -48,7 +48,7 @@ void Refresh::InsertRefresh() {
                         addr.channel = channel_id_;
                         addr.rank = i;
                         refresh_q_.push_back(
-                            new Request(CommandType::REFRESH, addr));
+                            new Command(CommandType::REFRESH, addr));
                     }
                 }
             }
@@ -61,7 +61,7 @@ void Refresh::InsertRefresh() {
                     addr.channel = channel_id_;
                     addr.rank = next_rank_;
                     refresh_q_.push_back(
-                        new Request(CommandType::REFRESH, addr));
+                        new Command(CommandType::REFRESH, addr));
                 }
                 IterateNext();
             }
@@ -80,7 +80,7 @@ void Refresh::InsertRefresh() {
                             addr.bankgroup = j;
                             addr.bank = k;
                             refresh_q_.push_back(
-                                new Request(CommandType::REFRESH_BANK, addr));
+                                new Command(CommandType::REFRESH_BANK, addr));
                         }
                     }
                 }
@@ -99,7 +99,7 @@ void Refresh::InsertRefresh() {
                     addr.bankgroup = next_bankgroup_;
                     addr.bank = next_bank_;
                     refresh_q_.push_back(
-                        new Request(CommandType::REFRESH_BANK, addr));
+                        new Command(CommandType::REFRESH_BANK, addr));
                 }
                 IterateNext();
             }
@@ -111,10 +111,10 @@ void Refresh::InsertRefresh() {
 }
 
 Command Refresh::GetRefreshOrAssociatedCommand(
-    std::list<Request *>::iterator refresh_itr) {
+    std::list<Command *>::iterator refresh_itr) {
     auto refresh_req = *refresh_itr;
     // TODO - Strict round robin search of queues?
-    if (refresh_req->cmd_.cmd_type == CommandType::REFRESH) {
+    if (refresh_req->cmd_type == CommandType::REFRESH) {
         for (auto k = 0; k < config_.banks_per_group; k++) {
             for (auto j = 0; j < config_.bankgroups; j++) {
                 if (ReadWritesToFinish(refresh_req->Rank(), j, k)) {
@@ -122,7 +122,7 @@ Command Refresh::GetRefreshOrAssociatedCommand(
                 }
             }
         }
-    } else if (refresh_req->cmd_.cmd_type == CommandType::REFRESH_BANK) {
+    } else if (refresh_req->cmd_type == CommandType::REFRESH_BANK) {
         if (ReadWritesToFinish(refresh_req->Rank(), refresh_req->Bankgroup(),
                                refresh_req->Bank())) {
             return GetReadWritesToOpenRow(refresh_req->Rank(),
@@ -131,7 +131,7 @@ Command Refresh::GetRefreshOrAssociatedCommand(
         }
     }
 
-    auto cmd = channel_state_.GetRequiredCommand(refresh_req->cmd_);
+    auto cmd = channel_state_.GetRequiredCommand(*refresh_req);
     if (channel_state_.IsReady(cmd, clk_)) {
         if (cmd.IsRefresh()) {
             // Sought of actually issuing the refresh command
@@ -151,15 +151,13 @@ bool Refresh::ReadWritesToFinish(int rank, int bankgroup, int bank) {
 
 Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup, int bank) {
     auto &queue = cmd_queue_.GetQueue(rank, bankgroup, bank);
-    for (auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
-        auto req = *req_itr;
-        // If the req belongs to the same bank which is being checked if it is
+    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
+        // If the cmd belongs to the same bank which is being checked if it is
         // okay for refresh  Necessary for PER_RANK queues
-        if (req->Rank() == rank && req->Bankgroup() == bankgroup &&
-            req->Bank() == bank) {
-            Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+        if (cmd_it->Rank() == rank && cmd_it->Bankgroup() == bankgroup &&
+            cmd_it->Bank() == bank) {
+            Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
             if (channel_state_.IsReady(cmd, clk_)) {
-                cmd_queue_.IssueRequest(queue, req_itr);
                 stats_.numb_rw_rowhits_pending_refresh++;
                 return cmd;
             }

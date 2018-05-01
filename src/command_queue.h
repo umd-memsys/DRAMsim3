@@ -18,17 +18,20 @@ class CommandQueue {
     CommandQueue(int channel_id, const Config& config,
                  const ChannelState& channel_state, Statistics& stats);
     Command GetCommandToIssue();
-    Command GetCommandToIssueFromQueue(std::list<Request*>& queue);
+    Command GetCommandToIssueFromQueue(std::list<Command>& queue);
     Command AggressivePrecharge();
-    void IssueRequest(std::list<Request*>& queue,
-                      std::list<Request*>::iterator req_itr);
-    bool IsReqInsertable(Request* req);
-    bool InsertReq(Request* req);
+    // void IssueRequest(std::list<Request*>& queue,
+    //                   std::list<Request*>::iterator req_itr);
+    void IssueCommand(std::list<Command>& queue, 
+                      std::list<Command>::iterator it);
+    bool WillAcceptCommand(int rank, int bankgroup, int bank);
+    bool AddCommand(Command cmd);
+    // bool IsReqInsertable(Request* req);
+    // bool InsertReq(Request* req);
     int QueueUsage() const;
-    std::list<Request*>& GetQueue(int rank, int bankgroup, int bank);
+    std::list<Command>& GetQueue(int rank, int bankgroup, int bank);
     uint64_t clk_;
-    std::list<Request*>
-        issued_req_;  // TODO - Here or in the controller or main?
+    // std::list<Request*> issued_req_;
     std::vector<bool> rank_queues_empty;
     std::vector<uint64_t> rank_queues_empty_from_time_;
 
@@ -38,7 +41,7 @@ class CommandQueue {
     const ChannelState& channel_state_;
     Statistics& stats_;
     int next_rank_, next_bankgroup_, next_bank_, next_queue_index_;
-    std::vector<std::list<Request*>> queues_;
+    std::vector<std::list<Command>> queues_;
     size_t queue_size_;
     int channel_id_;
 

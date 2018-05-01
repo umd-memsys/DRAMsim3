@@ -26,8 +26,8 @@ class BaseDRAMSystem {
     void RegisterCallbacks(
         std::function<void(uint64_t)> read_callback,
         std::function<void(uint64_t)> write_callback);
-    virtual bool IsReqInsertable(uint64_t hex_addr, bool is_write) = 0;
-    virtual bool InsertReq(uint64_t hex_addr, bool is_write) = 0;
+    virtual bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) = 0;
+    virtual bool AddTransaction(uint64_t hex_addr, bool is_write) = 0;
     virtual void ClockTick() = 0;
     virtual void PrintIntermediateStats();
     virtual void PrintStats();
@@ -66,14 +66,9 @@ class JedecDRAMSystem : public BaseDRAMSystem {
                  std::function<void(uint64_t)> read_callback,
                  std::function<void(uint64_t)> write_callback);
     ~JedecDRAMSystem();
-    bool IsReqInsertable(uint64_t hex_addr, bool is_write) override;
-    bool InsertReq(uint64_t hex_addr, bool is_write) override;
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) override;
+    bool AddTransaction(uint64_t hex_addr, bool is_write) override;
     void ClockTick() override;
-
-#ifdef NO_BACKPRESSURE
-   private:
-    std::list<Request *> buffer_q_;
-#endif
 };
 
 // Model a memorysystem with an infinite bandwidth and a fixed latency (possibly
@@ -86,15 +81,15 @@ class IdealDRAMSystem : public BaseDRAMSystem {
                       std::function<void(uint64_t)> read_callback,
                       std::function<void(uint64_t)> write_callback);
     ~IdealDRAMSystem();
-    bool IsReqInsertable(uint64_t hex_addr, bool is_write) override {
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) override {
         return true;
     };
-    bool InsertReq(uint64_t hex_addr, bool is_write) override;
+    bool AddTransaction(uint64_t hex_addr, bool is_write) override;
     void ClockTick() override;
 
    private:
     int latency_;
-    std::list<Request *> infinite_buffer_q_;
+    std::vector<Transaction> infinite_buffer_q_;
 };
 
 }  // namespace dramsim3

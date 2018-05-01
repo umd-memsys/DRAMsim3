@@ -1,14 +1,15 @@
 #include "configuration.h"
-#include "../ext/inih/src/INIReader.h"
-#include "common.h"
+// #include "../ext/inih/src/INIReader.h"
+// #include "common.h"
 
 namespace dramsim3 {
 
 std::function<Address(uint64_t)> AddressMapping;
+std::function<int(uint64_t)> MapChannel;
 
 Config::Config(std::string config_file, std::string out_dir)
-    : output_dir(out_dir) {
-    INIReader reader(config_file);
+    : output_dir(out_dir), reader(config_file) {
+    // INIReader reader(config_file);
 
     if (reader.ParseError() < 0) {
         std::cerr << "Can't load config file - " << config_file << std::endl;
@@ -18,28 +19,25 @@ Config::Config(std::string config_file, std::string out_dir)
     // System/controller Parameters
     protocol =
         GetDRAMProtocol(reader.Get("dram_structure", "protocol", "DDR3"));
-    channel_size =
-        static_cast<int>(reader.GetInteger("system", "channel_size", 1024));
-    channels = static_cast<int>(reader.GetInteger("system", "channels", 1));
-    bus_width = static_cast<int>(reader.GetInteger("system", "bus_width", 64));
+    channel_size = GetInteger("system", "channel_size", 1024);
+    channels = GetInteger("system", "channels", 1);
+    bus_width = GetInteger("system", "bus_width", 64);
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
-    queue_size =
-        static_cast<int>(reader.GetInteger("system", "queue_size", 16));
+    cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
+    trans_queue_size = GetInteger("system", "trans_queue_size", 16);
     refresh_strategy =
         reader.Get("system", "refresh_strategy", "RANK_LEVEL_STAGGERED");
     enable_self_refresh =
         reader.GetBoolean("system", "enable_self_refresh", false);
-    idle_cycles_for_self_refresh = static_cast<int>(
-        reader.GetInteger("system", "idle_cycles_for_self_refresh", 1000));
+    idle_cycles_for_self_refresh =
+        GetInteger("system", "idle_cycles_for_self_refresh", 1000);
     aggressive_precharging_enabled =
         reader.GetBoolean("system", "aggressive_precharging_enabled", false);
 
     // DRAM organization
-    bankgroups =
-        static_cast<int>(reader.GetInteger("dram_structure", "bankgroups", 2));
-    banks_per_group = static_cast<int>(
-        reader.GetInteger("dram_structure", "banks_per_group", 2));
+    bankgroups = GetInteger("dram_structure", "bankgroups", 2);
+    banks_per_group = GetInteger("dram_structure", "banks_per_group", 2);
     bool bankgroup_enable =
         reader.GetBoolean("dram_structure", "bankgroup_enable", true);
     // GDDR5 can chose to enable/disable bankgroups
@@ -51,27 +49,18 @@ Config::Config(std::string config_file, std::string out_dir)
         reader.GetBoolean("dram_structure", "hbm_dual_cmd", true);
     enable_hbm_dual_cmd &= IsHBM();  // Make sure only HBM enables this
     banks = bankgroups * banks_per_group;
-    rows =
-        static_cast<int>(reader.GetInteger("dram_structure", "rows", 1 << 16));
-    columns = static_cast<int>(
-        reader.GetInteger("dram_structure", "columns", 1 << 10));
-    device_width = static_cast<int>(
-        reader.GetInteger("dram_structure", "device_width", 8));
-    BL = static_cast<int>(reader.GetInteger("dram_structure", "BL", 8));
-    num_dies = static_cast<unsigned int>(
-        reader.GetInteger("dram_structure", "num_dies", 1));
+    rows = GetInteger("dram_structure", "rows", 1 << 16);
+    columns = GetInteger("dram_structure", "columns", 1 << 10);
+    device_width = GetInteger("dram_structure", "device_width", 8);
+    BL = GetInteger("dram_structure", "BL", 8);
+    num_dies = GetInteger("dram_structure", "num_dies", 1);
 
     // HMC Specific parameters
-    num_links =
-        static_cast<unsigned int>(reader.GetInteger("hmc", "num_links", 4));
-    link_width =
-        static_cast<unsigned int>(reader.GetInteger("hmc", "link_width", 16));
-    link_speed =
-        static_cast<unsigned int>(reader.GetInteger("hmc", "link_speed", 30));
-    block_size =
-        static_cast<unsigned int>(reader.GetInteger("hmc", "block_size", 32));
-    xbar_queue_depth = static_cast<unsigned int>(
-        reader.GetInteger("hmc", "xbar_queue_depth", 16));
+    num_links = GetInteger("hmc", "num_links", 4);
+    link_width = GetInteger("hmc", "link_width", 16);
+    link_speed = GetInteger("hmc", "link_speed", 30);
+    block_size = GetInteger("hmc", "block_size", 32);
+    xbar_queue_depth = GetInteger("hmc", "xbar_queue_depth", 16);
 
     ProtocolAdjust();
 
@@ -97,47 +86,48 @@ Config::Config(std::string config_file, std::string out_dir)
     SetAddressMapping();
 
     // Timing Parameters
-    // TODO there is no need to keep all of these variables, they should just be
-    // temporary ultimately we only need cmd to cmd Timing instead of these
+    // TODO there is no need to keep all of these variables, they should
+    // just be
+    // temporary ultimately we only need cmd to cmd Timing instead of
+    // these
     tCK = reader.GetReal("timing", "tCK", 1.0);
-    AL = static_cast<int>(reader.GetInteger("timing", "AL", 0));
-    CL = static_cast<int>(reader.GetInteger("timing", "CL", 12));
-    CWL = static_cast<int>(reader.GetInteger("timing", "CWL", 12));
-    tCCD_L = static_cast<int>(reader.GetInteger("timing", "tCCD_L", 6));
-    tCCD_S = static_cast<int>(reader.GetInteger("timing", "tCCD_S", 4));
-    tRTRS = static_cast<int>(reader.GetInteger("timing", "tRTRS", 2));
-    tRTP = static_cast<int>(reader.GetInteger("timing", "tRTP", 5));
-    tWTR_L = static_cast<int>(reader.GetInteger("timing", "tWTR_L", 5));
-    tWTR_S = static_cast<int>(reader.GetInteger("timing", "tWTR_S", 5));
-    tWR = static_cast<int>(reader.GetInteger("timing", "tWR", 10));
-    tRP = static_cast<int>(reader.GetInteger("timing", "tRP", 10));
-    tRRD_L = static_cast<int>(reader.GetInteger("timing", "tRRD_L", 4));
-    tRRD_S = static_cast<int>(reader.GetInteger("timing", "tRRD_S", 4));
-    tRAS = static_cast<int>(reader.GetInteger("timing", "tRAS", 24));
-    tRCD = static_cast<int>(reader.GetInteger("timing", "tRCD", 10));
-    tRFC = static_cast<int>(reader.GetInteger("timing", "tRFC", 74));
+    AL = GetInteger("timing", "AL", 0);
+    CL = GetInteger("timing", "CL", 12);
+    CWL = GetInteger("timing", "CWL", 12);
+    tCCD_L = GetInteger("timing", "tCCD_L", 6);
+    tCCD_S = GetInteger("timing", "tCCD_S", 4);
+    tRTRS = GetInteger("timing", "tRTRS", 2);
+    tRTP = GetInteger("timing", "tRTP", 5);
+    tWTR_L = GetInteger("timing", "tWTR_L", 5);
+    tWTR_S = GetInteger("timing", "tWTR_S", 5);
+    tWR = GetInteger("timing", "tWR", 10);
+    tRP = GetInteger("timing", "tRP", 10);
+    tRRD_L = GetInteger("timing", "tRRD_L", 4);
+    tRRD_S = GetInteger("timing", "tRRD_S", 4);
+    tRAS = GetInteger("timing", "tRAS", 24);
+    tRCD = GetInteger("timing", "tRCD", 10);
+    tRFC = GetInteger("timing", "tRFC", 74);
     tRC = tRAS + tRP;
-    tCKE = static_cast<int>(reader.GetInteger("timing", "tCKE", 6));
-    tCKESR = static_cast<int>(reader.GetInteger("timing", "tCKESR", 12));
-    tXS = static_cast<int>(reader.GetInteger("timing", "tXS", 432));
-    tXP = static_cast<int>(reader.GetInteger("timing", "tXP", 8));
-    tRFCb = static_cast<int>(reader.GetInteger("timing", "tRFCb", 20));
-    tREFI = static_cast<int>(reader.GetInteger("timing", "tREFI", 7800));
-    tREFIb = static_cast<int>(reader.GetInteger("timing", "tREFIb", 1950));
-    tFAW = static_cast<int>(reader.GetInteger("timing", "tFAW", 50));
-    tRPRE = static_cast<int>(reader.GetInteger("timing", "tRPRE", 1));
-    tWPRE = static_cast<int>(reader.GetInteger("timing", "tWPRE", 1));
+    tCKE = GetInteger("timing", "tCKE", 6);
+    tCKESR = GetInteger("timing", "tCKESR", 12);
+    tXS = GetInteger("timing", "tXS", 432);
+    tXP = GetInteger("timing", "tXP", 8);
+    tRFCb = GetInteger("timing", "tRFCb", 20);
+    tREFI = GetInteger("timing", "tREFI", 7800);
+    tREFIb = GetInteger("timing", "tREFIb", 1950);
+    tFAW = GetInteger("timing", "tFAW", 50);
+    tRPRE = GetInteger("timing", "tRPRE", 1);
+    tWPRE = GetInteger("timing", "tWPRE", 1);
 
     // LPDDR4 and GDDR5
-    tPPD = static_cast<int>(reader.GetInteger("timing", "tPPD", 0));
+    tPPD = GetInteger("timing", "tPPD", 0);
 
     // GDDR5 only
-    t32AW = static_cast<int>(reader.GetInteger("timing", "t32AW", 330));
-    tRCDRD = static_cast<int>(reader.GetInteger("timing", "tRCDRD", 24));
-    tRCDWR = static_cast<int>(reader.GetInteger("timing", "tRCDWR", 20));
+    t32AW = GetInteger("timing", "t32AW", 330);
+    tRCDRD = GetInteger("timing", "tRCDRD", 24);
+    tRCDWR = GetInteger("timing", "tRCDWR", 20);
 
-    ideal_memory_latency = static_cast<int>(
-        reader.GetInteger("timing", "ideal_memory_latency", 10));
+    ideal_memory_latency = GetInteger("timing", "ideal_memory_latency", 10);
 
     // calculated timing
     RL = AL + CL;
@@ -175,8 +165,7 @@ Config::Config(std::string config_file, std::string out_dir)
     pre_pd_energy_inc = VDD * IDD2P * devices;
     sref_energy_inc = VDD * IDD6x * devices;
 
-    epoch_period =
-        static_cast<int>(reader.GetInteger("other", "epoch_period", 100000));
+    epoch_period = GetInteger("other", "epoch_period", 100000);
     // determine how much output we want:
     // -1: no file output at all
     // 0: no epoch file output, only outputs the summary in the end
@@ -211,15 +200,14 @@ Config::Config(std::string config_file, std::string out_dir)
                                       output_prefix + "histo_stats.csv");
 
     // Thermal simulation parameters
-    power_epoch_period = static_cast<int>(
-        reader.GetInteger("thermal", "power_epoch_period", 100000));
-    // numXgrids = static_cast<int>(reader.GetInteger("thermal",
+    power_epoch_period = GetInteger("thermal", "power_epoch_period", 100000);
+    // numXgrids = GetInteger("thermal",
     // "numXgrids", 1));  numYgrids =
-    // static_cast<int>(reader.GetInteger("thermal", "numYgrids", 1));
+    // GetInteger("thermal", "numYgrids", 1));
 
-    matX = static_cast<int>(reader.GetInteger("thermal", "matX", 512));
-    matY = static_cast<int>(reader.GetInteger("thermal", "matY", 512));
-    // RowTile = static_cast<int>(reader.GetInteger("thermal", "RowTile", 1));
+    matX = GetInteger("thermal", "matX", 512);
+    matY = GetInteger("thermal", "matY", 512);
+    // RowTile = GetInteger("thermal", "RowTile", 1));
     numXgrids = rows / matX;
     TileRowNum = rows;
 
@@ -233,7 +221,7 @@ Config::Config(std::string config_file, std::string out_dir)
         while (RowTile * RowTile * 4 < bank_asr) {
             RowTile *= 2;
         }
-        // RowTile = numXgrids / (numYgrids * 8);
+            // RowTile = numXgrids / (numYgrids * 8);
 #ifdef DEBUG_OUTPUT
         std::cout << "RowTile = " << RowTile << std::endl;
 #endif  // DEBUG_OUTPUT
@@ -251,10 +239,8 @@ Config::Config(std::string config_file, std::string out_dir)
     loc_mapping = reader.Get("thermal", "loc_mapping", "");
     logic_bg_power = reader.GetReal("thermal", "logic_bg_power", 1.0);
     logic_max_power = reader.GetReal("thermal", "logic_max_power", 20.0);
-    bank_order =
-        static_cast<int>(reader.GetInteger("thermal", "bank_order", 1));
-    bank_layer_order =
-        static_cast<int>(reader.GetInteger("thermal", "bank_layer_order", 0));
+    bank_order = GetInteger("thermal", "bank_order", 1);
+    bank_layer_order = GetInteger("thermal", "bank_layer_order", 0);
     numRowRefresh = static_cast<int>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
     ChipX = reader.GetReal("thermal", "ChipX", 0.01);
     ChipY = reader.GetReal("thermal", "ChipY", 0.01);
@@ -271,7 +257,6 @@ Config::Config(std::string config_file, std::string out_dir)
                                    output_prefix + "bank_position.csv");
 }
 
-
 DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
     std::map<std::string, DRAMProtocol> protocol_pairs = {
         {"DDR3", DRAMProtocol::DDR3},     {"DDR4", DRAMProtocol::DDR4},
@@ -287,6 +272,11 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
     }
 
     return protocol_pairs[protocol_str];
+}
+
+int Config::GetInteger(const std::string& sec, const std::string& opt,
+                       int default_val) const {
+    return static_cast<int>(reader.GetInteger(sec, opt, default_val));
 }
 
 void Config::ProtocolAdjust() {
@@ -463,6 +453,10 @@ void Config::SetAddressMapping() {
             AbruptExit(__FILE__, __LINE__);
         }
     }
+
+    MapChannel = [field_pos, field_widths](uint64_t hex_addr) {
+        return ModuloWidth(hex_addr, field_widths[0], field_pos[0]);
+    };
 
     AddressMapping = [field_pos, field_widths, col_mask](uint64_t hex_addr) {
         int channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0, column = 0;

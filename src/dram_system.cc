@@ -175,17 +175,12 @@ JedecDRAMSystem::~JedecDRAMSystem() {
     }
 }
 
-bool JedecDRAMSystem::IsReqInsertable(uint64_t hex_addr, bool is_write) {
-    CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
-    Request *temp_req =
-        new Request(cmd_type, hex_addr, clk_,
-                    0);  // TODO - This is probably not very efficient
-    bool status = ctrls_[temp_req->Channel()]->IsReqInsertable(temp_req);
-    delete temp_req;
-    return status;
+bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr, bool is_write) {
+    int channel = MapChannel(hex_addr);
+    return ctrls_[channel]->WillAcceptTransaction();
 }
 
-bool JedecDRAMSystem::InsertReq(uint64_t hex_addr, bool is_write) {
+bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 // Record trace - Record address trace for debugging or other purposes
 #ifdef GENERATE_TRACE
     address_trace_ << left << setw(18) << clk_ << " " << setw(6) << std::hex
@@ -193,51 +188,28 @@ bool JedecDRAMSystem::InsertReq(uint64_t hex_addr, bool is_write) {
                    << std::endl;
 #endif
 
-    CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
-    id_++;
-    Request *req = new Request(cmd_type, hex_addr, clk_, id_);
+    int channel = MapChannel(hex_addr);
+    bool ok = ctrls_[channel]->WillAcceptTransaction();
 
-    bool is_insertable = ctrls_[req->Channel()]->InsertReq(req);
 #ifdef NO_BACKPRESSURE
     // Some CPU simulators might not model the backpressure because queues are
-    // full. An approximate way of addressing this scenario is to buffer all
-    // such requests here in the DRAM simulator and then feed them into the
-    // actual memory controller queues as and when space becomes available. Note
-    // - This is an approximation and if the size of such buffer queue becomes
-    // large during the course of the simulation, then the accuracy sought of
-    // devolves into that of a memory address trace based simulation.
-    if ((!is_insertable)) {
-        buffer_q_.push_back(req);
-        is_insertable = true;
-        ptr_stats_->numb_buffered_requests++;
-    }
+    // full. To make them work we push them to the transaction queue anyway
+
+    ok = true;
+    ptr_stats_->numb_buffered_requests++;
 #endif
-    assert(is_insertable);
-
-    // update interarrival latency
-    ptr_stats_->interarrival_latency.AddValue(clk_ - last_req_clk_);
-    last_req_clk_ = clk_;
-
-    return is_insertable;
+    assert(ok);
+    if (ok) {
+        Transaction trans = Transaction(hex_addr, is_write);
+        ctrls_[channel]->AddTransaction(trans);
+        ptr_stats_->interarrival_latency.AddValue(clk_ - last_req_clk_);
+        last_req_clk_ = clk_;
+    }
+    return ok;
 }
 
 void JedecDRAMSystem::ClockTick() {
     for (auto ctrl : ctrls_) ctrl->ClockTick();
-
-#ifdef NO_BACKPRESSURE
-    // Insert requests stored in the buffer_q as and when space is available
-    if (!buffer_q_.empty()) {
-        for (auto req_itr = buffer_q_.begin(); req_itr != buffer_q_.end();
-             req_itr++) {
-            auto req = *req_itr;
-            if (ctrls_[req->Channel()]->InsertReq(req)) {
-                buffer_q_.erase(req_itr);
-                break;  // either break or set req_itr to the return value of
-                        // erase()
-            }
-        }
-    }
-#endif
 
     if (clk_ % ptr_config_->epoch_period == 0 && clk_ != 0) {
         // calculate queue usage each epoch
@@ -267,38 +239,32 @@ IdealDRAMSystem::IdealDRAMSystem(
 
 IdealDRAMSystem::~IdealDRAMSystem() {}
 
-bool IdealDRAMSystem::InsertReq(uint64_t hex_addr, bool is_write) {
-    CommandType cmd_type = is_write ? CommandType::WRITE : CommandType ::READ;
-    id_++;
-    Request *req = new Request(cmd_type, hex_addr, clk_, id_);
-    infinite_buffer_q_.push_back(req);
+bool IdealDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
+    auto trans = Transaction(hex_addr, is_write);
+    trans.added_cycle = clk_; 
+    infinite_buffer_q_.push_back(trans);
     return true;
 }
 
 void IdealDRAMSystem::ClockTick() {
     clk_++;
     ptr_stats_->dramcycles++;
-    for (auto req_itr = infinite_buffer_q_.begin();
-         req_itr != infinite_buffer_q_.end(); req_itr++) {
-        auto req = *req_itr;
-        if (clk_ - req->arrival_time_ >= static_cast<uint64_t>(latency_)) {
-            if (req->cmd_.cmd_type == CommandType::READ) {
-                ptr_stats_->numb_read_reqs_issued++;
-            } else if (req->cmd_.cmd_type == CommandType::WRITE) {
+    for (auto trans_it = infinite_buffer_q_.begin();
+         trans_it != infinite_buffer_q_.end();) {
+        if (clk_ - trans_it->added_cycle >= static_cast<uint64_t>(latency_)) {
+            if (trans_it->is_write) {
                 ptr_stats_->numb_write_reqs_issued++;
+                write_callback_(trans_it->addr);
+            } else {
+                ptr_stats_->numb_read_reqs_issued++;
+                read_callback_(trans_it->addr);
             }
-            ptr_stats_->access_latency.AddValue(clk_ - req->arrival_time_);
-            if (req->cmd_.IsRead())
-                read_callback_(req->hex_addr_);
-            else if (req->cmd_.IsWrite())
-                write_callback_(req->hex_addr_);
-            else
-                AbruptExit(__FILE__, __LINE__);
-            delete (req);
-            infinite_buffer_q_.erase(req_itr++);
-        } else
-            break;  // Requests are always ordered w.r.t to their arrival times,
-                    // so need to check beyond.
+            ptr_stats_->access_latency.AddValue(clk_ - trans_it->added_cycle);
+            trans_it = infinite_buffer_q_.erase(trans_it++);
+        }
+        if (trans_it != infinite_buffer_q_.end()){
+            ++trans_it;
+        }
     }
 
     if (clk_ % ptr_config_->epoch_period == 0) {
