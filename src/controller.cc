@@ -26,7 +26,11 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
 #endif  // THERMAL
       cmd_queue_(channel_id_, config, channel_state_, stats),
       refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
-      stats_(stats) {
+      stats_(stats),
+      cmd_id_(0),
+      scheduling_policy_(config.scheduling_policy == "CLOSE_PAGE"
+                             ? SchedulingPolicy::CLOSE_PAGE
+                             : SchedulingPolicy::OPEN_PAGE) {
     transaction_q_.reserve(config_.trans_queue_size);
 }
 
@@ -36,10 +40,10 @@ void Controller::ClockTick() {
         if (clk_ >= it->complete_cycle) {
             stats_.access_latency.AddValue(clk_ - it->added_cycle);
             if (it->is_write) {
-                stats_.numb_read_reqs_issued++;
+                stats_.numb_write_reqs_issued++;
                 write_callback_(it->addr);
             } else {
-                stats_.numb_write_reqs_issued++;
+                stats_.numb_read_reqs_issued++;
                 read_callback_(it->addr);
             }
             it = return_queue_.erase(it);
@@ -135,7 +139,7 @@ void Controller::ClockTick() {
             // std::cout << "Command " << cmd.id << " finished! " << std::endl;
             // std::cout << it->first << it->second << std::endl;
             // std::cout << "Trans " << it->second.addr << " moved to return q,"
-            //           << "to be exit at " << std::setw(6) 
+            //           << "to be exit at " << std::setw(6)
             //           << it->second.complete_cycle << std::endl;
             return_queue_.push_back(it->second);
             pending_trans_.erase(it);
@@ -174,14 +178,16 @@ void Controller::ClockTick() {
         if (lookup_depth >= max_lookup_depth) {
             break;  // stop wasting time
         }
+        lookup_depth++;
         auto cmd = TransToCommand(*it);
         if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
                                          cmd.Bank())) {
             cmd_queue_.AddCommand(cmd);
-            // std::cout << "Trans " << it->addr << " moved to pending Q" << std::endl;
+            // std::cout << "Trans " << it->addr << " moved to pending Q" <<
+            // std::endl;
             pending_trans_.insert(std::make_pair(cmd_id_, *it));
             it = transaction_q_.erase(it);
-            cmd_id_ ++;
+            cmd_id_++;
             // reset cmd_id_ to avoid overflow, there will not be 32k cmds
             // in fly so we should be fine
             if (cmd_id_ == 32768) {

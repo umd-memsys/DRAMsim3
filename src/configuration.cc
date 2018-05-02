@@ -23,8 +23,9 @@ Config::Config(std::string config_file, std::string out_dir)
     bus_width = GetInteger("system", "bus_width", 64);
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
+    scheduling_policy = reader.Get("system", "scheduling_policy", "OPEN_PAGE");
     cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
-    trans_queue_size = GetInteger("system", "trans_queue_size", 16);
+    trans_queue_size = GetInteger("system", "trans_queue_size", 32);
     refresh_strategy =
         reader.Get("system", "refresh_strategy", "RANK_LEVEL_STAGGERED");
     enable_self_refresh =

@@ -112,6 +112,7 @@ class Config {
 
     std::string address_mapping;
     std::string queue_structure;
+    std::string scheduling_policy;
     int cmd_queue_size;
     int trans_queue_size;
     std::string refresh_strategy;
