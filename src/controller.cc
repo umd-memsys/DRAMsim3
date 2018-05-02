@@ -32,6 +32,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
                              ? SchedulingPolicy::CLOSE_PAGE
                              : SchedulingPolicy::OPEN_PAGE) {
     transaction_q_.reserve(config_.trans_queue_size);
+    bank_dist_ = std::vector<int>(config_.banks, 0);
 }
 
 void Controller::ClockTick() {
@@ -180,6 +181,8 @@ void Controller::ClockTick() {
         }
         lookup_depth++;
         auto cmd = TransToCommand(*it);
+        int bank_idx = cmd.Bankgroup() * config_.bankgroups + cmd.Bank();
+        bank_dist_[bank_idx]++;
         if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
                                          cmd.Bank())) {
             cmd_queue_.AddCommand(cmd);
@@ -196,6 +199,9 @@ void Controller::ClockTick() {
             // only allow one transaction scheduled per cycle
             break;
         } else {
+            // std::cout << std::setw(8) << clk_ << "cmd-q " << cmd.Rank() << ", "
+            //           << cmd.Bankgroup()
+            //           << "," <<  cmd.Bank() << " FULL!" << std::endl;
             ++it;
         }
     }
@@ -214,6 +220,11 @@ void Controller::ClockTick() {
     // for (auto trans:return_queue_) {
     //     std::cout << trans << std::endl;
     // }
+    if (clk_ % config_.epoch_period == 0 && clk_ != 0) {
+        for (size_t i = 0; i < bank_dist_.size(); i++){
+            std::cout << "bank " << i << ":" << bank_dist_[i] << std::endl;
+        }
+    }
     clk_++;
     cmd_queue_.clk_++;
 }

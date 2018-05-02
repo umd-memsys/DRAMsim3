@@ -51,6 +51,7 @@ class Controller {
     // An ID that is used to keep track of commands in fly
     int cmd_id_;
     SchedulingPolicy scheduling_policy_;
+    std::vector<int> bank_dist_;
     Command TransToCommand(const Transaction &trans);
 };
 }  // namespace dramsim3
