@@ -48,7 +48,7 @@ void Refresh::InsertRefresh() {
                         addr.channel = channel_id_;
                         addr.rank = i;
                         refresh_q_.push_back(
-                            new Command(CommandType::REFRESH, addr));
+                            new Command(CommandType::REFRESH, addr, -1));
                     }
                 }
             }
@@ -61,7 +61,7 @@ void Refresh::InsertRefresh() {
                     addr.channel = channel_id_;
                     addr.rank = next_rank_;
                     refresh_q_.push_back(
-                        new Command(CommandType::REFRESH, addr));
+                        new Command(CommandType::REFRESH, addr, -1));
                 }
                 IterateNext();
             }
@@ -80,7 +80,7 @@ void Refresh::InsertRefresh() {
                             addr.bankgroup = j;
                             addr.bank = k;
                             refresh_q_.push_back(
-                                new Command(CommandType::REFRESH_BANK, addr));
+                                new Command(CommandType::REFRESH_BANK, addr, -1));
                         }
                     }
                 }
@@ -99,7 +99,7 @@ void Refresh::InsertRefresh() {
                     addr.bankgroup = next_bankgroup_;
                     addr.bank = next_bank_;
                     refresh_q_.push_back(
-                        new Command(CommandType::REFRESH_BANK, addr));
+                        new Command(CommandType::REFRESH_BANK, addr, -1));
                 }
                 IterateNext();
             }

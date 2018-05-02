@@ -9,7 +9,6 @@ std::function<int(uint64_t)> MapChannel;
 
 Config::Config(std::string config_file, std::string out_dir)
     : output_dir(out_dir), reader(config_file) {
-    // INIReader reader(config_file);
 
     if (reader.ParseError() < 0) {
         std::cerr << "Can't load config file - " << config_file << std::endl;

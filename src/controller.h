@@ -14,6 +14,8 @@
 
 namespace dramsim3 {
 
+enum class SchedulingPolicy { OPEN_PAGE, CLOSE_PAGE, SIZE };
+
 class Controller {
    public:
 #ifdef THERMAL
@@ -33,7 +35,6 @@ class Controller {
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
     int QueueUsage() const;
-    std::list<Command> issued_cmds;
 
    protected:
     uint64_t clk_;
@@ -45,6 +46,12 @@ class Controller {
     CommandQueue cmd_queue_;
     Refresh refresh_;
     Statistics &stats_;
+
+   private:
+    // An ID that is used to keep track of commands in fly
+    int cmd_id_;
+    SchedulingPolicy scheduling_policy_;
+    Command TransToCommand(const Transaction &trans);
 };
 }  // namespace dramsim3
 #endif

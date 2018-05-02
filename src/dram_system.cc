@@ -194,7 +194,6 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 #ifdef NO_BACKPRESSURE
     // Some CPU simulators might not model the backpressure because queues are
     // full. To make them work we push them to the transaction queue anyway
-
     ok = true;
     ptr_stats_->numb_buffered_requests++;
 #endif

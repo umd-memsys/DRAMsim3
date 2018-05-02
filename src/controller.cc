@@ -31,9 +31,10 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
 }
 
 void Controller::ClockTick() {
-    // Return already issued read/write requests back to the CPU
+    // Return completed transactions back to the CPU
     for (auto it = return_queue_.begin(); it != return_queue_.end();) {
         if (clk_ >= it->complete_cycle) {
+            stats_.access_latency.AddValue(clk_ - it->added_cycle);
             if (it->is_write) {
                 stats_.numb_read_reqs_issued++;
                 write_callback_(it->addr);
@@ -78,7 +79,7 @@ void Controller::ClockTick() {
                 addr.channel = channel_id_;
                 addr.rank = i;
                 auto self_refresh_enter_cmd =
-                    Command(CommandType::SELF_REFRESH_ENTER, addr);
+                    Command(CommandType::SELF_REFRESH_ENTER, addr, -1);
                 auto cmd =
                     channel_state_.GetRequiredCommand(self_refresh_enter_cmd);
                 if (channel_state_.IsReady(cmd, clk_))
@@ -127,10 +128,15 @@ void Controller::ClockTick() {
         if (cmd.IsReadWrite()) {
             auto it = pending_trans_.find(cmd.id);
             if (cmd.IsRead()) {
-                it->second.complete_cycle += config_.read_delay;
+                it->second.complete_cycle = clk_ + config_.read_delay;
             } else {
-                it->second.complete_cycle += config_.write_delay;
+                it->second.complete_cycle = clk_ + config_.write_delay;
             }
+            // std::cout << "Command " << cmd.id << " finished! " << std::endl;
+            // std::cout << it->first << it->second << std::endl;
+            // std::cout << "Trans " << it->second.addr << " moved to return q,"
+            //           << "to be exit at " << std::setw(6) 
+            //           << it->second.complete_cycle << std::endl;
             return_queue_.push_back(it->second);
             pending_trans_.erase(it);
         }
@@ -161,22 +167,47 @@ void Controller::ClockTick() {
         }
     }
 
-    // for performance considerations, we only look at this many transactions
-    const int max_lookup_depth = 8;
+    // put command into command queue, only lookup for a certain amount
+    const int max_lookup_depth = 16;
     int lookup_depth = 0;
-    for (auto it = transaction_q_.begin(); it != transaction_q_.end(); it++) {
+    for (auto it = transaction_q_.begin(); it != transaction_q_.end();) {
         if (lookup_depth >= max_lookup_depth) {
             break;  // stop wasting time
         }
-        auto addr = AddressMapping((*it).addr);
-        if (cmd_queue_.WillAcceptCommand(addr.rank, addr.bankgroup,
-                                            addr.bank)) {
-            CommandType cmd_type = it->is_write ? CommandType::WRITE : 
-                                    CommandType::READ;
-            cmd_queue_.AddCommand(Command(cmd_type, addr));
+        auto cmd = TransToCommand(*it);
+        if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
+                                         cmd.Bank())) {
+            cmd_queue_.AddCommand(cmd);
+            // std::cout << "Trans " << it->addr << " moved to pending Q" << std::endl;
+            pending_trans_.insert(std::make_pair(cmd_id_, *it));
+            it = transaction_q_.erase(it);
+            cmd_id_ ++;
+            // reset cmd_id_ to avoid overflow, there will not be 32k cmds
+            // in fly so we should be fine
+            if (cmd_id_ == 32768) {
+                cmd_id_ = 0;
+            }
+            // only allow one transaction scheduled per cycle
+            break;
+        } else {
+            ++it;
         }
     }
 
+    // std::cout << "Queue Depts " << " at " << clk_ << ": " << std::endl;
+    // std::cout << "TransQ:  " << transaction_q_.size() << std::endl;
+    // for (auto trans:transaction_q_) {
+    //     std::cout << trans << std::endl;
+    // }
+    // std::cout << "PendingQ:" << pending_trans_.size() << std::endl;
+    // for (auto it:pending_trans_) {
+    //     std::cout << std::setw(5) << it.first;
+    //     std::cout << it.second <<std::endl;
+    // }
+    // std::cout << "ReturnQ: " << return_queue_.size() << std::endl;
+    // for (auto trans:return_queue_) {
+    //     std::cout << trans << std::endl;
+    // }
     clk_++;
     cmd_queue_.clk_++;
 }
@@ -191,6 +222,18 @@ bool Controller::AddTransaction(Transaction trans) {
     return transaction_q_.size() <= transaction_q_.capacity();
 }
 
+Command Controller::TransToCommand(const Transaction &trans) {
+    auto addr = AddressMapping(trans.addr);
+    CommandType cmd_type;
+    if (scheduling_policy_ == SchedulingPolicy::OPEN_PAGE) {
+        cmd_type = trans.is_write ? CommandType::WRITE : CommandType::READ;
+    } else {
+        cmd_type = trans.is_write ? CommandType::WRITE_PRECHARGE
+                                  : CommandType::READ_PRECHARGE;
+    }
+    Command cmd = Command(cmd_type, addr, cmd_id_);
+    return cmd;
+}
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
 

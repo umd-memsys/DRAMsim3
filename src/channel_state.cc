@@ -62,7 +62,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
         case CommandType::REFRESH_BANK:
             return Command(bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]
                                ->GetRequiredCommandType(cmd),
-                           cmd.addr);
+                           cmd.addr, cmd.id);
         case CommandType::REFRESH:
         case CommandType::SELF_REFRESH_ENTER:
         case CommandType::SELF_REFRESH_EXIT:
@@ -77,7 +77,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
                         addr.bankgroup = j;
                         addr.bank = k;
                         addr.row = bank_states_[cmd.Rank()][j][k]->OpenRow();
-                        return Command(required_cmd_type, addr);
+                        return Command(required_cmd_type, addr, -1);
                     }
                 }
             }

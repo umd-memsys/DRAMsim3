@@ -67,6 +67,7 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Command>& queue) {
                         }
                     }
                     if (!dependency) {
+                        queue.erase(cmd_it);
                         return cmd;
                     }
                 } else if (cmd.cmd_type == CommandType::PRECHARGE) {
@@ -125,7 +126,7 @@ Command CommandQueue::AggressivePrecharge() {
             for (auto j = 0; j < config_.bankgroups; j++) {
                 if (channel_state_.IsRowOpen(i, j, k)) {
                     auto cmd = Command(CommandType::PRECHARGE,
-                                       Address(-1, i, j, k, -1, -1));
+                                       Address(-1, i, j, k, -1, -1), -1);
                     if (channel_state_.IsReady(cmd, clk_)) {
                         bool pending_row_hits_exist = false;
                         auto open_row = channel_state_.OpenRow(i, j, k);
@@ -144,7 +145,7 @@ Command CommandQueue::AggressivePrecharge() {
                             stats_.numb_aggressive_precharges++;
                             return Command(
                                 CommandType::PRECHARGE,
-                                Address(channel_id_, i, j, k, -1, -1));
+                                Address(channel_id_, i, j, k, -1, -1), -1);
                         }
                     }
                 }
@@ -165,7 +166,6 @@ bool CommandQueue::AddCommand(Command cmd) {
         queue.push_back(cmd);
         rank_queues_empty[cmd.Rank()] = false;
         return true;
-        // queue.push_back()
     } else {
         return false;
     }

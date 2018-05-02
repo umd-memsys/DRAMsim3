@@ -73,8 +73,8 @@ enum class CommandType {
 
 struct Command {
     Command() : cmd_type(CommandType::SIZE) {}
-    Command(CommandType cmd_type, const Address& addr)
-        : cmd_type(cmd_type), addr(addr) {}
+    Command(CommandType cmd_type, const Address& addr, int id)
+        : cmd_type(cmd_type), addr(addr), id(id) {}
 
     bool IsValid() const { return cmd_type != CommandType::SIZE; }
     bool IsRefresh() const {
@@ -112,6 +112,8 @@ struct Transaction {
     uint64_t added_cycle;
     uint64_t complete_cycle;
     bool is_write;
+
+    friend std::ostream& operator<<(std::ostream& os, const Transaction& trans);
 };
 
 

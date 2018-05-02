@@ -24,6 +24,12 @@ std::ostream& operator<<(std::ostream& os, const Command& cmd) {
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const Transaction& trans) {
+    const std::string trans_type = trans.is_write ? "WRITE" : "READ";
+    os << std::setw(30) << trans.addr << std::setw(8) << trans_type;
+    return os;
+}
+
 
 std::istream& operator>>(std::istream& is, Access& access) {
     is >> std::hex >> access.hex_addr_ >> access.access_type_ >> std::dec >>
