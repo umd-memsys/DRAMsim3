@@ -17,7 +17,7 @@ void RandomCPU::ClockTick() {
         last_addr_ = gen();
     }
     bool is_write = (gen() % 3 == 0);  // R/W ratio 2:1
-    bool get_next_ = memory_system_.IsReqInsertable(last_addr_, is_write);
+    get_next_ = memory_system_.IsReqInsertable(last_addr_, is_write);
     if (get_next_) {
         memory_system_.InsertReq(last_addr_, is_write);
     }
