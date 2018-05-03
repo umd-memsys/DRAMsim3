@@ -156,7 +156,7 @@ Command CommandQueue::AggressivePrecharge() {
 }
 
 bool CommandQueue::WillAcceptCommand(int rank, int bankgroup, int bank) {
-    auto& queue = GetQueue(rank, bankgroup, bank);
+    const auto& queue = GetQueue(rank, bankgroup, bank);
     return queue.size() < queue_size_;
 }
 

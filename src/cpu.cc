@@ -18,7 +18,7 @@ void RandomCPU::ClockTick() {
     }
     bool is_write = (gen() % 3 == 0);  // R/W ratio 2:1
     get_next_ = memory_system_.WillAcceptTransaction(last_addr_, is_write);
-    if (get_next_) {
+    if (get_next_ && clk_ % 6 == 0) {
         memory_system_.AddTransaction(last_addr_, is_write);
     }
     clk_++;

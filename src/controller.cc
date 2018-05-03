@@ -63,10 +63,8 @@ void Controller::ClockTick() {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
                 stats_.all_bank_idle_cycles[channel_id_][i]++;
-                // stats_.pre_stb_energy[channel_id_][i]++;
             } else {
                 stats_.active_cycles[channel_id_][i]++;
-                // stats_.act_stb_energy[channel_id_][i]++;
             }
         }
     }
@@ -137,11 +135,6 @@ void Controller::ClockTick() {
             } else {
                 it->second.complete_cycle = clk_ + config_.write_delay;
             }
-            // std::cout << "Command " << cmd.id << " finished! " << std::endl;
-            // std::cout << it->first << it->second << std::endl;
-            // std::cout << "Trans " << it->second.addr << " moved to return q,"
-            //           << "to be exit at " << std::setw(6)
-            //           << it->second.complete_cycle << std::endl;
             return_queue_.push_back(it->second);
             pending_trans_.erase(it);
         }
@@ -173,7 +166,7 @@ void Controller::ClockTick() {
     }
 
     // put command into command queue, only lookup for a certain amount
-    const int max_lookup_depth = 16;
+    const int max_lookup_depth = 128;
     int lookup_depth = 0;
     for (auto it = transaction_q_.begin(); it != transaction_q_.end();) {
         if (lookup_depth >= max_lookup_depth) {
@@ -181,50 +174,23 @@ void Controller::ClockTick() {
         }
         lookup_depth++;
         auto cmd = TransToCommand(*it);
-        int bank_idx = cmd.Bankgroup() * config_.bankgroups + cmd.Bank();
-        bank_dist_[bank_idx]++;
         if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
                                          cmd.Bank())) {
             cmd_queue_.AddCommand(cmd);
-            // std::cout << "Trans " << it->addr << " moved to pending Q" <<
-            // std::endl;
             pending_trans_.insert(std::make_pair(cmd_id_, *it));
             it = transaction_q_.erase(it);
-            cmd_id_++;
             // reset cmd_id_ to avoid overflow, there will not be 32k cmds
             // in fly so we should be fine
+            cmd_id_++;
             if (cmd_id_ == 32768) {
                 cmd_id_ = 0;
             }
-            // only allow one transaction scheduled per cycle
-            break;
+            break;  // only allow one transaction scheduled per cycle
         } else {
-            // std::cout << std::setw(8) << clk_ << "cmd-q " << cmd.Rank() << ", "
-            //           << cmd.Bankgroup()
-            //           << "," <<  cmd.Bank() << " FULL!" << std::endl;
             ++it;
         }
     }
 
-    // std::cout << "Queue Depts " << " at " << clk_ << ": " << std::endl;
-    // std::cout << "TransQ:  " << transaction_q_.size() << std::endl;
-    // for (auto trans:transaction_q_) {
-    //     std::cout << trans << std::endl;
-    // }
-    // std::cout << "PendingQ:" << pending_trans_.size() << std::endl;
-    // for (auto it:pending_trans_) {
-    //     std::cout << std::setw(5) << it.first;
-    //     std::cout << it.second <<std::endl;
-    // }
-    // std::cout << "ReturnQ: " << return_queue_.size() << std::endl;
-    // for (auto trans:return_queue_) {
-    //     std::cout << trans << std::endl;
-    // }
-    if (clk_ % config_.epoch_period == 0 && clk_ != 0) {
-        for (size_t i = 0; i < bank_dist_.size(); i++){
-            std::cout << "bank " << i << ":" << bank_dist_[i] << std::endl;
-        }
-    }
     clk_++;
     cmd_queue_.clk_++;
 }
