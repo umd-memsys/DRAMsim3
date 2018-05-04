@@ -337,7 +337,7 @@ void HMCMemorySystem::SetClockRatio() {
 #ifdef DEBUG_OUTPUT
     std::cout << "HMC Logic clock speed " << dram_clk_ticks_ << std::endl;
     std::cout << "HMC DRAM clock speed " << logic_clk_ticks_ << std::endl;
-#endif
+#endif  // DEBUG_OUTPUT
 
     return;
 }
