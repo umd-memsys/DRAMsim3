@@ -122,8 +122,8 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Command>& queue) {
 Command CommandQueue::AggressivePrecharge() {
     // TODO - Why such round robin order?
     for (auto i = 0; i < config_.ranks; i++) {
-        for (auto k = 0; k < config_.banks_per_group; k++) {
-            for (auto j = 0; j < config_.bankgroups; j++) {
+        for (auto j = 0; j < config_.bankgroups; j++) {
+            for (auto k = 0; k < config_.banks_per_group; k++) {
                 if (channel_state_.IsRowOpen(i, j, k)) {
                     auto cmd = Command(CommandType::PRECHARGE,
                                        Address(-1, i, j, k, -1, -1), -1);

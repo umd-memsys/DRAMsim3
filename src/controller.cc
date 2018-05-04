@@ -69,6 +69,8 @@ void Controller::ClockTick() {
         }
     }
 
+    // currently there can be only 1 command at the bus at the same time
+    bool command_issued = false;
     // Move idle ranks into self-refresh mode to save power
     if (config_.enable_self_refresh) {
         for (auto i = 0; i < config_.ranks; i++) {
@@ -100,6 +102,7 @@ void Controller::ClockTick() {
                             }
                         }
                     }
+                command_issued = true;
                 channel_state_.IssueCommand(cmd, clk_);
             }
         }
@@ -114,54 +117,57 @@ void Controller::ClockTick() {
             channel_state_.UpdateRefreshWaitingStatus((**refresh_itr), true);
         }
         auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
-        if (cmd.IsValid()) {
+        if (cmd.IsValid() && (!command_issued)) {
             channel_state_.IssueCommand(cmd, clk_);
             if (cmd.IsRefresh()) {
                 channel_state_.need_to_update_refresh_waiting_status_ = true;
                 channel_state_.UpdateRefreshWaitingStatus(
                     cmd, false);  // TODO - Move this to channelstate update?
             }
-            return;  // TODO - What about HBM dual command issue?
+            command_issued = true;
         }
     }
 
-    auto cmd = cmd_queue_.GetCommandToIssue();
-    if (cmd.IsValid()) {
-        // if read/write, update pending queue and return queue
-        if (cmd.IsReadWrite()) {
-            auto it = pending_trans_.find(cmd.id);
-            if (cmd.IsRead()) {
-                it->second.complete_cycle = clk_ + config_.read_delay;
-            } else {
-                it->second.complete_cycle = clk_ + config_.write_delay;
-            }
-            return_queue_.push_back(it->second);
-            pending_trans_.erase(it);
-        }
-
-        channel_state_.IssueCommand(cmd, clk_);
-
-        if (config_.enable_hbm_dual_cmd) {  // TODO - Current implementation
-                                            // doesn't do dual command issue
-                                            // during refresh
-            auto second_cmd = cmd_queue_.GetCommandToIssue();
-            if (second_cmd.IsValid()) {
-                if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {
-                    channel_state_.IssueCommand(second_cmd, clk_);
-                    stats_.hbm_dual_command_issue_cycles++;
+    if (!command_issued){
+        auto cmd = cmd_queue_.GetCommandToIssue();
+        if (cmd.IsValid()) {
+            // if read/write, update pending queue and return queue
+            if (cmd.IsReadWrite()) {
+                auto it = pending_trans_.find(cmd.id);
+                if (cmd.IsRead()) {
+                    it->second.complete_cycle = clk_ + config_.read_delay;
+                } else {
+                    it->second.complete_cycle = clk_ + config_.write_delay;
                 }
-                if (!cmd.IsReadWrite() && !second_cmd.IsReadWrite()) {
-                    stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
+                return_queue_.push_back(it->second);
+                pending_trans_.erase(it);
+            }
+
+            channel_state_.IssueCommand(cmd, clk_);
+            command_issued = true;
+
+            if (config_.enable_hbm_dual_cmd) {  // TODO - Current implementation
+                                                // doesn't do dual command issue
+                                                // during refresh
+                auto second_cmd = cmd_queue_.GetCommandToIssue();
+                if (second_cmd.IsValid()) {
+                    if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {
+                        channel_state_.IssueCommand(second_cmd, clk_);
+                        stats_.hbm_dual_command_issue_cycles++;
+                    }
+                    if (!cmd.IsReadWrite() && !second_cmd.IsReadWrite()) {
+                        stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
+                    }
                 }
             }
-        }
-        return;
-    } else if (config_.aggressive_precharging_enabled) {
-        // Look for closing open banks if any. (Aggressive precharing)
-        // To which no read/write requests exist in the queues
-        auto pre_cmd = cmd_queue_.AggressivePrecharge();
-        if (pre_cmd.IsValid()) {
-            channel_state_.IssueCommand(pre_cmd, clk_);
+        } else if (config_.aggressive_precharging_enabled) {
+            // Look for closing open banks if any. (Aggressive precharing)
+            // To which no read/write requests exist in the queues
+            auto pre_cmd = cmd_queue_.AggressivePrecharge();
+            if (pre_cmd.IsValid()) {
+                channel_state_.IssueCommand(pre_cmd, clk_);
+                command_issued = true;
+            }
         }
     }
 
@@ -193,6 +199,7 @@ void Controller::ClockTick() {
 
     clk_++;
     cmd_queue_.clk_++;
+    return;
 }
 
 bool Controller::WillAcceptTransaction() {

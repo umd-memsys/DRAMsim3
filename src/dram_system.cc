@@ -208,8 +208,6 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
-    for (auto ctrl : ctrls_) ctrl->ClockTick();
-
     if (clk_ % ptr_config_->epoch_period == 0 && clk_ != 0) {
         // calculate queue usage each epoch
         // otherwise it would be too inefficient
@@ -223,6 +221,8 @@ void JedecDRAMSystem::ClockTick() {
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }
+
+    for (auto ctrl : ctrls_) ctrl->ClockTick();
 
     clk_++;
     ptr_stats_->dramcycles++;
@@ -246,7 +246,6 @@ bool IdealDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void IdealDRAMSystem::ClockTick() {
-    clk_++;
     ptr_stats_->dramcycles++;
     for (auto trans_it = infinite_buffer_q_.begin();
          trans_it != infinite_buffer_q_.end();) {
@@ -270,6 +269,7 @@ void IdealDRAMSystem::ClockTick() {
         PrintIntermediateStats();
         ptr_stats_->UpdateEpoch(clk_);
     }
+    clk_++;
     return;
 }
 
