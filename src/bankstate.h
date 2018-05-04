@@ -1,7 +1,6 @@
 #ifndef __BANKSTATE_H
 #define __BANKSTATE_H
 
-#include <list>
 #include <utility>
 #include <vector>
 #include "common.h"
@@ -15,7 +14,7 @@ class BankState {
 
     // Get the command that needs to executed first to execute the comand of
     // interest given the state of the bank
-    CommandType GetRequiredCommandType(const Command& cmd);
+    CommandType GetRequiredCommandType(const Command& cmd) const;
 
     // Update the state of the bank resulting after the execution of the command
     void UpdateState(const Command& cmd);

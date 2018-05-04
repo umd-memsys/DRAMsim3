@@ -27,10 +27,10 @@ class MemorySystem {
     int GetBusBits() const;
     int GetBurstLength() const;
     int GetQueueSize() const;
-    bool IsInsertable() const;
     void PrintStats() const;
 
-    bool InsertRequest(bool is_write, uint64_t addr);
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
+    bool AddTransaction(uint64_t hex_addr, bool is_write);
 
    private:
     Config *config_;

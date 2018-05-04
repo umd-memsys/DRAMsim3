@@ -32,7 +32,9 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 
     queues_.reserve(num_queues);
     for (int i = 0; i < num_queues; i++) {
-        queues_.push_back(std::list<Command>());
+        auto cmd_queue = std::vector<Command>();
+        cmd_queue.reserve(config_.cmd_queue_size);
+        queues_.push_back(cmd_queue);
     }
 }
 
@@ -47,7 +49,7 @@ Command CommandQueue::GetCommandToIssue() {
     return Command();
 }
 
-Command CommandQueue::GetCommandToIssueFromQueue(std::list<Command>& queue) {
+Command CommandQueue::GetCommandToIssueFromQueue(std::vector<Command>& queue) {
     // Prioritize row hits while honoring read, write dependencies
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         if (!channel_state_.IsRefreshWaiting(
@@ -199,13 +201,13 @@ int CommandQueue::GetQueueIndex(int rank, int bankgroup, int bank) {
     }
 }
 
-std::list<Command>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
+std::vector<Command>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
     int index = GetQueueIndex(rank, bankgroup, bank);
     return queues_[index];
 }
 
-void CommandQueue::IssueCommand(std::list<Command>& queue,
-                                std::list<Command>::iterator cmd_it) {
+void CommandQueue::IssueCommand(std::vector<Command>& queue,
+                                std::vector<Command>::iterator cmd_it) {
     // Update rank queues emptyness
     if (queue.empty() && !rank_queues_empty[cmd_it->Rank()]) {
         if (queue_structure_ == QueueStructure::PER_RANK) {

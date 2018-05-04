@@ -48,7 +48,7 @@ void Refresh::InsertRefresh() {
                         addr.channel = channel_id_;
                         addr.rank = i;
                         refresh_q_.push_back(
-                            new Command(CommandType::REFRESH, addr, -1));
+                            Command(CommandType::REFRESH, addr, -1));
                     }
                 }
             }
@@ -61,7 +61,7 @@ void Refresh::InsertRefresh() {
                     addr.channel = channel_id_;
                     addr.rank = next_rank_;
                     refresh_q_.push_back(
-                        new Command(CommandType::REFRESH, addr, -1));
+                        Command(CommandType::REFRESH, addr, -1));
                 }
                 IterateNext();
             }
@@ -80,7 +80,7 @@ void Refresh::InsertRefresh() {
                             addr.bankgroup = j;
                             addr.bank = k;
                             refresh_q_.push_back(
-                                new Command(CommandType::REFRESH_BANK, addr, -1));
+                                Command(CommandType::REFRESH_BANK, addr, -1));
                         }
                     }
                 }
@@ -99,7 +99,7 @@ void Refresh::InsertRefresh() {
                     addr.bankgroup = next_bankgroup_;
                     addr.bank = next_bank_;
                     refresh_q_.push_back(
-                        new Command(CommandType::REFRESH_BANK, addr, -1));
+                        Command(CommandType::REFRESH_BANK, addr, -1));
                 }
                 IterateNext();
             }
@@ -111,31 +111,30 @@ void Refresh::InsertRefresh() {
 }
 
 Command Refresh::GetRefreshOrAssociatedCommand(
-    std::list<Command *>::iterator refresh_itr) {
+    std::vector<Command>::iterator refresh_itr) {
     auto refresh_req = *refresh_itr;
     // TODO - Strict round robin search of queues?
-    if (refresh_req->cmd_type == CommandType::REFRESH) {
+    if (refresh_req.cmd_type == CommandType::REFRESH) {
         for (auto k = 0; k < config_.banks_per_group; k++) {
             for (auto j = 0; j < config_.bankgroups; j++) {
-                if (ReadWritesToFinish(refresh_req->Rank(), j, k)) {
-                    return GetReadWritesToOpenRow(refresh_req->Rank(), j, k);
+                if (ReadWritesToFinish(refresh_req.Rank(), j, k)) {
+                    return GetReadWritesToOpenRow(refresh_req.Rank(), j, k);
                 }
             }
         }
-    } else if (refresh_req->cmd_type == CommandType::REFRESH_BANK) {
-        if (ReadWritesToFinish(refresh_req->Rank(), refresh_req->Bankgroup(),
-                               refresh_req->Bank())) {
-            return GetReadWritesToOpenRow(refresh_req->Rank(),
-                                          refresh_req->Bankgroup(),
-                                          refresh_req->Bank());
+    } else if (refresh_req.cmd_type == CommandType::REFRESH_BANK) {
+        if (ReadWritesToFinish(refresh_req.Rank(), refresh_req.Bankgroup(),
+                               refresh_req.Bank())) {
+            return GetReadWritesToOpenRow(refresh_req.Rank(),
+                                          refresh_req.Bankgroup(),
+                                          refresh_req.Bank());
         }
     }
 
-    auto cmd = channel_state_.GetRequiredCommand(*refresh_req);
+    auto cmd = channel_state_.GetRequiredCommand(refresh_req);
     if (channel_state_.IsReady(cmd, clk_)) {
         if (cmd.IsRefresh()) {
             // Sought of actually issuing the refresh command
-            delete (*refresh_itr);
             refresh_q_.erase(refresh_itr);
         }
         return cmd;

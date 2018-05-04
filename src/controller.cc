@@ -28,11 +28,11 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
       stats_(stats),
       cmd_id_(0),
+      max_cmd_id_(config_.cmd_queue_size * config_.banks * 2),
       scheduling_policy_(config.scheduling_policy == "CLOSE_PAGE"
                              ? SchedulingPolicy::CLOSE_PAGE
                              : SchedulingPolicy::OPEN_PAGE) {
-    transaction_q_.reserve(config_.trans_queue_size);
-    bank_dist_ = std::vector<int>(config_.banks, 0);
+    transaction_queue_.reserve(config_.trans_queue_size);
 }
 
 void Controller::ClockTick() {
@@ -96,8 +96,7 @@ void Controller::ClockTick() {
                              refresh_req_iter != refresh_.refresh_q_.end();
                              refresh_req_iter++) {
                             auto refresh_req = *refresh_req_iter;
-                            if (refresh_req->Rank() == cmd.Rank()) {
-                                delete (refresh_req);
+                            if (refresh_req.Rank() == cmd.Rank()) {
                                 refresh_.refresh_q_.erase(refresh_req_iter);
                             }
                         }
@@ -114,7 +113,7 @@ void Controller::ClockTick() {
         auto refresh_itr = refresh_.refresh_q_.begin();
         if (channel_state_.need_to_update_refresh_waiting_status_) {
             channel_state_.need_to_update_refresh_waiting_status_ = false;
-            channel_state_.UpdateRefreshWaitingStatus((**refresh_itr), true);
+            channel_state_.UpdateRefreshWaitingStatus((*refresh_itr), true);
         }
         auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
         if (cmd.IsValid() && (!command_issued)) {
@@ -128,19 +127,19 @@ void Controller::ClockTick() {
         }
     }
 
-    if (!command_issued){
+    if (!command_issued) {
         auto cmd = cmd_queue_.GetCommandToIssue();
         if (cmd.IsValid()) {
             // if read/write, update pending queue and return queue
             if (cmd.IsReadWrite()) {
-                auto it = pending_trans_.find(cmd.id);
+                auto it = pending_queue_.find(cmd.id);
                 if (cmd.IsRead()) {
                     it->second.complete_cycle = clk_ + config_.read_delay;
                 } else {
                     it->second.complete_cycle = clk_ + config_.write_delay;
                 }
                 return_queue_.push_back(it->second);
-                pending_trans_.erase(it);
+                pending_queue_.erase(it);
             }
 
             channel_state_.IssueCommand(cmd, clk_);
@@ -173,9 +172,10 @@ void Controller::ClockTick() {
 
     // look ahead this amount of transactions to put in cmd queue
     // considering hardware cost to implement this... it won't be a large number
-    const int max_lookup_depth = 8;
+    const int max_lookup_depth = 4;
     int lookup_depth = 0;
-    for (auto it = transaction_q_.begin(); it != transaction_q_.end();) {
+    for (auto it = transaction_queue_.begin();
+         it != transaction_queue_.end();) {
         if (lookup_depth >= max_lookup_depth) {
             break;  // stop wasting time
         }
@@ -184,14 +184,11 @@ void Controller::ClockTick() {
         if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
                                          cmd.Bank())) {
             cmd_queue_.AddCommand(cmd);
-            pending_trans_.insert(std::make_pair(cmd_id_, *it));
-            it = transaction_q_.erase(it);
-            // reset cmd_id_ to avoid overflow, there will not be 32k cmds
-            // in fly so we should be fine
+            pending_queue_.insert(std::make_pair(cmd_id_, *it));
+            it = transaction_queue_.erase(it);
+            // Reset cmd_id
             cmd_id_++;
-            if (cmd_id_ == 32768) {
-                cmd_id_ = 0;
-            }
+            cmd_id_ = cmd_id_ % max_cmd_id_;
             break;  // only allow one transaction scheduled per cycle
         } else {
             ++it;
@@ -204,13 +201,13 @@ void Controller::ClockTick() {
 }
 
 bool Controller::WillAcceptTransaction() {
-    return transaction_q_.size() < transaction_q_.capacity();
+    return transaction_queue_.size() < transaction_queue_.capacity();
 }
 
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
-    transaction_q_.push_back(trans);
-    return transaction_q_.size() <= transaction_q_.capacity();
+    transaction_queue_.push_back(trans);
+    return transaction_queue_.size() <= transaction_queue_.capacity();
 }
 
 Command Controller::TransToCommand(const Transaction &trans) {

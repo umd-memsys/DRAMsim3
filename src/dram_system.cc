@@ -2,8 +2,6 @@
 
 #include <assert.h>
 
-
-
 #ifdef GENERATE_TRACE
 #include "../ext/fmt/src/format.h"
 #endif  // GENERATE_TRACE
@@ -15,9 +13,9 @@ namespace dramsim3 {
 int BaseDRAMSystem::num_mems_ = 0;
 
 BaseDRAMSystem::BaseDRAMSystem(const std::string &config_file,
-                                   const std::string &output_dir,
-                                   std::function<void(uint64_t)> read_callback,
-                                   std::function<void(uint64_t)> write_callback)
+                               const std::string &output_dir,
+                               std::function<void(uint64_t)> read_callback,
+                               std::function<void(uint64_t)> write_callback)
     : read_callback_(read_callback),
       write_callback_(write_callback),
       clk_(0),
@@ -84,12 +82,11 @@ BaseDRAMSystem::~BaseDRAMSystem() {
 }
 
 void BaseDRAMSystem::RegisterCallbacks(
-        std::function<void(uint64_t)> read_callback,
-        std::function<void(uint64_t)> write_callback) {
+    std::function<void(uint64_t)> read_callback,
+    std::function<void(uint64_t)> write_callback) {
     read_callback_ = read_callback;
     write_callback_ = write_callback;
 }
-
 
 void BaseDRAMSystem::PrintIntermediateStats() {
     if (ptr_config_->output_level >= 1) {
@@ -145,9 +142,9 @@ void BaseDRAMSystem::PrintStats() {
 }
 
 JedecDRAMSystem::JedecDRAMSystem(const std::string &config_file,
-                           const std::string &output_dir,
-                           std::function<void(uint64_t)> read_callback,
-                           std::function<void(uint64_t)> write_callback)
+                                 const std::string &output_dir,
+                                 std::function<void(uint64_t)> read_callback,
+                                 std::function<void(uint64_t)> write_callback)
     : BaseDRAMSystem(config_file, output_dir, read_callback, write_callback) {
     if (ptr_config_->IsHMC()) {
         std::cerr << "Initialized a memory system with an HMC config file!"
@@ -175,7 +172,8 @@ JedecDRAMSystem::~JedecDRAMSystem() {
     }
 }
 
-bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr, bool is_write) {
+bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr,
+                                            bool is_write) const {
     int channel = MapChannel(hex_addr);
     return ctrls_[channel]->WillAcceptTransaction();
 }
@@ -229,10 +227,10 @@ void JedecDRAMSystem::ClockTick() {
     return;
 }
 
-IdealDRAMSystem::IdealDRAMSystem(
-    const std::string &config_file, const std::string &output_dir,
-    std::function<void(uint64_t)> read_callback,
-    std::function<void(uint64_t)> write_callback)
+IdealDRAMSystem::IdealDRAMSystem(const std::string &config_file,
+                                 const std::string &output_dir,
+                                 std::function<void(uint64_t)> read_callback,
+                                 std::function<void(uint64_t)> write_callback)
     : BaseDRAMSystem(config_file, output_dir, read_callback, write_callback),
       latency_(ptr_config_->ideal_memory_latency) {}
 
@@ -240,7 +238,7 @@ IdealDRAMSystem::~IdealDRAMSystem() {}
 
 bool IdealDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     auto trans = Transaction(hex_addr, is_write);
-    trans.added_cycle = clk_; 
+    trans.added_cycle = clk_;
     infinite_buffer_q_.push_back(trans);
     return true;
 }
@@ -260,7 +258,7 @@ void IdealDRAMSystem::ClockTick() {
             ptr_stats_->access_latency.AddValue(clk_ - trans_it->added_cycle);
             trans_it = infinite_buffer_q_.erase(trans_it++);
         }
-        if (trans_it != infinite_buffer_q_.end()){
+        if (trans_it != infinite_buffer_q_.end()) {
             ++trans_it;
         }
     }
@@ -274,5 +272,3 @@ void IdealDRAMSystem::ClockTick() {
 }
 
 }  // namespace dramsim3
-
-

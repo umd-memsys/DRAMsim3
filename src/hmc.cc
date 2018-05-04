@@ -351,7 +351,8 @@ inline void HMCMemorySystem::IterateNextLink() {
     return;
 }
 
-bool HMCMemorySystem::WillAcceptTransaction(uint64_t hex_addr, bool is_write) {
+bool HMCMemorySystem::WillAcceptTransaction(uint64_t hex_addr,
+                                            bool is_write) const {
     bool insertable = false;
     for (auto link_queue = link_req_queues_.begin();
          link_queue != link_req_queues_.end(); link_queue++) {
@@ -672,7 +673,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
             // only 1 request is needed, if the request length is shorter than
             // block_size it will be chopped and therefore results in a waste of
             // bandwidth
-            trans =  Transaction(req->mem_operand, false);
+            trans = Transaction(req->mem_operand, false);
             vaults_[req->vault]->AddTransaction(trans);
             break;
         case HMCReqType::WR0:

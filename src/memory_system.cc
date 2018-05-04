@@ -51,12 +51,12 @@ void MemorySystem::RegisterCallbacks(
     dram_system_->RegisterCallbacks(read_callback, write_callback);
 }
 
-bool MemorySystem::IsInsertable() const {
-    return true;
+bool MemorySystem::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
+    return dram_system_->WillAcceptTransaction(hex_addr, is_write);
 }
 
-bool MemorySystem::InsertRequest(bool is_write, uint64_t addr) {
-    return dram_system_->AddTransaction(addr, is_write);
+bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
+    return dram_system_->AddTransaction(hex_addr, is_write);
 }
 
 void MemorySystem::PrintStats() const {

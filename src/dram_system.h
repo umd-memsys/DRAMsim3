@@ -14,7 +14,7 @@
 #include "thermal.h"
 #endif  // THERMAL
 
-namespace dramsim3{
+namespace dramsim3 {
 
 class BaseDRAMSystem {
    public:
@@ -23,10 +23,10 @@ class BaseDRAMSystem {
                    std::function<void(uint64_t)> read_callback,
                    std::function<void(uint64_t)> write_callback);
     virtual ~BaseDRAMSystem();
-    void RegisterCallbacks(
-        std::function<void(uint64_t)> read_callback,
-        std::function<void(uint64_t)> write_callback);
-    virtual bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) = 0;
+    void RegisterCallbacks(std::function<void(uint64_t)> read_callback,
+                           std::function<void(uint64_t)> write_callback);
+    virtual bool WillAcceptTransaction(uint64_t hex_addr,
+                                       bool is_write) const = 0;
     virtual bool AddTransaction(uint64_t hex_addr, bool is_write) = 0;
     virtual void ClockTick() = 0;
     virtual void PrintIntermediateStats();
@@ -34,8 +34,9 @@ class BaseDRAMSystem {
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
     std::vector<Controller *> ctrls_;
     Config *ptr_config_;
-    static int num_mems_;  // a lot of CPU sims create a JedecDRAMSystem for each
-                           // channel, oh well..
+    static int
+        num_mems_;  // a lot of CPU sims create a JedecDRAMSystem for each
+                    // channel, oh well..
 
    protected:
     uint64_t clk_;
@@ -62,11 +63,12 @@ class BaseDRAMSystem {
 // hmmm not sure this is the best naming...
 class JedecDRAMSystem : public BaseDRAMSystem {
    public:
-    JedecDRAMSystem(const std::string &config_file, const std::string &output_dir,
-                 std::function<void(uint64_t)> read_callback,
-                 std::function<void(uint64_t)> write_callback);
+    JedecDRAMSystem(const std::string &config_file,
+                    const std::string &output_dir,
+                    std::function<void(uint64_t)> read_callback,
+                    std::function<void(uint64_t)> write_callback);
     ~JedecDRAMSystem();
-    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) override;
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const override;
     bool AddTransaction(uint64_t hex_addr, bool is_write) override;
     void ClockTick() override;
 };
@@ -77,11 +79,12 @@ class JedecDRAMSystem : public BaseDRAMSystem {
 class IdealDRAMSystem : public BaseDRAMSystem {
    public:
     IdealDRAMSystem(const std::string &config_file,
-                      const std::string &output_dir,
-                      std::function<void(uint64_t)> read_callback,
-                      std::function<void(uint64_t)> write_callback);
+                    const std::string &output_dir,
+                    std::function<void(uint64_t)> read_callback,
+                    std::function<void(uint64_t)> write_callback);
     ~IdealDRAMSystem();
-    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) override {
+    bool WillAcceptTransaction(uint64_t hex_addr,
+                               bool is_write) const override {
         return true;
     };
     bool AddTransaction(uint64_t hex_addr, bool is_write) override;
@@ -94,4 +97,3 @@ class IdealDRAMSystem : public BaseDRAMSystem {
 
 }  // namespace dramsim3
 #endif  // __DRAM_SYSTEM_H
-

@@ -2,7 +2,6 @@
 #define __CONTROLLER_H
 
 #include <functional>
-#include <list>
 #include <map>
 #include <vector>
 #include "channel_state.h"
@@ -40,18 +39,26 @@ class Controller {
     uint64_t clk_;
     const Config &config_;
     ChannelState channel_state_;
-    std::multimap<int, Transaction> pending_trans_;
-    std::vector<Transaction> transaction_q_;
-    std::vector<Transaction> return_queue_;
     CommandQueue cmd_queue_;
     Refresh refresh_;
     Statistics &stats_;
 
    private:
+    // queue that takes transactions from CPU side
+    std::vector<Transaction> transaction_queue_;
+
+    // transactions that are issued to command queue, use map for convenience
+    std::multimap<int, Transaction> pending_queue_;
+    
+    // completed transactions
+    std::vector<Transaction> return_queue_;
+
     // An ID that is used to keep track of commands in fly
     int cmd_id_;
+
+    // the max number of cmds in fly, x2 to be safe
+    const int max_cmd_id_;
     SchedulingPolicy scheduling_policy_;
-    std::vector<int> bank_dist_;
     Command TransToCommand(const Transaction &trans);
 };
 }  // namespace dramsim3

@@ -22,7 +22,7 @@ BankState::BankState(Statistics& stats)
     cmd_timing_[static_cast<int>(CommandType::SELF_REFRESH_EXIT)] = 0;
 }
 
-CommandType BankState::GetRequiredCommandType(const Command& cmd) {
+CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
     switch (cmd.cmd_type) {
         case CommandType::READ:
             switch (state_) {
