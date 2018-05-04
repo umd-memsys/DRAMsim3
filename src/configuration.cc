@@ -403,13 +403,13 @@ void Config::SetAddressMapping() {
 
 #ifdef DEBUG_OUTPUT
     std::cout << "Address bits:" << std::endl;
-    std::cout << setw(10) << "Channel " << channel_width << std::endl;
-    std::cout << setw(10) << "Rank " << rank_width << std::endl;
-    std::cout << setw(10) << "Bankgroup " << bankgroup_width << std::endl;
-    std::cout << setw(10) << "Bank " << bank_width << std::endl;
-    std::cout << setw(10) << "Row " << row_width << std::endl;
-    std::cout << setw(10) << "Column " << column_width << std::endl;
-#endif
+    std::cout << std::setw(10) << "Channel " << channel_width << std::endl;
+    std::cout << std::setw(10) << "Rank " << rank_width << std::endl;
+    std::cout << std::setw(10) << "Bankgroup " << bankgroup_width << std::endl;
+    std::cout << std::setw(10) << "Bank " << bank_width << std::endl;
+    std::cout << std::setw(10) << "Row " << row_width << std::endl;
+    std::cout << std::setw(10) << "Column " << column_width << std::endl;
+#endif  // DEBUG_OUTPUT
 
     int field_pos[] = {0, 0, 0, 0, 0, 0};
     int field_widths[] = {0, 0, 0, 0, 0, 0};

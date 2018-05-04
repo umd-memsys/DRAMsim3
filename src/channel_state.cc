@@ -290,10 +290,10 @@ void ChannelState::UpdateSameRankTiming(
 
 void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
 #ifdef DEBUG_OUTPUT
-    std::cout << left << setw(8) << clk << " " << cmd << std::endl;
+    std::cout << std::left << std::setw(8) << clk << " " << cmd << std::endl;
 #endif  // DEBUG_OUTPUT
 #ifdef GENERATE_TRACE
-    cmd_trace_ << left << setw(18) << clk << " " << cmd << endl;
+    cmd_trace_ << std::left << std::setw(18) << clk << " " << cmd << endl;
 #endif  // GENERATE_TRACE
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
