@@ -337,7 +337,7 @@ void HMCMemorySystem::SetClockRatio() {
 #ifdef DEBUG_OUTPUT
     std::cout << "HMC Logic clock speed " << dram_clk_ticks_ << std::endl;
     std::cout << "HMC DRAM clock speed " << logic_clk_ticks_ << std::endl;
-#endif
+#endif  // DEBUG_OUTPUT
 
     return;
 }
@@ -351,7 +351,8 @@ inline void HMCMemorySystem::IterateNextLink() {
     return;
 }
 
-bool HMCMemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) {
+bool HMCMemorySystem::WillAcceptTransaction(uint64_t hex_addr,
+                                            bool is_write) const {
     bool insertable = false;
     for (auto link_queue = link_req_queues_.begin();
          link_queue != link_req_queues_.end(); link_queue++) {
@@ -363,7 +364,7 @@ bool HMCMemorySystem::IsReqInsertable(uint64_t hex_addr, bool is_write) {
     return insertable;
 }
 
-bool HMCMemorySystem::InsertReq(uint64_t hex_addr, bool is_write) {
+bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     // to be compatible with other protocol we have this interface
     // when using this intreface the size of each transaction will be block_size
     HMCReqType req_type;
@@ -657,8 +658,7 @@ std::vector<int> HMCMemorySystem::BuildAgeQueue(std::vector<int> &age_counter) {
 }
 
 void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
-    Request *dram_req;
-    int64_t dummy_id = 0;  // TODO use a dummy id for Request constructor...
+    Transaction trans;
     switch (req->type) {
         case HMCReqType::RD0:
         case HMCReqType::RD16:
@@ -673,9 +673,8 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
             // only 1 request is needed, if the request length is shorter than
             // block_size it will be chopped and therefore results in a waste of
             // bandwidth
-            dram_req = new Request(CommandType::READ_PRECHARGE,
-                                   req->mem_operand, clk_, dummy_id);
-            vaults_[req->vault]->InsertReq(dram_req);
+            trans = Transaction(req->mem_operand, false);
+            vaults_[req->vault]->AddTransaction(trans);
             break;
         case HMCReqType::WR0:
         case HMCReqType::WR16:
@@ -696,9 +695,8 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::P_WR128:
         case HMCReqType::WR256:
         case HMCReqType::P_WR256:
-            dram_req = new Request(CommandType::WRITE_PRECHARGE,
-                                   req->mem_operand, clk_, dummy_id);
-            vaults_[req->vault]->InsertReq(dram_req);
+            trans = Transaction(req->mem_operand, true);
+            vaults_[req->vault]->AddTransaction(trans);
             break;
         // TODO real question here is, if an atomic operantion
         // generate a read and a write request,

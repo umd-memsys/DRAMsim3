@@ -15,7 +15,7 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
       next_bankgroup_(0),
       next_bank_(0),
       next_queue_index_(0),
-      queue_size_(static_cast<size_t>(config_.queue_size)),
+      queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
       channel_id_(channel_id) {
     int num_queues = 0;
     if (config_.queue_structure == "PER_BANK") {
@@ -32,7 +32,9 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 
     queues_.reserve(num_queues);
     for (int i = 0; i < num_queues; i++) {
-        queues_.push_back(std::list<Request*>());
+        auto cmd_queue = std::vector<Command>();
+        cmd_queue.reserve(config_.cmd_queue_size);
+        queues_.push_back(cmd_queue);
     }
 }
 
@@ -47,38 +49,32 @@ Command CommandQueue::GetCommandToIssue() {
     return Command();
 }
 
-Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
+Command CommandQueue::GetCommandToIssueFromQueue(std::vector<Command>& queue) {
     // Prioritize row hits while honoring read, write dependencies
-    for (auto req_itr = queue.begin(); req_itr != queue.end(); req_itr++) {
-        auto req = *req_itr;
-        if (!channel_state_.IsRefreshWaiting(req->Rank(), req->Bankgroup(),
-                                             req->Bank())) {
-            Command cmd = channel_state_.GetRequiredCommand(req->cmd_);
+    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
+        if (!channel_state_.IsRefreshWaiting(
+                cmd_it->Rank(), cmd_it->Bankgroup(), cmd_it->Bank())) {
+            Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
             // TODO - Can specizalize for PER_BANK queues (simulator speed)
             if (channel_state_.IsReady(cmd, clk_)) {
                 if (cmd.IsReadWrite()) {
                     // Check for read/write dependency check. Necessary only for
                     // unified queues
                     bool dependency = false;
-                    for (auto dep_itr = queue.begin(); dep_itr != req_itr;
+                    for (auto dep_itr = queue.begin(); dep_itr != cmd_it;
                          dep_itr++) {
-                        auto dep = *dep_itr;
-                        if (dep->Row() == cmd.Row()) {  // Just check the
-                                                        // address to be more
-                                                        // generic
-                            // ASSERT the cmd are of different types. If one is
-                            // read, other write. Vice versa.
+                        if (dep_itr->Row() == cmd.Row()) {
                             dependency = true;
                             break;
                         }
                     }
                     if (!dependency) {
-                        IssueRequest(queue, req_itr);
+                        queue.erase(cmd_it);
                         return cmd;
                     }
                 } else if (cmd.cmd_type == CommandType::PRECHARGE) {
                     // Attempt to issue a precharge only if
-                    // 1. There are no prior requests to the same bank in the
+                    // 0. There are no prior requests to the same bank in the
                     // queue (and)
                     // 1. There are no pending row hits to the open row in the
                     // bank (or)
@@ -86,29 +82,25 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
                     // allowed cap for row hits has been exceeded
 
                     bool prior_requests_to_bank_exist = false;
-                    for (auto prior_itr = queue.begin(); prior_itr != req_itr;
+                    for (auto prior_itr = queue.begin(); prior_itr != cmd_it;
                          prior_itr++) {
-                        auto prior_req = *prior_itr;
-                        if (prior_req->Bank() == cmd.Bank() &&
-                            prior_req->Bankgroup() == cmd.Bankgroup() &&
-                            prior_req->Rank() == cmd.Rank()) {
-                            prior_requests_to_bank_exist =
-                                true;  // Entire address upto bank matches
+                        if (prior_itr->Bank() == cmd.Bank() &&
+                            prior_itr->Bankgroup() == cmd.Bankgroup() &&
+                            prior_itr->Rank() == cmd.Rank()) {
+                            prior_requests_to_bank_exist = true;
                             break;
                         }
                     }
                     bool pending_row_hits_exist = false;
                     auto open_row = channel_state_.OpenRow(
                         cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
-                    for (auto pending_itr = req_itr; pending_itr != queue.end();
-                         pending_itr++) {  // TODO - req_itr + 1?
-                        auto pending_req = *pending_itr;
-                        if (pending_req->Row() == open_row &&
-                            pending_req->Bank() == cmd.Bank() &&
-                            pending_req->Bankgroup() == cmd.Bankgroup() &&
-                            pending_req->Rank() == cmd.Rank()) {
-                            pending_row_hits_exist =
-                                true;  // Entire address upto row matches
+                    for (auto pending_itr = cmd_it; pending_itr != queue.end();
+                         pending_itr++) { 
+                        if (pending_itr->Row() == open_row &&
+                            pending_itr->Bank() == cmd.Bank() &&
+                            pending_itr->Bankgroup() == cmd.Bankgroup() &&
+                            pending_itr->Rank() == cmd.Rank()) {
+                            pending_row_hits_exist = true;
                             break;
                         }
                     }
@@ -120,8 +112,9 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
                         stats_.numb_ondemand_precharges++;
                         return cmd;
                     }
-                } else
+                } else {
                     return cmd;
+                }
             }
         }
     }
@@ -131,20 +124,20 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::list<Request*>& queue) {
 Command CommandQueue::AggressivePrecharge() {
     // TODO - Why such round robin order?
     for (auto i = 0; i < config_.ranks; i++) {
-        for (auto k = 0; k < config_.banks_per_group; k++) {
-            for (auto j = 0; j < config_.bankgroups; j++) {
+        for (auto j = 0; j < config_.bankgroups; j++) {
+            for (auto k = 0; k < config_.banks_per_group; k++) {
                 if (channel_state_.IsRowOpen(i, j, k)) {
                     auto cmd = Command(CommandType::PRECHARGE,
-                                       Address(-1, i, j, k, -1, -1));
+                                       Address(-1, i, j, k, -1, -1), -1);
                     if (channel_state_.IsReady(cmd, clk_)) {
                         bool pending_row_hits_exist = false;
                         auto open_row = channel_state_.OpenRow(i, j, k);
                         auto& queue = GetQueue(i, j, k);
-                        for (auto pending_req : queue) {
-                            if (pending_req->Row() == open_row &&
-                                pending_req->Bank() == k &&
-                                pending_req->Bankgroup() == j &&
-                                pending_req->Rank() == i) {
+                        for (auto const &pending_req : queue) {
+                            if (pending_req.Row() == open_row &&
+                                pending_req.Bank() == k &&
+                                pending_req.Bankgroup() == j &&
+                                pending_req.Rank() == i) {
                                 pending_row_hits_exist =
                                     true;  // Entire address upto row matches
                                 break;
@@ -154,7 +147,7 @@ Command CommandQueue::AggressivePrecharge() {
                             stats_.numb_aggressive_precharges++;
                             return Command(
                                 CommandType::PRECHARGE,
-                                Address(channel_id_, i, j, k, -1, -1));
+                                Address(channel_id_, i, j, k, -1, -1), -1);
                         }
                     }
                 }
@@ -164,20 +157,16 @@ Command CommandQueue::AggressivePrecharge() {
     return Command();
 }
 
-bool CommandQueue::IsReqInsertable(Request* req) {
-    std::list<Request*>& queue =
-        GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
+bool CommandQueue::WillAcceptCommand(int rank, int bankgroup, int bank) {
+    const auto& queue = GetQueue(rank, bankgroup, bank);
     return queue.size() < queue_size_;
 }
 
-bool CommandQueue::InsertReq(Request* req) {
-    std::list<Request*>& queue =
-        GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
+bool CommandQueue::AddCommand(Command cmd) {
+    auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
     if (queue.size() < queue_size_) {
-        queue.push_back(req);
-        if (rank_queues_empty[req->Rank()]) {
-            rank_queues_empty[req->Rank()] = false;
-        }
+        queue.push_back(cmd);
+        rank_queues_empty[cmd.Rank()] = false;
         return true;
     } else {
         return false;
@@ -212,39 +201,24 @@ int CommandQueue::GetQueueIndex(int rank, int bankgroup, int bank) {
     }
 }
 
-std::list<Request*>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
+std::vector<Command>& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
     int index = GetQueueIndex(rank, bankgroup, bank);
     return queues_[index];
 }
 
-void CommandQueue::IssueRequest(std::list<Request*>& queue,
-                                std::list<Request*>::iterator req_itr) {
-    // Put the requests into a new buffer. They will be returned to the CPU
-    // after the read/write latency
-    auto req = *req_itr;
-    if (req->cmd_.IsRead()) {
-        req->exit_time_ = clk_ + config_.read_delay;
-        stats_.numb_read_reqs_issued++;
-    } else if (req->cmd_.IsWrite()) {
-        req->exit_time_ = clk_ + config_.write_delay;
-        stats_.numb_write_reqs_issued++;
-    } else {
-        std::cerr << "Unknown request type\n" << std::endl;
-        AbruptExit(__FILE__, __LINE__);
-    }
-    issued_req_.splice(issued_req_.end(), queue, req_itr);
-
+void CommandQueue::IssueCommand(std::vector<Command>& queue,
+                                std::vector<Command>::iterator cmd_it) {
     // Update rank queues emptyness
-    if (queue.empty() && !rank_queues_empty[req->Rank()]) {
+    if (queue.empty() && !rank_queues_empty[cmd_it->Rank()]) {
         if (queue_structure_ == QueueStructure::PER_RANK) {
-            rank_queues_empty[req->Rank()] = true;
-            rank_queues_empty_from_time_[req->Rank()] = clk_;
+            rank_queues_empty[cmd_it->Rank()] = true;
+            rank_queues_empty_from_time_[cmd_it->Rank()] = clk_;
         } else if (queue_structure_ == QueueStructure::PER_BANK) {
             auto empty = true;
             for (auto j = 0; j < config_.bankgroups; j++) {
                 for (auto k = 0; k < config_.banks_per_group; k++) {
                     auto& bank_queue =
-                        GetQueue(req->Rank(), req->Bankgroup(), req->Bank());
+                        GetQueue(cmd_it->Rank(),cmd_it->Bankgroup(), cmd_it->Bank());
                     if (!bank_queue.empty()) {
                         empty = false;
                         break;
@@ -253,8 +227,8 @@ void CommandQueue::IssueRequest(std::list<Request*>& queue,
                 if (!empty) break;  // Achieving multi-loop break
             }
             if (empty) {
-                rank_queues_empty[req->Rank()] = true;
-                rank_queues_empty_from_time_[req->Rank()] = clk_;
+                rank_queues_empty[cmd_it->Rank()] = true;
+                rank_queues_empty_from_time_[cmd_it->Rank()] = clk_;
             }
         } else {
             AbruptExit(__FILE__, __LINE__);

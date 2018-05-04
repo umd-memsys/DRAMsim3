@@ -41,6 +41,7 @@ struct Address {
 
 uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos);
 extern std::function<Address(uint64_t)> AddressMapping;
+extern std::function<int(uint64_t)> MapChannel;
 int GetBitInPos(uint64_t bits, int pos);
 // it's 2017 and c++ std::string still lacks a split function, oh well
 std::vector<std::string> StringSplit(const std::string& s, char delim);
@@ -72,8 +73,8 @@ enum class CommandType {
 
 struct Command {
     Command() : cmd_type(CommandType::SIZE) {}
-    Command(CommandType cmd_type, const Address& addr)
-        : cmd_type(cmd_type), addr(addr) {}
+    Command(CommandType cmd_type, const Address& addr, int id)
+        : cmd_type(cmd_type), addr(addr), id(id) {}
 
     bool IsValid() const { return cmd_type != CommandType::SIZE; }
     bool IsRefresh() const {
@@ -91,6 +92,7 @@ struct Command {
     bool IsReadWrite() const { return IsRead() || IsWrite(); }
     CommandType cmd_type;
     Address addr;
+    int id;
 
     int Channel() const { return addr.channel; }
     int Rank() const { return addr.rank; }
@@ -102,38 +104,18 @@ struct Command {
     friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
 
-class Request {
-   public:
-    // For refresh requests
-    Request(CommandType cmd_type, const Address& addr)
-        : cmd_(Command(cmd_type, addr)),
-          hex_addr_(-1),
-          arrival_time_(-1),
-          exit_time_(-1) {}
-    // For read/write requets
-    Request(CommandType cmd_type, uint64_t hex_addr, uint64_t arrival_time,
-            int64_t id)
-        : cmd_(Command(cmd_type, AddressMapping(hex_addr))),
-          hex_addr_(hex_addr),
-          arrival_time_(arrival_time),
-          exit_time_(-1),
-          id_(id) {}
+struct Transaction {
+    Transaction() {}
+    Transaction(uint64_t addr, bool is_write) 
+        : addr(addr), is_write(is_write) {};
+    uint64_t addr;
+    uint64_t added_cycle;
+    uint64_t complete_cycle;
+    bool is_write;
 
-    Command cmd_;
-    uint64_t hex_addr_;
-    uint64_t arrival_time_;
-    uint64_t exit_time_;
-    uint64_t id_;
-
-    int Channel() const { return cmd_.Channel(); }
-    int Rank() const { return cmd_.Rank(); }
-    int Bankgroup() const { return cmd_.Bankgroup(); }
-    int Bank() const { return cmd_.Bank(); }
-    int Row() const { return cmd_.Row(); }
-    int Column() const { return cmd_.Column(); }
-
-    friend std::ostream& operator<<(std::ostream& os, const Request& req);
+    friend std::ostream& operator<<(std::ostream& os, const Transaction& trans);
 };
+
 
 class Access {
    public:

@@ -1,7 +1,6 @@
 #ifndef __REFRESH_H
 #define __REFRESH_H
 
-#include <list>
 #include <vector>
 #include "channel_state.h"
 #include "command_queue.h"
@@ -23,10 +22,10 @@ class Refresh {
     Refresh(const int channel_id, const Config& config,
             const ChannelState& channel_state, CommandQueue& cmd_queue,
             Statistics& stats);
-    std::list<Request*> refresh_q_;  // Queue of refresh commands
+    std::vector<Command> refresh_q_;  // Queue of refresh commands
     void ClockTick();
     Command GetRefreshOrAssociatedCommand(
-        std::list<Request*>::iterator refresh_itr);
+        std::vector<Command>::iterator refresh_itr);
 
    private:
     uint64_t clk_;

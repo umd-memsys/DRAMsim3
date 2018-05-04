@@ -8,6 +8,8 @@
 #include <vector>
 #include "common.h"
 
+#include "../ext/inih/src/INIReader.h"
+
 namespace dramsim3 {
 
 enum class DRAMProtocol {
@@ -110,7 +112,9 @@ class Config {
 
     std::string address_mapping;
     std::string queue_structure;
-    int queue_size;
+    std::string scheduling_policy;
+    int cmd_queue_size;
+    int trans_queue_size;
     std::string refresh_strategy;
     bool enable_self_refresh;
     int idle_cycles_for_self_refresh;
@@ -174,7 +178,10 @@ class Config {
     std::string bank_position_csv;
 
    private:
+    const INIReader &reader;
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
+    int GetInteger(const std::string& sec, const std::string& opt, 
+                   int default_val) const;
     void ProtocolAdjust();
     void CalculateSize();
     void SetAddressMapping();
