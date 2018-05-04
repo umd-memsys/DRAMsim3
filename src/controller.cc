@@ -171,8 +171,9 @@ void Controller::ClockTick() {
         }
     }
 
-    // put command into command queue, only lookup for a certain amount
-    const int max_lookup_depth = 128;
+    // look ahead this amount of transactions to put in cmd queue
+    // considering hardware cost to implement this... it won't be a large number
+    const int max_lookup_depth = 8;
     int lookup_depth = 0;
     for (auto it = transaction_q_.begin(); it != transaction_q_.end();) {
         if (lookup_depth >= max_lookup_depth) {
