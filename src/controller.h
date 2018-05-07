@@ -29,7 +29,7 @@ class Controller {
 #endif  // THERMAL
     ~Controller(){};
     void ClockTick();
-    bool WillAcceptTransaction();
+    bool WillAcceptTransaction() const;
     bool AddTransaction(Transaction trans);
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;

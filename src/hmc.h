@@ -124,7 +124,7 @@ class HMCMemorySystem : public BaseDRAMSystem {
     int logic_time_inc_, dram_time_inc_;
     uint64_t time_lcm_;
      */
-    std::vector<Controller*> vaults_;
+    std::vector<Controller> vaults_;
     std::function<void(uint64_t)> vault_callback_;
 
     void SetClockRatio();

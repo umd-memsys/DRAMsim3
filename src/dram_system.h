@@ -32,7 +32,6 @@ class BaseDRAMSystem {
     virtual void PrintIntermediateStats();
     virtual void PrintStats();
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
-    std::vector<Controller *> ctrls_;
     Config *ptr_config_;
     static int
         num_mems_;  // a lot of CPU sims create a JedecDRAMSystem for each
@@ -71,6 +70,8 @@ class JedecDRAMSystem : public BaseDRAMSystem {
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const override;
     bool AddTransaction(uint64_t hex_addr, bool is_write) override;
     void ClockTick() override;
+   private:
+    std::vector<Controller> ctrls_;
 };
 
 // Model a memorysystem with an infinite bandwidth and a fixed latency (possibly

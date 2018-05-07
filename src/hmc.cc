@@ -267,13 +267,11 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
     vaults_.reserve(ptr_config_->channels);
     for (int i = 0; i < ptr_config_->channels; i++) {
 #ifdef THERMAL
-        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_,
-                                         *ptr_stats_, ptr_thermCal_,
-                                         vault_callback_, vault_callback_));
+        vaults_.emplace_back(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
+                             *ptr_thermCal_, vault_callback_, vault_callback_);
 #else
-        vaults_.push_back(new Controller(i, *ptr_config_, *ptr_timing_,
-                                         *ptr_stats_, vault_callback_,
-                                         vault_callback_));
+        vaults_.emplace_back(i, *ptr_config_, *ptr_timing_, *ptr_stats_, 
+                             vault_callback_, vault_callback_);
 #endif  // THERMAL
     }
     // initialize vaults and crossbar
@@ -533,13 +531,13 @@ void HMCMemorySystem::LogicClockTickPost() {
 }
 
 void HMCMemorySystem::DRAMClockTick() {
-    for (auto vault : vaults_) {
-        vault->ClockTick();
+    for (auto&& vault : vaults_) {
+        vault.ClockTick();
     }
     if (clk_ % ptr_config_->epoch_period == 0 && clk_ != 0) {
         int queue_usage_total = 0;
-        for (auto vault : vaults_) {
-            queue_usage_total += vault->QueueUsage();
+        for (const auto& vault : vaults_) {
+            queue_usage_total += vault.QueueUsage();
         }
         ptr_stats_->queue_usage.epoch_value =
             static_cast<double>(queue_usage_total);
@@ -674,7 +672,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
             // block_size it will be chopped and therefore results in a waste of
             // bandwidth
             trans = Transaction(req->mem_operand, false);
-            vaults_[req->vault]->AddTransaction(trans);
+            vaults_[req->vault].AddTransaction(trans);
             break;
         case HMCReqType::WR0:
         case HMCReqType::WR16:
@@ -696,7 +694,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::WR256:
         case HMCReqType::P_WR256:
             trans = Transaction(req->mem_operand, true);
-            vaults_[req->vault]->AddTransaction(trans);
+            vaults_[req->vault].AddTransaction(trans);
             break;
         // TODO real question here is, if an atomic operantion
         // generate a read and a write request,
@@ -772,11 +770,7 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     return;
 }
 
-HMCMemorySystem::~HMCMemorySystem() {
-    for (auto i = 0; i < ptr_config_->channels; i++) {
-        delete (vaults_[i]);
-    }
-}
+HMCMemorySystem::~HMCMemorySystem() {}
 
 // the following 2 functions for domain crossing...
 uint64_t gcd(uint64_t x, uint64_t y) {

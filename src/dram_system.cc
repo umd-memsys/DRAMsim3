@@ -152,30 +152,24 @@ JedecDRAMSystem::JedecDRAMSystem(const std::string &config_file,
         AbruptExit(__FILE__, __LINE__);
     }
 
-    ctrls_.resize(ptr_config_->channels);
+    ctrls_.reserve(ptr_config_->channels);
     for (auto i = 0; i < ptr_config_->channels; i++) {
-        ctrls_[i] =
 #ifdef THERMAL
-            new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
-                           ptr_thermCal_, read_callback_, write_callback_);
+        ctrls_.emplace_back(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
+                            ptr_thermCal_, read_callback_, write_callback_)
 #else
-            new Controller(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
-                           read_callback_, write_callback_);
+        ctrls_.emplace_back(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
+                         read_callback_, write_callback_);
 #endif  // THERMAL
     }
 }
 
-JedecDRAMSystem::~JedecDRAMSystem() {
-    // std::cout << "come to delete JedecDRAMSystem\n";
-    for (auto i = 0; i < ptr_config_->channels; i++) {
-        delete (ctrls_[i]);
-    }
-}
+JedecDRAMSystem::~JedecDRAMSystem() {}
 
 bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr,
                                             bool is_write) const {
     int channel = MapChannel(hex_addr);
-    return ctrls_[channel]->WillAcceptTransaction();
+    return ctrls_[channel].WillAcceptTransaction();
 }
 
 bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
@@ -187,7 +181,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 #endif
 
     int channel = MapChannel(hex_addr);
-    bool ok = ctrls_[channel]->WillAcceptTransaction();
+    bool ok = ctrls_[channel].WillAcceptTransaction();
 
 #ifdef NO_BACKPRESSURE
     // Some CPU simulators might not model the backpressure because queues are
@@ -198,7 +192,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     assert(ok);
     if (ok) {
         Transaction trans = Transaction(hex_addr, is_write);
-        ctrls_[channel]->AddTransaction(trans);
+        ctrls_[channel].AddTransaction(trans);
         ptr_stats_->interarrival_latency.AddValue(clk_ - last_req_clk_);
         last_req_clk_ = clk_;
     }
@@ -210,8 +204,8 @@ void JedecDRAMSystem::ClockTick() {
         // calculate queue usage each epoch
         // otherwise it would be too inefficient
         int queue_usage_total = 0;
-        for (auto ctrl : ctrls_) {
-            queue_usage_total += ctrl->QueueUsage();
+        for (const auto& ctrl : ctrls_) {
+            queue_usage_total += ctrl.QueueUsage();
         }
         ptr_stats_->queue_usage.epoch_value =
             static_cast<double>(queue_usage_total);
@@ -220,7 +214,7 @@ void JedecDRAMSystem::ClockTick() {
         ptr_stats_->UpdateEpoch(clk_);
     }
 
-    for (auto ctrl : ctrls_) ctrl->ClockTick();
+    for (auto&& ctrl : ctrls_) ctrl.ClockTick();
 
     clk_++;
     ptr_stats_->dramcycles++;

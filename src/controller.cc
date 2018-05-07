@@ -200,7 +200,7 @@ void Controller::ClockTick() {
     return;
 }
 
-bool Controller::WillAcceptTransaction() {
+bool Controller::WillAcceptTransaction() const {
     return transaction_queue_.size() < transaction_queue_.capacity();
 }
 
