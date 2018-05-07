@@ -32,19 +32,18 @@ class BaseDRAMSystem {
     virtual void PrintIntermediateStats();
     virtual void PrintStats();
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
-    Config *ptr_config_;
-    static int
-        num_mems_;  // a lot of CPU sims create a JedecDRAMSystem for each
-                    // channel, oh well..
+    // TODO remove this
+    static int num_mems_;
 
    protected:
     uint64_t clk_;
     uint64_t id_;
     uint64_t last_req_clk_;
-    Timing *ptr_timing_;
-    Statistics *ptr_stats_;
+    Config config_;
+    Timing timing_;
+    Statistics stats_;
 #ifdef THERMAL
-    ThermalCalculator *ptr_thermCal_;
+    ThermalCalculator thermal_calc_;
 #endif  // THERMAL
     int mem_sys_id_;
 

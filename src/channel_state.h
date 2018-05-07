@@ -14,7 +14,7 @@ class ChannelState {
    public:
 #ifdef THERMAL
     ChannelState(const Config& config, const Timing& timing, Statistics& stats,
-                 ThermalCalculator* thermcalc);
+                 ThermalCalculator& thermal_calc);
 #else
     ChannelState(const Config& config, const Timing& timing, Statistics& stats);
 #endif  // THERMAL
@@ -53,7 +53,7 @@ class ChannelState {
 #endif  // GENERATE_TRACE
     Statistics& stats_;
 #ifdef THERMAL
-    ThermalCalculator* thermcalc_;
+    ThermalCalculator& thermal_calc_;
 #endif  // THERMAL
     std::vector<std::vector<std::vector<BankState> > > bank_states_;
     std::vector<std::vector<uint64_t> > four_aw;

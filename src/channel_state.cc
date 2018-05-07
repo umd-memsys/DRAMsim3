@@ -4,7 +4,7 @@
 namespace dramsim3 {
 #ifdef THERMAL
 ChannelState::ChannelState(const Config& config, const Timing& timing,
-                           Statistics& stats, ThermalCalculator* thermcalc)
+                           Statistics& stats, ThermalCalculator& thermal_calc)
 #else
 ChannelState::ChannelState(const Config& config, const Timing& timing,
                            Statistics& stats)
@@ -15,7 +15,7 @@ ChannelState::ChannelState(const Config& config, const Timing& timing,
       timing_(timing),
       stats_(stats),
 #ifdef THERMAL
-      thermcalc_(thermcalc),
+      thermal_calc_(thermal_calc),
 #endif  // THERMAL
       four_aw(config_.ranks, std::vector<uint64_t>()),
       thirty_two_aw(config_.ranks, std::vector<uint64_t>()),
@@ -299,7 +299,7 @@ void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
 #ifdef THERMAL
-    thermcalc_.UpdatePower(cmd, clk);
+    thermal_calc_.UpdatePower(cmd, clk);
 #endif  // THERMAL
     UpdateCommandIssueStats(cmd);
     return;

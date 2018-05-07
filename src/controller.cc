@@ -5,7 +5,7 @@ namespace dramsim3 {
 
 #ifdef THERMAL
 Controller::Controller(int channel, const Config &config, const Timing &timing,
-                       Statistics &stats, ThermalCalculator *thermalcalc,
+                       Statistics &stats, ThermalCalculator& thermal_calc,
                        std::function<void(uint64_t)> read_callback,
                        std::function<void(uint64_t)> write_callback)
 #else
@@ -20,7 +20,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       clk_(0),
       config_(config),
 #ifdef THERMAL
-      channel_state_(config, timing, stats, thermalcalc),
+      channel_state_(config, timing, stats, thermal_calc),
 #else
       channel_state_(config, timing, stats),
 #endif  // THERMAL

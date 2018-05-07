@@ -253,7 +253,7 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
       logic_clk_(0),
       next_link_(0) {
     // sanity check, this constructor should only be intialized using HMC
-    if (!ptr_config_->IsHMC()) {
+    if (!config_.IsHMC()) {
         std::cerr << "Initialzed an HMC system without an HMC config file!"
                   << std::endl;
         AbruptExit(__FILE__, __LINE__);
@@ -264,13 +264,13 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
 
     vault_callback_ =
         std::bind(&HMCMemorySystem::VaultCallback, this, std::placeholders::_1);
-    vaults_.reserve(ptr_config_->channels);
-    for (int i = 0; i < ptr_config_->channels; i++) {
+    vaults_.reserve(config_.channels);
+    for (int i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
-        vaults_.emplace_back(i, *ptr_config_, *ptr_timing_, *ptr_stats_,
-                             *ptr_thermCal_, vault_callback_, vault_callback_);
+        vaults_.emplace_back(i, config_, timing_, stats_,
+                             thermal_calc_, vault_callback_, vault_callback_);
 #else
-        vaults_.emplace_back(i, *ptr_config_, *ptr_timing_, *ptr_stats_, 
+        vaults_.emplace_back(i, config_, timing_, stats_, 
                              vault_callback_, vault_callback_);
 #endif  // THERMAL
     }
@@ -279,8 +279,8 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
     // the second layer will be a 1:8 xbar
     // (each quadrant has 8 vaults and each quadrant can access any ohter
     // quadrant)
-    queue_depth_ = static_cast<size_t>(ptr_config_->xbar_queue_depth);
-    links_ = ptr_config_->num_links;
+    queue_depth_ = static_cast<size_t>(config_.xbar_queue_depth);
+    links_ = config_.num_links;
     link_req_queues_.reserve(links_);
     link_resp_queues_.reserve(links_);
     for (int i = 0; i < links_; i++) {
@@ -306,14 +306,14 @@ HMCMemorySystem::HMCMemorySystem(const std::string &config_file,
 
 void HMCMemorySystem::SetClockRatio() {
     int dram_speed = 1250;
-    int link_speed = ptr_config_->link_speed;
+    int link_speed = config_.link_speed;
 
     // 128 bits per flit, this is to calculate logic speed
     // e.g. if it takes 8 link cycles to transfer a flit
     // the logic has to be running in similar speed so that
     // the logic or the link don't have to wait for each other
     int cycles_per_flit =
-        128 / ptr_config_->link_width;  // Unit interval per flit: 8, 16, or 32
+        128 / config_.link_width;  // Unit interval per flit: 8, 16, or 32
     int logic_speed_needed = link_speed / cycles_per_flit;
 
     // In the ClockTick() we will use DRAM's 1250MHz as basic clock ticks
@@ -367,7 +367,7 @@ bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     // when using this intreface the size of each transaction will be block_size
     HMCReqType req_type;
     if (is_write) {
-        switch (ptr_config_->block_size) {
+        switch (config_.block_size) {
             case 0:
                 req_type = HMCReqType::WR0;
                 break;
@@ -389,7 +389,7 @@ bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
                 break;
         }
     } else {
-        switch (ptr_config_->block_size) {
+        switch (config_.block_size) {
             case 0:
                 req_type = HMCReqType::RD0;
                 break;
@@ -429,7 +429,7 @@ bool HMCMemorySystem::InsertReqToLink(HMCRequest *req, int link) {
         resp_lookup_table.insert(
             std::pair<uint64_t, HMCResponse *>(resp->resp_id, resp));
         link_age_counter[link] = 1;
-        ptr_stats_->interarrival_latency.AddValue(clk_ - last_req_clk_);
+        stats_.interarrival_latency.AddValue(clk_ - last_req_clk_);
         last_req_clk_ = clk_;
         return true;
     } else {
@@ -482,7 +482,7 @@ void HMCMemorySystem::LogicClockTickPre() {
                 }
                 delete (resp);
                 link_resp_queues_[i].erase(link_resp_queues_[i].begin());
-                ptr_stats_->hmc_reqs_done++;
+                stats_.hmc_reqs_done++;
             }
         }
     }
@@ -534,19 +534,19 @@ void HMCMemorySystem::DRAMClockTick() {
     for (auto&& vault : vaults_) {
         vault.ClockTick();
     }
-    if (clk_ % ptr_config_->epoch_period == 0 && clk_ != 0) {
+    if (clk_ % config_.epoch_period == 0 && clk_ != 0) {
         int queue_usage_total = 0;
         for (const auto& vault : vaults_) {
             queue_usage_total += vault.QueueUsage();
         }
-        ptr_stats_->queue_usage.epoch_value =
+        stats_.queue_usage.epoch_value =
             static_cast<double>(queue_usage_total);
-        ptr_stats_->PreEpochCompute(clk_);
+        stats_.PreEpochCompute(clk_);
         PrintIntermediateStats();
-        ptr_stats_->UpdateEpoch(clk_);
+        stats_.UpdateEpoch(clk_);
     }
     clk_++;
-    ptr_stats_->dramcycles++;
+    stats_.dramcycles++;
     return;
 }
 
