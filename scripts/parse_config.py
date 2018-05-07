@@ -1,5 +1,5 @@
 import tempfile
-import ConfigParser
+import configparser
 
 def get_val(config, sec, opt):
     """
@@ -22,7 +22,7 @@ def get_val_from_file(config_file, sec, opt):
     """
         a quick way to obtain an option from a config file
     """
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(config_file)
     return get_val(config, sec, opt)
 
@@ -65,6 +65,14 @@ def get_density(config_file):
     density = bankgroups * banks * rows * page_size
     return density / 1024 / 1024
 
+def get_rank_size_mb(config_file):
+    dens = get_density(config_file)
+    dev_width = get_val_from_file(config_file, "dram_structure", "device_width")
+    bus_width = get_val_from_file(config_file, "system", "bus_width")
+    num_dev = bus_width / dev_width
+    rank_size = dens * num_dev
+    return int(rank_size)
+
 
 def get_dict(config_file):
     """
@@ -72,7 +80,7 @@ def get_dict(config_file):
     return a dict of configs with [section][option] : value structure
     """
     _config_dict = {}
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(config_file)
     for sec in config.sections():
         _config_dict[sec] = {}
@@ -89,15 +97,14 @@ def sub_options(config_file, sec, opt, new_value, inplace=False):
         returned, NOTE if inplace is true all the comments in the
         original file will be gone..
     """
-    config = ConfigParser.ConfigParser()
+    config = configparser.configparser()
     config.read(config_file)
     if not config.has_section(sec):
         config.add_section(sec)
     
     try:
         config.set(sec, opt, str(new_value))
-    except ConfigParser.Error:
-        print "cannot set sec:%s, option:%s, to %s" % (sec, opt, new_value)
+    except configparser.Error:
         raise
     if not inplace:
         temp_fp = tempfile.NamedTemporaryFile()

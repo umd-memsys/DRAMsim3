@@ -13,7 +13,7 @@
 
 namespace dramsim3 {
 
-enum class SchedulingPolicy { OPEN_PAGE, CLOSE_PAGE, SIZE };
+enum class RowBufPolicy { OPEN_PAGE, CLOSE_PAGE, SIZE };
 
 class Controller {
    public:
@@ -58,7 +58,7 @@ class Controller {
 
     // the max number of cmds in fly, x2 to be safe
     const int max_cmd_id_;
-    SchedulingPolicy scheduling_policy_;
+    RowBufPolicy row_buf_policy_;
     Command TransToCommand(const Transaction &trans);
 };
 }  // namespace dramsim3

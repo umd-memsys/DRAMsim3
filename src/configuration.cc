@@ -23,7 +23,7 @@ Config::Config(std::string config_file, std::string out_dir)
     bus_width = GetInteger("system", "bus_width", 64);
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
-    scheduling_policy = reader.Get("system", "scheduling_policy", "OPEN_PAGE");
+    row_buf_policy = reader.Get("system", "row_buf_policy", "OPEN_PAGE");
     cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
     trans_queue_size = GetInteger("system", "trans_queue_size", 32);
     refresh_strategy =
@@ -205,13 +205,13 @@ Config::Config(std::string config_file, std::string out_dir)
     // "numXgrids", 1));  numYgrids =
     // GetInteger("thermal", "numYgrids", 1));
 
-    matX = GetInteger("thermal", "matX", 512);
-    matY = GetInteger("thermal", "matY", 512);
+    mat_dim_x = GetInteger("thermal", "mat_dim_x", 512);
+    mat_dim_y = GetInteger("thermal", "mat_dim_y", 512);
     // RowTile = GetInteger("thermal", "RowTile", 1));
-    numXgrids = rows / matX;
+    numXgrids = rows / mat_dim_x;
     TileRowNum = rows;
 
-    numYgrids = columns * device_width / matY;
+    numYgrids = columns * device_width / mat_dim_y;
     bank_asr = (double)numXgrids / numYgrids;
     RowTile = 1;
     if (bank_asr > 4 && banks_per_group == 1) {
@@ -242,9 +242,9 @@ Config::Config(std::string config_file, std::string out_dir)
     bank_order = GetInteger("thermal", "bank_order", 1);
     bank_layer_order = GetInteger("thermal", "bank_layer_order", 0);
     numRowRefresh = static_cast<int>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
-    ChipX = reader.GetReal("thermal", "ChipX", 0.01);
-    ChipY = reader.GetReal("thermal", "ChipY", 0.01);
-    Tamb0 = reader.GetReal("thermal", "Tamb0", 40);
+    chip_dim_x = reader.GetReal("thermal", "chip_dim_x", 0.01);
+    chip_dim_y = reader.GetReal("thermal", "chip_dim_y", 0.01);
+    amb_temp = reader.GetReal("thermal", "amb_temp", 40);
     epoch_temperature_file_csv =
         reader.Get("other", "epoch_temperature_file",
                    output_prefix + "epoch_power_temperature.csv");

@@ -112,7 +112,7 @@ class Config {
 
     std::string address_mapping;
     std::string queue_structure;
-    std::string scheduling_policy;
+    std::string row_buf_policy;
     int cmd_queue_size;
     int trans_queue_size;
     std::string refresh_strategy;
@@ -155,16 +155,16 @@ class Config {
     std::string loc_mapping;
     int power_epoch_period;
     int numRowRefresh;  // number of rows to be refreshed for one time
-    double Tamb0;  // the ambient temperature in [C]
+    double amb_temp;  // the ambient temperature in [C]
     double logic_bg_power;  // background power of logic layer
     double logic_max_power;  // max power of logic layer
 
-    double ChipX;
-    double ChipY;
+    double chip_dim_x;
+    double chip_dim_y;
     int numXgrids;
     int numYgrids;
-    int matX;
-    int matY;
+    int mat_dim_x;
+    int mat_dim_y;
     // 0: x-direction priority, 1: y-direction priority
     int bank_order;        
     // 0; low-layer priority, 1: high-layer priority

@@ -69,7 +69,7 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
         num_case = config_.ranks * config_.channels;
     }
 
-    Tamb = config_.Tamb0 + T0;
+    Tamb = config_.amb_temp + T0;
 
     std::cout << "bank aspect ratio = " << config_.bank_asr << std::endl;
     // std::cout << "#rows = " << config_.rows << "; #columns = " <<
@@ -325,7 +325,7 @@ std::pair<std::vector<int>, std::vector<int>> ThermalCalculator::MapToXY(
 
     int row_id = cmd.Row();
     int col_tile_id = row_id / config_.TileRowNum;
-    int grid_id_x = row_id / config_.matX / config_.RowTile;
+    int grid_id_x = row_id / config_.mat_dim_x / config_.RowTile;
 
     Address temp_addr = Address(cmd.addr);
     for (int i = 0; i < config_.BL; i++) {
@@ -334,7 +334,7 @@ std::pair<std::vector<int>, std::vector<int>> ThermalCalculator::MapToXY(
         int bank_x_offset = bank_x * config_.numXgrids;
         int bank_y_offset = bank_y * config_.numYgrids;
         for (int j = 0; j < config_.device_width; j++) {
-            int grid_id_y = col_id / config_.matY +
+            int grid_id_y = col_id / config_.mat_dim_y +
                             col_tile_id * (config_.numYgrids / config_.RowTile);
             int temp_x = vault_id_x * bank_x_offset +
                          bank_id_x * config_.numXgrids + grid_id_x;
@@ -408,8 +408,8 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd,
     int row_id = phy_addr.row;
     int col_id = 0;  // refresh all units
     int col_tile_id = row_id / config_.TileRowNum;
-    int grid_id_x = row_id / config_.matX / config_.RowTile;
-    int grid_id_y = col_id / config_.matY +
+    int grid_id_x = row_id / config_.mat_dim_x / config_.RowTile;
+    int grid_id_y = col_id / config_.mat_dim_y +
                     col_tile_id * (config_.numYgrids / config_.RowTile);
     int x = vault_id_x * (bank_x * config_.numXgrids) +
             bank_id_x * config_.numXgrids + grid_id_x;
@@ -670,7 +670,7 @@ void ThermalCalculator::CalcTransT(int case_id) {
     double totP = GetTotalPower(powerM);
     std::cout << "total trans power is " << totP * 1000 << " [mW]" << std::endl;
     T_trans[case_id] = transient_thermal_solver(
-        powerM, config_.ChipX, config_.ChipY, numP, dimX + num_dummy,
+        powerM, config_.chip_dim_x, config_.chip_dim_y, numP, dimX + num_dummy,
         dimY + num_dummy, Midx, MidxSize, Cap, CapSize, time, time_iter,
         T_trans[case_id], Tamb);
 }
@@ -679,7 +679,7 @@ void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk) {
     double ***powerM = InitPowerM(case_id, clk);
     double totP = GetTotalPower(powerM);
     std::cout << "total final power is " << totP * 1000 << " [mW]" << std::endl;
-    double *T = steady_thermal_solver(powerM, config_.ChipX, config_.ChipY,
+    double *T = steady_thermal_solver(powerM, config_.chip_dim_x, config_.chip_dim_y,
                                       numP, dimX + num_dummy, dimY + num_dummy,
                                       Midx, MidxSize, Tamb);
     T_final[case_id] = T;
@@ -730,16 +730,16 @@ double ThermalCalculator::GetTotalPower(double ***powerM) {
 void ThermalCalculator::InitialParameters() {
     layerP = std::vector<int>(numP, 0);
     for (int l = 0; l < numP; l++) layerP[l] = l * 3;
-    Midx = calculate_Midx_array(config_.ChipX, config_.ChipY, numP,
+    Midx = calculate_Midx_array(config_.chip_dim_x, config_.chip_dim_y, numP,
                                 dimX + num_dummy, dimY + num_dummy, &MidxSize,
                                 Tamb);
-    Cap = calculate_Cap_array(config_.ChipX, config_.ChipY, numP,
+    Cap = calculate_Cap_array(config_.chip_dim_x, config_.chip_dim_y, numP,
                               dimX + num_dummy, dimY + num_dummy, &CapSize);
     calculate_time_step();
 
     for (int ir = 0; ir < num_case; ir++) {
         double *T =
-            initialize_Temperature(config_.ChipX, config_.ChipY, numP,
+            initialize_Temperature(config_.chip_dim_x, config_.chip_dim_y, numP,
                                    dimX + num_dummy, dimY + num_dummy, Tamb);
         for (int i = 0; i < T_size; i++) T_trans[ir][i] = T[i];
         free(T);

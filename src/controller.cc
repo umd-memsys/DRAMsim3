@@ -5,7 +5,7 @@ namespace dramsim3 {
 
 #ifdef THERMAL
 Controller::Controller(int channel, const Config &config, const Timing &timing,
-                       Statistics &stats, ThermalCalculator& thermal_calc,
+                       Statistics &stats, ThermalCalculator &thermal_calc,
                        std::function<void(uint64_t)> read_callback,
                        std::function<void(uint64_t)> write_callback)
 #else
@@ -29,9 +29,9 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       stats_(stats),
       cmd_id_(0),
       max_cmd_id_(config_.cmd_queue_size * config_.banks * 2),
-      scheduling_policy_(config.scheduling_policy == "CLOSE_PAGE"
-                             ? SchedulingPolicy::CLOSE_PAGE
-                             : SchedulingPolicy::OPEN_PAGE) {
+      row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
+                          ? RowBufPolicy::CLOSE_PAGE
+                          : RowBufPolicy::OPEN_PAGE) {
     transaction_queue_.reserve(config_.trans_queue_size);
 }
 
@@ -213,7 +213,7 @@ bool Controller::AddTransaction(Transaction trans) {
 Command Controller::TransToCommand(const Transaction &trans) {
     auto addr = AddressMapping(trans.addr);
     CommandType cmd_type;
-    if (scheduling_policy_ == SchedulingPolicy::OPEN_PAGE) {
+    if (row_buf_policy_ == RowBufPolicy::OPEN_PAGE) {
         cmd_type = trans.is_write ? CommandType::WRITE : CommandType::READ;
     } else {
         cmd_type = trans.is_write ? CommandType::WRITE_PRECHARGE
