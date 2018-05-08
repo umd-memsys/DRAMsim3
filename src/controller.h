@@ -9,7 +9,10 @@
 #include "common.h"
 #include "refresh.h"
 #include "statistics.h"
+
+#ifdef THERMAL
 #include "thermal.h"
+#endif  // THERMAL
 
 namespace dramsim3 {
 

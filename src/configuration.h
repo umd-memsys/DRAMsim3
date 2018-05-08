@@ -151,7 +151,7 @@ class Config {
 
     int ideal_memory_latency;
 
-    // thermal simulator
+#ifdef THERMAL
     std::string loc_mapping;
     int power_epoch_period;
     int numRowRefresh;  // number of rows to be refreshed for one time
@@ -176,14 +176,23 @@ class Config {
     std::string epoch_temperature_file_csv;
     std::string final_temperature_file_csv;
     std::string bank_position_csv;
+#endif  // THERMAL
 
    private:
-    const INIReader &reader;
+    INIReader* reader_;
+    void CalculateSize();
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     int GetInteger(const std::string& sec, const std::string& opt, 
                    int default_val) const;
-    void ProtocolAdjust();
-    void CalculateSize();
+    void InitDRAMParams();
+    void InitOtherParams();
+    void InitPowerParams();
+    void InitSystemParams();
+#ifdef THERMAL
+    void InitThermalParams();
+#endif  // THERMAL
+    void InitTimingParams();
+    void SanityCheck();
     void SetAddressMapping();
 };
 

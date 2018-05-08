@@ -5,8 +5,11 @@
 #include "bankstate.h"
 #include "common.h"
 #include "configuration.h"
-#include "thermal.h"
 #include "timing.h"
+
+#ifdef THERMAL
+#include "thermal.h"
+#endif  // THERMAL
 
 namespace dramsim3 {
 
