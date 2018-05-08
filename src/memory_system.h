@@ -35,7 +35,6 @@ class MemorySystem {
    private:
     Config *config_;
     BaseDRAMSystem *dram_system_;
-    int num_mems_;
 };
 
 }  // namespace dramsim3
