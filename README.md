@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.com/shavvn/DRAMSim3.svg?token=pCfCJ4yBqyhn3rfWbJVF&branch=master)](https://travis-ci.com/shavvn/DRAMSim3)
 
 # DRAMSim3
-Model the timing paramaters and memory controller behaviour for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, HBM.
+Model the timing paramaters and memory controller behaviour for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, HBM, HMC.
 
 
 ## Building and running the simulator
@@ -24,13 +24,22 @@ cmake ..
 # Alternatively, build with thermal module
 cmake .. -DTHERMAL=1
 
-# Build dramsim3 and dramsim3test executables
+# Build dramsim3 and executables
 make -j4
 
 ```
 
-The build process creates `dramsim3main` and `dramsim3test` executables in the build directory.
-It also creates `libdramsim3.so` shared library in the parent directory. 
+The build process creates `dramsim3main` and executables in the build 
+directory. 
+By default, it also creates `libdramsim3.a` static library in the 
+project root directory.
+We build a static library for portability purposes. (Simulators like gem5
+also prefers a static libarary.)
+If you want to build a shared library, you can also use the build command
+
+```
+make dramsim3dy
+```
 
 
 ### Running
@@ -42,16 +51,10 @@ dramsim3main -c ./../configs/dummy_config.ini --cpu-type random -n 100000
 // Running trace cpu with a trace file and a config file
 dramsim3main -c ./../configs/dummy_config.ini -n 100000 --cpu-type trace --trace-file ./../sample_trace.txt
 
-// Running HMC memory type with HMC config file
-dramsim3main -c ./../configs/hmc_8GB_4Lx16.ini --memory-type hmc -n 100000
 
 defaults:
 --cpu-type = random (options - random, trace, stream)
---memory-type = default (options - default, hmc, ideal)
 -n = 100000
-
-# Run the dramsim3test executable (No actual tests are currently written :P)
-./dramsim3test
 
 ```
 

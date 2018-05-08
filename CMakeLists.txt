@@ -3,14 +3,18 @@ cmake_minimum_required(VERSION 3.0)
 project(dramsim3)
 
 # self-defined flgas that help debugging
-# use cmake -DGENERATE_TRACE=ON or 1 to enbale this
+# e.g. use cmake -DGENERATE_TRACE=ON or 1 to enbale this
 if (NO_BACKPRESSURE)
-        message("Adding NO_BACKPRESSURE - To enable infinite buffering of memory requests in memory controller to support CPUs that does not model backpressure when the queues in the memory controller are full")
+        message("Adding NO_BACKPRESSURE - To enable infinite buffering \
+                 of memory requests in memory controller to support CPUs that \
+                 does not model backpressure when the queues in the memory \
+                 controller are full")
         add_definitions(-DNO_BACKPRESSURE)
 endif (NO_BACKPRESSURE)
 
 if (GENERATE_TRACE)
-        message("Adding GENERATE_TRACE - To log to a file the memory address trace along with timing information")
+        message("Adding GENERATE_TRACE - To log to a file the \
+                 memory address trace along with timing information")
         add_definitions(-DGENERATE_TRACE)
 endif (GENERATE_TRACE)
 
@@ -19,16 +23,17 @@ if (DEBUG_POWER)
         add_definitions(-DDEBUG_POWER)
 endif  (DEBUG_POWER)
 
-
 if (DEBUG_LOC_MAPPING)
         add_definitions(-DDEBUG_LOC_MAPPING)
 endif (DEBUG_LOC_MAPPING)
 
-if (THERMAL)
-        message("Adding thermal module...")
-        add_definitions(-DTHERMAL)
 
+# THERMAL module, disabled by default since it will slow down simulation
+if (THERMAL)
+        add_definitions(-DTHERMAL)
         # check dependency
+        # if cmake fails the check for f77blas try 
+        # sudo apt-get install libatlas-base-dev
         find_package(BLAS REQUIRED)
         find_package(OpenMP REQUIRED)
 
@@ -36,7 +41,8 @@ if (THERMAL)
         # rewirte the entire make system so here's the solution...
         if (NOT SUPERLU_ROOT)
                 set(SUPERLU_ROOT ${CMAKE_SOURCE_DIR}/ext/SuperLU_MT_3.1/)
-                execute_process(COMMAND git submodule update --init -- ${SUPERLU_ROOT})
+                execute_process(COMMAND git submodule update --init --
+                                ${SUPERLU_ROOT})
         endif (NOT SUPERLU_ROOT)
         set(SUPERLU_PLAT OPENMP)
         set(SUPERLU_LIB ${SUPERLU_ROOT}/lib/libsuperlu_mt_${SUPERLU_PLAT}.a)
@@ -50,8 +56,11 @@ if (THERMAL)
         )
         add_dependencies(superlu_mt build_superlu_mt)
         include_directories(${SUPERLU_ROOT}/SRC)  # header files are here..
-
 endif (THERMAL)
+
+if (NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE Release)
+endif()
 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-fPIC -D_LONGINT -DAdd_")
 set(EXTRA_CXX_FLAGS "-Wall -fPIC")
@@ -60,11 +69,13 @@ set(EXTRA_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(EXTRA_CXX_FLAGS_RELWITHDEBINFO "-O0 -DNDDEBUG")
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS_DEBUG}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS_RELWITHDEBINFO}")
+set(CMAKE_CXX_FLAGS_RELEASE 
+        "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  
+        "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS_RELWITHDEBINFO}")
 
 set(SOURCES
         src/bankstate.cc
@@ -87,13 +98,11 @@ set(SOURCES
         )
 
 if (THERMAL)
-        set(SOURCES ${SOURCES} src/thermal.cc src/sp_ienv.c src/thermal_solver.c)
-        if (OPENMP_FOUND)
-            message("adding openmp flag")
-            set_source_files_properties(src/thermal_solver.c PROPERTIES COMPILE_FLAGS "${OpenMP_C_FLAGS} -O2")
-        endif(OPENMP_FOUND)
+        set(SOURCES ${SOURCES} src/thermal.cc src/sp_ienv.c 
+                               src/thermal_solver.c)
+        set_source_files_properties(src/thermal_solver.c PROPERTIES 
+                                    COMPILE_FLAGS "${OpenMP_C_FLAGS} -O2")
 endif (THERMAL)
-
 
 include_directories(src ext/headers)
 
@@ -102,13 +111,15 @@ add_library(dramsim3 STATIC ${SOURCES})
 add_library(dramsim3dy SHARED EXCLUDE_FROM_ALL ${SOURCES})
 
 if (THERMAL)
-        target_link_libraries(dramsim3 superlu_mt f77blas atlas m ${OpenMP_C_FLAGS})
-        target_link_libraries(dramsim3dy superlu_mt f77blas atlas m ${OpenMP_C_FLAGS})
+        target_link_libraries(dramsim3 superlu_mt f77blas atlas m 
+                              ${OpenMP_C_FLAGS})
+        target_link_libraries(dramsim3dy superlu_mt f77blas atlas m 
+                              ${OpenMP_C_FLAGS})
         add_executable(thermalreplay src/thermal_replay.cc)
         target_link_libraries(thermalreplay dramsim3)
 endif (THERMAL)
 
-# use proj root level dir to make it easier to find
+# use project root directory to make it easier to locate
 set_target_properties(dramsim3 PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
