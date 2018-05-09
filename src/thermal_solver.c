@@ -240,8 +240,8 @@ double **calculate_Midx_array(double W, double Lc, int numP, int dimX, int dimZ,
             Rhori[i][0] = Rsinkx;
             Rhori[i][1] = Rsinkz;
         } else {
-            Rhori[i][0] = gridX / K[i - 1] / gridZ / H[i - 1];
-            Rhori[i][1] = gridZ / K[i - 1] / gridZ / H[i - 1];
+            Rhori[i][0] = gridX / K[i - 1] / gridZ / H[i - 1] * 10;
+            Rhori[i][1] = gridZ / K[i - 1] / gridZ / H[i - 1] * 10;
         }
     }
 
