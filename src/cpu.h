@@ -13,8 +13,8 @@ namespace dramsim3 {
 
 class CPU {
    public:
-    CPU(MemorySystem& memory_system) : memory_system_(memory_system), clk_(0){}
-    ~CPU() {memory_system_.PrintStats();}
+    CPU(MemorySystem& memory_system) : memory_system_(memory_system), clk_(0) {}
+    virtual ~CPU() { memory_system_.PrintStats(); }
     virtual void ClockTick() = 0;
 
    protected:
@@ -49,6 +49,7 @@ class StreamCPU : public CPU {
 class TraceBasedCPU : public CPU {
    public:
     TraceBasedCPU(MemorySystem& memory_system, std::string trace_file);
+    ~TraceBasedCPU() { trace_file_.close(); }
     void ClockTick() override;
 
    private:
