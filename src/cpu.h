@@ -7,23 +7,24 @@
 #include "common.h"
 #include "configuration.h"
 #include "controller.h"
-#include "dram_system.h"
+#include "memory_system.h"
 
 namespace dramsim3 {
 
 class CPU {
    public:
-    CPU(BaseDRAMSystem& memory_system);
+    CPU(MemorySystem& memory_system) : memory_system_(memory_system), clk_(0){}
+    ~CPU() {memory_system_.PrintStats();}
     virtual void ClockTick() = 0;
 
    protected:
-    BaseDRAMSystem& memory_system_;
+    MemorySystem& memory_system_;
     uint64_t clk_;
 };
 
 class RandomCPU : public CPU {
    public:
-    RandomCPU(BaseDRAMSystem& memory_system);
+    RandomCPU(MemorySystem& memory_system) : CPU(memory_system) {}
     void ClockTick() override;
 
    private:
@@ -34,7 +35,7 @@ class RandomCPU : public CPU {
 
 class StreamCPU : public CPU {
    public:
-    StreamCPU(BaseDRAMSystem& memory_system);
+    StreamCPU(MemorySystem& memory_system) : CPU(memory_system) {}
     void ClockTick() override;
 
    private:
@@ -47,7 +48,7 @@ class StreamCPU : public CPU {
 
 class TraceBasedCPU : public CPU {
    public:
-    TraceBasedCPU(BaseDRAMSystem& memory_system, std::string trace_file);
+    TraceBasedCPU(MemorySystem& memory_system, std::string trace_file);
     void ClockTick() override;
 
    private:

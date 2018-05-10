@@ -2,17 +2,11 @@
 
 namespace dramsim3 {
 
-CPU::CPU(BaseDRAMSystem& memory_system)
-    : memory_system_(memory_system), clk_(0) {}
-
-RandomCPU::RandomCPU(BaseDRAMSystem& memory_system) : CPU(memory_system) {}
-
-StreamCPU::StreamCPU(BaseDRAMSystem& memory_system) : CPU(memory_system) {}
-
 void RandomCPU::ClockTick() {
     // Create random CPU requests at full speed
     // this is useful to exploit the parallelism of a DRAM protocol
     // and is also immune to address mapping and scheduling policies
+    memory_system_.ClockTick();
     if (get_next_) {
         last_addr_ = gen();
     }
@@ -31,6 +25,7 @@ void StreamCPU::ClockTick() {
     // enough buffer hits
 
     // moving on to next set of arrays
+    memory_system_.ClockTick();
     if (offset_ >= array_size_ || clk_ == 0) {
         addr_a_ = gen();
         addr_b_ = gen();
@@ -68,7 +63,7 @@ void StreamCPU::ClockTick() {
     return;
 }
 
-TraceBasedCPU::TraceBasedCPU(BaseDRAMSystem& memory_system,
+TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system,
                              std::string trace_file)
     : CPU(memory_system) {
     trace_file_.open(trace_file);
@@ -79,6 +74,7 @@ TraceBasedCPU::TraceBasedCPU(BaseDRAMSystem& memory_system,
 }
 
 void TraceBasedCPU::ClockTick() {
+    memory_system_.ClockTick();
     if (!trace_file_.eof()) {
         if (get_next_) {
             get_next_ = false;
@@ -86,8 +82,8 @@ void TraceBasedCPU::ClockTick() {
         }
         if (access_.time_ <= clk_) {
             bool is_write = access_.access_type_ == "WRITE";
-            bool get_next_ =
-                memory_system_.WillAcceptTransaction(access_.hex_addr_, is_write);
+            bool get_next_ = memory_system_.WillAcceptTransaction(
+                access_.hex_addr_, is_write);
             if (get_next_) {
                 memory_system_.AddTransaction(access_.hex_addr_, is_write);
             }

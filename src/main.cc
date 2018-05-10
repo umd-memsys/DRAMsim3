@@ -44,15 +44,14 @@ int main(int argc, const char **argv) {
 
     MemorySystem mem_sys(config_file, output_dir, read_callback_func,
                          write_callback_func);
-    auto memory_system = mem_sys.GetDRAMSystem();
 
     CPU *cpu;
     if (cpu_type == "random") {
-        cpu = new RandomCPU(*memory_system);
+        cpu = new RandomCPU(mem_sys);
     } else if (cpu_type == "trace") {
-        cpu = new TraceBasedCPU(*memory_system, trace_file);
+        cpu = new TraceBasedCPU(mem_sys, trace_file);
     } else if (cpu_type == "stream") {
-        cpu = new StreamCPU(*memory_system);
+        cpu = new StreamCPU(mem_sys);
     } else {
         cpu = nullptr;
         std::cerr << "Unknown cpu type" << std::endl;
@@ -61,10 +60,9 @@ int main(int argc, const char **argv) {
 
     for (uint64_t clk = 0; clk < cycles; clk++) {
         cpu->ClockTick();
-        memory_system->ClockTick();
     }
 
-    memory_system->PrintStats();
+    delete (cpu);
 
     return 0;
 }
