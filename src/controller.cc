@@ -132,29 +132,23 @@ void Controller::ClockTick() {
         if (cmd.IsValid()) {
             // if read/write, update pending queue and return queue
             if (cmd.IsReadWrite()) {
-                auto it = pending_queue_.find(cmd.id);
-                if (cmd.IsRead()) {
-                    it->second.complete_cycle = clk_ + config_.read_delay;
-                } else {
-                    it->second.complete_cycle = clk_ + config_.write_delay;
-                }
-                return_queue_.push_back(it->second);
-                pending_queue_.erase(it);
+                ProcessRWCommand(cmd); 
             }
 
             channel_state_.IssueCommand(cmd, clk_);
             command_issued = true;
 
-            if (config_.enable_hbm_dual_cmd) {  // TODO - Current implementation
-                                                // doesn't do dual command issue
-                                                // during refresh
+            if (config_.enable_hbm_dual_cmd) {
                 auto second_cmd = cmd_queue_.GetCommandToIssue();
                 if (second_cmd.IsValid()) {
-                    if (cmd.IsReadWrite() ^ second_cmd.IsReadWrite()) {
+                    if (second_cmd.IsReadWrite() && !cmd.IsReadWrite()) {
+                        ProcessRWCommand(second_cmd);
                         channel_state_.IssueCommand(second_cmd, clk_);
                         stats_.hbm_dual_command_issue_cycles++;
-                    }
-                    if (!cmd.IsReadWrite() && !second_cmd.IsReadWrite()) {
+                    } else if (!second_cmd.IsReadWrite() && cmd.IsReadWrite()) {
+                        channel_state_.IssueCommand(second_cmd, clk_);
+                        stats_.hbm_dual_command_issue_cycles++;
+                    } else {
                         stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
                     }
                 }
@@ -208,6 +202,19 @@ bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
     transaction_queue_.push_back(trans);
     return transaction_queue_.size() <= transaction_queue_.capacity();
+}
+
+
+void Controller::ProcessRWCommand(const Command& cmd) {
+    auto it = pending_queue_.find(cmd.id);
+    if (cmd.IsRead()) {
+        it->second.complete_cycle = clk_ + config_.read_delay;
+    } else {
+        it->second.complete_cycle = clk_ + config_.write_delay;
+    }
+    return_queue_.push_back(it->second);
+    pending_queue_.erase(it);
+    return;
 }
 
 Command Controller::TransToCommand(const Transaction &trans) {

@@ -22,7 +22,6 @@ class MemorySystem {
     void RegisterCallbacks(
         std::function<void(uint64_t)> read_callback,
         std::function<void(uint64_t)> write_callback);
-    BaseDRAMSystem *GetDRAMSystem();
     double GetTCK() const;
     int GetBusBits() const;
     int GetBurstLength() const;

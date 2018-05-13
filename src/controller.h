@@ -62,6 +62,7 @@ class Controller {
     // the max number of cmds in fly, x2 to be safe
     const int max_cmd_id_;
     RowBufPolicy row_buf_policy_;
+    void ProcessRWCommand(const Command& cmd);
     Command TransToCommand(const Transaction &trans);
 };
 }  // namespace dramsim3

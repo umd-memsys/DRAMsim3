@@ -26,8 +26,6 @@ void MemorySystem::ClockTick() {
     dram_system_->ClockTick();
 }
 
-BaseDRAMSystem *MemorySystem::GetDRAMSystem() { return dram_system_; }
-
 double MemorySystem::GetTCK() const {
     return config_->tCK;
 }
