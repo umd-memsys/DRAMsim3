@@ -96,7 +96,7 @@ class HMCResponse {
 
 class HMCMemorySystem : public BaseDRAMSystem {
    public:
-    HMCMemorySystem(const std::string& config_file,
+    HMCMemorySystem(Config& config,
                     const std::string& output_dir,
                     std::function<void(uint64_t)> read_callback,
                     std::function<void(uint64_t)> write_callback);

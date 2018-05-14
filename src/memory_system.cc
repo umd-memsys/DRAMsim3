@@ -4,21 +4,21 @@ namespace dramsim3 {
 MemorySystem::MemorySystem(const std::string &config_file,
                            const std::string &output_dir,
                            std::function<void(uint64_t)> read_callback,
-                           std::function<void(uint64_t)> write_callback) {
-    config_ = new Config(config_file, output_dir);
+                           std::function<void(uint64_t)> write_callback) :
+    config_(new Config(config_file, output_dir)) {
     // TODO: ideal memory type?
+    std::cout << "config initialized!" << std::endl;
     if (config_->IsHMC()) {
-        dram_system_ = new HMCMemorySystem(config_file, output_dir,
+        dram_system_ = new HMCMemorySystem(*config_, output_dir,
                                            read_callback, write_callback);
     } else {
-        dram_system_ = new JedecDRAMSystem(config_file, output_dir,
+        dram_system_ = new JedecDRAMSystem(*config_, output_dir,
                                            read_callback, write_callback);
     }
 
 }
 
 MemorySystem::~MemorySystem() { 
-    delete (config_);
     delete (dram_system_);
 }
 

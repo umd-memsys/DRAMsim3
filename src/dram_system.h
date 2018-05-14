@@ -18,7 +18,7 @@ namespace dramsim3 {
 
 class BaseDRAMSystem {
    public:
-    BaseDRAMSystem(const std::string &config_file,
+    BaseDRAMSystem(Config& config,
                    const std::string &output_dir,
                    std::function<void(uint64_t)> read_callback,
                    std::function<void(uint64_t)> write_callback);
@@ -39,7 +39,7 @@ class BaseDRAMSystem {
     uint64_t clk_;
     uint64_t id_;
     uint64_t last_req_clk_;
-    Config config_;
+    Config &config_;
     Timing timing_;
     Statistics stats_;
 #ifdef THERMAL
@@ -61,7 +61,7 @@ class BaseDRAMSystem {
 // hmmm not sure this is the best naming...
 class JedecDRAMSystem : public BaseDRAMSystem {
    public:
-    JedecDRAMSystem(const std::string &config_file,
+    JedecDRAMSystem(Config& config,
                     const std::string &output_dir,
                     std::function<void(uint64_t)> read_callback,
                     std::function<void(uint64_t)> write_callback);
@@ -78,7 +78,7 @@ class JedecDRAMSystem : public BaseDRAMSystem {
 // cannot do for a given application
 class IdealDRAMSystem : public BaseDRAMSystem {
    public:
-    IdealDRAMSystem(const std::string &config_file,
+    IdealDRAMSystem(Config& config,
                     const std::string &output_dir,
                     std::function<void(uint64_t)> read_callback,
                     std::function<void(uint64_t)> write_callback);

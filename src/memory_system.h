@@ -32,6 +32,9 @@ class MemorySystem {
     bool AddTransaction(uint64_t hex_addr, bool is_write);
 
    private:
+    // These have to be pointers because Gem5 will try to push this object
+    // into container which will invoke a copy constructor, using pointers
+    // here is safe
     Config *config_;
     BaseDRAMSystem *dram_system_;
 };

@@ -12,7 +12,7 @@ namespace dramsim3 {
 // destructive
 int BaseDRAMSystem::num_mems_ = 0;
 
-BaseDRAMSystem::BaseDRAMSystem(const std::string &config_file,
+BaseDRAMSystem::BaseDRAMSystem(Config& config,
                                const std::string &output_dir,
                                std::function<void(uint64_t)> read_callback,
                                std::function<void(uint64_t)> write_callback)
@@ -20,7 +20,7 @@ BaseDRAMSystem::BaseDRAMSystem(const std::string &config_file,
       write_callback_(write_callback),
       clk_(0),
       last_req_clk_(0),
-      config_(config_file, output_dir),
+      config_(config),
       timing_(config_),
 #ifdef THERMAL
       stats_(config_),
@@ -135,11 +135,11 @@ void BaseDRAMSystem::PrintStats() {
     return;
 }
 
-JedecDRAMSystem::JedecDRAMSystem(const std::string &config_file,
+JedecDRAMSystem::JedecDRAMSystem(Config& config,
                                  const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
-    : BaseDRAMSystem(config_file, output_dir, read_callback, write_callback) {
+    : BaseDRAMSystem(config, output_dir, read_callback, write_callback) {
     if (config_.IsHMC()) {
         std::cerr << "Initialized a memory system with an HMC config file!"
                   << std::endl;
@@ -214,11 +214,11 @@ void JedecDRAMSystem::ClockTick() {
     return;
 }
 
-IdealDRAMSystem::IdealDRAMSystem(const std::string &config_file,
+IdealDRAMSystem::IdealDRAMSystem(Config& config,
                                  const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
-    : BaseDRAMSystem(config_file, output_dir, read_callback, write_callback),
+    : BaseDRAMSystem(config, output_dir, read_callback, write_callback),
       latency_(config_.ideal_memory_latency) {}
 
 IdealDRAMSystem::~IdealDRAMSystem() {}
