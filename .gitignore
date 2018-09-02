@@ -1,3 +1,7 @@
+# project files
+build/
+debug_build
+
 # Compiled Object files
 *.slo
 *.lo
