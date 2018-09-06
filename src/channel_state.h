@@ -15,24 +15,14 @@ namespace dramsim3 {
 
 class ChannelState {
    public:
-#ifdef THERMAL
-    ChannelState(const Config& config, const Timing& timing, Statistics& stats,
-                 ThermalCalculator& thermal_calc);
-#else
     ChannelState(const Config& config, const Timing& timing, Statistics& stats);
-#endif  // THERMAL
-
     Command GetRequiredCommand(const Command& cmd) const;
     bool IsReady(const Command& cmd, uint64_t clk) const;
     void UpdateState(const Command& cmd);
     void UpdateTiming(const Command& cmd, uint64_t clk);
-    void IssueCommand(const Command& cmd, uint64_t clk);
-    void UpdateRefreshWaitingStatus(const Command& cmd, bool status);
+    void UpdateTimingAndStates(const Command& cmd, uint64_t clk);
     bool ActivationWindowOk(int rank, uint64_t curr_time) const;
     void UpdateActivationTimes(int rank, uint64_t curr_time);
-    bool IsRefreshWaiting(int rank, int bankgroup, int bank) const {
-        return bank_states_[rank][bankgroup][bank].IsRefreshWaiting();
-    }
     bool IsRowOpen(int rank, int bankgroup, int bank) const {
         return bank_states_[rank][bankgroup][bank].IsRowOpen();
     }
@@ -55,9 +45,6 @@ class ChannelState {
     std::ofstream cmd_trace_;
 #endif  // GENERATE_TRACE
     Statistics& stats_;
-#ifdef THERMAL
-    ThermalCalculator& thermal_calc_;
-#endif  // THERMAL
     std::vector<std::vector<std::vector<BankState> > > bank_states_;
     std::vector<std::vector<uint64_t> > four_aw;
     std::vector<std::vector<uint64_t> > thirty_two_aw;

@@ -9,8 +9,7 @@ BankState::BankState(Statistics& stats)
       state_(State::CLOSED),
       cmd_timing_(static_cast<int>(CommandType::SIZE)),
       open_row_(-1),
-      row_hit_count_(0),
-      refresh_waiting_(false) {
+      row_hit_count_(0) {
     cmd_timing_[static_cast<int>(CommandType::READ)] = 0;
     cmd_timing_[static_cast<int>(CommandType::READ_PRECHARGE)] = 0;
     cmd_timing_[static_cast<int>(CommandType::WRITE)] = 0;

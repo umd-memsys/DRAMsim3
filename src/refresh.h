@@ -12,43 +12,34 @@ namespace dramsim3 {
 enum class RefreshStrategy {
     RANK_LEVEL_SIMULTANEOUS,  // impractical due to high power requirement
     RANK_LEVEL_STAGGERED,
-    BANK_LEVEL_SIMULTANEOUS,
     BANK_LEVEL_STAGGERED,
     UNKNOWN
 };
 
 class Refresh {
    public:
-    Refresh(const int channel_id, const Config& config,
+    Refresh(const Config& config,
             const ChannelState& channel_state, CommandQueue& cmd_queue,
             Statistics& stats);
     std::vector<Command> refresh_q_;  // Queue of refresh commands
     void ClockTick();
-    Command GetRefreshOrAssociatedCommand(
-        std::vector<Command>::iterator refresh_itr);
+    bool IsRefWaiting();
+    void RefreshIssued(const Command& cmd);
+    Command GetRefreshOrAssociatedCommand();
 
    private:
     uint64_t clk_;
-    int channel_id_;
+    int refresh_interval_;
+    std::vector<std::vector<std::vector<bool> > > refresh_waiting_;
     const Config& config_;
     const ChannelState& channel_state_;
     CommandQueue& cmd_queue_;
     Statistics& stats_;
-
     RefreshStrategy refresh_strategy_;
-
-    // Keep track of the last time when a refresh command was issued to this
-    // bank
-    std::vector<std::vector<std::vector<uint64_t> > >
-        last_bank_refresh_;  // TODO - Wouldn't it be better to move this to
-                             // bankstate?
-
-    // Last time when a refresh command was issued to the entire rank
-    // Also updated when an epoch of bank level refreshed is done as well
-    std::vector<uint64_t> last_rank_refresh_;
 
     int next_rank_, next_bankgroup_, next_bank_;
 
+    void UpdateRefWaiting(const Command& cmd, bool status);
     void InsertRefresh();
 
     void IterateNext();

@@ -28,11 +28,6 @@ class BankState {
         return time >= cmd_timing_[static_cast<int>(cmd_type)];
     }
 
-    void UpdateRefreshWaitingStatus(bool status) {
-        refresh_waiting_ = status;
-        return;
-    }
-    bool IsRefreshWaiting() const { return refresh_waiting_; }
     bool IsRowOpen() const { return state_ == State::OPEN; }
     int OpenRow() const { return open_row_; }
     int RowHitCount() const { return row_hit_count_; }
@@ -54,7 +49,6 @@ class BankState {
     // To prevent starvation and allow fairness
     int row_hit_count_;
 
-    bool refresh_waiting_;
 };
 
 }  // namespace dramsim3
