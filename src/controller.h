@@ -50,6 +50,9 @@ class Controller {
 #ifdef THERMAL
     ThermalCalculator& thermal_calc_;
 #endif  // THERMAL
+#ifdef GENERATE_TRACE
+    std::ofstream cmd_trace_;
+#endif  // GENERATE_TRACE
     // queue that takes transactions from CPU side
     std::vector<Transaction> transaction_queue_;
 

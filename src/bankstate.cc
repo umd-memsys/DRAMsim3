@@ -180,6 +180,7 @@ void BankState::UpdateState(const Command& cmd) {
                 case CommandType::PRECHARGE:
                 case CommandType::SELF_REFRESH_EXIT:
                 default:
+                    std::cout << cmd << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
             break;

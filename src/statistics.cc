@@ -282,9 +282,6 @@ Statistics::Statistics(const Config& config)
     numb_self_refresh_exit_cmds_issued =
         CounterStat("numb_self_refresh_exit_cmds_issued",
                     "Number of self-refresh mode exit commands issued");
-    numb_rw_rowhits_pending_refresh = CounterStat(
-        "numb_rw_rowhits_pending_refresh",
-        "Number of read/write row hits issued while a refresh was pending");
 #ifdef DEBUG_HMC
     logic_clk CounterStat("hmc_logic_clk", "HMC logic clock");
     stats_list.push_back(&logic_clk);
@@ -359,7 +356,6 @@ Statistics::Statistics(const Config& config)
     stats_list.push_back(&numb_refresh_bank_cmds_issued);
     stats_list.push_back(&numb_self_refresh_enter_cmds_issued);
     stats_list.push_back(&numb_self_refresh_exit_cmds_issued);
-    stats_list.push_back(&numb_rw_rowhits_pending_refresh);
     // stats_list.push_back(&all_bank_idle_cycles);
     // stats_list.push_back(&active_cycles);
     stats_list.push_back(&act_energy);

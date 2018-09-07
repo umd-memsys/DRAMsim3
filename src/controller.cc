@@ -32,6 +32,12 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE) {
     transaction_queue_.reserve(config_.trans_queue_size);
+#ifdef GENERATE_TRACE
+    std::string trace_file_name = config_.output_prefix + "cmd.trace";
+    RenameFileWithNumber(trace_file_name, channel_id);
+    std::cout << "Command Trace write to " << trace_file_name << std::endl;
+    cmd_trace_.open(trace_file_name, std::ofstream::out);
+#endif  // GENERATE_TRACE
 }
 
 void Controller::ClockTick() {
@@ -210,6 +216,7 @@ void Controller::IssueCommand(const Command& tmp_cmd) {
 }
 
 void Controller::ProcessRWCommand(const Command& cmd) {
+    cmd_queue_.IssueRWCommand(cmd);
     auto it = pending_queue_.find(cmd.id);
     if (cmd.IsRead()) {
         it->second.complete_cycle = clk_ + config_.read_delay;

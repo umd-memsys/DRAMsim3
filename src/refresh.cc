@@ -81,6 +81,7 @@ void Refresh::InsertRefresh() {
             for (auto i = 0; i < config_.ranks; i++) {
                 if (!channel_state_.rank_in_self_refresh_mode_[i]) {
                     addr.rank = i;
+                    break;
                 }
             }
             break;
@@ -151,24 +152,7 @@ bool Refresh::ReadWritesToFinish(int rank, int bankgroup, int bank) {
 }
 
 Command Refresh::GetReadWritesToOpenRow(int rank, int bankgroup, int bank) {
-    auto &queue = cmd_queue_.GetQueue(rank, bankgroup, bank);
-    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        // If the cmd belongs to the same bank which is being checked if it is
-        // okay for refresh  Necessary for PER_RANK queues
-        if (cmd_it->Rank() == rank && cmd_it->Bankgroup() == bankgroup &&
-            cmd_it->Bank() == bank) {
-            Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
-            if (channel_state_.IsReady(cmd, clk_)) {
-                stats_.numb_rw_rowhits_pending_refresh++;
-                // TODO Dumbest shit I have to ever write
-                if (cmd.IsReadWrite()) {
-                    queue.erase(cmd_it);
-                }
-                return cmd;
-            }
-        }
-    }
-    return Command();
+    return cmd_queue_.GetFristReadyInBank(rank, bankgroup, bank);
 }
 
 inline void Refresh::IterateNext() {

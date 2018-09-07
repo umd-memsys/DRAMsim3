@@ -40,9 +40,12 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 
 Command CommandQueue::GetCommandToIssue() {
     for (unsigned i = 0; i < queues_.size(); i++) {
-        auto cmd = GetCommandToIssueFromQueue(queues_[next_queue_index_]);
+        // auto cmd = GetCommandToIssueFromQueue(queues_[next_queue_index_]);
         IterateNext();
-        if (cmd.IsValid()) {
+        auto cmd = GetFristReadyInQueue(queues_[next_queue_index_]);
+        if (!cmd.IsValid()) {
+            continue;
+        } else {
             return cmd;
         }
     }
@@ -67,7 +70,6 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::vector<Command>& queue) {
                     }
                 }
                 if (!dependency) {
-                    queue.erase(cmd_it);
                     return cmd;
                 }
             } else if (cmd.cmd_type == CommandType::PRECHARGE) {
@@ -204,35 +206,55 @@ std::vector<Command>& CommandQueue::GetQueue(int rank, int bankgroup,
     return queues_[index];
 }
 
-void CommandQueue::IssueCommand(std::vector<Command>& queue,
-                                std::vector<Command>::iterator cmd_it) {
-    // Update rank queues emptyness
-    if (queue.empty() && !rank_queues_empty[cmd_it->Rank()]) {
-        if (queue_structure_ == QueueStructure::PER_RANK) {
-            rank_queues_empty[cmd_it->Rank()] = true;
-            rank_queues_empty_from_time_[cmd_it->Rank()] = clk_;
-        } else if (queue_structure_ == QueueStructure::PER_BANK) {
-            auto empty = true;
-            for (auto j = 0; j < config_.bankgroups; j++) {
-                for (auto k = 0; k < config_.banks_per_group; k++) {
-                    auto& bank_queue = GetQueue(
-                        cmd_it->Rank(), cmd_it->Bankgroup(), cmd_it->Bank());
-                    if (!bank_queue.empty()) {
-                        empty = false;
-                        break;
-                    }
-                }
-                if (!empty) break;  // Achieving multi-loop break
-            }
-            if (empty) {
-                rank_queues_empty[cmd_it->Rank()] = true;
-                rank_queues_empty_from_time_[cmd_it->Rank()] = clk_;
-            }
-        } else {
-            AbruptExit(__FILE__, __LINE__);
+Command CommandQueue::GetFristReadyInQueue(std::vector<Command>& queue) {
+    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
+        Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
+        // TODO required might be different from cmd_it, e.g. ACT vs READ
+        if (channel_state_.IsReady(cmd, clk_)) {
+            return cmd;
         }
     }
-    return;
+    return Command();
+}
+
+CMDIterator CommandQueue::GetFirstRWInQueue(CMDQueue& queue) {
+    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
+        int rank, bankgroup, bank;
+        rank = cmd_it->Rank();
+        bankgroup = cmd_it->Bankgroup();
+        bank = cmd_it->Bank();
+        if (channel_state_.OpenRow(rank, bankgroup, bank) != -1) {
+            if (channel_state_.IsReady(*cmd_it, clk_)) {
+                return cmd_it;
+            }
+        }
+    }
+    return queue.end();
+}
+
+Command CommandQueue::GetFristReadyInBank(int rank, int bankgroup, int bank) {
+    // only useful in rank queue
+    auto &queue = GetQueue(rank, bankgroup, bank);
+    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
+        if (cmd_it->Rank() == rank && cmd_it->Bankgroup() == bankgroup &&
+            cmd_it->Bank() == bank) {
+            Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
+            if (channel_state_.IsReady(cmd, clk_)) {
+                return cmd;
+            }
+        }
+    }
+    return Command();
+}
+
+void CommandQueue::IssueRWCommand(const Command& cmd) {
+    auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
+    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
+        if (cmd.id == cmd_it->id) {
+            queue.erase(cmd_it);
+            return;
+        }
+    }
 }
 
 int CommandQueue::QueueUsage() const {

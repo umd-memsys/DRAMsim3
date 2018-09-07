@@ -4,7 +4,7 @@
 namespace dramsim3 {
 ChannelState::ChannelState(const Config& config, const Timing& timing,
                            Statistics& stats)
-    : need_to_update_refresh_waiting_status_(true),
+    :
       rank_in_self_refresh_mode_(std::vector<bool>(config.ranks, false)),
       config_(config),
       timing_(timing),
@@ -25,12 +25,6 @@ ChannelState::ChannelState(const Config& config, const Timing& timing,
         bank_states_.push_back(rank_states);
     }
 
-#ifdef GENERATE_TRACE
-    std::string trace_file_name = config.output_prefix + "cmd.trace";
-    RenameFileWithNumber(trace_file_name, channel_id);
-    std::cout << "Command Trace write to " << trace_file_name << std::endl;
-    cmd_trace_.open(trace_file_name, std::ofstream::out);
-#endif  // GENERATE_TRACE
 }
 
 bool ChannelState::IsAllBankIdleInRank(int rank) const {

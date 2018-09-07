@@ -35,15 +35,11 @@ class ChannelState {
         return bank_states_[rank][bankgroup][bank].RowHitCount();
     };
 
-    bool need_to_update_refresh_waiting_status_ = true;
     std::vector<bool> rank_in_self_refresh_mode_;
 
    private:
     const Config& config_;
     const Timing& timing_;
-#ifdef GENERATE_TRACE
-    std::ofstream cmd_trace_;
-#endif  // GENERATE_TRACE
     Statistics& stats_;
     std::vector<std::vector<std::vector<BankState> > > bank_states_;
     std::vector<std::vector<uint64_t> > four_aw;

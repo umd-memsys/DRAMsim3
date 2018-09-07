@@ -157,8 +157,6 @@ class Statistics {
     class CounterStat numb_self_refresh_enter_cmds_issued;
     class CounterStat numb_self_refresh_exit_cmds_issued;
 
-    class CounterStat numb_rw_rowhits_pending_refresh;
-
     std::vector<std::vector<CounterStat>> sref_cycles;
     std::vector<std::vector<CounterStat>> active_cycles;
     std::vector<std::vector<CounterStat>> all_bank_idle_cycles;
