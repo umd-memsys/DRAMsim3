@@ -208,9 +208,11 @@ bool Controller::AddTransaction(Transaction trans) {
 void Controller::ProcessRWCommand(const Command& cmd) {
     auto it = pending_queue_.find(cmd.id);
     if (cmd.IsRead()) {
-        it->second.complete_cycle = clk_ + config_.read_delay;
+        it->second.complete_cycle = clk_ + config_.read_delay + 
+                                    config_.delay_queue_cycles;
     } else {
-        it->second.complete_cycle = clk_ + config_.write_delay;
+        it->second.complete_cycle = clk_ + config_.write_delay +
+                                    config_.delay_queue_cycles;
     }
     return_queue_.push_back(it->second);
     pending_queue_.erase(it);

@@ -115,6 +115,7 @@ class Config {
     std::string row_buf_policy;
     int cmd_queue_size;
     int trans_queue_size;
+    int delay_queue_cycles;
     std::string refresh_strategy;
     bool enable_self_refresh;
     int idle_cycles_for_self_refresh;
