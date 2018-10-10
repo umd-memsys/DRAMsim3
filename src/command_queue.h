@@ -24,7 +24,6 @@ class CommandQueue {
     CMDIterator GetFirstRWInQueue(CMDQueue& queue);
     Command GetFristReadyInBank(int rank, int bankgroup, int bank);
     void IssueRWCommand(const Command& cmd);
-    Command AggressivePrecharge();
     bool WillAcceptCommand(int rank, int bankgroup, int bank);
     bool AddCommand(Command cmd);
     int QueueUsage() const;

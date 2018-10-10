@@ -115,8 +115,6 @@ void Refresh::InsertRefresh() {
 Command Refresh::GetRefreshOrAssociatedCommand() {
     auto refresh_itr = refresh_q_.begin();
     auto refresh_req = *refresh_itr;
-    // auto refresh_req = *refresh_itr;
-    // TODO - Strict round robin search of queues?
     if (refresh_req.cmd_type == CommandType::REFRESH) {
         for (auto k = 0; k < config_.banks_per_group; k++) {
             for (auto j = 0; j < config_.bankgroups; j++) {

@@ -40,7 +40,6 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 
 Command CommandQueue::GetCommandToIssue() {
     for (unsigned i = 0; i < queues_.size(); i++) {
-        // auto cmd = GetCommandToIssueFromQueue(queues_[next_queue_index_]);
         IterateNext();
         auto cmd = GetFristReadyInQueue(queues_[next_queue_index_]);
         if (!cmd.IsValid()) {
@@ -114,42 +113,6 @@ Command CommandQueue::GetCommandToIssueFromQueue(std::vector<Command>& queue) {
                 }
             } else {
                 return cmd;
-            }
-        }
-    }
-    return Command();
-}
-
-Command CommandQueue::AggressivePrecharge() {
-    // TODO - Why such round robin order?
-    for (auto i = 0; i < config_.ranks; i++) {
-        for (auto j = 0; j < config_.bankgroups; j++) {
-            for (auto k = 0; k < config_.banks_per_group; k++) {
-                if (channel_state_.IsRowOpen(i, j, k)) {
-                    auto cmd = Command(CommandType::PRECHARGE,
-                                       Address(-1, i, j, k, -1, -1), -1);
-                    if (channel_state_.IsReady(cmd, clk_)) {
-                        bool pending_row_hits_exist = false;
-                        auto open_row = channel_state_.OpenRow(i, j, k);
-                        auto& queue = GetQueue(i, j, k);
-                        for (auto const &pending_req : queue) {
-                            if (pending_req.Row() == open_row &&
-                                pending_req.Bank() == k &&
-                                pending_req.Bankgroup() == j &&
-                                pending_req.Rank() == i) {
-                                pending_row_hits_exist =
-                                    true;  // Entire address upto row matches
-                                break;
-                            }
-                        }
-                        if (!pending_row_hits_exist) {
-                            stats_.numb_aggressive_precharges++;
-                            return Command(
-                                CommandType::PRECHARGE,
-                                Address(channel_id_, i, j, k, -1, -1), -1);
-                        }
-                    }
-                }
             }
         }
     }

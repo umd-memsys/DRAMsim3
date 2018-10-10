@@ -112,16 +112,14 @@ void Controller::ClockTick() {
         }
     }
 
-    // Refresh command is queued
-    refresh_.ClockTick();
-    if (!refresh_.refresh_q_.empty()) {
-        // auto refresh_itr = refresh_.refresh_q_.begin();
+    if (refresh_.IsRefWaiting()) {
         auto cmd = refresh_.GetRefreshOrAssociatedCommand();
         if (cmd.IsValid() && (!command_issued)) {
             IssueCommand(cmd);
             command_issued = true;
         }
     }
+    refresh_.ClockTick();
 
     if ((!command_issued) && (!refresh_.IsRefWaiting())) {
         auto cmd = cmd_queue_.GetCommandToIssue();
@@ -132,24 +130,13 @@ void Controller::ClockTick() {
             if (config_.enable_hbm_dual_cmd) {
                 auto second_cmd = cmd_queue_.GetCommandToIssue();
                 if (second_cmd.IsValid()) {
-                    if (second_cmd.IsReadWrite() && !cmd.IsReadWrite()) {
-                        IssueCommand(cmd);
-                        stats_.hbm_dual_command_issue_cycles++;
-                    } else if (!second_cmd.IsReadWrite() && cmd.IsReadWrite()) {
+                    if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
                         IssueCommand(cmd);
                         stats_.hbm_dual_command_issue_cycles++;
                     } else {
                         stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
                     }
                 }
-            }
-        } else if (config_.aggressive_precharging_enabled) {
-            // Look for closing open banks if any. (Aggressive precharing)
-            // To which no read/write requests exist in the queues
-            auto pre_cmd = cmd_queue_.AggressivePrecharge();
-            if (pre_cmd.IsValid()) {
-                IssueCommand(pre_cmd);
-                command_issued = true;
             }
         }
     }
