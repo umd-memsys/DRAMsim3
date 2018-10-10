@@ -19,10 +19,10 @@ class CommandQueue {
     CommandQueue(int channel_id, const Config& config,
                  const ChannelState& channel_state, Statistics& stats);
     Command GetCommandToIssue();
-    Command GetCommandToIssueFromQueue(std::vector<Command>& queue);
     Command GetFristReadyInQueue(std::vector<Command>& queue);
     CMDIterator GetFirstRWInQueue(CMDQueue& queue);
     Command GetFristReadyInBank(int rank, int bankgroup, int bank);
+    bool ArbitratePrecharge(const Command& cmd);
     void IssueRWCommand(const Command& cmd);
     bool WillAcceptCommand(int rank, int bankgroup, int bank);
     bool AddCommand(Command cmd);

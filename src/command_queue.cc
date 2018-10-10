@@ -45,78 +45,40 @@ Command CommandQueue::GetCommandToIssue() {
         if (!cmd.IsValid()) {
             continue;
         } else {
+            if (cmd.cmd_type == CommandType::PRECHARGE) {
+                if (!ArbitratePrecharge(cmd)) {
+                    return Command();
+                }
+            }
             return cmd;
         }
     }
     return Command();
 }
 
-Command CommandQueue::GetCommandToIssueFromQueue(std::vector<Command>& queue) {
-    // Prioritize row hits while honoring read, write dependencies
-    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
-        // TODO - Can specizalize for PER_BANK queues (simulator speed)
-        if (channel_state_.IsReady(cmd, clk_)) {
-            if (cmd.IsReadWrite()) {
-                // Check for read/write dependency check. Necessary only for
-                // unified queues
-                bool dependency = false;
-                for (auto dep_itr = queue.begin(); dep_itr != cmd_it;
-                        dep_itr++) {
-                    if (dep_itr->Row() == cmd.Row()) {
-                        dependency = true;
-                        break;
-                    }
-                }
-                if (!dependency) {
-                    return cmd;
-                }
-            } else if (cmd.cmd_type == CommandType::PRECHARGE) {
-                // Attempt to issue a precharge only if
-                // 0. There are no prior requests to the same bank in the
-                // queue (and)
-                // 1. There are no pending row hits to the open row in the
-                // bank (or)
-                // 2. There are pending row hits to the open row but the max
-                // allowed cap for row hits has been exceeded
-
-                bool prior_requests_to_bank_exist = false;
-                for (auto prior_itr = queue.begin(); prior_itr != cmd_it;
-                        prior_itr++) {
-                    if (prior_itr->Bank() == cmd.Bank() &&
-                        prior_itr->Bankgroup() == cmd.Bankgroup() &&
-                        prior_itr->Rank() == cmd.Rank()) {
-                        prior_requests_to_bank_exist = true;
-                        break;
-                    }
-                }
-                bool pending_row_hits_exist = false;
-                auto open_row = channel_state_.OpenRow(
-                    cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
-                for (auto pending_itr = cmd_it; pending_itr != queue.end();
-                        pending_itr++) {
-                    if (pending_itr->Row() == open_row &&
-                        pending_itr->Bank() == cmd.Bank() &&
-                        pending_itr->Bankgroup() == cmd.Bankgroup() &&
-                        pending_itr->Rank() == cmd.Rank()) {
-                        pending_row_hits_exist = true;
-                        break;
-                    }
-                }
-                bool rowhit_limit_reached =
-                    channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(),
-                                                cmd.Bank()) >= 4;
-                if (!prior_requests_to_bank_exist &&
-                    (!pending_row_hits_exist || rowhit_limit_reached)) {
-                    stats_.numb_ondemand_precharges++;
-                    return cmd;
-                }
-            } else {
-                return cmd;
-            }
+bool CommandQueue::ArbitratePrecharge(const Command& cmd) {
+    auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
+    bool pending_row_hits_exist = false;
+    auto open_row =
+        channel_state_.OpenRow(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
+    for (auto pending_itr = queue.begin(); pending_itr != queue.end();
+         pending_itr++) {
+        if (pending_itr->Row() == open_row &&
+            pending_itr->Bank() == cmd.Bank() &&
+            pending_itr->Bankgroup() == cmd.Bankgroup() &&
+            pending_itr->Rank() == cmd.Rank()) {
+            pending_row_hits_exist = true;
+            break;
         }
     }
-    return Command();
+    bool rowhit_limit_reached =
+        channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >=
+        4;
+    if (!pending_row_hits_exist || rowhit_limit_reached) {
+        stats_.numb_ondemand_precharges++;
+        return true;
+    }
+    return false;
 }
 
 bool CommandQueue::WillAcceptCommand(int rank, int bankgroup, int bank) {
@@ -197,7 +159,7 @@ CMDIterator CommandQueue::GetFirstRWInQueue(CMDQueue& queue) {
 
 Command CommandQueue::GetFristReadyInBank(int rank, int bankgroup, int bank) {
     // only useful in rank queue
-    auto &queue = GetQueue(rank, bankgroup, bank);
+    auto& queue = GetQueue(rank, bankgroup, bank);
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         if (cmd_it->Rank() == rank && cmd_it->Bankgroup() == bankgroup &&
             cmd_it->Bank() == bank) {
