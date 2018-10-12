@@ -110,6 +110,7 @@ class Config {
     int block_size;  // block size in bytes
     int xbar_queue_depth;
 
+    // System
     std::string address_mapping;
     std::string queue_structure;
     std::string row_buf_policy;

@@ -163,7 +163,7 @@ JedecDRAMSystem::~JedecDRAMSystem() {}
 bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr,
                                             bool is_write) const {
     int channel = MapChannel(hex_addr);
-    return ctrls_[channel].WillAcceptTransaction();
+    return ctrls_[channel].WillAcceptTransaction(hex_addr, is_write);
 }
 
 bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
@@ -175,7 +175,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 #endif
 
     int channel = MapChannel(hex_addr);
-    bool ok = ctrls_[channel].WillAcceptTransaction();
+    bool ok = ctrls_[channel].WillAcceptTransaction(hex_addr, is_write);
 
 #ifdef NO_BACKPRESSURE
     // Some CPU simulators might not model the backpressure because queues are

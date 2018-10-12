@@ -32,7 +32,7 @@ class Controller {
 #endif  // THERMAL
     ~Controller(){};
     void ClockTick();
-    bool WillAcceptTransaction() const;
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
     bool AddTransaction(Transaction trans);
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
@@ -54,7 +54,8 @@ class Controller {
     std::ofstream cmd_trace_;
 #endif  // GENERATE_TRACE
     // queue that takes transactions from CPU side
-    std::vector<Transaction> transaction_queue_;
+    std::vector<Transaction> read_queue_;
+    std::vector<Transaction> write_queue_;
 
     // transactions that are issued to command queue, use map for convenience
     std::multimap<int, Transaction> pending_queue_;
@@ -67,7 +68,13 @@ class Controller {
 
     // the max number of cmds in fly, x2 to be safe
     const int max_cmd_id_;
+
+    // row buffer policy
     RowBufPolicy row_buf_policy_;
+
+    // transaction queueing
+    bool write_draining_;
+    void ScheduleTransaction();
     void IssueCommand(const Command& tmp_cmd);
     void ProcessRWCommand(const Command& cmd);
     Command TransToCommand(const Transaction &trans);

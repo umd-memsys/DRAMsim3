@@ -30,8 +30,10 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       max_cmd_id_(config_.cmd_queue_size * config_.banks * 2),
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
-                          : RowBufPolicy::OPEN_PAGE) {
-    transaction_queue_.reserve(config_.trans_queue_size);
+                          : RowBufPolicy::OPEN_PAGE),
+      write_draining_(false) {
+    read_queue_.reserve(config_.trans_queue_size);
+    write_queue_.reserve(config_.trans_queue_size);
 #ifdef GENERATE_TRACE
     std::string trace_file_name = config_.output_prefix + "cmd.trace";
     RenameFileWithNumber(trace_file_name, channel_id);
@@ -51,8 +53,8 @@ void Controller::ClockTick() {
             } else {
                 stats_.numb_read_reqs_issued++;
                 read_callback_(it->addr);
+                it = return_queue_.erase(it);
             }
-            it = return_queue_.erase(it);
         } else {
             ++it;
         }
@@ -141,43 +143,89 @@ void Controller::ClockTick() {
         }
     }
 
-    // look ahead this amount of transactions to put in cmd queue
-    // considering hardware cost to implement this... it won't be a large number
-    const int max_lookup_depth = 4;
-    int lookup_depth = 0;
-    for (auto it = transaction_queue_.begin();
-         it != transaction_queue_.end();) {
-        if (lookup_depth >= max_lookup_depth) {
-            break;  // stop wasting time
-        }
-        lookup_depth++;
-        auto cmd = TransToCommand(*it);
-        if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
-                                         cmd.Bank())) {
-            cmd_queue_.AddCommand(cmd);
-            pending_queue_.insert(std::make_pair(cmd_id_, *it));
-            it = transaction_queue_.erase(it);
-            // Reset cmd_id
-            cmd_id_++;
-            cmd_id_ = cmd_id_ % max_cmd_id_;
-            break;  // only allow one transaction scheduled per cycle
-        } else {
-            ++it;
-        }
-    }
+    ScheduleTransaction();
     clk_++;
     cmd_queue_.clk_++;
     return;
 }
 
-bool Controller::WillAcceptTransaction() const {
-    return transaction_queue_.size() < transaction_queue_.capacity();
+bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
+    if (!is_write) {
+        return read_queue_.size() < read_queue_.capacity(); 
+    } else {
+        return write_draining_ ? false
+                               : write_queue_.size() < write_queue_.capacity();
+    }
 }
 
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
-    transaction_queue_.push_back(trans);
-    return transaction_queue_.size() <= transaction_queue_.capacity();
+    if (trans.is_write) {
+        // pretend it's done
+        stats_.numb_write_reqs_issued++;
+        write_callback_(trans.addr);
+        bool merge = false;
+        // mask column bits so that we can merge requests to the same row
+        trans.addr = MaskColumns(trans.addr);
+        for (auto it = write_queue_.begin(); it != write_queue_.end(); it++) {
+            if (trans.addr == it->addr) {
+                merge = true;
+            }
+        }
+        if (!merge) {
+            write_queue_.push_back(trans);
+        }
+        return write_queue_.size() <= write_queue_.capacity();
+    } else {
+        read_queue_.push_back(trans);
+        return read_queue_.size() <= read_queue_.capacity();
+    }
+}
+
+void Controller::ScheduleTransaction() {
+    // determine whether to schedule read or write
+    if (write_draining_){
+        // ok so the question is while write requests are draining do
+        // we stop getting new requests?
+        if (write_queue_.empty()) {
+            write_draining_ = false;
+        }
+    } else {
+        if (write_queue_.size() == write_queue_.capacity() ||
+            read_queue_.size() == 0) {
+            write_draining_ = true;
+        }
+    }
+
+    std::vector<Transaction>::iterator trans_it;
+    std::vector<Transaction>::iterator queue_end;
+    if (write_draining_) {
+        trans_it = write_queue_.begin();
+        queue_end = write_queue_.end();
+    } else {
+        trans_it = read_queue_.begin();
+        queue_end = read_queue_.end();
+    }
+
+    while (trans_it != queue_end) {
+        auto cmd = TransToCommand(*trans_it);
+        if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
+                                         cmd.Bank())) {
+            cmd_queue_.AddCommand(cmd);
+            if (!write_draining_) {
+                pending_queue_.insert(std::make_pair(cmd_id_, *trans_it));
+                trans_it = read_queue_.erase(trans_it);
+                // Reset cmd_id
+                cmd_id_++;
+                cmd_id_ = cmd_id_ % max_cmd_id_;
+            } else {
+                trans_it = write_queue_.erase(trans_it);
+            }
+            break;  // only allow one transaction scheduled per cycle
+        } else {
+            ++trans_it;
+        }
+    }
 }
 
 void Controller::IssueCommand(const Command& tmp_cmd) {
@@ -208,12 +256,12 @@ void Controller::ProcessRWCommand(const Command& cmd) {
     if (cmd.IsRead()) {
         it->second.complete_cycle = clk_ + config_.read_delay + 
                                     config_.delay_queue_cycles;
+        return_queue_.push_back(it->second);
+        pending_queue_.erase(it);
     } else {
         it->second.complete_cycle = clk_ + config_.write_delay +
                                     config_.delay_queue_cycles;
     }
-    return_queue_.push_back(it->second);
-    pending_queue_.erase(it);
     return;
 }
 

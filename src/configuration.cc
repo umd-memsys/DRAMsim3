@@ -3,6 +3,7 @@
 namespace dramsim3 {
 
 std::function<Address(uint64_t)> AddressMapping;
+std::function<uint64_t(uint64_t)> MaskColumns;
 std::function<int(uint64_t)> MapChannel;
 
 Config::Config(std::string config_file, std::string out_dir)
@@ -179,7 +180,7 @@ void Config::InitSystemParams() {
     channels = GetInteger("system", "channels", 1);
     bus_width = GetInteger("system", "bus_width", 64);
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
-    delay_queue_cycles = reader.GetInteger("system", "delay_queue_cycles", 0);
+    delay_queue_cycles = GetInteger("system", "delay_queue_cycles", 0);
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
     row_buf_policy = reader.Get("system", "row_buf_policy", "OPEN_PAGE");
     cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
@@ -476,6 +477,13 @@ void Config::SetAddressMapping() {
         column = ModuloWidth(hex_addr, field_widths[5], field_pos[5]);
         column = column & col_mask;
         return Address(channel, rank, bankgroup, bank, row, column);
+    };
+
+    int col_width = field_widths[5];
+    int col_pos = field_pos[5];
+    MaskColumns = [col_width, col_pos](uint64_t value) {
+        uint64_t one_mask = ((1 << col_width) - 1) << col_pos;
+        return value | one_mask;
     };
 }
 
