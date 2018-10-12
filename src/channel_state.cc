@@ -2,21 +2,13 @@
 #include "../ext/fmt/src/format.h"
 
 namespace dramsim3 {
-#ifdef THERMAL
-ChannelState::ChannelState(const Config& config, const Timing& timing,
-                           Statistics& stats, ThermalCalculator& thermal_calc)
-#else
 ChannelState::ChannelState(const Config& config, const Timing& timing,
                            Statistics& stats)
-#endif  // THERMAL
-    : need_to_update_refresh_waiting_status_(true),
+    :
       rank_in_self_refresh_mode_(std::vector<bool>(config.ranks, false)),
       config_(config),
       timing_(timing),
       stats_(stats),
-#ifdef THERMAL
-      thermal_calc_(thermal_calc),
-#endif  // THERMAL
       four_aw(config_.ranks, std::vector<uint64_t>()),
       thirty_two_aw(config_.ranks, std::vector<uint64_t>()),
       is_selfrefresh_(config_.ranks, false) {
@@ -33,12 +25,6 @@ ChannelState::ChannelState(const Config& config, const Timing& timing,
         bank_states_.push_back(rank_states);
     }
 
-#ifdef GENERATE_TRACE
-    std::string trace_file_name = config.output_prefix + "cmd.trace";
-    RenameFileWithNumber(trace_file_name, channel_id);
-    std::cout << "Command Trace write to " << trace_file_name << std::endl;
-    cmd_trace_.open(trace_file_name, std::ofstream::out);
-#endif  // GENERATE_TRACE
 }
 
 bool ChannelState::IsAllBankIdleInRank(int rank) const {
@@ -53,6 +39,10 @@ bool ChannelState::IsAllBankIdleInRank(int rank) const {
 }
 
 Command ChannelState::GetRequiredCommand(const Command& cmd) const {
+    CommandType cmd_type = cmd.cmd_type;
+    Address addr = Address(cmd.addr);
+    int cmd_id = cmd.id;
+    bool need_precharge = false;
     switch (cmd.cmd_type) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
@@ -61,32 +51,38 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
         case CommandType::ACTIVATE:
         case CommandType::PRECHARGE:
         case CommandType::REFRESH_BANK:
-            return Command(bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]
-                               .GetRequiredCommandType(cmd),
-                           cmd.addr, cmd.id);
+            cmd_type = bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]
+                               .GetRequiredCommandType(cmd);
+            break;
         case CommandType::REFRESH:
         case CommandType::SELF_REFRESH_ENTER:
         case CommandType::SELF_REFRESH_EXIT:
             // Static fixed order to check banks
             for (auto j = 0; j < config_.bankgroups; j++) {
                 for (auto k = 0; k < config_.banks_per_group; k++) {
-                    CommandType required_cmd_type =
+                    CommandType tmp_type =
                         bank_states_[cmd.Rank()][j][k].GetRequiredCommandType(
                             cmd);
-                    if (required_cmd_type != cmd.cmd_type) {  // precharge
-                        auto addr = Address(cmd.addr);
+                    if (tmp_type != cmd.cmd_type) {  // precharge
+                        need_precharge = true;
+                        cmd_type = tmp_type;
                         addr.bankgroup = j;
                         addr.bank = k;
                         addr.row = bank_states_[cmd.Rank()][j][k].OpenRow();
-                        return Command(required_cmd_type, addr, -1);
+                        cmd_id = -1;
+                        break;
                     }
                 }
+                if (need_precharge){
+                    break;
+                }
             }
-            return cmd;
+            break;
         default:
             AbruptExit(__FILE__, __LINE__);
-            return Command();
+            break;
     }
+    return Command(cmd_type, addr, cmd_id); 
 }
 
 bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
@@ -289,40 +285,13 @@ void ChannelState::UpdateSameRankTiming(
     return;
 }
 
-void ChannelState::IssueCommand(const Command& cmd, uint64_t clk) {
-#ifdef DEBUG_OUTPUT
-    std::cout << std::left << std::setw(8) << clk << " " << cmd << std::endl;
-#endif  // DEBUG_OUTPUT
-#ifdef GENERATE_TRACE
-    cmd_trace_ << std::left << std::setw(18) << clk << " " << cmd << endl;
-#endif  // GENERATE_TRACE
+void ChannelState::UpdateTimingAndStates(const Command& cmd, uint64_t clk) {
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
-#ifdef THERMAL
-    thermal_calc_.UpdatePower(cmd, clk);
-#endif  // THERMAL
     UpdateCommandIssueStats(cmd);
     return;
 }
 
-void ChannelState::UpdateRefreshWaitingStatus(const Command& cmd, bool status) {
-    if (cmd.cmd_type == CommandType::REFRESH) {
-        for (auto j = 0; j < config_.bankgroups; j++) {
-            for (auto k = 0; k < config_.banks_per_group; k++) {
-                bank_states_[cmd.Rank()][j][k].UpdateRefreshWaitingStatus(
-                    status);
-            }
-        }
-    } else if (cmd.cmd_type == CommandType::REFRESH_BANK) {
-        for (auto k = 0; k < config_.banks_per_group; k++) {
-            bank_states_[cmd.Rank()][cmd.Bankgroup()][k]
-                .UpdateRefreshWaitingStatus(status);
-        }
-    } else {
-        AbruptExit(__FILE__, __LINE__);
-    }
-    return;
-}
 
 bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) const {
     bool tfaw_ok = IsFAWReady(rank, curr_time);

@@ -19,20 +19,25 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       channel_id_(channel),
       clk_(0),
       config_(config),
-#ifdef THERMAL
-      channel_state_(config, timing, stats, thermal_calc),
-#else
       channel_state_(config, timing, stats),
-#endif  // THERMAL
       cmd_queue_(channel_id_, config, channel_state_, stats),
-      refresh_(channel_id_, config, channel_state_, cmd_queue_, stats),
+      refresh_(config, channel_state_, cmd_queue_, stats),
       stats_(stats),
+#ifdef THERMAL
+      thermal_calc_(thermal_calc),
+#endif  // THERMAL
       cmd_id_(0),
       max_cmd_id_(config_.cmd_queue_size * config_.banks * 2),
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE) {
     transaction_queue_.reserve(config_.trans_queue_size);
+#ifdef GENERATE_TRACE
+    std::string trace_file_name = config_.output_prefix + "cmd.trace";
+    RenameFileWithNumber(trace_file_name, channel_id);
+    std::cout << "Command Trace write to " << trace_file_name << std::endl;
+    cmd_trace_.open(trace_file_name, std::ofstream::out);
+#endif  // GENERATE_TRACE
 }
 
 void Controller::ClockTick() {
@@ -102,64 +107,36 @@ void Controller::ClockTick() {
                         }
                     }
                 command_issued = true;
-                channel_state_.IssueCommand(cmd, clk_);
+                IssueCommand(cmd);
             }
         }
     }
 
-    // Refresh command is queued
-    refresh_.ClockTick();
-    if (!refresh_.refresh_q_.empty()) {
-        auto refresh_itr = refresh_.refresh_q_.begin();
-        if (channel_state_.need_to_update_refresh_waiting_status_) {
-            channel_state_.need_to_update_refresh_waiting_status_ = false;
-            channel_state_.UpdateRefreshWaitingStatus((*refresh_itr), true);
-        }
-        auto cmd = refresh_.GetRefreshOrAssociatedCommand(refresh_itr);
+    if (refresh_.IsRefWaiting()) {
+        auto cmd = refresh_.GetRefreshOrAssociatedCommand();
         if (cmd.IsValid() && (!command_issued)) {
-            channel_state_.IssueCommand(cmd, clk_);
-            if (cmd.IsRefresh()) {
-                channel_state_.need_to_update_refresh_waiting_status_ = true;
-                channel_state_.UpdateRefreshWaitingStatus(
-                    cmd, false);  // TODO - Move this to channelstate update?
-            }
+            IssueCommand(cmd);
             command_issued = true;
         }
     }
+    refresh_.ClockTick();
 
-    if (!command_issued) {
+    if ((!command_issued) && (!refresh_.IsRefWaiting())) {
         auto cmd = cmd_queue_.GetCommandToIssue();
         if (cmd.IsValid()) {
-            // if read/write, update pending queue and return queue
-            if (cmd.IsReadWrite()) {
-                ProcessRWCommand(cmd); 
-            }
-
-            channel_state_.IssueCommand(cmd, clk_);
+            IssueCommand(cmd);
             command_issued = true;
 
             if (config_.enable_hbm_dual_cmd) {
                 auto second_cmd = cmd_queue_.GetCommandToIssue();
                 if (second_cmd.IsValid()) {
-                    if (second_cmd.IsReadWrite() && !cmd.IsReadWrite()) {
-                        ProcessRWCommand(second_cmd);
-                        channel_state_.IssueCommand(second_cmd, clk_);
-                        stats_.hbm_dual_command_issue_cycles++;
-                    } else if (!second_cmd.IsReadWrite() && cmd.IsReadWrite()) {
-                        channel_state_.IssueCommand(second_cmd, clk_);
+                    if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
+                        IssueCommand(cmd);
                         stats_.hbm_dual_command_issue_cycles++;
                     } else {
                         stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
                     }
                 }
-            }
-        } else if (config_.aggressive_precharging_enabled) {
-            // Look for closing open banks if any. (Aggressive precharing)
-            // To which no read/write requests exist in the queues
-            auto pre_cmd = cmd_queue_.AggressivePrecharge();
-            if (pre_cmd.IsValid()) {
-                channel_state_.IssueCommand(pre_cmd, clk_);
-                command_issued = true;
             }
         }
     }
@@ -188,7 +165,6 @@ void Controller::ClockTick() {
             ++it;
         }
     }
-
     clk_++;
     cmd_queue_.clk_++;
     return;
@@ -204,8 +180,30 @@ bool Controller::AddTransaction(Transaction trans) {
     return transaction_queue_.size() <= transaction_queue_.capacity();
 }
 
+void Controller::IssueCommand(const Command& tmp_cmd) {
+    Command cmd = Command(tmp_cmd.cmd_type, tmp_cmd.addr, tmp_cmd.id);
+#ifdef DEBUG_OUTPUT
+    std::cout << std::left << std::setw(8) << clk << " " << cmd << std::endl;
+#endif  // DEBUG_OUTPUT
+#ifdef GENERATE_TRACE
+    cmd_trace_ << std::left << std::setw(18) << clk << " " << cmd << endl;
+#endif  // GENERATE_TRACE
+#ifdef THERMAL
+    // add channel in, only needed by thermal module
+    cmd.addr.channel = channel_id_;
+    thermal_calc_.UpdatePower(cmd, clk_);
+#endif  // THERMAL
+    // if read/write, update pending queue and return queue
+    if (cmd.IsReadWrite()) {
+        ProcessRWCommand(cmd);
+    } else if (cmd.IsRefresh()) {
+        refresh_.RefreshIssued(cmd);
+    }
+    channel_state_.UpdateTimingAndStates(cmd, clk_);
+}
 
 void Controller::ProcessRWCommand(const Command& cmd) {
+    cmd_queue_.IssueRWCommand(cmd);
     auto it = pending_queue_.find(cmd.id);
     if (cmd.IsRead()) {
         it->second.complete_cycle = clk_ + config_.read_delay + 

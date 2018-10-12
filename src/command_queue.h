@@ -10,6 +10,8 @@
 
 namespace dramsim3 {
 
+using CMDIterator = std::vector<Command>::iterator;
+using CMDQueue = std::vector<Command>;
 enum class QueueStructure { PER_RANK, PER_BANK, SIZE };
 
 class CommandQueue {
@@ -17,10 +19,11 @@ class CommandQueue {
     CommandQueue(int channel_id, const Config& config,
                  const ChannelState& channel_state, Statistics& stats);
     Command GetCommandToIssue();
-    Command GetCommandToIssueFromQueue(std::vector<Command>& queue);
-    Command AggressivePrecharge();
-    void IssueCommand(std::vector<Command>& queue, 
-                      std::vector<Command>::iterator it);
+    Command GetFristReadyInQueue(std::vector<Command>& queue);
+    CMDIterator GetFirstRWInQueue(CMDQueue& queue);
+    Command GetFristReadyInBank(int rank, int bankgroup, int bank);
+    bool ArbitratePrecharge(const Command& cmd);
+    void IssueRWCommand(const Command& cmd);
     bool WillAcceptCommand(int rank, int bankgroup, int bank);
     bool AddCommand(Command cmd);
     int QueueUsage() const;

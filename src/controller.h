@@ -47,6 +47,12 @@ class Controller {
     Statistics &stats_;
 
    private:
+#ifdef THERMAL
+    ThermalCalculator& thermal_calc_;
+#endif  // THERMAL
+#ifdef GENERATE_TRACE
+    std::ofstream cmd_trace_;
+#endif  // GENERATE_TRACE
     // queue that takes transactions from CPU side
     std::vector<Transaction> transaction_queue_;
 
@@ -62,6 +68,7 @@ class Controller {
     // the max number of cmds in fly, x2 to be safe
     const int max_cmd_id_;
     RowBufPolicy row_buf_policy_;
+    void IssueCommand(const Command& tmp_cmd);
     void ProcessRWCommand(const Command& cmd);
     Command TransToCommand(const Transaction &trans);
 };
