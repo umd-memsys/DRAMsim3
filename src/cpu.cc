@@ -37,27 +37,23 @@ void StreamCPU::ClockTick() {
         memory_system_.WillAcceptTransaction(addr_a_ + offset_, false)) {
         memory_system_.AddTransaction(addr_a_ + offset_, false);
         inserted_a_ = true;
-    } else {
-        inserted_a_ = false;
     }
     if (!inserted_b_ &&
         memory_system_.WillAcceptTransaction(addr_b_ + offset_, false)) {
         memory_system_.AddTransaction(addr_b_ + offset_, false);
         inserted_b_ = true;
-    } else {
-        inserted_b_ = false;
     }
     if (!inserted_c_ &&
         memory_system_.WillAcceptTransaction(addr_c_ + offset_, true)) {
         memory_system_.AddTransaction(addr_c_ + offset_, true);
         inserted_c_ = true;
-    } else {
-        inserted_c_ = false;
     }
-
     // moving on to next element
     if (inserted_a_ && inserted_b_ && inserted_c_) {
         offset_ += stride_;
+        inserted_a_ = false;
+        inserted_b_ = false;
+        inserted_c_ = false;
     }
     clk_++;
     return;
