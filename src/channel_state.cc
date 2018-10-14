@@ -79,6 +79,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
             }
             break;
         default:
+            std::cerr << cmd << std::endl;
             AbruptExit(__FILE__, __LINE__);
             break;
     }

@@ -38,7 +38,7 @@ class Controller {
     int channel_id_;
     int QueueUsage() const;
 
-   protected:
+   private:
     uint64_t clk_;
     const Config &config_;
     ChannelState channel_state_;
@@ -46,7 +46,6 @@ class Controller {
     Refresh refresh_;
     Statistics &stats_;
 
-   private:
 #ifdef THERMAL
     ThermalCalculator& thermal_calc_;
 #endif  // THERMAL

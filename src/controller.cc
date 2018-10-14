@@ -27,7 +27,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       thermal_calc_(thermal_calc),
 #endif  // THERMAL
       cmd_id_(0),
-      max_cmd_id_(config_.cmd_queue_size * config_.banks * 2),
+      max_cmd_id_(config_.cmd_queue_size * config_.banks * 4),
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
@@ -43,13 +43,13 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
 }
 
 void Controller::ClockTick() {
-    // Return completed transactions back to the CPU
+    // Return completed read transactions back to the CPU
     for (auto it = return_queue_.begin(); it != return_queue_.end();) {
         if (clk_ >= it->complete_cycle) {
             stats_.access_latency.AddValue(clk_ - it->added_cycle);
             if (it->is_write) {
-                stats_.numb_write_reqs_issued++;
-                write_callback_(it->addr);
+                std::cerr << "cmd id overflow!" << std::endl;
+                exit(1);
             } else {
                 stats_.numb_read_reqs_issued++;
                 read_callback_(it->addr);
@@ -133,7 +133,7 @@ void Controller::ClockTick() {
                 auto second_cmd = cmd_queue_.GetCommandToIssue();
                 if (second_cmd.IsValid()) {
                     if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
-                        IssueCommand(cmd);
+                        IssueCommand(second_cmd);
                         stats_.hbm_dual_command_issue_cycles++;
                     } else {
                         stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
@@ -212,12 +212,12 @@ void Controller::ScheduleTransaction() {
         if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
                                          cmd.Bank())) {
             cmd_queue_.AddCommand(cmd);
-            if (!write_draining_) {
-                pending_queue_.insert(std::make_pair(cmd_id_, *trans_it));
+            pending_queue_.insert(std::make_pair(cmd.id, *trans_it));
+            cmd_id_++;
+            cmd_id_ = cmd_id_ % max_cmd_id_;
+            if (cmd.IsRead()) {
                 trans_it = read_queue_.erase(trans_it);
                 // Reset cmd_id
-                cmd_id_++;
-                cmd_id_ = cmd_id_ % max_cmd_id_;
             } else {
                 trans_it = write_queue_.erase(trans_it);
             }
@@ -231,10 +231,10 @@ void Controller::ScheduleTransaction() {
 void Controller::IssueCommand(const Command& tmp_cmd) {
     Command cmd = Command(tmp_cmd.cmd_type, tmp_cmd.addr, tmp_cmd.id);
 #ifdef DEBUG_OUTPUT
-    std::cout << std::left << std::setw(8) << clk << " " << cmd << std::endl;
+    std::cout << std::left << std::setw(8) << clk_ << " " << cmd << " " << cmd.id << std::endl;
 #endif  // DEBUG_OUTPUT
 #ifdef GENERATE_TRACE
-    cmd_trace_ << std::left << std::setw(18) << clk << " " << cmd << endl;
+    cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd << endl;
 #endif  // GENERATE_TRACE
 #ifdef THERMAL
     // add channel in, only needed by thermal module
@@ -253,14 +253,24 @@ void Controller::IssueCommand(const Command& tmp_cmd) {
 void Controller::ProcessRWCommand(const Command& cmd) {
     cmd_queue_.IssueRWCommand(cmd);
     auto it = pending_queue_.find(cmd.id);
+    if (it == pending_queue_.end()) {
+        std::cerr << cmd.id << " not in pending queue!" << std::endl;
+        exit(1);
+    }
     if (cmd.IsRead()) {
         it->second.complete_cycle = clk_ + config_.read_delay + 
                                     config_.delay_queue_cycles;
+        if (it->second.is_write) {
+            std::cout << "cmd read trans write!" << std::endl;
+            auto count = pending_queue_.count(cmd.id);
+            std::cout << count << " of id " << cmd.id << std::endl;
+        }
         return_queue_.push_back(it->second);
         pending_queue_.erase(it);
     } else {
-        it->second.complete_cycle = clk_ + config_.write_delay +
-                                    config_.delay_queue_cycles;
+        // it->second.complete_cycle = clk_ + config_.write_delay +
+        //                             config_.delay_queue_cycles;
+        pending_queue_.erase(it);
     }
     return;
 }

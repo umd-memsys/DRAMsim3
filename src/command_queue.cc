@@ -133,6 +133,10 @@ std::vector<Command>& CommandQueue::GetQueue(int rank, int bankgroup,
 
 Command CommandQueue::GetFristReadyInQueue(std::vector<Command>& queue) {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
+        // DO NOT REORDER R/W
+        if (cmd_it->IsRead() != queue.begin()->IsRead()) {
+            break;
+        }
         Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
         // TODO required might be different from cmd_it, e.g. ACT vs READ
         if (channel_state_.IsReady(cmd, clk_)) {
@@ -161,6 +165,10 @@ Command CommandQueue::GetFristReadyInBank(int rank, int bankgroup, int bank) {
     // only useful in rank queue
     auto& queue = GetQueue(rank, bankgroup, bank);
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
+        // DO NOT REORDER R/W
+        if (cmd_it->IsRead() != queue.begin()->IsRead()) {
+            break;
+        }
         if (cmd_it->Rank() == rank && cmd_it->Bankgroup() == bankgroup &&
             cmd_it->Bank() == bank) {
             Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
@@ -180,6 +188,8 @@ void CommandQueue::IssueRWCommand(const Command& cmd) {
             return;
         }
     }
+    std::cerr << "cannot find cmd!" << std::endl;
+    exit(1);
 }
 
 int CommandQueue::QueueUsage() const {
