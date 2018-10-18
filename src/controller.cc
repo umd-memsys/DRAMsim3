@@ -131,7 +131,7 @@ void Controller::ClockTick() {
                 auto second_cmd = cmd_queue_.GetCommandToIssue();
                 if (second_cmd.IsValid()) {
                     if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
-                        IssueCommand(cmd);
+                        IssueCommand(second_cmd);
                         stats_.hbm_dual_command_issue_cycles++;
                     } else {
                         stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
@@ -183,10 +183,10 @@ bool Controller::AddTransaction(Transaction trans) {
 void Controller::IssueCommand(const Command& tmp_cmd) {
     Command cmd = Command(tmp_cmd.cmd_type, tmp_cmd.addr, tmp_cmd.id);
 #ifdef DEBUG_OUTPUT
-    std::cout << std::left << std::setw(8) << clk << " " << cmd << std::endl;
+    std::cout << std::left << std::setw(8) << clk_ << " " << cmd << std::endl;
 #endif  // DEBUG_OUTPUT
 #ifdef GENERATE_TRACE
-    cmd_trace_ << std::left << std::setw(18) << clk << " " << cmd << endl;
+    cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd << endl;
 #endif  // GENERATE_TRACE
 #ifdef THERMAL
     // add channel in, only needed by thermal module
