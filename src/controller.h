@@ -72,7 +72,7 @@ class Controller {
     RowBufPolicy row_buf_policy_;
 
     // transaction queueing
-    bool write_draining_;
+    int write_draining_;
     void ScheduleTransaction();
     void IssueCommand(const Command& tmp_cmd);
     void ProcessRWCommand(const Command& cmd);

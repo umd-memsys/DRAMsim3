@@ -31,7 +31,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
-      write_draining_(false) {
+      write_draining_(0) {
     read_queue_.reserve(config_.trans_queue_size);
     write_queue_.reserve(config_.trans_queue_size);
 #ifdef GENERATE_TRACE
@@ -153,8 +153,7 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
     if (!is_write) {
         return read_queue_.size() < read_queue_.capacity(); 
     } else {
-        return write_draining_ ? false
-                               : write_queue_.size() < write_queue_.capacity();
+        return write_queue_.size() < write_queue_.capacity();
     }
 }
 
@@ -184,16 +183,14 @@ bool Controller::AddTransaction(Transaction trans) {
 
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
-    if (write_draining_){
+    if (write_draining_ > 0){
         // ok so the question is while write requests are draining do
         // we stop getting new requests?
-        if (write_queue_.empty()) {
-            write_draining_ = false;
-        }
+        write_draining_ -= 1;
     } else {
-        if (write_queue_.size() == write_queue_.capacity() ||
+        if (write_queue_.size() >= write_queue_.capacity() ||
             read_queue_.size() == 0) {
-            write_draining_ = true;
+            write_draining_ = write_queue_.size();
         }
     }
 
