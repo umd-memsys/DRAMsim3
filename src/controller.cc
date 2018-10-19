@@ -163,18 +163,7 @@ bool Controller::AddTransaction(Transaction trans) {
         // pretend it's done
         stats_.numb_write_reqs_issued++;
         write_callback_(trans.addr);
-        bool merge = false;
-        // mask column bits so that we can merge requests to the same row
-        trans.addr = MaskColumns(trans.addr);
-        for (auto it = write_queue_.begin(); it != write_queue_.end(); it++) {
-            if (trans.addr == it->addr) {
-                // TODO not merge, reorder!
-                merge = true;
-            }
-        }
-        if (!merge) {
-            write_queue_.push_back(trans);
-        }
+        write_queue_.push_back(trans);
         return write_queue_.size() <= write_queue_.capacity();
     } else {
         read_queue_.push_back(trans);
