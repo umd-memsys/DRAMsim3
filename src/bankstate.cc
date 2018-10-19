@@ -96,11 +96,11 @@ void BankState::UpdateState(const Command& cmd) {
                 case CommandType::READ:
                 case CommandType::WRITE:
                     if (row_hit_count_ != 0) {
-                        stats_.numb_row_hits++;
+                        stats_.num_row_hits++;
                         if (cmd.cmd_type == CommandType::READ)
-                            stats_.numb_read_row_hits++;
+                            stats_.num_read_row_hits++;
                         if (cmd.cmd_type == CommandType::WRITE)
-                            stats_.numb_write_row_hits++;
+                            stats_.num_write_row_hits++;
                     }
                     row_hit_count_++;
                     break;

@@ -51,7 +51,7 @@ void Controller::ClockTick() {
                 std::cerr << "cmd id overflow!" << std::endl;
                 exit(1);
             } else {
-                stats_.numb_read_reqs_issued++;
+                stats_.num_reads_done++;
                 read_callback_(it->addr);
                 it = return_queue_.erase(it);
             }
@@ -83,9 +83,8 @@ void Controller::ClockTick() {
         for (auto i = 0; i < config_.ranks; i++) {
             // update rank idleness
             if (cmd_queue_.rank_queues_empty[i] &&
-                clk_ - cmd_queue_.rank_queues_empty_from_time_[i] >=
-                    static_cast<uint64_t>(
-                        config_.idle_cycles_for_self_refresh) &&
+                clk_ - cmd_queue_.rank_idle_since[i] >=
+                    static_cast<uint64_t>(config_.sref_threshold) &&
                 !channel_state_.rank_in_self_refresh_mode_[i]) {
                 auto addr = Address();
                 addr.channel = channel_id_;
@@ -119,9 +118,9 @@ void Controller::ClockTick() {
                 if (second_cmd.IsValid()) {
                     if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
                         IssueCommand(second_cmd);
-                        stats_.hbm_dual_command_issue_cycles++;
+                        stats_.hbm_dual_cmds++;
                     } else {
-                        stats_.hbm_dual_non_rw_cmd_attempt_cycles++;
+                        stats_.hbm_dual_cmd_attemps++;
                     }
                 }
             }
@@ -146,7 +145,7 @@ bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
     if (trans.is_write) {
         // pretend it's done
-        stats_.numb_write_reqs_issued++;
+        stats_.num_writes_done++;
         write_callback_(trans.addr);
         write_queue_.push_back(trans);
         return write_queue_.size() <= write_queue_.capacity();

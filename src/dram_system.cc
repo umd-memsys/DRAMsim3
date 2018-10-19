@@ -181,7 +181,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     // Some CPU simulators might not model the backpressure because queues are
     // full. To make them work we push them to the transaction queue anyway
     ok = true;
-    stats_.numb_buffered_requests++;
+    stats_.num_buffered_trans++;
 #endif
     assert(ok);
     if (ok) {
@@ -236,10 +236,10 @@ void IdealDRAMSystem::ClockTick() {
          trans_it != infinite_buffer_q_.end();) {
         if (clk_ - trans_it->added_cycle >= static_cast<uint64_t>(latency_)) {
             if (trans_it->is_write) {
-                stats_.numb_write_reqs_issued++;
+                stats_.num_writes_done++;
                 write_callback_(trans_it->addr);
             } else {
-                stats_.numb_read_reqs_issued++;
+                stats_.num_reads_done++;
                 read_callback_(trans_it->addr);
             }
             stats_.access_latency.AddValue(clk_ - trans_it->added_cycle);

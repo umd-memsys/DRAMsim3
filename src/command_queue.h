@@ -30,7 +30,7 @@ class CommandQueue {
     std::vector<Command>& GetQueue(int rank, int bankgroup, int bank);
     uint64_t clk_;
     std::vector<bool> rank_queues_empty;
-    std::vector<uint64_t> rank_queues_empty_from_time_;
+    std::vector<uint64_t> rank_idle_since;
 
    private:
     QueueStructure queue_structure_;

@@ -910,8 +910,8 @@ void ThermalCalculator::PrintCSVHeader_final(std::ofstream &csvfile) {
 void ThermalCalculator::UpdateLogicPower() {
     // suppose the logic power is linearly corellated with bandwidth usage
     // and if max bandwidth <-> max power + constant background power
-    uint64_t num_reads = stats_.numb_read_cmds_issued.EpochCount();
-    uint64_t num_writes = stats_.numb_write_cmds_issued.EpochCount();
+    uint64_t num_reads = stats_.num_read_cmds.EpochCount();
+    uint64_t num_writes = stats_.num_write_cmds.EpochCount();
     uint64_t total_rw =
         (num_reads + num_writes) * config_.burst_cycle / config_.channels;
     // a little problem here: the epoch period is not necessarily power epoch

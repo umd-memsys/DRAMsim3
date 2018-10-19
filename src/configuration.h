@@ -119,7 +119,7 @@ class Config {
     int delay_queue_cycles;
     std::string refresh_strategy;
     bool enable_self_refresh;
-    int idle_cycles_for_self_refresh;
+    int sref_threshold;
     bool aggressive_precharging_enabled;
     bool enable_hbm_dual_cmd;
 

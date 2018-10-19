@@ -6,7 +6,7 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
                            const ChannelState& channel_state, Statistics& stats)
     : clk_(0),
       rank_queues_empty(std::vector<bool>(config.ranks, true)),
-      rank_queues_empty_from_time_(std::vector<uint64_t>(config.ranks, 0)),
+      rank_idle_since(std::vector<uint64_t>(config.ranks, 0)),
       config_(config),
       channel_state_(channel_state),
       stats_(stats),
@@ -101,7 +101,7 @@ bool CommandQueue::ArbitratePrecharge(const Command& cmd) {
         channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >=
         64;
     if (!pending_row_hits_exist || rowhit_limit_reached) {
-        stats_.numb_ondemand_precharges++;
+        stats_.num_ondemand_pres++;
         return true;
     }
     return false;

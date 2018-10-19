@@ -132,29 +132,29 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
     switch (cmd.cmd_type) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
-            stats_.numb_read_cmds_issued++;
+            stats_.num_read_cmds++;
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
-            stats_.numb_write_cmds_issued++;
+            stats_.num_write_cmds++;
             break;
         case CommandType::ACTIVATE:
-            stats_.numb_activate_cmds_issued++;
+            stats_.num_act_cmds++;
             break;
         case CommandType::PRECHARGE:
-            stats_.numb_precharge_cmds_issued++;
+            stats_.num_pre_cmds++;
             break;
         case CommandType::REFRESH:
-            stats_.numb_refresh_cmds_issued++;
+            stats_.num_refresh_cmds++;
             break;
         case CommandType::REFRESH_BANK:
-            stats_.numb_refresh_bank_cmds_issued++;
+            stats_.num_refb_cmds++;
             break;
         case CommandType::SELF_REFRESH_ENTER:
-            stats_.numb_self_refresh_enter_cmds_issued++;
+            stats_.num_sref_enter_cmds++;
             break;
         case CommandType::SELF_REFRESH_EXIT:
-            stats_.numb_self_refresh_exit_cmds_issued++;
+            stats_.num_sref_exit_cmds++;
             break;
         default:
             AbruptExit(__FILE__, __LINE__);

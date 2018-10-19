@@ -136,26 +136,26 @@ class DoubleComputeStat : public BaseStat {
 class Statistics {
    public:
     Statistics(const Config& config);
-    class CounterStat numb_read_reqs_issued;
-    class CounterStat numb_write_reqs_issued;
+    class CounterStat num_reads_done;
+    class CounterStat num_writes_done;
     class CounterStat hmc_reqs_done;
-    class CounterStat numb_row_hits;
-    class CounterStat numb_read_row_hits;
-    class CounterStat numb_write_row_hits;
-    class CounterStat numb_aggressive_precharges;
-    class CounterStat numb_ondemand_precharges;
+    class CounterStat num_row_hits;
+    class CounterStat num_read_row_hits;
+    class CounterStat num_write_row_hits;
     class CounterStat dramcycles;
-    class CounterStat numb_buffered_requests;
-    class CounterStat hbm_dual_command_issue_cycles;
-    class CounterStat hbm_dual_non_rw_cmd_attempt_cycles;
-    class CounterStat numb_read_cmds_issued;
-    class CounterStat numb_write_cmds_issued;
-    class CounterStat numb_activate_cmds_issued;
-    class CounterStat numb_precharge_cmds_issued;
-    class CounterStat numb_refresh_cmds_issued;
-    class CounterStat numb_refresh_bank_cmds_issued;
-    class CounterStat numb_self_refresh_enter_cmds_issued;
-    class CounterStat numb_self_refresh_exit_cmds_issued;
+    class CounterStat num_buffered_trans;
+    class CounterStat hbm_dual_cmds;
+    class CounterStat hbm_dual_cmd_attemps;
+    class CounterStat num_read_cmds;
+    class CounterStat num_write_cmds;
+    class CounterStat num_act_cmds;
+    class CounterStat num_pre_cmds;
+    class CounterStat num_aggressive_pres;
+    class CounterStat num_ondemand_pres;
+    class CounterStat num_refresh_cmds;
+    class CounterStat num_refb_cmds;
+    class CounterStat num_sref_enter_cmds;
+    class CounterStat num_sref_exit_cmds;
 
     std::vector<std::vector<CounterStat>> sref_cycles;
     std::vector<std::vector<CounterStat>> active_cycles;

@@ -238,49 +238,49 @@ void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
 Statistics::Statistics(const Config& config)
     : stats_list(), config_(config), last_clk_(0) {
     // TODO - Should stats be global?
-    numb_read_reqs_issued =
-        CounterStat("numb_read_reqs_issued", "Number of read requests issued");
-    numb_write_reqs_issued = CounterStat("numb_write_reqs_issued",
+    num_reads_done =
+        CounterStat("num_reads_done", "Number of read requests issued");
+    num_writes_done = CounterStat("num_writes_done",
                                          "Number of write requests issued");
     hmc_reqs_done = CounterStat("hmc_reqs_done", "HMC Requests finished");
-    numb_row_hits = CounterStat("numb_row_hits", "Number of row hits");
-    numb_read_row_hits =
-        CounterStat("numb_read_row_hits", "Number of read row hits");
-    numb_write_row_hits =
-        CounterStat("numb_write_row_hits", "Number of write row hits");
-    numb_aggressive_precharges = CounterStat(
-        "numb_aggressive_precharges", "Number of aggressive precharges issued");
-    numb_ondemand_precharges = CounterStat(
-        "numb_ondemand_precharges", "Number of on demand precharges issued");
+    num_row_hits = CounterStat("num_row_hits", "Number of row hits");
+    num_read_row_hits =
+        CounterStat("num_read_row_hits", "Number of read row hits");
+    num_write_row_hits =
+        CounterStat("num_write_row_hits", "Number of write row hits");
+    num_aggressive_pres = CounterStat(
+        "num_aggressive_pres", "Number of aggressive precharges issued");
+    num_ondemand_pres = CounterStat(
+        "num_ondemand_pres", "Number of on demand precharges issued");
     dramcycles = CounterStat("cycles", "Total number of DRAM execution cycles");
-    numb_buffered_requests =
-        CounterStat("numb_buffered_requests",
+    num_buffered_trans =
+        CounterStat("num_buffered_trans",
                     "Number of buffered requests because queues were full");
-    hbm_dual_command_issue_cycles =
-        CounterStat("hbm_dual_command_issue_cycles",
+    hbm_dual_cmds =
+        CounterStat("hbm_dual_cmds",
                     "Number of cycles in which two commands were issued");
-    hbm_dual_non_rw_cmd_attempt_cycles =
-        CounterStat("hbm_dual_non_rw_cmd_attempt_cycles",
+    hbm_dual_cmd_attemps =
+        CounterStat("hbm_dual_cmd_attemps",
                     "Number of cycles during which an opportunity to issue a "
                     "read/write is possibly missed");
-    numb_read_cmds_issued =
-        CounterStat("numb_read_cmds_issued", "Number of read commands issued");
-    numb_write_cmds_issued = CounterStat("numb_write_cmds_issued",
+    num_read_cmds =
+        CounterStat("num_read_cmds", "Number of read commands issued");
+    num_write_cmds = CounterStat("num_write_cmds",
                                          "Number of write commands issued");
-    numb_activate_cmds_issued = CounterStat(
-        "numb_activate_cmds_issued", "Number of activate commands issued");
-    numb_precharge_cmds_issued = CounterStat(
-        "numb_precharge_cmds_issued", "Number of precharge commands issued");
-    numb_refresh_cmds_issued = CounterStat("numb_refresh_cmds_issued",
+    num_act_cmds = CounterStat(
+        "num_act_cmds", "Number of activate commands issued");
+    num_pre_cmds = CounterStat(
+        "num_pre_cmds", "Number of precharge commands issued");
+    num_refresh_cmds = CounterStat("num_refresh_cmds",
                                            "Number of refresh commands issued");
-    numb_refresh_bank_cmds_issued =
-        CounterStat("numb_refresh_bank_cmds_issued",
+    num_refb_cmds =
+        CounterStat("num_refb_cmds",
                     "Number of refresh bank commands issued");
-    numb_self_refresh_enter_cmds_issued =
-        CounterStat("numb_self_refresh_enter_cmds_issued",
+    num_sref_enter_cmds =
+        CounterStat("num_sref_enter_cmds",
                     "Number of self-refresh mode enter commands issued");
-    numb_self_refresh_exit_cmds_issued =
-        CounterStat("numb_self_refresh_exit_cmds_issued",
+    num_sref_exit_cmds =
+        CounterStat("num_sref_exit_cmds",
                     "Number of self-refresh mode exit commands issued");
 #ifdef DEBUG_HMC
     logic_clk CounterStat("hmc_logic_clk", "HMC logic clock");
@@ -336,26 +336,26 @@ Statistics::Statistics(const Config& config)
     interarrival_latency = HistogramStat(0, 100, 10, "interarrival_latency",
                                          "Histogram of interarrival latencies");
 
-    stats_list.push_back(&numb_read_reqs_issued);
-    stats_list.push_back(&numb_write_reqs_issued);
+    stats_list.push_back(&num_reads_done);
+    stats_list.push_back(&num_writes_done);
     stats_list.push_back(&hmc_reqs_done);
-    stats_list.push_back(&numb_row_hits);
-    stats_list.push_back(&numb_read_row_hits);
-    stats_list.push_back(&numb_write_row_hits);
-    stats_list.push_back(&numb_aggressive_precharges);
-    stats_list.push_back(&numb_ondemand_precharges);
+    stats_list.push_back(&num_row_hits);
+    stats_list.push_back(&num_read_row_hits);
+    stats_list.push_back(&num_write_row_hits);
+    stats_list.push_back(&num_aggressive_pres);
+    stats_list.push_back(&num_ondemand_pres);
     stats_list.push_back(&dramcycles);
-    stats_list.push_back(&numb_buffered_requests);
-    stats_list.push_back(&hbm_dual_command_issue_cycles);
-    stats_list.push_back(&hbm_dual_non_rw_cmd_attempt_cycles);
-    stats_list.push_back(&numb_read_cmds_issued);
-    stats_list.push_back(&numb_write_cmds_issued);
-    stats_list.push_back(&numb_activate_cmds_issued);
-    stats_list.push_back(&numb_precharge_cmds_issued);
-    stats_list.push_back(&numb_refresh_cmds_issued);
-    stats_list.push_back(&numb_refresh_bank_cmds_issued);
-    stats_list.push_back(&numb_self_refresh_enter_cmds_issued);
-    stats_list.push_back(&numb_self_refresh_exit_cmds_issued);
+    stats_list.push_back(&num_buffered_trans);
+    stats_list.push_back(&hbm_dual_cmds);
+    stats_list.push_back(&hbm_dual_cmd_attemps);
+    stats_list.push_back(&num_read_cmds);
+    stats_list.push_back(&num_write_cmds);
+    stats_list.push_back(&num_act_cmds);
+    stats_list.push_back(&num_pre_cmds);
+    stats_list.push_back(&num_refresh_cmds);
+    stats_list.push_back(&num_refb_cmds);
+    stats_list.push_back(&num_sref_enter_cmds);
+    stats_list.push_back(&num_sref_exit_cmds);
     // stats_list.push_back(&all_bank_idle_cycles);
     // stats_list.push_back(&active_cycles);
     stats_list.push_back(&act_energy);
@@ -387,30 +387,30 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     uint64_t reqs_issued_epoch, reqs_issued;
     if (!config_.IsHMC()) {
         reqs_issued_epoch =
-            numb_read_reqs_issued.Count() - numb_read_reqs_issued.LastCount() +
-            numb_write_reqs_issued.Count() - numb_write_reqs_issued.LastCount();
+            num_reads_done.Count() - num_reads_done.LastCount() +
+            num_writes_done.Count() - num_writes_done.LastCount();
         reqs_issued =
-            numb_read_reqs_issued.Count() + numb_write_reqs_issued.Count();
+            num_reads_done.Count() + num_writes_done.Count();
     } else {
         reqs_issued_epoch = hmc_reqs_done.Count() - hmc_reqs_done.LastCount();
         reqs_issued = hmc_reqs_done.Count();
     }
 
     // Epoch level compute stats
-    act_energy.epoch_value = (numb_activate_cmds_issued.Count() -
-                              numb_activate_cmds_issued.LastCount()) *
+    act_energy.epoch_value = (num_act_cmds.Count() -
+                              num_act_cmds.LastCount()) *
                              config_.act_energy_inc;
     read_energy.epoch_value =
-        (numb_read_cmds_issued.Count() - numb_read_cmds_issued.LastCount()) *
+        (num_read_cmds.Count() - num_read_cmds.LastCount()) *
         config_.read_energy_inc;
     write_energy.epoch_value =
-        (numb_write_cmds_issued.Count() - numb_write_cmds_issued.LastCount()) *
+        (num_write_cmds.Count() - num_write_cmds.LastCount()) *
         config_.write_energy_inc;
-    ref_energy.epoch_value = (numb_refresh_cmds_issued.Count() -
-                              numb_refresh_cmds_issued.LastCount()) *
+    ref_energy.epoch_value = (num_refresh_cmds.Count() -
+                              num_refresh_cmds.LastCount()) *
                              config_.ref_energy_inc;
-    refb_energy.epoch_value = (numb_refresh_bank_cmds_issued.Count() -
-                               numb_refresh_bank_cmds_issued.LastCount()) *
+    refb_energy.epoch_value = (num_refb_cmds.Count() -
+                               num_refb_cmds.LastCount()) *
                               config_.refb_energy_inc;
     for (int i = 0; i < config_.channels; i++) {
         for (int j = 0; j < config_.ranks; j++) {
@@ -440,15 +440,15 @@ void Statistics::PreEpochCompute(uint64_t clk) {
 
     // cumulative compute stats
     act_energy.cumulative_value =
-        numb_activate_cmds_issued.Count() * config_.act_energy_inc;
+        num_act_cmds.Count() * config_.act_energy_inc;
     read_energy.cumulative_value =
-        numb_read_cmds_issued.Count() * config_.read_energy_inc;
+        num_read_cmds.Count() * config_.read_energy_inc;
     write_energy.cumulative_value =
-        numb_write_cmds_issued.Count() * config_.write_energy_inc;
+        num_write_cmds.Count() * config_.write_energy_inc;
     ref_energy.cumulative_value =
-        numb_refresh_cmds_issued.Count() * config_.ref_energy_inc;
+        num_refresh_cmds.Count() * config_.ref_energy_inc;
     refb_energy.cumulative_value =
-        numb_refresh_bank_cmds_issued.Count() * config_.refb_energy_inc;
+        num_refb_cmds.Count() * config_.refb_energy_inc;
     for (int i = 0; i < config_.channels; i++) {
         for (int j = 0; j < config_.ranks; j++) {
             act_stb_energy[i][j].cumulative_value =

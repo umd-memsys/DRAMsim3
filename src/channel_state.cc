@@ -9,9 +9,9 @@ ChannelState::ChannelState(const Config& config, const Timing& timing,
       config_(config),
       timing_(timing),
       stats_(stats),
+      is_selfrefresh_(config_.ranks, false),
       four_aw(config_.ranks, std::vector<uint64_t>()),
-      thirty_two_aw(config_.ranks, std::vector<uint64_t>()),
-      is_selfrefresh_(config_.ranks, false) {
+      thirty_two_aw(config_.ranks, std::vector<uint64_t>()) {
 
     bank_states_.reserve(config_.ranks);
     for (auto i = 0; i < config_.ranks; i++) {
@@ -361,29 +361,29 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
     switch (cmd.cmd_type) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
-            stats_.numb_read_cmds_issued++;
+            stats_.num_read_cmds++;
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
-            stats_.numb_write_cmds_issued++;
+            stats_.num_write_cmds++;
             break;
         case CommandType::ACTIVATE:
-            stats_.numb_activate_cmds_issued++;
+            stats_.num_act_cmds++;
             break;
         case CommandType::PRECHARGE:
-            stats_.numb_precharge_cmds_issued++;
+            stats_.num_pre_cmds++;
             break;
         case CommandType::REFRESH:
-            stats_.numb_refresh_cmds_issued++;
+            stats_.num_refresh_cmds++;
             break;
         case CommandType::REFRESH_BANK:
-            stats_.numb_refresh_bank_cmds_issued++;
+            stats_.num_refb_cmds++;
             break;
         case CommandType::SELF_REFRESH_ENTER:
-            stats_.numb_self_refresh_enter_cmds_issued++;
+            stats_.num_sref_enter_cmds++;
             break;
         case CommandType::SELF_REFRESH_EXIT:
-            stats_.numb_self_refresh_exit_cmds_issued++;
+            stats_.num_sref_exit_cmds++;
             break;
         default:
             AbruptExit(__FILE__, __LINE__);

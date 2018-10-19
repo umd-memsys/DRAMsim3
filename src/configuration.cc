@@ -188,8 +188,8 @@ void Config::InitSystemParams() {
         reader.Get("system", "refresh_strategy", "RANK_LEVEL_STAGGERED");
     enable_self_refresh =
         reader.GetBoolean("system", "enable_self_refresh", false);
-    idle_cycles_for_self_refresh =
-        GetInteger("system", "idle_cycles_for_self_refresh", 1000);
+    sref_threshold =
+        GetInteger("system", "sref_threshold", 1000);
     aggressive_precharging_enabled =
         reader.GetBoolean("system", "aggressive_precharging_enabled", false);
     return;
