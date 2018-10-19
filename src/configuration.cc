@@ -179,7 +179,7 @@ void Config::InitSystemParams() {
     channels = GetInteger("system", "channels", 1);
     bus_width = GetInteger("system", "bus_width", 64);
     address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
-    delay_queue_cycles = reader.GetInteger("system", "delay_queue_cycles", 0);
+    delay_queue_cycles = GetInteger("system", "delay_queue_cycles", 0);
     queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
     row_buf_policy = reader.Get("system", "row_buf_policy", "OPEN_PAGE");
     cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);

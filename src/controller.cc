@@ -1,5 +1,6 @@
 #include "controller.h"
 #include <iostream>
+#include <limits>
 
 namespace dramsim3 {
 
@@ -27,11 +28,12 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       thermal_calc_(thermal_calc),
 #endif  // THERMAL
       cmd_id_(0),
-      max_cmd_id_(config_.cmd_queue_size * config_.banks * 2),
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
-                          : RowBufPolicy::OPEN_PAGE) {
-    transaction_queue_.reserve(config_.trans_queue_size);
+                          : RowBufPolicy::OPEN_PAGE),
+      write_draining_(0) {
+    read_queue_.reserve(config_.trans_queue_size);
+    write_queue_.reserve(config_.trans_queue_size);
 #ifdef GENERATE_TRACE
     std::string trace_file_name = config_.output_prefix + "cmd.trace";
     RenameFileWithNumber(trace_file_name, channel_id);
@@ -41,18 +43,18 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
 }
 
 void Controller::ClockTick() {
-    // Return completed transactions back to the CPU
+    // Return completed read transactions back to the CPU
     for (auto it = return_queue_.begin(); it != return_queue_.end();) {
         if (clk_ >= it->complete_cycle) {
             stats_.access_latency.AddValue(clk_ - it->added_cycle);
             if (it->is_write) {
-                stats_.numb_write_reqs_issued++;
-                write_callback_(it->addr);
+                std::cerr << "cmd id overflow!" << std::endl;
+                exit(1);
             } else {
                 stats_.numb_read_reqs_issued++;
                 read_callback_(it->addr);
+                it = return_queue_.erase(it);
             }
-            it = return_queue_.erase(it);
         } else {
             ++it;
         }
@@ -141,43 +143,74 @@ void Controller::ClockTick() {
         }
     }
 
-    // look ahead this amount of transactions to put in cmd queue
-    // considering hardware cost to implement this... it won't be a large number
-    const int max_lookup_depth = 4;
-    int lookup_depth = 0;
-    for (auto it = transaction_queue_.begin();
-         it != transaction_queue_.end();) {
-        if (lookup_depth >= max_lookup_depth) {
-            break;  // stop wasting time
-        }
-        lookup_depth++;
-        auto cmd = TransToCommand(*it);
-        if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
-                                         cmd.Bank())) {
-            cmd_queue_.AddCommand(cmd);
-            pending_queue_.insert(std::make_pair(cmd_id_, *it));
-            it = transaction_queue_.erase(it);
-            // Reset cmd_id
-            cmd_id_++;
-            cmd_id_ = cmd_id_ % max_cmd_id_;
-            break;  // only allow one transaction scheduled per cycle
-        } else {
-            ++it;
-        }
-    }
+    ScheduleTransaction();
     clk_++;
     cmd_queue_.clk_++;
     return;
 }
 
-bool Controller::WillAcceptTransaction() const {
-    return transaction_queue_.size() < transaction_queue_.capacity();
+bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
+    if (!is_write) {
+        return read_queue_.size() < read_queue_.capacity(); 
+    } else {
+        return write_queue_.size() < write_queue_.capacity();
+    }
 }
 
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
-    transaction_queue_.push_back(trans);
-    return transaction_queue_.size() <= transaction_queue_.capacity();
+    if (trans.is_write) {
+        // pretend it's done
+        stats_.numb_write_reqs_issued++;
+        write_callback_(trans.addr);
+        write_queue_.push_back(trans);
+        return write_queue_.size() <= write_queue_.capacity();
+    } else {
+        read_queue_.push_back(trans);
+        return read_queue_.size() <= read_queue_.capacity();
+    }
+}
+
+void Controller::ScheduleTransaction() {
+    // determine whether to schedule read or write
+    if (write_draining_ == 0) {
+        if (write_queue_.size() >= write_queue_.capacity() ||
+            read_queue_.size() == 0) {
+            write_draining_ = write_queue_.size();
+        }
+    }
+
+    std::vector<Transaction>::iterator trans_it;
+    std::vector<Transaction>::iterator queue_end;
+    if (write_draining_ > 0) {
+        trans_it = write_queue_.begin();
+        queue_end = write_queue_.end();
+    } else {
+        trans_it = read_queue_.begin();
+        queue_end = read_queue_.end();
+    }
+
+    while (trans_it != queue_end) {
+        auto cmd = TransToCommand(*trans_it);
+        if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
+                                         cmd.Bank())) {
+            cmd_queue_.AddCommand(cmd);
+            pending_queue_.insert(std::make_pair(cmd.id, *trans_it));
+            cmd_id_++;
+            if (cmd_id_ == std::numeric_limits<int>::max() ) {
+                cmd_id_ = 0;
+            }
+            if (cmd.IsRead()) {
+                trans_it = read_queue_.erase(trans_it);
+            } else {
+                write_draining_ -= 1;
+                trans_it = write_queue_.erase(trans_it);
+            }
+            break;  // only allow one transaction scheduled per cycle
+        } else {
+            ++trans_it;
+        }
+    }
 }
 
 void Controller::IssueCommand(const Command& tmp_cmd) {
@@ -186,7 +219,7 @@ void Controller::IssueCommand(const Command& tmp_cmd) {
     std::cout << std::left << std::setw(8) << clk_ << " " << cmd << std::endl;
 #endif  // DEBUG_OUTPUT
 #ifdef GENERATE_TRACE
-    cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd << endl;
+    cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd << std::endl;
 #endif  // GENERATE_TRACE
 #ifdef THERMAL
     // add channel in, only needed by thermal module
@@ -205,15 +238,25 @@ void Controller::IssueCommand(const Command& tmp_cmd) {
 void Controller::ProcessRWCommand(const Command& cmd) {
     cmd_queue_.IssueRWCommand(cmd);
     auto it = pending_queue_.find(cmd.id);
+    if (it == pending_queue_.end()) {
+        std::cerr << cmd.id << " not in pending queue!" << std::endl;
+        exit(1);
+    }
     if (cmd.IsRead()) {
         it->second.complete_cycle = clk_ + config_.read_delay + 
                                     config_.delay_queue_cycles;
+        if (it->second.is_write) {
+            std::cout << "cmd read trans write!" << std::endl;
+            auto count = pending_queue_.count(cmd.id);
+            std::cout << count << " of id " << cmd.id << std::endl;
+        }
+        return_queue_.push_back(it->second);
+        pending_queue_.erase(it);
     } else {
-        it->second.complete_cycle = clk_ + config_.write_delay +
-                                    config_.delay_queue_cycles;
+        // it->second.complete_cycle = clk_ + config_.write_delay +
+        //                             config_.delay_queue_cycles;
+        pending_queue_.erase(it);
     }
-    return_queue_.push_back(it->second);
-    pending_queue_.erase(it);
     return;
 }
 

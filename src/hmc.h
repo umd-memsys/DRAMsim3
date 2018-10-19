@@ -80,6 +80,11 @@ class HMCRequest {
     int flits;
     // this exit_time is the time to exit xbar to vaults
     uint64_t exit_time;
+
+    // HACK: HMC type by range
+    bool IsWrite() const {
+        return type >= HMCReqType::WR0 && type <= HMCReqType::P_WR256;
+    }
 };
 
 class HMCResponse {

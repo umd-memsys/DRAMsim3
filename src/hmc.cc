@@ -498,9 +498,12 @@ void HMCMemorySystem::LogicClockTickPost() {
             quad_resp_queues_[i].size() < queue_depth_) {
             HMCRequest *req = quad_req_queues_[i].front();
             if (req->exit_time <= logic_clk_) {
-                InsertReqToDRAM(req);
-                delete (req);
-                quad_req_queues_[i].erase(quad_req_queues_[i].begin());
+                if (vaults_[req->vault].WillAcceptTransaction(req->mem_operand,
+                                                              req->IsWrite())) {
+                    InsertReqToDRAM(req);
+                    delete (req);
+                    quad_req_queues_[i].erase(quad_req_queues_[i].begin());
+                }
             }
         }
     }

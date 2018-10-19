@@ -1,4 +1,5 @@
 #include "common.h"
+#include <limits>
 #include <vector>
 #include "../ext/fmt/src/format.h"
 
