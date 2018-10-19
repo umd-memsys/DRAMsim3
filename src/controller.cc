@@ -1,5 +1,6 @@
 #include "controller.h"
 #include <iostream>
+#include <limits>
 
 namespace dramsim3 {
 
@@ -27,7 +28,6 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       thermal_calc_(thermal_calc),
 #endif  // THERMAL
       cmd_id_(0),
-      max_cmd_id_(config_.cmd_queue_size * config_.banks * 4),
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
@@ -168,6 +168,7 @@ bool Controller::AddTransaction(Transaction trans) {
         trans.addr = MaskColumns(trans.addr);
         for (auto it = write_queue_.begin(); it != write_queue_.end(); it++) {
             if (trans.addr == it->addr) {
+                // TODO not merge, reorder!
                 merge = true;
             }
         }
@@ -183,11 +184,7 @@ bool Controller::AddTransaction(Transaction trans) {
 
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
-    if (write_draining_ > 0){
-        // ok so the question is while write requests are draining do
-        // we stop getting new requests?
-        write_draining_ -= 1;
-    } else {
+    if (write_draining_ == 0) {
         if (write_queue_.size() >= write_queue_.capacity() ||
             read_queue_.size() == 0) {
             write_draining_ = write_queue_.size();
@@ -196,7 +193,7 @@ void Controller::ScheduleTransaction() {
 
     std::vector<Transaction>::iterator trans_it;
     std::vector<Transaction>::iterator queue_end;
-    if (write_draining_) {
+    if (write_draining_ > 0) {
         trans_it = write_queue_.begin();
         queue_end = write_queue_.end();
     } else {
@@ -211,11 +208,13 @@ void Controller::ScheduleTransaction() {
             cmd_queue_.AddCommand(cmd);
             pending_queue_.insert(std::make_pair(cmd.id, *trans_it));
             cmd_id_++;
-            cmd_id_ = cmd_id_ % max_cmd_id_;
+            if (cmd_id_ == std::numeric_limits<int>::max() ) {
+                cmd_id_ = 0;
+            }
             if (cmd.IsRead()) {
                 trans_it = read_queue_.erase(trans_it);
-                // Reset cmd_id
             } else {
+                write_draining_ -= 1;
                 trans_it = write_queue_.erase(trans_it);
             }
             break;  // only allow one transaction scheduled per cycle

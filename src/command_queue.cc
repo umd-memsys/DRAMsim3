@@ -45,11 +45,6 @@ Command CommandQueue::GetCommandToIssue() {
         if (!cmd.IsValid()) {
             continue;
         } else {
-            if (cmd.cmd_type == CommandType::PRECHARGE) {
-                if (!ArbitratePrecharge(cmd)) {
-                    return Command();
-                }
-            }
             return cmd;
         }
     }
@@ -58,11 +53,27 @@ Command CommandQueue::GetCommandToIssue() {
 
 bool CommandQueue::ArbitratePrecharge(const Command& cmd) {
     auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
+
+    CMDIterator cmd_it;
+    for (auto it = queue.begin(); it != queue.end(); it++) {
+        if (it->id == cmd.id) {
+            cmd_it = it;
+            break;
+        }
+    }
+
+    for (auto prev_itr = queue.begin(); prev_itr != cmd_it; prev_itr++) {
+        if (prev_itr->Rank() == cmd.Rank() &&
+            prev_itr->Bankgroup() == cmd.Bankgroup() &&
+            prev_itr->Bank() == cmd.Bank()) {
+            return false;
+        }
+    }
+
     bool pending_row_hits_exist = false;
-    auto open_row =
+    int open_row =
         channel_state_.OpenRow(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
-    for (auto pending_itr = queue.begin(); pending_itr != queue.end();
-         pending_itr++) {
+    for (auto pending_itr = cmd_it; pending_itr != queue.end(); pending_itr++) {
         if (pending_itr->Row() == open_row &&
             pending_itr->Bank() == cmd.Bank() &&
             pending_itr->Bankgroup() == cmd.Bankgroup() &&
@@ -71,9 +82,10 @@ bool CommandQueue::ArbitratePrecharge(const Command& cmd) {
             break;
         }
     }
+    
     bool rowhit_limit_reached =
         channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >=
-        4;
+        64;
     if (!pending_row_hits_exist || rowhit_limit_reached) {
         stats_.numb_ondemand_precharges++;
         return true;
@@ -135,11 +147,18 @@ Command CommandQueue::GetFristReadyInQueue(std::vector<Command>& queue) {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         // DO NOT REORDER R/W
         if (cmd_it->IsRead() != queue.begin()->IsRead()) {
-            break;
+            // TODO had to comment this out to not block 
+            // but then what's the point of using separate queues?
+            // break;
         }
         Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
         // TODO required might be different from cmd_it, e.g. ACT vs READ
         if (channel_state_.IsReady(cmd, clk_)) {
+            if (cmd.cmd_type == CommandType::PRECHARGE) {
+                if (!ArbitratePrecharge(cmd)) {
+                    continue;
+                }
+            }
             return cmd;
         }
     }
@@ -165,10 +184,6 @@ Command CommandQueue::GetFristReadyInBank(int rank, int bankgroup, int bank) {
     // only useful in rank queue
     auto& queue = GetQueue(rank, bankgroup, bank);
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        // DO NOT REORDER R/W
-        if (cmd_it->IsRead() != queue.begin()->IsRead()) {
-            break;
-        }
         if (cmd_it->Rank() == rank && cmd_it->Bankgroup() == bankgroup &&
             cmd_it->Bank() == bank) {
             Command cmd = channel_state_.GetRequiredCommand(*cmd_it);

@@ -111,6 +111,8 @@ struct Transaction {
         : addr(addr), is_write(is_write) {};
     uint64_t addr;
     uint64_t added_cycle;
+    uint64_t pending_queue_cycle;
+    uint64_t return_queue_cycle;
     uint64_t complete_cycle;
     bool is_write;
 

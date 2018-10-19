@@ -65,9 +65,6 @@ class Controller {
     // An ID that is used to keep track of commands in fly
     int cmd_id_;
 
-    // the max number of cmds in fly, x2 to be safe
-    const int max_cmd_id_;
-
     // row buffer policy
     RowBufPolicy row_buf_policy_;
 
