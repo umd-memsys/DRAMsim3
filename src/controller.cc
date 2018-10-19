@@ -22,7 +22,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       config_(config),
       channel_state_(config, timing, stats),
       cmd_queue_(channel_id_, config, channel_state_, stats),
-      refresh_(config, channel_state_, cmd_queue_, stats),
+      refresh_(config, channel_state_),
       stats_(stats),
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
@@ -96,17 +96,9 @@ void Controller::ClockTick() {
                     channel_state_.GetRequiredCommand(self_refresh_enter_cmd);
                 if (channel_state_.IsReady(cmd, clk_))
                     if (cmd.cmd_type == CommandType::SELF_REFRESH_ENTER) {
+                        // TODO
                         // clear refresh requests from the queue for the rank
                         // that is about to go into self-refresh mode
-                        for (auto refresh_req_iter =
-                                 refresh_.refresh_q_.begin();
-                             refresh_req_iter != refresh_.refresh_q_.end();
-                             refresh_req_iter++) {
-                            auto refresh_req = *refresh_req_iter;
-                            if (refresh_req.Rank() == cmd.Rank()) {
-                                refresh_.refresh_q_.erase(refresh_req_iter);
-                            }
-                        }
                     }
                 command_issued = true;
                 IssueCommand(cmd);
@@ -114,16 +106,9 @@ void Controller::ClockTick() {
         }
     }
 
-    if (refresh_.IsRefWaiting()) {
-        auto cmd = refresh_.GetRefreshOrAssociatedCommand();
-        if (cmd.IsValid() && (!command_issued)) {
-            IssueCommand(cmd);
-            command_issued = true;
-        }
-    }
     refresh_.ClockTick();
 
-    if ((!command_issued) && (!refresh_.IsRefWaiting())) {
+    if (!command_issued) {
         auto cmd = cmd_queue_.GetCommandToIssue();
         if (cmd.IsValid()) {
             IssueCommand(cmd);
@@ -229,8 +214,6 @@ void Controller::IssueCommand(const Command& tmp_cmd) {
     // if read/write, update pending queue and return queue
     if (cmd.IsReadWrite()) {
         ProcessRWCommand(cmd);
-    } else if (cmd.IsRefresh()) {
-        refresh_.RefreshIssued(cmd);
     }
     channel_state_.UpdateTimingAndStates(cmd, clk_);
 }

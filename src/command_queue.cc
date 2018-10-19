@@ -1,5 +1,4 @@
 #include "command_queue.h"
-#include "statistics.h"
 
 namespace dramsim3 {
 
@@ -12,7 +11,7 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
       channel_state_(channel_state),
       stats_(stats),
       next_rank_(0),
-      next_bankgroup_(0),
+      next_bg_(0),
       next_bank_(0),
       next_queue_index_(0),
       queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
@@ -39,14 +38,29 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 }
 
 Command CommandQueue::GetCommandToIssue() {
-    for (unsigned i = 0; i < queues_.size(); i++) {
+    unsigned i = queues_.size();
+    while (i > 0){
         IterateNext();
-        auto cmd = GetFristReadyInQueue(queues_[next_queue_index_]);
-        if (!cmd.IsValid()) {
-            continue;
+        if (channel_state_.IsRefreshWaiting(next_rank_, next_bg_, next_bank_)) {
+            bool row_open = channel_state_.IsRowOpen(next_rank_, next_bg_,
+                                                     next_bank_);
+            int hit_count = channel_state_.RowHitCount(next_rank_, next_bg_,
+                                                        next_bank_);
+            if (row_open && hit_count == 0) {  // just open, finish this one
+                // queues_[next_queue_index_];
+                return GetFristReadyInBank(next_rank_, next_bg_, next_bank_);
+            } else {
+                auto addr = Address(0, next_rank_, next_bg_, next_bank_, -1, 0);
+                Command ref = Command(CommandType::REFRESH, addr, -1);
+                return channel_state_.GetRequiredCommand(ref);
+            }
         } else {
-            return cmd;
+            auto cmd = GetFristReadyInQueue(queues_[next_queue_index_]);
+            if (cmd.IsValid()) {
+                return cmd;
+            }
         }
+        i--;
     }
     return Command();
 }
@@ -111,8 +125,8 @@ bool CommandQueue::AddCommand(Command cmd) {
 
 inline void CommandQueue::IterateNext() {
     if (queue_structure_ == QueueStructure::PER_BANK) {
-        next_bankgroup_ = (next_bankgroup_ + 1) % config_.bankgroups;
-        if (next_bankgroup_ == 0) {
+        next_bg_ = (next_bg_ + 1) % config_.bankgroups;
+        if (next_bg_ == 0) {
             next_bank_ = (next_bank_ + 1) % config_.banks_per_group;
             if (next_bank_ == 0) {
                 next_rank_ = (next_rank_ + 1) % config_.ranks;
@@ -124,7 +138,7 @@ inline void CommandQueue::IterateNext() {
         std::cerr << "Unknown queue structure" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
-    next_queue_index_ = GetQueueIndex(next_rank_, next_bankgroup_, next_bank_);
+    next_queue_index_ = GetQueueIndex(next_rank_, next_bg_, next_bank_);
     return;
 }
 
@@ -165,20 +179,6 @@ Command CommandQueue::GetFristReadyInQueue(std::vector<Command>& queue) {
     return Command();
 }
 
-CMDIterator CommandQueue::GetFirstRWInQueue(CMDQueue& queue) {
-    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        int rank, bankgroup, bank;
-        rank = cmd_it->Rank();
-        bankgroup = cmd_it->Bankgroup();
-        bank = cmd_it->Bank();
-        if (channel_state_.OpenRow(rank, bankgroup, bank) != -1) {
-            if (channel_state_.IsReady(*cmd_it, clk_)) {
-                return cmd_it;
-            }
-        }
-    }
-    return queue.end();
-}
 
 Command CommandQueue::GetFristReadyInBank(int rank, int bankgroup, int bank) {
     // only useful in rank queue

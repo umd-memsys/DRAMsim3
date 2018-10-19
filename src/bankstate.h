@@ -29,6 +29,8 @@ class BankState {
     }
 
     bool IsRowOpen() const { return state_ == State::OPEN; }
+    bool IsRefreshWaiting() const { return refresh_waiting_; }
+    void NeedRefresh(bool need) { refresh_waiting_ = need; }
     int OpenRow() const { return open_row_; }
     int RowHitCount() const { return row_hit_count_; }
 
@@ -37,6 +39,9 @@ class BankState {
     // Current state of the Bank
     // Apriori or instantaneously transitions on a command.
     State state_;
+
+    // whether there is a ref waiting on this bank
+    bool refresh_waiting_;
 
     // Earliest time when the particular Command can be executed in this bank
     std::vector<uint64_t> cmd_timing_;

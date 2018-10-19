@@ -38,6 +38,24 @@ bool ChannelState::IsAllBankIdleInRank(int rank) const {
     return true;
 }
 
+bool ChannelState::IsRefreshWaiting(int rank, int bankgroup, int bank) const {
+    return bank_states_[rank][bankgroup][bank].IsRefreshWaiting();
+}
+
+void ChannelState::BankNeedRefresh(int rank, int bankgroup, int bank, bool need) {
+    bank_states_[rank][bankgroup][bank].NeedRefresh(need);
+    return;
+}
+
+void ChannelState::RankNeedRefresh(int rank, bool need) {
+    for (int j = 0; j < config_.bankgroups; j++) {
+        for (int k = 0; k < config_.banks_per_group; k++) {
+            bank_states_[rank][j][k].NeedRefresh(need);
+        }
+    }
+    return;
+}
+
 Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     CommandType cmd_type = cmd.cmd_type;
     Address addr = Address(cmd.addr);

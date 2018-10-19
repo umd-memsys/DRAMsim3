@@ -37,7 +37,7 @@ class CommandQueue {
     const Config& config_;
     const ChannelState& channel_state_;
     Statistics& stats_;
-    int next_rank_, next_bankgroup_, next_bank_, next_queue_index_;
+    int next_rank_, next_bg_, next_bank_, next_queue_index_;
     std::vector<std::vector<Command>> queues_;
     size_t queue_size_;
     int channel_id_;
