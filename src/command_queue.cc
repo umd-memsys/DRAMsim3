@@ -5,8 +5,7 @@ namespace dramsim3 {
 CommandQueue::CommandQueue(int channel_id, const Config& config,
                            const ChannelState& channel_state, Statistics& stats)
     : clk_(0),
-      rank_queues_empty(std::vector<bool>(config.ranks, true)),
-      rank_idle_since(std::vector<uint64_t>(config.ranks, 0)),
+      rank_q_empty(config.ranks, true),
       config_(config),
       channel_state_(channel_state),
       stats_(stats),
@@ -47,7 +46,6 @@ Command CommandQueue::GetCommandToIssue() {
             int hit_count = channel_state_.RowHitCount(next_rank_, next_bg_,
                                                         next_bank_);
             if (row_open && hit_count == 0) {  // just open, finish this one
-                // queues_[next_queue_index_];
                 return GetFristReadyInBank(next_rank_, next_bg_, next_bank_);
             } else {
                 auto addr = Address(0, next_rank_, next_bg_, next_bank_, -1, 0);
@@ -116,7 +114,7 @@ bool CommandQueue::AddCommand(Command cmd) {
     auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
     if (queue.size() < queue_size_) {
         queue.push_back(cmd);
-        rank_queues_empty[cmd.Rank()] = false;
+        rank_q_empty[cmd.Rank()] = false;
         return true;
     } else {
         return false;

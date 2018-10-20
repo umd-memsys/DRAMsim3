@@ -55,7 +55,7 @@ void write_callback_func(uint64_t req_id);
 bool DirExist(std::string dir);
 void RenameFileWithNumber(std::string& file_name, int number);
 
-enum class State { OPEN, CLOSED, SELF_REFRESH, SIZE };
+enum class State { OPEN, CLOSED, SREF, SIZE };
 
 enum class CommandType {
     READ,
@@ -66,8 +66,8 @@ enum class CommandType {
     PRECHARGE,
     REFRESH_BANK,
     REFRESH,
-    SELF_REFRESH_ENTER,
-    SELF_REFRESH_EXIT,
+    SREF_ENTER,
+    SREF_EXIT,
     SIZE
 };
 

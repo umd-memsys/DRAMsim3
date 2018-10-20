@@ -5,13 +5,13 @@ namespace dramsim3 {
 ChannelState::ChannelState(const Config& config, const Timing& timing,
                            Statistics& stats)
     :
-      rank_in_self_refresh_mode_(std::vector<bool>(config.ranks, false)),
+      rank_idle_cycles(config.ranks, 0),
       config_(config),
       timing_(timing),
       stats_(stats),
-      is_selfrefresh_(config_.ranks, false),
-      four_aw(config_.ranks, std::vector<uint64_t>()),
-      thirty_two_aw(config_.ranks, std::vector<uint64_t>()) {
+      rank_is_sref_(config.ranks, false),
+      four_aw_(config_.ranks, std::vector<uint64_t>()),
+      thirty_two_aw_(config_.ranks, std::vector<uint64_t>()) {
 
     bank_states_.reserve(config_.ranks);
     for (auto i = 0; i < config_.ranks; i++) {
@@ -73,8 +73,8 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
                                .GetRequiredCommandType(cmd);
             break;
         case CommandType::REFRESH:
-        case CommandType::SELF_REFRESH_ENTER:
-        case CommandType::SELF_REFRESH_EXIT:
+        case CommandType::SREF_ENTER:
+        case CommandType::SREF_EXIT:
             // Static fixed order to check banks
             for (auto j = 0; j < config_.bankgroups; j++) {
                 for (auto k = 0; k < config_.banks_per_group; k++) {
@@ -119,8 +119,8 @@ bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
             return bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]
                 .IsReady(cmd.cmd_type, clk);
         case CommandType::REFRESH:
-        case CommandType::SELF_REFRESH_ENTER:
-        case CommandType::SELF_REFRESH_EXIT: {
+        case CommandType::SREF_ENTER:
+        case CommandType::SREF_EXIT: {
             bool is_ready = true;
             for (auto j = 0; j < config_.bankgroups; j++) {
                 for (auto k = 0; k < config_.banks_per_group; k++) {
@@ -151,11 +151,10 @@ void ChannelState::UpdateState(const Command& cmd) {
                 cmd);
             break;
         case CommandType::REFRESH:
-        case CommandType::SELF_REFRESH_ENTER:
-        case CommandType::SELF_REFRESH_EXIT:
-            is_selfrefresh_[cmd.Rank()] =
-                (cmd.cmd_type == CommandType::SELF_REFRESH_ENTER ? true
-                                                                 : false);
+        case CommandType::SREF_ENTER:
+        case CommandType::SREF_EXIT:
+            rank_is_sref_[cmd.Rank()] =
+                (cmd.cmd_type == CommandType::SREF_ENTER ? true : false);
             for (auto j = 0; j < config_.bankgroups; j++) {
                 for (auto k = 0; k < config_.banks_per_group; k++) {
                     bank_states_[cmd.Rank()][j][k].UpdateState(cmd);
@@ -164,16 +163,6 @@ void ChannelState::UpdateState(const Command& cmd) {
             break;
         default:
             AbruptExit(__FILE__, __LINE__);
-    }
-    switch (cmd.cmd_type) {
-        case CommandType::SELF_REFRESH_ENTER:
-            rank_in_self_refresh_mode_[cmd.Rank()] = true;
-            break;
-        case CommandType::SELF_REFRESH_EXIT:
-            rank_in_self_refresh_mode_[cmd.Rank()] = false;
-            break;
-        default:
-            break;
     }
     return;
 }
@@ -215,8 +204,8 @@ void ChannelState::UpdateTiming(const Command& cmd, uint64_t clk) {
                 clk);
             break;
         case CommandType::REFRESH:
-        case CommandType::SELF_REFRESH_ENTER:
-        case CommandType::SELF_REFRESH_EXIT:
+        case CommandType::SREF_ENTER:
+        case CommandType::SREF_EXIT:
             UpdateSameRankTiming(
                 cmd.addr, timing_.same_rank[static_cast<int>(cmd.cmd_type)],
                 clk);
@@ -324,23 +313,23 @@ bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) const {
 }
 
 void ChannelState::UpdateActivationTimes(int rank, uint64_t curr_time) {
-    if (!four_aw[rank].empty() && curr_time >= four_aw[rank][0]) {
-        four_aw[rank].erase(four_aw[rank].begin());
+    if (!four_aw_[rank].empty() && curr_time >= four_aw_[rank][0]) {
+        four_aw_[rank].erase(four_aw_[rank].begin());
     }
-    four_aw[rank].push_back(curr_time + config_.tFAW);
+    four_aw_[rank].push_back(curr_time + config_.tFAW);
     if (config_.IsGDDR()) {
-        if (!thirty_two_aw[rank].empty() &&
-            curr_time >= thirty_two_aw[rank][0]) {
-            thirty_two_aw[rank].erase(thirty_two_aw[rank].begin());
+        if (!thirty_two_aw_[rank].empty() &&
+            curr_time >= thirty_two_aw_[rank][0]) {
+            thirty_two_aw_[rank].erase(thirty_two_aw_[rank].begin());
         }
-        thirty_two_aw[rank].push_back(curr_time + config_.t32AW);
+        thirty_two_aw_[rank].push_back(curr_time + config_.t32AW);
     }
     return;
 }
 
 bool ChannelState::IsFAWReady(int rank, uint64_t curr_time) const {
-    if (!four_aw[rank].empty()) {
-        if (curr_time < four_aw[rank][0] && four_aw[rank].size() >= 4) {
+    if (!four_aw_[rank].empty()) {
+        if (curr_time < four_aw_[rank][0] && four_aw_[rank].size() >= 4) {
             return false;
         }
     }
@@ -348,9 +337,9 @@ bool ChannelState::IsFAWReady(int rank, uint64_t curr_time) const {
 }
 
 bool ChannelState::Is32AWReady(int rank, uint64_t curr_time) const {
-    if (!thirty_two_aw[rank].empty()) {
-        if (curr_time < thirty_two_aw[rank][0] &&
-            thirty_two_aw[rank].size() >= 32) {
+    if (!thirty_two_aw_[rank].empty()) {
+        if (curr_time < thirty_two_aw_[rank][0] &&
+            thirty_two_aw_[rank].size() >= 32) {
             return false;
         }
     }
@@ -379,10 +368,10 @@ void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
         case CommandType::REFRESH_BANK:
             stats_.num_refb_cmds++;
             break;
-        case CommandType::SELF_REFRESH_ENTER:
+        case CommandType::SREF_ENTER:
             stats_.num_sref_enter_cmds++;
             break;
-        case CommandType::SELF_REFRESH_EXIT:
+        case CommandType::SREF_EXIT:
             stats_.num_sref_exit_cmds++;
             break;
         default:

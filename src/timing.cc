@@ -134,7 +134,7 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, readp_to_act},
             {CommandType::REFRESH, read_to_activate},
             {CommandType::REFRESH_BANK, read_to_activate},
-            {CommandType::SELF_REFRESH_ENTER, read_to_activate}};
+            {CommandType::SREF_ENTER, read_to_activate}};
     other_banks_same_bankgroup[static_cast<int>(CommandType::READ_PRECHARGE)] =
         std::vector<std::pair<CommandType, int> >{
             {CommandType::READ, read_to_read_l},
@@ -160,7 +160,7 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, write_to_activate},
             {CommandType::REFRESH, write_to_activate},
             {CommandType::REFRESH_BANK, write_to_activate},
-            {CommandType::SELF_REFRESH_ENTER, write_to_activate}};
+            {CommandType::SREF_ENTER, write_to_activate}};
     other_banks_same_bankgroup[static_cast<int>(CommandType::WRITE_PRECHARGE)] =
         std::vector<std::pair<CommandType, int> >{
             {CommandType::READ, write_to_read_l},
@@ -207,7 +207,7 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, precharge_to_activate},
             {CommandType::REFRESH, precharge_to_activate},
             {CommandType::REFRESH_BANK, precharge_to_activate},
-            {CommandType::SELF_REFRESH_ENTER, precharge_to_activate}};
+            {CommandType::SREF_ENTER, precharge_to_activate}};
 
     // for those who need tPPD
     if (config.IsGDDR() || config.protocol == DRAMProtocol::LPDDR4) {
@@ -228,7 +228,7 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, refresh_to_activate_bank},
             {CommandType::REFRESH, refresh_to_activate_bank},
             {CommandType::REFRESH_BANK, refresh_to_activate_bank},
-            {CommandType::SELF_REFRESH_ENTER, refresh_to_activate_bank}};
+            {CommandType::SREF_ENTER, refresh_to_activate_bank}};
 
     other_banks_same_bankgroup[static_cast<int>(CommandType::REFRESH_BANK)] =
         std::vector<std::pair<CommandType, int> >{
@@ -242,27 +242,27 @@ Timing::Timing(const Config& config)
             {CommandType::REFRESH_BANK, refresh_to_refresh},
         };
 
-    // REFRESH, SELF_REFRESH_ENTER and SELF_REFRESH_EXIT are isued to the entire
+    // REFRESH, SREF_ENTER and SREF_EXIT are isued to the entire
     // rank  command REFRESH
     same_rank[static_cast<int>(CommandType::REFRESH)] =
         std::vector<std::pair<CommandType, int> >{
             {CommandType::ACTIVATE, refresh_to_activate},
             {CommandType::REFRESH, refresh_to_activate},
-            {CommandType::SELF_REFRESH_ENTER, refresh_to_activate}};
+            {CommandType::SREF_ENTER, refresh_to_activate}};
 
-    // command SELF_REFRESH_ENTER
+    // command SREF_ENTER
     // TODO: add power down commands
-    same_rank[static_cast<int>(CommandType::SELF_REFRESH_ENTER)] =
+    same_rank[static_cast<int>(CommandType::SREF_ENTER)] =
         std::vector<std::pair<CommandType, int> >{
-            {CommandType::SELF_REFRESH_EXIT, self_refresh_entry_to_exit}};
+            {CommandType::SREF_EXIT, self_refresh_entry_to_exit}};
 
-    // command SELF_REFRESH_EXIT
-    same_rank[static_cast<int>(CommandType::SELF_REFRESH_EXIT)] =
+    // command SREF_EXIT
+    same_rank[static_cast<int>(CommandType::SREF_EXIT)] =
         std::vector<std::pair<CommandType, int> >{
             {CommandType::ACTIVATE, self_refresh_exit},
             {CommandType::REFRESH, self_refresh_exit},
             {CommandType::REFRESH_BANK, self_refresh_exit},
-            {CommandType::SELF_REFRESH_ENTER, self_refresh_exit}};
+            {CommandType::SREF_ENTER, self_refresh_exit}};
 }
 
 }  // namespace dramsim3

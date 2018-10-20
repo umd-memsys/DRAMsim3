@@ -60,8 +60,7 @@ void Controller::ClockTick() {
         }
     }
 
-    // add background power, we have to cram all ranks and banks together now...
-    // if we have rank states it would make life easier
+    // power updates pt 1
     for (int i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
             // stats_.sref_energy[channel_id_][i]++;
@@ -70,58 +69,55 @@ void Controller::ClockTick() {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
                 stats_.all_bank_idle_cycles[channel_id_][i]++;
+                channel_state_.rank_idle_cycles[i] += 1;
             } else {
                 stats_.active_cycles[channel_id_][i]++;
+                // reset
+                channel_state_.rank_idle_cycles[i] = 0;
             }
         }
     }
 
-    // currently there can be only 1 command at the bus at the same time
-    bool command_issued = false;
-    // Move idle ranks into self-refresh mode to save power
+    // power updates pt 2: move idle ranks into self-refresh mode to save power
     if (config_.enable_self_refresh) {
         for (auto i = 0; i < config_.ranks; i++) {
-            // update rank idleness
-            if (cmd_queue_.rank_queues_empty[i] &&
-                clk_ - cmd_queue_.rank_idle_since[i] >=
-                    static_cast<uint64_t>(config_.sref_threshold) &&
-                !channel_state_.rank_in_self_refresh_mode_[i]) {
-                auto addr = Address();
-                addr.channel = channel_id_;
-                addr.rank = i;
-                auto self_refresh_enter_cmd =
-                    Command(CommandType::SELF_REFRESH_ENTER, addr, -1);
-                auto cmd =
-                    channel_state_.GetRequiredCommand(self_refresh_enter_cmd);
-                if (channel_state_.IsReady(cmd, clk_))
-                    if (cmd.cmd_type == CommandType::SELF_REFRESH_ENTER) {
-                        // TODO
-                        // clear refresh requests from the queue for the rank
-                        // that is about to go into self-refresh mode
-                    }
-                command_issued = true;
-                IssueCommand(cmd);
+            if (channel_state_.IsRankSelfRefreshing(i)) {
+                // wake up!
+                if (!cmd_queue_.rank_q_empty[i]) {
+                    auto addr = Address();
+                    addr.rank = i;
+                    auto cmd = Command(CommandType::SREF_EXIT, addr, -1);
+                    IssueCommand(cmd);
+                    break;
+                }
+            } else {
+                if (cmd_queue_.rank_q_empty[i] &&
+                    channel_state_.rank_idle_cycles[i] >= config_.sref_threshold)
+                {
+                    auto addr = Address();
+                    addr.rank = i;
+                    auto cmd = Command(CommandType::SREF_ENTER, addr, -1);
+                    IssueCommand(cmd);
+                    break;
+                }
             }
         }
     }
 
     refresh_.ClockTick();
 
-    if (!command_issued) {
-        auto cmd = cmd_queue_.GetCommandToIssue();
-        if (cmd.IsValid()) {
-            IssueCommand(cmd);
-            command_issued = true;
+    auto cmd = cmd_queue_.GetCommandToIssue();
+    if (cmd.IsValid()) {
+        IssueCommand(cmd);
 
-            if (config_.enable_hbm_dual_cmd) {
-                auto second_cmd = cmd_queue_.GetCommandToIssue();
-                if (second_cmd.IsValid()) {
-                    if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
-                        IssueCommand(second_cmd);
-                        stats_.hbm_dual_cmds++;
-                    } else {
-                        stats_.hbm_dual_cmd_attemps++;
-                    }
+        if (config_.enable_hbm_dual_cmd) {
+            auto second_cmd = cmd_queue_.GetCommandToIssue();
+            if (second_cmd.IsValid()) {
+                if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
+                    IssueCommand(second_cmd);
+                    stats_.hbm_dual_cmds++;
+                } else {
+                    stats_.hbm_dual_cmd_attemps++;
                 }
             }
         }
@@ -227,11 +223,6 @@ void Controller::ProcessRWCommand(const Command& cmd) {
     if (cmd.IsRead()) {
         it->second.complete_cycle = clk_ + config_.read_delay + 
                                     config_.delay_queue_cycles;
-        if (it->second.is_write) {
-            std::cout << "cmd read trans write!" << std::endl;
-            auto count = pending_queue_.count(cmd.id);
-            std::cout << count << " of id " << cmd.id << std::endl;
-        }
         return_queue_.push_back(it->second);
         pending_queue_.erase(it);
     } else {

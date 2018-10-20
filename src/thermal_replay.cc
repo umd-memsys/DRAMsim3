@@ -87,8 +87,8 @@ void ThermalReplay::ParseLine(std::string line, uint64_t &clk, Command &cmd) {
                                                       // distinguish bank/rank
                                                       // refresh
         {"refresh", CommandType::REFRESH},
-        {"self_refresh_enter", CommandType::SELF_REFRESH_ENTER},
-        {"self_refresh_exit", CommandType::SELF_REFRESH_EXIT},
+        {"self_refresh_enter", CommandType::SREF_ENTER},
+        {"self_refresh_exit", CommandType::SREF_EXIT},
     };
     std::vector<std::string> tokens = StringSplit(line, ' ');
 
@@ -150,10 +150,10 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
         case CommandType::REFRESH_BANK:
             stats_.num_refb_cmds++;
             break;
-        case CommandType::SELF_REFRESH_ENTER:
+        case CommandType::SREF_ENTER:
             stats_.num_sref_enter_cmds++;
             break;
-        case CommandType::SELF_REFRESH_EXIT:
+        case CommandType::SREF_EXIT:
             stats_.num_sref_exit_cmds++;
             break;
         default:

@@ -28,7 +28,7 @@ class ChannelState {
     }
     bool IsAllBankIdleInRank(int rank) const;
     bool IsRefreshWaiting(int rank, int bankgroup, int bank) const;
-    bool IsRankSelfRefreshing(int rank) const { return is_selfrefresh_[rank]; }
+    bool IsRankSelfRefreshing(int rank) const { return rank_is_sref_[rank]; }
     void BankNeedRefresh(int rank, int bankgroup, int bank, bool need);
     void RankNeedRefresh(int rank, bool need);
     int OpenRow(int rank, int bankgroup, int bank) const {
@@ -38,18 +38,18 @@ class ChannelState {
         return bank_states_[rank][bankgroup][bank].RowHitCount();
     };
 
-    std::vector<bool> rank_in_self_refresh_mode_;
+    std::vector<int> rank_idle_cycles;
 
    private:
     const Config& config_;
     const Timing& timing_;
     Statistics& stats_;
 
+    std::vector<bool> rank_is_sref_;
     std::vector<std::vector<std::vector<BankState> > > bank_states_;
-    std::vector<bool> is_selfrefresh_;
 
-    std::vector<std::vector<uint64_t> > four_aw;
-    std::vector<std::vector<uint64_t> > thirty_two_aw;
+    std::vector<std::vector<uint64_t> > four_aw_;
+    std::vector<std::vector<uint64_t> > thirty_two_aw_;
     bool IsFAWReady(int rank, uint64_t curr_time) const;
     bool Is32AWReady(int rank, uint64_t curr_time) const;
     // Update timing of the bank the command corresponds to

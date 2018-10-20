@@ -18,8 +18,8 @@ BankState::BankState(Statistics& stats)
     cmd_timing_[static_cast<int>(CommandType::ACTIVATE)] = 0;
     cmd_timing_[static_cast<int>(CommandType::PRECHARGE)] = 0;
     cmd_timing_[static_cast<int>(CommandType::REFRESH)] = 0;
-    cmd_timing_[static_cast<int>(CommandType::SELF_REFRESH_ENTER)] = 0;
-    cmd_timing_[static_cast<int>(CommandType::SELF_REFRESH_EXIT)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::SREF_ENTER)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::SREF_EXIT)] = 0;
 }
 
 CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
@@ -35,7 +35,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
                     break;
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
-                case CommandType::SELF_REFRESH_ENTER:
+                case CommandType::SREF_ENTER:
                     required_type = cmd.cmd_type;
                     break;
                 default:
@@ -58,7 +58,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
                     break;
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
-                case CommandType::SELF_REFRESH_ENTER:
+                case CommandType::SREF_ENTER:
                     required_type = CommandType::PRECHARGE;
                     break;
                 default:
@@ -67,13 +67,13 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
                     break;
             }
             break;
-        case State::SELF_REFRESH:
+        case State::SREF:
             switch (cmd.cmd_type) {
                 case CommandType::READ:
                 case CommandType::READ_PRECHARGE:
                 case CommandType::WRITE:
                 case CommandType::WRITE_PRECHARGE:
-                    required_type = CommandType::SELF_REFRESH_EXIT;
+                    required_type = CommandType::SREF_EXIT;
                     break;
                 default:
                     std::cout << "In unknown state" << std::endl;
@@ -114,8 +114,8 @@ void BankState::UpdateState(const Command& cmd) {
                 case CommandType::ACTIVATE:
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
-                case CommandType::SELF_REFRESH_ENTER:
-                case CommandType::SELF_REFRESH_EXIT:
+                case CommandType::SREF_ENTER:
+                case CommandType::SREF_EXIT:
                 default:
                     AbruptExit(__FILE__, __LINE__);
             }
@@ -130,23 +130,23 @@ void BankState::UpdateState(const Command& cmd) {
                     state_ = State::OPEN;
                     open_row_ = cmd.Row();
                     break;
-                case CommandType::SELF_REFRESH_ENTER:
-                    state_ = State::SELF_REFRESH;
+                case CommandType::SREF_ENTER:
+                    state_ = State::SREF;
                     break;
                 case CommandType::READ:
                 case CommandType::WRITE:
                 case CommandType::READ_PRECHARGE:
                 case CommandType::WRITE_PRECHARGE:
                 case CommandType::PRECHARGE:
-                case CommandType::SELF_REFRESH_EXIT:
+                case CommandType::SREF_EXIT:
                 default:
                     std::cout << cmd << std::endl;
                     AbruptExit(__FILE__, __LINE__);
             }
             break;
-        case State::SELF_REFRESH:
+        case State::SREF:
             switch (cmd.cmd_type) {
-                case CommandType::SELF_REFRESH_EXIT:
+                case CommandType::SREF_EXIT:
                     state_ = State::CLOSED;
                     break;
                 case CommandType::READ:
@@ -157,7 +157,7 @@ void BankState::UpdateState(const Command& cmd) {
                 case CommandType::PRECHARGE:
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
-                case CommandType::SELF_REFRESH_ENTER:
+                case CommandType::SREF_ENTER:
                 default:
                     AbruptExit(__FILE__, __LINE__);
             }
