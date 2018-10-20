@@ -583,10 +583,9 @@ void ThermalCalculator::PrintTransPT(uint64_t clk) {
         double maxT = 0;
         for (int layer = 0; layer < numP; layer++) {
             double maxT_layer = GetMaxTofCaseLayer(T_trans, ir, layer);
-            epoch_max_temp_file_csv_ << layer << ","
-                                     << stats_.average_power.epoch_value << ","
-                                     << maxT_layer << "," << bw_usage_ << ","
-                                     << ms << std::endl;
+            epoch_max_temp_file_csv_
+                << layer << "," << stats_.average_power.epoch_value << ","
+                << maxT_layer << "," << bw_usage_ << "," << ms << std::endl;
             std::cout << "MaxT of case " << ir << " in layer " << layer
                       << " is " << maxT_layer << " [C]\n";
             maxT = maxT > maxT_layer ? maxT : maxT_layer;
@@ -679,9 +678,9 @@ void ThermalCalculator::CalcFinalT(int case_id, uint64_t clk) {
     double ***powerM = InitPowerM(case_id, clk);
     double totP = GetTotalPower(powerM);
     std::cout << "total final power is " << totP * 1000 << " [mW]" << std::endl;
-    double *T = steady_thermal_solver(powerM, config_.chip_dim_x, config_.chip_dim_y,
-                                      numP, dimX + num_dummy, dimY + num_dummy,
-                                      Midx, MidxSize, Tamb);
+    double *T = steady_thermal_solver(
+        powerM, config_.chip_dim_x, config_.chip_dim_y, numP, dimX + num_dummy,
+        dimY + num_dummy, Midx, MidxSize, Tamb);
     T_final[case_id] = T;
 }
 
@@ -840,7 +839,8 @@ void ThermalCalculator::PrintCSV_trans(std::ofstream &csvfile,
                     (double)scale;
                 double tm = T_[id][(layerP[l] + 1) * ((dimX + num_dummy) *
                                                       (dimY + num_dummy)) +
-                                   j * (dimX + num_dummy) + i] - T0;
+                                   j * (dimX + num_dummy) + i] -
+                            T0;
                 csvfile << id << "," << i - num_dummy / 2 << ","
                         << j - num_dummy / 2 << "," << l << "," << pw << ","
                         << tm << "," << sample_id << std::endl;
@@ -915,7 +915,7 @@ void ThermalCalculator::UpdateLogicPower() {
     uint64_t total_rw =
         (num_reads + num_writes) * config_.burst_cycle / config_.channels;
     // a little problem here: the epoch period is not necessarily power epoch
-    bw_usage_ = static_cast<double>(total_rw) / 
+    bw_usage_ = static_cast<double>(total_rw) /
                 static_cast<double>(config_.epoch_period);
     avg_logic_power_ = logic_max_power_ * bw_usage_ + logic_bg_power_;
 }

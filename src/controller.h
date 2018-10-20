@@ -22,7 +22,7 @@ class Controller {
    public:
 #ifdef THERMAL
     Controller(int channel, const Config &config, const Timing &timing,
-               Statistics &stats, ThermalCalculator& thermalcalc,
+               Statistics &stats, ThermalCalculator &thermalcalc,
                std::function<void(uint64_t)> read_callback,
                std::function<void(uint64_t)> write_callback);
 #else
@@ -47,7 +47,7 @@ class Controller {
     Statistics &stats_;
 
 #ifdef THERMAL
-    ThermalCalculator& thermal_calc_;
+    ThermalCalculator &thermal_calc_;
 #endif  // THERMAL
 #ifdef GENERATE_TRACE
     std::ofstream cmd_trace_;
@@ -58,7 +58,7 @@ class Controller {
 
     // transactions that are issued to command queue, use map for convenience
     std::multimap<int, Transaction> pending_queue_;
-    
+
     // completed transactions
     std::vector<Transaction> return_queue_;
 
@@ -71,8 +71,8 @@ class Controller {
     // transaction queueing
     int write_draining_;
     void ScheduleTransaction();
-    void IssueCommand(const Command& tmp_cmd);
-    void ProcessRWCommand(const Command& cmd);
+    void IssueCommand(const Command &tmp_cmd);
+    void ProcessRWCommand(const Command &cmd);
     Command TransToCommand(const Transaction &trans);
 };
 }  // namespace dramsim3

@@ -214,7 +214,7 @@ void Config::InitThermalParams() {
         while (RowTile * RowTile * 4 < bank_asr) {
             RowTile *= 2;
         }
-            // RowTile = numXgrids / (numYgrids * 8);
+        // RowTile = numXgrids / (numYgrids * 8);
 #ifdef DEBUG_OUTPUT
         std::cout << "RowTile = " << RowTile << std::endl;
 #endif  // DEBUG_OUTPUT
@@ -226,28 +226,30 @@ void Config::InitThermalParams() {
 #ifdef DEBUG_OUTPUT
         std::cout << "No Need to Tile Rows\n";
 #endif  // DEBUG_OUTPUT
-    loc_mapping = reader.Get("thermal", "loc_mapping", "");
-    logic_bg_power = reader.GetReal("thermal", "logic_bg_power", 1.0);
-    logic_max_power = reader.GetReal("thermal", "logic_max_power", 20.0);
-    bank_order = GetInteger("thermal", "bank_order", 1);
-    bank_layer_order = GetInteger("thermal", "bank_layer_order", 0);
-    numRowRefresh = static_cast<int>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
-    chip_dim_x = reader.GetReal("thermal", "chip_dim_x", 0.01);
-    chip_dim_y = reader.GetReal("thermal", "chip_dim_y", 0.01);
-    amb_temp = reader.GetReal("thermal", "amb_temp", 40);
+        loc_mapping = reader.Get("thermal", "loc_mapping", "");
+        logic_bg_power = reader.GetReal("thermal", "logic_bg_power", 1.0);
+        logic_max_power = reader.GetReal("thermal", "logic_max_power", 20.0);
+        bank_order = GetInteger("thermal", "bank_order", 1);
+        bank_layer_order = GetInteger("thermal", "bank_layer_order", 0);
+        numRowRefresh =
+            static_cast<int>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
+        chip_dim_x = reader.GetReal("thermal", "chip_dim_x", 0.01);
+        chip_dim_y = reader.GetReal("thermal", "chip_dim_y", 0.01);
+        amb_temp = reader.GetReal("thermal", "amb_temp", 40);
 
-    // Technically the following ones are in "other" section but they're
-    // only available when THREMAL is defined
-    epoch_temperature_file_csv =
-        reader.Get("other", "epoch_temperature_file",
-                   output_prefix + "epoch_power_temperature.csv");
-    epoch_max_temp_file_csv = reader.Get("other", "epoch_max_temp_file",
-                                         output_prefix + "epoch_max_temp.csv");
-    final_temperature_file_csv =
-        reader.Get("other", "final_temperature_file",
-                   output_prefix + "final_power_temperature.csv");
-    bank_position_csv = reader.Get("other", "final_temperature_file",
-                                   output_prefix + "bank_position.csv");
+        // Technically the following ones are in "other" section but they're
+        // only available when THREMAL is defined
+        epoch_temperature_file_csv =
+            reader.Get("other", "epoch_temperature_file",
+                       output_prefix + "epoch_power_temperature.csv");
+        epoch_max_temp_file_csv =
+            reader.Get("other", "epoch_max_temp_file",
+                       output_prefix + "epoch_max_temp.csv");
+        final_temperature_file_csv =
+            reader.Get("other", "final_temperature_file",
+                       output_prefix + "final_power_temperature.csv");
+        bank_position_csv = reader.Get("other", "final_temperature_file",
+                                       output_prefix + "bank_position.csv");
     }
     return;
 }

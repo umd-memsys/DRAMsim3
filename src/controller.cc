@@ -92,8 +92,8 @@ void Controller::ClockTick() {
                 }
             } else {
                 if (cmd_queue_.rank_q_empty[i] &&
-                    channel_state_.rank_idle_cycles[i] >= config_.sref_threshold)
-                {
+                    channel_state_.rank_idle_cycles[i] >=
+                        config_.sref_threshold) {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_ENTER, addr, -1);
@@ -131,7 +131,7 @@ void Controller::ClockTick() {
 
 bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
     if (!is_write) {
-        return read_queue_.size() < read_queue_.capacity(); 
+        return read_queue_.size() < read_queue_.capacity();
     } else {
         return write_queue_.size() < write_queue_.capacity();
     }
@@ -177,7 +177,7 @@ void Controller::ScheduleTransaction() {
             cmd_queue_.AddCommand(cmd);
             pending_queue_.insert(std::make_pair(cmd.id, *trans_it));
             cmd_id_++;
-            if (cmd_id_ == std::numeric_limits<int>::max() ) {
+            if (cmd_id_ == std::numeric_limits<int>::max()) {
                 cmd_id_ = 0;
             }
             if (cmd.IsRead()) {
@@ -193,7 +193,7 @@ void Controller::ScheduleTransaction() {
     }
 }
 
-void Controller::IssueCommand(const Command& tmp_cmd) {
+void Controller::IssueCommand(const Command &tmp_cmd) {
     Command cmd = Command(tmp_cmd.cmd_type, tmp_cmd.addr, tmp_cmd.id);
 #ifdef DEBUG_OUTPUT
     std::cout << std::left << std::setw(8) << clk_ << " " << cmd << std::endl;
@@ -213,7 +213,7 @@ void Controller::IssueCommand(const Command& tmp_cmd) {
     channel_state_.UpdateTimingAndStates(cmd, clk_);
 }
 
-void Controller::ProcessRWCommand(const Command& cmd) {
+void Controller::ProcessRWCommand(const Command &cmd) {
     cmd_queue_.IssueRWCommand(cmd);
     auto it = pending_queue_.find(cmd.id);
     if (it == pending_queue_.end()) {
@@ -221,8 +221,8 @@ void Controller::ProcessRWCommand(const Command& cmd) {
         exit(1);
     }
     if (cmd.IsRead()) {
-        it->second.complete_cycle = clk_ + config_.read_delay + 
-                                    config_.delay_queue_cycles;
+        it->second.complete_cycle =
+            clk_ + config_.read_delay + config_.delay_queue_cycles;
         return_queue_.push_back(it->second);
         pending_queue_.erase(it);
     } else {

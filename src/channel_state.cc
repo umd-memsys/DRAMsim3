@@ -4,15 +4,13 @@
 namespace dramsim3 {
 ChannelState::ChannelState(const Config& config, const Timing& timing,
                            Statistics& stats)
-    :
-      rank_idle_cycles(config.ranks, 0),
+    : rank_idle_cycles(config.ranks, 0),
       config_(config),
       timing_(timing),
       stats_(stats),
       rank_is_sref_(config.ranks, false),
       four_aw_(config_.ranks, std::vector<uint64_t>()),
       thirty_two_aw_(config_.ranks, std::vector<uint64_t>()) {
-
     bank_states_.reserve(config_.ranks);
     for (auto i = 0; i < config_.ranks; i++) {
         auto rank_states = std::vector<std::vector<BankState>>();
@@ -24,7 +22,6 @@ ChannelState::ChannelState(const Config& config, const Timing& timing,
         }
         bank_states_.push_back(rank_states);
     }
-
 }
 
 bool ChannelState::IsAllBankIdleInRank(int rank) const {
@@ -42,7 +39,8 @@ bool ChannelState::IsRefreshWaiting(int rank, int bankgroup, int bank) const {
     return bank_states_[rank][bankgroup][bank].IsRefreshWaiting();
 }
 
-void ChannelState::BankNeedRefresh(int rank, int bankgroup, int bank, bool need) {
+void ChannelState::BankNeedRefresh(int rank, int bankgroup, int bank,
+                                   bool need) {
     bank_states_[rank][bankgroup][bank].NeedRefresh(need);
     return;
 }
@@ -70,7 +68,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
         case CommandType::PRECHARGE:
         case CommandType::REFRESH_BANK:
             cmd_type = bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]
-                               .GetRequiredCommandType(cmd);
+                           .GetRequiredCommandType(cmd);
             break;
         case CommandType::REFRESH:
         case CommandType::SREF_ENTER:
@@ -91,7 +89,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
                         break;
                     }
                 }
-                if (need_precharge){
+                if (need_precharge) {
                     break;
                 }
             }
@@ -101,7 +99,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
             AbruptExit(__FILE__, __LINE__);
             break;
     }
-    return Command(cmd_type, addr, cmd_id); 
+    return Command(cmd_type, addr, cmd_id);
 }
 
 bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
@@ -299,7 +297,6 @@ void ChannelState::UpdateTimingAndStates(const Command& cmd, uint64_t clk) {
     UpdateCommandIssueStats(cmd);
     return;
 }
-
 
 bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) const {
     bool tfaw_ok = IsFAWReady(rank, curr_time);

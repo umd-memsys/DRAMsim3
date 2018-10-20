@@ -38,13 +38,13 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 
 Command CommandQueue::GetCommandToIssue() {
     unsigned i = queues_.size();
-    while (i > 0){
+    while (i > 0) {
         IterateNext();
         if (channel_state_.IsRefreshWaiting(next_rank_, next_bg_, next_bank_)) {
-            bool row_open = channel_state_.IsRowOpen(next_rank_, next_bg_,
-                                                     next_bank_);
-            int hit_count = channel_state_.RowHitCount(next_rank_, next_bg_,
-                                                        next_bank_);
+            bool row_open =
+                channel_state_.IsRowOpen(next_rank_, next_bg_, next_bank_);
+            int hit_count =
+                channel_state_.RowHitCount(next_rank_, next_bg_, next_bank_);
             if (row_open && hit_count == 0) {  // just open, finish this one
                 return GetFristReadyInBank(next_rank_, next_bg_, next_bank_);
             } else {
@@ -94,7 +94,7 @@ bool CommandQueue::ArbitratePrecharge(const Command& cmd) {
             break;
         }
     }
-    
+
     bool rowhit_limit_reached =
         channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >=
         64;
@@ -159,7 +159,7 @@ Command CommandQueue::GetFristReadyInQueue(std::vector<Command>& queue) {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         // DO NOT REORDER R/W
         if (cmd_it->IsRead() != queue.begin()->IsRead()) {
-            // TODO had to comment this out to not block 
+            // TODO had to comment this out to not block
             // but then what's the point of using separate queues?
             // break;
         }
@@ -176,7 +176,6 @@ Command CommandQueue::GetFristReadyInQueue(std::vector<Command>& queue) {
     }
     return Command();
 }
-
 
 Command CommandQueue::GetFristReadyInBank(int rank, int bankgroup, int bank) {
     // only useful in rank queue

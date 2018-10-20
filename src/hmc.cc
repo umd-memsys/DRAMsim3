@@ -244,8 +244,7 @@ HMCResponse::HMCResponse(uint64_t id, HMCReqType req_type, int dest_link,
     return;
 }
 
-HMCMemorySystem::HMCMemorySystem(Config& config,
-                                 const std::string &output_dir,
+HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
     : BaseDRAMSystem(config, output_dir, read_callback, write_callback),
@@ -267,11 +266,11 @@ HMCMemorySystem::HMCMemorySystem(Config& config,
     vaults_.reserve(config_.channels);
     for (int i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
-        vaults_.emplace_back(i, config_, timing_, stats_,
-                             thermal_calc_, vault_callback_, vault_callback_);
-#else
-        vaults_.emplace_back(i, config_, timing_, stats_, 
+        vaults_.emplace_back(i, config_, timing_, stats_, thermal_calc_,
                              vault_callback_, vault_callback_);
+#else
+        vaults_.emplace_back(i, config_, timing_, stats_, vault_callback_,
+                             vault_callback_);
 #endif  // THERMAL
     }
     // initialize vaults and crossbar
@@ -534,16 +533,15 @@ void HMCMemorySystem::LogicClockTickPost() {
 }
 
 void HMCMemorySystem::DRAMClockTick() {
-    for (auto&& vault : vaults_) {
+    for (auto &&vault : vaults_) {
         vault.ClockTick();
     }
     if (clk_ % config_.epoch_period == 0 && clk_ != 0) {
         int queue_usage_total = 0;
-        for (const auto& vault : vaults_) {
+        for (const auto &vault : vaults_) {
             queue_usage_total += vault.QueueUsage();
         }
-        stats_.queue_usage.epoch_value =
-            static_cast<double>(queue_usage_total);
+        stats_.queue_usage.epoch_value = static_cast<double>(queue_usage_total);
         stats_.PreEpochCompute(clk_);
         PrintIntermediateStats();
         stats_.UpdateEpoch(clk_);

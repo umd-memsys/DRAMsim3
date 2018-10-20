@@ -4,52 +4,38 @@ namespace dramsim3 {
 MemorySystem::MemorySystem(const std::string &config_file,
                            const std::string &output_dir,
                            std::function<void(uint64_t)> read_callback,
-                           std::function<void(uint64_t)> write_callback) :
-    config_(new Config(config_file, output_dir)) {
+                           std::function<void(uint64_t)> write_callback)
+    : config_(new Config(config_file, output_dir)) {
     // TODO: ideal memory type?
-    std::cout << "config initialized!" << std::endl;
     if (config_->IsHMC()) {
-        dram_system_ = new HMCMemorySystem(*config_, output_dir,
-                                           read_callback, write_callback);
+        dram_system_ = new HMCMemorySystem(*config_, output_dir, read_callback,
+                                           write_callback);
     } else {
-        dram_system_ = new JedecDRAMSystem(*config_, output_dir,
-                                           read_callback, write_callback);
+        dram_system_ = new JedecDRAMSystem(*config_, output_dir, read_callback,
+                                           write_callback);
     }
-
 }
 
-MemorySystem::~MemorySystem() { 
-    delete (dram_system_);
-}
+MemorySystem::~MemorySystem() { delete (dram_system_); }
 
-void MemorySystem::ClockTick() {
-    dram_system_->ClockTick();
-}
+void MemorySystem::ClockTick() { dram_system_->ClockTick(); }
 
-double MemorySystem::GetTCK() const {
-    return config_->tCK;
-}
+double MemorySystem::GetTCK() const { return config_->tCK; }
 
-int MemorySystem::GetBusBits() const {
-    return config_->bus_width;
-}
+int MemorySystem::GetBusBits() const { return config_->bus_width; }
 
-int MemorySystem::GetBurstLength() const {
-    return config_->BL;
-}
+int MemorySystem::GetBurstLength() const { return config_->BL; }
 
-int MemorySystem::GetQueueSize() const {
-    return config_->trans_queue_size;
-}
-
+int MemorySystem::GetQueueSize() const { return config_->trans_queue_size; }
 
 void MemorySystem::RegisterCallbacks(
-        std::function<void(uint64_t)> read_callback,
-        std::function<void(uint64_t)> write_callback) {
+    std::function<void(uint64_t)> read_callback,
+    std::function<void(uint64_t)> write_callback) {
     dram_system_->RegisterCallbacks(read_callback, write_callback);
 }
 
-bool MemorySystem::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
+bool MemorySystem::WillAcceptTransaction(uint64_t hex_addr,
+                                         bool is_write) const {
     return dram_system_->WillAcceptTransaction(hex_addr, is_write);
 }
 
@@ -57,9 +43,7 @@ bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     return dram_system_->AddTransaction(hex_addr, is_write);
 }
 
-void MemorySystem::PrintStats() const {
-    dram_system_->PrintStats();
-}
+void MemorySystem::PrintStats() const { dram_system_->PrintStats(); }
 
 }  // namespace dramsim3
 
@@ -67,6 +51,5 @@ void MemorySystem::PrintStats() const {
 // apparently it can't detect C++ functions.
 // Basically just an entry in the symbol table
 extern "C" {
-    void libdramsim3_is_present(void) { ; }
+void libdramsim3_is_present(void) { ; }
 }
-

@@ -12,8 +12,7 @@ namespace dramsim3 {
 // destructive
 int BaseDRAMSystem::num_mems_ = 0;
 
-BaseDRAMSystem::BaseDRAMSystem(Config& config,
-                               const std::string &output_dir,
+BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
                                std::function<void(uint64_t)> read_callback,
                                std::function<void(uint64_t)> write_callback)
     : read_callback_(read_callback),
@@ -135,8 +134,7 @@ void BaseDRAMSystem::PrintStats() {
     return;
 }
 
-JedecDRAMSystem::JedecDRAMSystem(Config& config,
-                                 const std::string &output_dir,
+JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
     : BaseDRAMSystem(config, output_dir, read_callback, write_callback) {
@@ -214,8 +212,7 @@ void JedecDRAMSystem::ClockTick() {
     return;
 }
 
-IdealDRAMSystem::IdealDRAMSystem(Config& config,
-                                 const std::string &output_dir,
+IdealDRAMSystem::IdealDRAMSystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
     : BaseDRAMSystem(config, output_dir, read_callback, write_callback),

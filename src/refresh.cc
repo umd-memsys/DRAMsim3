@@ -33,7 +33,7 @@ void Refresh::ClockTick() {
 void Refresh::InsertRefresh() {
     switch (refresh_strategy_) {
         // Simultaneous all rank refresh
-        case RefreshStrategy::RANK_LEVEL_SIMULTANEOUS:  
+        case RefreshStrategy::RANK_LEVEL_SIMULTANEOUS:
             for (auto i = 0; i < config_.ranks; i++) {
                 if (!channel_state_.IsRankSelfRefreshing(i)) {
                     channel_state_.RankNeedRefresh(i, true);
@@ -42,17 +42,17 @@ void Refresh::InsertRefresh() {
             }
             break;
         // Staggered all rank refresh
-        case RefreshStrategy::RANK_LEVEL_STAGGERED:              
+        case RefreshStrategy::RANK_LEVEL_STAGGERED:
             if (!channel_state_.IsRankSelfRefreshing(next_rank_)) {
                 channel_state_.RankNeedRefresh(next_rank_, true);
             }
             IterateNext();
             break;
         // Fully staggered per bank refresh
-        case RefreshStrategy::BANK_LEVEL_STAGGERED:  
+        case RefreshStrategy::BANK_LEVEL_STAGGERED:
             if (!channel_state_.IsRankSelfRefreshing(next_rank_)) {
-                channel_state_.BankNeedRefresh(next_rank_, next_bg_,
-                                               next_bank_, true);
+                channel_state_.BankNeedRefresh(next_rank_, next_bg_, next_bank_,
+                                               true);
             }
             IterateNext();
             break;

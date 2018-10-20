@@ -53,7 +53,6 @@ class BankState {
     // Maximum allowed row hits to a bank before aggressively precharing it
     // To prevent starvation and allow fairness
     int row_hit_count_;
-
 };
 
 }  // namespace dramsim3

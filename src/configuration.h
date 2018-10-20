@@ -156,9 +156,9 @@ class Config {
 #ifdef THERMAL
     std::string loc_mapping;
     int power_epoch_period;
-    int numRowRefresh;  // number of rows to be refreshed for one time
-    double amb_temp;  // the ambient temperature in [C]
-    double logic_bg_power;  // background power of logic layer
+    int numRowRefresh;       // number of rows to be refreshed for one time
+    double amb_temp;         // the ambient temperature in [C]
+    double logic_bg_power;   // background power of logic layer
     double logic_max_power;  // max power of logic layer
 
     double chip_dim_x;
@@ -168,9 +168,9 @@ class Config {
     int mat_dim_x;
     int mat_dim_y;
     // 0: x-direction priority, 1: y-direction priority
-    int bank_order;        
+    int bank_order;
     // 0; low-layer priority, 1: high-layer priority
-    int bank_layer_order;  
+    int bank_layer_order;
     int RowTile;
     int TileRowNum;
     double bank_asr;  // the aspect ratio of a bank: #row_bits / #col_bits
@@ -184,7 +184,7 @@ class Config {
     INIReader* reader_;
     void CalculateSize();
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
-    int GetInteger(const std::string& sec, const std::string& opt, 
+    int GetInteger(const std::string& sec, const std::string& opt,
                    int default_val) const;
     void InitDRAMParams();
     void InitOtherParams();

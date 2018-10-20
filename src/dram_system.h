@@ -18,8 +18,7 @@ namespace dramsim3 {
 
 class BaseDRAMSystem {
    public:
-    BaseDRAMSystem(Config& config,
-                   const std::string &output_dir,
+    BaseDRAMSystem(Config &config, const std::string &output_dir,
                    std::function<void(uint64_t)> read_callback,
                    std::function<void(uint64_t)> write_callback);
     virtual ~BaseDRAMSystem();
@@ -61,14 +60,14 @@ class BaseDRAMSystem {
 // hmmm not sure this is the best naming...
 class JedecDRAMSystem : public BaseDRAMSystem {
    public:
-    JedecDRAMSystem(Config& config,
-                    const std::string &output_dir,
+    JedecDRAMSystem(Config &config, const std::string &output_dir,
                     std::function<void(uint64_t)> read_callback,
                     std::function<void(uint64_t)> write_callback);
     ~JedecDRAMSystem();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const override;
     bool AddTransaction(uint64_t hex_addr, bool is_write) override;
     void ClockTick() override;
+
    private:
     std::vector<Controller> ctrls_;
 };
@@ -78,8 +77,7 @@ class JedecDRAMSystem : public BaseDRAMSystem {
 // cannot do for a given application
 class IdealDRAMSystem : public BaseDRAMSystem {
    public:
-    IdealDRAMSystem(Config& config,
-                    const std::string &output_dir,
+    IdealDRAMSystem(Config &config, const std::string &output_dir,
                     std::function<void(uint64_t)> read_callback,
                     std::function<void(uint64_t)> write_callback);
     ~IdealDRAMSystem();

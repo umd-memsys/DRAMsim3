@@ -240,42 +240,40 @@ Statistics::Statistics(const Config& config)
     // TODO - Should stats be global?
     num_reads_done =
         CounterStat("num_reads_done", "Number of read requests issued");
-    num_writes_done = CounterStat("num_writes_done",
-                                         "Number of write requests issued");
+    num_writes_done =
+        CounterStat("num_writes_done", "Number of write requests issued");
     hmc_reqs_done = CounterStat("hmc_reqs_done", "HMC Requests finished");
     num_row_hits = CounterStat("num_row_hits", "Number of row hits");
     num_read_row_hits =
         CounterStat("num_read_row_hits", "Number of read row hits");
     num_write_row_hits =
         CounterStat("num_write_row_hits", "Number of write row hits");
-    num_aggressive_pres = CounterStat(
-        "num_aggressive_pres", "Number of aggressive precharges issued");
-    num_ondemand_pres = CounterStat(
-        "num_ondemand_pres", "Number of on demand precharges issued");
+    num_aggressive_pres = CounterStat("num_aggressive_pres",
+                                      "Number of aggressive precharges issued");
+    num_ondemand_pres = CounterStat("num_ondemand_pres",
+                                    "Number of on demand precharges issued");
     dramcycles = CounterStat("cycles", "Total number of DRAM execution cycles");
     num_buffered_trans =
         CounterStat("num_buffered_trans",
                     "Number of buffered requests because queues were full");
-    hbm_dual_cmds =
-        CounterStat("hbm_dual_cmds",
-                    "Number of cycles in which two commands were issued");
+    hbm_dual_cmds = CounterStat(
+        "hbm_dual_cmds", "Number of cycles in which two commands were issued");
     hbm_dual_cmd_attemps =
         CounterStat("hbm_dual_cmd_attemps",
                     "Number of cycles during which an opportunity to issue a "
                     "read/write is possibly missed");
     num_read_cmds =
         CounterStat("num_read_cmds", "Number of read commands issued");
-    num_write_cmds = CounterStat("num_write_cmds",
-                                         "Number of write commands issued");
-    num_act_cmds = CounterStat(
-        "num_act_cmds", "Number of activate commands issued");
-    num_pre_cmds = CounterStat(
-        "num_pre_cmds", "Number of precharge commands issued");
-    num_refresh_cmds = CounterStat("num_refresh_cmds",
-                                           "Number of refresh commands issued");
+    num_write_cmds =
+        CounterStat("num_write_cmds", "Number of write commands issued");
+    num_act_cmds =
+        CounterStat("num_act_cmds", "Number of activate commands issued");
+    num_pre_cmds =
+        CounterStat("num_pre_cmds", "Number of precharge commands issued");
+    num_refresh_cmds =
+        CounterStat("num_refresh_cmds", "Number of refresh commands issued");
     num_refb_cmds =
-        CounterStat("num_refb_cmds",
-                    "Number of refresh bank commands issued");
+        CounterStat("num_refb_cmds", "Number of refresh bank commands issued");
     num_sref_enter_cmds =
         CounterStat("num_sref_enter_cmds",
                     "Number of self-refresh mode enter commands issued");
@@ -389,16 +387,14 @@ void Statistics::PreEpochCompute(uint64_t clk) {
         reqs_issued_epoch =
             num_reads_done.Count() - num_reads_done.LastCount() +
             num_writes_done.Count() - num_writes_done.LastCount();
-        reqs_issued =
-            num_reads_done.Count() + num_writes_done.Count();
+        reqs_issued = num_reads_done.Count() + num_writes_done.Count();
     } else {
         reqs_issued_epoch = hmc_reqs_done.Count() - hmc_reqs_done.LastCount();
         reqs_issued = hmc_reqs_done.Count();
     }
 
     // Epoch level compute stats
-    act_energy.epoch_value = (num_act_cmds.Count() -
-                              num_act_cmds.LastCount()) *
+    act_energy.epoch_value = (num_act_cmds.Count() - num_act_cmds.LastCount()) *
                              config_.act_energy_inc;
     read_energy.epoch_value =
         (num_read_cmds.Count() - num_read_cmds.LastCount()) *
@@ -406,12 +402,12 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     write_energy.epoch_value =
         (num_write_cmds.Count() - num_write_cmds.LastCount()) *
         config_.write_energy_inc;
-    ref_energy.epoch_value = (num_refresh_cmds.Count() -
-                              num_refresh_cmds.LastCount()) *
-                             config_.ref_energy_inc;
-    refb_energy.epoch_value = (num_refb_cmds.Count() -
-                               num_refb_cmds.LastCount()) *
-                              config_.refb_energy_inc;
+    ref_energy.epoch_value =
+        (num_refresh_cmds.Count() - num_refresh_cmds.LastCount()) *
+        config_.ref_energy_inc;
+    refb_energy.epoch_value =
+        (num_refb_cmds.Count() - num_refb_cmds.LastCount()) *
+        config_.refb_energy_inc;
     for (int i = 0; i < config_.channels; i++) {
         for (int j = 0; j < config_.ranks; j++) {
             act_stb_energy[i][j].epoch_value =
@@ -439,8 +435,7 @@ void Statistics::PreEpochCompute(uint64_t clk) {
         ((clk - last_clk_) * config_.tCK);
 
     // cumulative compute stats
-    act_energy.cumulative_value =
-        num_act_cmds.Count() * config_.act_energy_inc;
+    act_energy.cumulative_value = num_act_cmds.Count() * config_.act_energy_inc;
     read_energy.cumulative_value =
         num_read_cmds.Count() * config_.read_energy_inc;
     write_energy.cumulative_value =

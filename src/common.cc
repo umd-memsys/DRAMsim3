@@ -31,7 +31,6 @@ std::ostream& operator<<(std::ostream& os, const Transaction& trans) {
     return os;
 }
 
-
 std::istream& operator>>(std::istream& is, Access& access) {
     is >> std::hex >> access.hex_addr_ >> access.access_type_ >> std::dec >>
         access.time_;
