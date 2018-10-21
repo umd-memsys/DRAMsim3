@@ -13,7 +13,7 @@ Refresh::Refresh(const Config &config, ChannelState &channel_state)
         refresh_interval_ = config_.tREFI;
     } else if (refresh_policy_ == RefreshPolicy::BANK_LEVEL_STAGGERED) {
         refresh_interval_ = config_.tREFIb;
-    } else if (refresh_policy_ == RefreshPolicy::RANK_LEVEL_STAGGERED) {
+    } else {  // default refresh scheme: RANK STAGGERED
         refresh_interval_ = config_.tREFI / config_.ranks;
     }
 }
