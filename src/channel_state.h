@@ -27,8 +27,9 @@ class ChannelState {
         return bank_states_[rank][bankgroup][bank].IsRowOpen();
     }
     bool IsAllBankIdleInRank(int rank) const;
-    bool IsRefreshWaiting(int rank, int bankgroup, int bank) const;
     bool IsRankSelfRefreshing(int rank) const { return rank_is_sref_[rank]; }
+    bool IsRefreshWaiting() const;
+    const Command& PendingRefCommand() const {return refresh_q_.front(); }
     void BankNeedRefresh(int rank, int bankgroup, int bank, bool need);
     void RankNeedRefresh(int rank, bool need);
     int OpenRow(int rank, int bankgroup, int bank) const {
@@ -47,6 +48,7 @@ class ChannelState {
 
     std::vector<bool> rank_is_sref_;
     std::vector<std::vector<std::vector<BankState> > > bank_states_;
+    std::vector<Command> refresh_q_;
 
     std::vector<std::vector<uint64_t> > four_aw_;
     std::vector<std::vector<uint64_t> > thirty_two_aw_;

@@ -184,8 +184,18 @@ void Config::InitSystemParams() {
     row_buf_policy = reader.Get("system", "row_buf_policy", "OPEN_PAGE");
     cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
     trans_queue_size = GetInteger("system", "trans_queue_size", 32);
-    refresh_strategy =
-        reader.Get("system", "refresh_strategy", "RANK_LEVEL_STAGGERED");
+    std::string ref_policy =
+        reader.Get("system", "refresh_policy", "RANK_LEVEL_STAGGERED");
+    if (ref_policy == "RANK_LEVEL_SIMULTANEOUS") {
+        refresh_policy = RefreshPolicy::RANK_LEVEL_SIMULTANEOUS;
+    } else if (ref_policy == "RANK_LEVEL_STAGGERED") {
+        refresh_policy = RefreshPolicy::RANK_LEVEL_STAGGERED;
+    } else if (ref_policy == "BANK_LEVEL_STAGGERED") {
+        refresh_policy = RefreshPolicy::BANK_LEVEL_STAGGERED;
+    } else {
+        AbruptExit(__FILE__, __LINE__);
+    }
+
     enable_self_refresh =
         reader.GetBoolean("system", "enable_self_refresh", false);
     sref_threshold = GetInteger("system", "sref_threshold", 1000);

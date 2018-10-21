@@ -26,6 +26,13 @@ enum class DRAMProtocol {
     SIZE
 };
 
+enum class RefreshPolicy {
+    RANK_LEVEL_SIMULTANEOUS,  // impractical due to high power requirement
+    RANK_LEVEL_STAGGERED,
+    BANK_LEVEL_STAGGERED,
+    SIZE 
+};
+
 class Config {
    public:
     Config(std::string config_file, std::string out_dir);
@@ -114,10 +121,10 @@ class Config {
     std::string address_mapping;
     std::string queue_structure;
     std::string row_buf_policy;
+    RefreshPolicy refresh_policy;
     int cmd_queue_size;
     int trans_queue_size;
     int delay_queue_cycles;
-    std::string refresh_strategy;
     bool enable_self_refresh;
     int sref_threshold;
     bool aggressive_precharging_enabled;

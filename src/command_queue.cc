@@ -12,8 +12,7 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
       next_bg_(0),
       next_bank_(0),
       queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
-      clk_(0)
-{
+      clk_(0) {
     int num_queues = 0;
     if (config_.queue_structure == "PER_BANK") {
         queue_structure_ = QueueStructure::PER_BANK;
@@ -36,37 +35,58 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 }
 
 Command CommandQueue::GetCommandToIssue() {
-    unsigned i = queues_.size();
-    while (i > 0) {  // iterate all queues
-        auto& queue = GetNextQueue();
-        if (channel_state_.IsRefreshWaiting(next_rank_, next_bg_, next_bank_)) {
-            bool row_open =
-                channel_state_.IsRowOpen(next_rank_, next_bg_, next_bank_);
-            int hit_count =
-                channel_state_.RowHitCount(next_rank_, next_bg_, next_bank_);
-            if (row_open && hit_count == 0) {  // just open, finish this one
-                for (auto it = queue.begin(); it != queue.end(); it++) {
-                    if (it->Rank() == next_rank_ &&
-                        it->Bankgroup() == next_bg_ &&
-                        it->Bank() == next_bank_) {
-                        Command cmd = channel_state_.GetRequiredCommand(*it);
-                        if (channel_state_.IsReady(cmd, clk_)) {
+    // prioritize refresh
+    // Rank queues, bank queues, ref and refbs, so complicated
+    if (channel_state_.IsRefreshWaiting()) {
+        auto ref = channel_state_.PendingRefCommand();
+        if (ref.cmd_type == CommandType::REFRESH) {
+            for (size_t i = 0; i < queues_.size(); i++) {
+                auto& queue = GetNextQueue();
+                if (next_rank_ == ref.Rank()) {
+                    for (auto it=queue.begin(); it != queue.end(); it++) {
+                        auto cmd = PrepRefCmd(it, ref);
+                        if (cmd.IsValid()) {
                             return cmd;
                         }
                     }
                 }
-            } else {
-                auto addr = Address(0, next_rank_, next_bg_, next_bank_, -1, 0);
-                Command ref = Command(CommandType::REFRESH, addr, -1);
-                return channel_state_.GetRequiredCommand(ref);
             }
-        } else {
+        } else {  // Bank level refresh
+            auto& queue = GetQueue(ref.Rank(), ref.Bankgroup(), ref.Bank());
+            for (auto it = queue.begin(); it != queue.end(); it++) {
+                if (it->Rank() == ref.Rank() &&
+                    it->Bankgroup() == ref.Bankgroup() &&
+                    it->Bank() == ref.Bank()) {
+                    auto cmd = PrepRefCmd(it, ref);
+                    if (cmd.IsValid()) {
+                        return cmd;
+                    }
+                }
+            }
+        }
+
+        // Cannot find any ref-related cmd, (no returning till here), then
+        // try to find other things to do in other ranks
+        for (size_t i = 0; i < queues_.size(); i++) {
+            if (next_rank_ != ref.Rank()) {  // not the refreshed rank
+                auto& next_queue = GetQueue(next_rank_, next_bg_, next_bank_);
+                auto cmd = GetFristReadyInQueue(next_queue);
+                if (cmd.IsValid()) {
+                    return cmd;
+                }
+            }
+            GetNextQueue();
+        }
+    } else {
+        int i = queues_.size();
+        while (i > 0) {
+            auto& queue = GetNextQueue();
             auto cmd = GetFristReadyInQueue(queue);
             if (cmd.IsValid()) {
                 return cmd;
             }
+            i--;
         }
-        i--;
     }
     return Command();
 }
@@ -105,7 +125,7 @@ bool CommandQueue::ArbitratePrecharge(const Command& cmd) {
 
     bool rowhit_limit_reached =
         channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >=
-        64;
+        4;
     if (!pending_row_hits_exist || rowhit_limit_reached) {
         stats_.num_ondemand_pres++;
         return true;
@@ -156,8 +176,7 @@ int CommandQueue::GetQueueIndex(int rank, int bankgroup, int bank) {
     }
 }
 
-CMDQueue& CommandQueue::GetQueue(int rank, int bankgroup,
-                                             int bank) {
+CMDQueue& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
     int index = GetQueueIndex(rank, bankgroup, bank);
     return queues_[index];
 }
@@ -196,6 +215,26 @@ int CommandQueue::QueueUsage() const {
         usage += i->size();
     }
     return usage;
+}
+
+Command CommandQueue::PrepRefCmd(CMDIterator& it, Command& ref) {
+    int r = it->Rank();
+    int g = it->Bankgroup();
+    int b = it->Bank();
+    bool row_open = channel_state_.IsRowOpen(r, g, b);
+    int hit_count = channel_state_.RowHitCount(r, g, b);
+    if (row_open && hit_count) {
+        Command cmd = channel_state_.GetRequiredCommand(*it);
+        if (channel_state_.IsReady(cmd, clk_)) {
+            return cmd;
+        }
+    } else {  // precharge
+        Command cmd = channel_state_.GetRequiredCommand(ref);
+        if (channel_state_.IsReady(cmd, clk_)) {
+            return cmd;
+        }
+    }
+    return Command();
 }
 
 }  // namespace dramsim3

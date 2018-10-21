@@ -7,7 +7,6 @@ namespace dramsim3 {
 BankState::BankState(Statistics& stats)
     : stats_(stats),
       state_(State::CLOSED),
-      refresh_waiting_(false),
       cmd_timing_(static_cast<int>(CommandType::SIZE)),
       open_row_(-1),
       row_hit_count_(0) {
@@ -124,7 +123,6 @@ void BankState::UpdateState(const Command& cmd) {
             switch (cmd.cmd_type) {
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
-                    refresh_waiting_ = false;
                     break;
                 case CommandType::ACTIVATE:
                     state_ = State::OPEN;

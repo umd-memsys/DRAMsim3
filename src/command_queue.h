@@ -41,6 +41,7 @@ class CommandQueue {
     CMDQueue& GetQueue(int rank, int bankgroup, int bank);
     int GetQueueIndex(int rank, int bankgroup, int bank);
     CMDQueue& GetNextQueue();
+    Command PrepRefCmd(CMDIterator& it, Command& ref);
 };
 
 }  // namespace dramsim3
