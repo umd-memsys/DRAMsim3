@@ -4,17 +4,16 @@ namespace dramsim3 {
 
 CommandQueue::CommandQueue(int channel_id, const Config& config,
                            const ChannelState& channel_state, Statistics& stats)
-    : clk_(0),
-      rank_q_empty(config.ranks, true),
+    : rank_q_empty(config.ranks, true),
       config_(config),
       channel_state_(channel_state),
       stats_(stats),
       next_rank_(0),
       next_bg_(0),
       next_bank_(0),
-      next_queue_index_(0),
       queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
-      channel_id_(channel_id) {
+      clk_(0)
+{
     int num_queues = 0;
     if (config_.queue_structure == "PER_BANK") {
         queue_structure_ = QueueStructure::PER_BANK;
@@ -38,22 +37,31 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 
 Command CommandQueue::GetCommandToIssue() {
     unsigned i = queues_.size();
-    while (i > 0) {
-        IterateNext();
+    while (i > 0) {  // iterate all queues
+        auto& queue = GetNextQueue();
         if (channel_state_.IsRefreshWaiting(next_rank_, next_bg_, next_bank_)) {
             bool row_open =
                 channel_state_.IsRowOpen(next_rank_, next_bg_, next_bank_);
             int hit_count =
                 channel_state_.RowHitCount(next_rank_, next_bg_, next_bank_);
             if (row_open && hit_count == 0) {  // just open, finish this one
-                return GetFristReadyInBank(next_rank_, next_bg_, next_bank_);
+                for (auto it = queue.begin(); it != queue.end(); it++) {
+                    if (it->Rank() == next_rank_ &&
+                        it->Bankgroup() == next_bg_ &&
+                        it->Bank() == next_bank_) {
+                        Command cmd = channel_state_.GetRequiredCommand(*it);
+                        if (channel_state_.IsReady(cmd, clk_)) {
+                            return cmd;
+                        }
+                    }
+                }
             } else {
                 auto addr = Address(0, next_rank_, next_bg_, next_bank_, -1, 0);
                 Command ref = Command(CommandType::REFRESH, addr, -1);
                 return channel_state_.GetRequiredCommand(ref);
             }
         } else {
-            auto cmd = GetFristReadyInQueue(queues_[next_queue_index_]);
+            auto cmd = GetFristReadyInQueue(queue);
             if (cmd.IsValid()) {
                 return cmd;
             }
@@ -121,7 +129,7 @@ bool CommandQueue::AddCommand(Command cmd) {
     }
 }
 
-inline void CommandQueue::IterateNext() {
+CMDQueue& CommandQueue::GetNextQueue() {
     if (queue_structure_ == QueueStructure::PER_BANK) {
         next_bg_ = (next_bg_ + 1) % config_.bankgroups;
         if (next_bg_ == 0) {
@@ -136,8 +144,7 @@ inline void CommandQueue::IterateNext() {
         std::cerr << "Unknown queue structure" << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
-    next_queue_index_ = GetQueueIndex(next_rank_, next_bg_, next_bank_);
-    return;
+    return GetQueue(next_rank_, next_bg_, next_bank_);
 }
 
 int CommandQueue::GetQueueIndex(int rank, int bankgroup, int bank) {
@@ -149,22 +156,16 @@ int CommandQueue::GetQueueIndex(int rank, int bankgroup, int bank) {
     }
 }
 
-std::vector<Command>& CommandQueue::GetQueue(int rank, int bankgroup,
+CMDQueue& CommandQueue::GetQueue(int rank, int bankgroup,
                                              int bank) {
     int index = GetQueueIndex(rank, bankgroup, bank);
     return queues_[index];
 }
 
-Command CommandQueue::GetFristReadyInQueue(std::vector<Command>& queue) {
+Command CommandQueue::GetFristReadyInQueue(CMDQueue& queue) {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        // DO NOT REORDER R/W
-        if (cmd_it->IsRead() != queue.begin()->IsRead()) {
-            // TODO had to comment this out to not block
-            // but then what's the point of using separate queues?
-            // break;
-        }
+        // TODO not enforcing R/W orders?
         Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
-        // TODO required might be different from cmd_it, e.g. ACT vs READ
         if (channel_state_.IsReady(cmd, clk_)) {
             if (cmd.cmd_type == CommandType::PRECHARGE) {
                 if (!ArbitratePrecharge(cmd)) {
@@ -172,21 +173,6 @@ Command CommandQueue::GetFristReadyInQueue(std::vector<Command>& queue) {
                 }
             }
             return cmd;
-        }
-    }
-    return Command();
-}
-
-Command CommandQueue::GetFristReadyInBank(int rank, int bankgroup, int bank) {
-    // only useful in rank queue
-    auto& queue = GetQueue(rank, bankgroup, bank);
-    for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        if (cmd_it->Rank() == rank && cmd_it->Bankgroup() == bankgroup &&
-            cmd_it->Bank() == bank) {
-            Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
-            if (channel_state_.IsReady(cmd, clk_)) {
-                return cmd;
-            }
         }
     }
     return Command();

@@ -131,7 +131,7 @@ void Controller::ClockTick() {
 
     ScheduleTransaction();
     clk_++;
-    cmd_queue_.clk_++;
+    cmd_queue_.ClockTick();
     return;
 }
 

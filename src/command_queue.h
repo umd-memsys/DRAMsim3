@@ -19,16 +19,11 @@ class CommandQueue {
     CommandQueue(int channel_id, const Config& config,
                  const ChannelState& channel_state, Statistics& stats);
     Command GetCommandToIssue();
-    Command GetFristReadyInQueue(std::vector<Command>& queue);
-    CMDIterator GetFirstRWInQueue(CMDQueue& queue);
-    Command GetFristReadyInBank(int rank, int bankgroup, int bank);
-    bool ArbitratePrecharge(const Command& cmd);
+    void ClockTick() {clk_ += 1;};
     void IssueRWCommand(const Command& cmd);
     bool WillAcceptCommand(int rank, int bankgroup, int bank);
     bool AddCommand(Command cmd);
     int QueueUsage() const;
-    std::vector<Command>& GetQueue(int rank, int bankgroup, int bank);
-    uint64_t clk_;
     std::vector<bool> rank_q_empty;
 
    private:
@@ -36,13 +31,16 @@ class CommandQueue {
     const Config& config_;
     const ChannelState& channel_state_;
     Statistics& stats_;
-    int next_rank_, next_bg_, next_bank_, next_queue_index_;
-    std::vector<std::vector<Command>> queues_;
+    int next_rank_, next_bg_, next_bank_;
+    std::vector<CMDQueue> queues_;
     size_t queue_size_;
-    int channel_id_;
+    uint64_t clk_;
 
-    void IterateNext();
+    bool ArbitratePrecharge(const Command& cmd);
+    Command GetFristReadyInQueue(CMDQueue& queue);
+    CMDQueue& GetQueue(int rank, int bankgroup, int bank);
     int GetQueueIndex(int rank, int bankgroup, int bank);
+    CMDQueue& GetNextQueue();
 };
 
 }  // namespace dramsim3
