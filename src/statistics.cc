@@ -258,10 +258,6 @@ Statistics::Statistics(const Config& config)
                     "Number of buffered requests because queues were full");
     hbm_dual_cmds = CounterStat(
         "hbm_dual_cmds", "Number of cycles in which two commands were issued");
-    hbm_dual_cmd_attemps =
-        CounterStat("hbm_dual_cmd_attemps",
-                    "Number of cycles during which an opportunity to issue a "
-                    "read/write is possibly missed");
     num_read_cmds =
         CounterStat("num_read_cmds", "Number of read commands issued");
     num_write_cmds =
@@ -345,7 +341,6 @@ Statistics::Statistics(const Config& config)
     stats_list.push_back(&dramcycles);
     stats_list.push_back(&num_buffered_trans);
     stats_list.push_back(&hbm_dual_cmds);
-    stats_list.push_back(&hbm_dual_cmd_attemps);
     stats_list.push_back(&num_read_cmds);
     stats_list.push_back(&num_write_cmds);
     stats_list.push_back(&num_act_cmds);

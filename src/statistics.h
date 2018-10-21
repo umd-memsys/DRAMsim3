@@ -145,7 +145,6 @@ class Statistics {
     class CounterStat dramcycles;
     class CounterStat num_buffered_trans;
     class CounterStat hbm_dual_cmds;
-    class CounterStat hbm_dual_cmd_attemps;
     class CounterStat num_read_cmds;
     class CounterStat num_write_cmds;
     class CounterStat num_act_cmds;

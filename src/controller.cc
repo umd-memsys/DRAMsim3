@@ -60,6 +60,26 @@ void Controller::ClockTick() {
         }
     }
 
+    // update refresh counter
+    refresh_.ClockTick();
+
+    bool cmd_issued = false;
+    auto cmd = cmd_queue_.GetCommandToIssue();
+    if (cmd.IsValid()) {
+        IssueCommand(cmd);
+        cmd_issued = true;
+
+        if (config_.enable_hbm_dual_cmd) {
+            auto second_cmd = cmd_queue_.GetCommandToIssue();
+            if (second_cmd.IsValid()) {
+                if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
+                    IssueCommand(second_cmd);
+                    stats_.hbm_dual_cmds++;
+                }
+            }
+        }
+    }
+
     // power updates pt 1
     for (int i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
@@ -79,7 +99,7 @@ void Controller::ClockTick() {
     }
 
     // power updates pt 2: move idle ranks into self-refresh mode to save power
-    if (config_.enable_self_refresh) {
+    if (config_.enable_self_refresh && !cmd_issued) {
         for (auto i = 0; i < config_.ranks; i++) {
             if (channel_state_.IsRankSelfRefreshing(i)) {
                 // wake up!
@@ -87,8 +107,10 @@ void Controller::ClockTick() {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_EXIT, addr, -1);
-                    IssueCommand(cmd);
-                    break;
+                    if (channel_state_.IsReady(cmd, clk_)){
+                        IssueCommand(cmd);
+                        break;
+                    }
                 }
             } else {
                 if (cmd_queue_.rank_q_empty[i] &&
@@ -97,31 +119,15 @@ void Controller::ClockTick() {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_ENTER, addr, -1);
-                    IssueCommand(cmd);
-                    break;
+                    if (channel_state_.IsReady(cmd, clk_)){
+                        IssueCommand(cmd);
+                        break;
+                    }
                 }
             }
         }
     }
 
-    refresh_.ClockTick();
-
-    auto cmd = cmd_queue_.GetCommandToIssue();
-    if (cmd.IsValid()) {
-        IssueCommand(cmd);
-
-        if (config_.enable_hbm_dual_cmd) {
-            auto second_cmd = cmd_queue_.GetCommandToIssue();
-            if (second_cmd.IsValid()) {
-                if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
-                    IssueCommand(second_cmd);
-                    stats_.hbm_dual_cmds++;
-                } else {
-                    stats_.hbm_dual_cmd_attemps++;
-                }
-            }
-        }
-    }
 
     ScheduleTransaction();
     clk_++;
