@@ -2,6 +2,7 @@
 build/
 debug_build/
 data/
+ext/SuperLU_MT_3.1/
 obj
 dramsim3
 dramsim3test
@@ -43,5 +44,5 @@ release
 *.out
 *.app
 
-# IDEs
-.vscode/settings.json
+# IDEs / Editors
+.vscode/

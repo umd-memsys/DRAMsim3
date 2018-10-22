@@ -58,16 +58,5 @@ defaults:
 
 ```
 
-## Using Clion IDE (preferred way)
-Clion supports a CMake based buildsystem natively. Infact, being able to use Clion was the motivation behind moving
-from a handwritten Makefile to a CMake based build system.
-
-Import the project from Clion. This will create a `cmake-build-debug` directory. Use this as the new build
-and run directory.
-
-
-*Note - While Clion is a paid IDE, it provides a free student license.*
-
-
 ## Using Visual Studio Code
 Just the usual way of working with a Makefile based project. Check the .vscode directory for further help.
