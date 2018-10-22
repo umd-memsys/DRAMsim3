@@ -1,130 +1,42 @@
-cmake_minimum_required(VERSION 3.0)
-
+cmake_minimum_required(VERSION 3.0.0)
 project(dramsim3)
+add_library(ini SHARED
+    ext/inih/src/INIReader.cpp
+    ext/inih/src/ini.c
+)
+target_compile_options(ini PRIVATE -O3)
+target_include_directories(ini PUBLIC ext/inih/src)
+add_library(format SHARED
+    ext/fmt/src/format.cc
+)
+target_compile_options(format PRIVATE -O3)
 
-# self-defined flgas that help debugging
-# e.g. use cmake -DGENERATE_TRACE=ON or 1 to enbale this
-if (NO_BACKPRESSURE)
-        message("Adding NO_BACKPRESSURE - To enable infinite buffering \
-                 of memory requests in memory controller to support CPUs that \
-                 does not model backpressure when the queues in the memory \
-                 controller are full")
-        add_definitions(-DNO_BACKPRESSURE)
-endif (NO_BACKPRESSURE)
-
-if (GENERATE_TRACE)
-        message("Adding GENERATE_TRACE - To log to a file the \
-                 memory address trace along with timing information")
-        add_definitions(-DGENERATE_TRACE)
-endif (GENERATE_TRACE)
-
-if (DEBUG_POWER)
-        message("Adding DEBUG_POWER definition...")
-        add_definitions(-DDEBUG_POWER)
-endif  (DEBUG_POWER)
-
-if (DEBUG_LOC_MAPPING)
-        add_definitions(-DDEBUG_LOC_MAPPING)
-endif (DEBUG_LOC_MAPPING)
-
-
-# THERMAL module, disabled by default since it will slow down simulation
-if (THERMAL)
-        add_definitions(-DTHERMAL)
-        # check dependency
-        # if cmake fails the check for f77blas try 
-        # sudo apt-get install libatlas-base-dev
-        find_package(BLAS REQUIRED)
-        find_package(OpenMP REQUIRED)
-
-        # since SuperLU has a build system already, I don't want to
-        # rewirte the entire make system so here's the solution...
-        if (NOT SUPERLU_ROOT)
-                set(SUPERLU_ROOT ${CMAKE_SOURCE_DIR}/ext/SuperLU_MT_3.1/)
-                execute_process(COMMAND git submodule update --init --
-                                ${SUPERLU_ROOT})
-        endif (NOT SUPERLU_ROOT)
-        set(SUPERLU_PLAT OPENMP)
-        set(SUPERLU_LIB ${SUPERLU_ROOT}/lib/libsuperlu_mt_${SUPERLU_PLAT}.a)
-        add_library(superlu_mt STATIC IMPORTED)
-
-        set_target_properties(superlu_mt
-                              PROPERTIES IMPORTED_LOCATION ${SUPERLU_LIB})
-        add_custom_target(build_superlu_mt
-                          COMMAND make lib
-                          WORKING_DIRECTORY ${SUPERLU_ROOT}
-        )
-        add_dependencies(superlu_mt build_superlu_mt)
-        include_directories(${SUPERLU_ROOT}/SRC)  # header files are here..
-endif (THERMAL)
-
-if (NOT CMAKE_BUILD_TYPE)
-        set(CMAKE_BUILD_TYPE Release)
-endif()
-
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-fPIC -D_LONGINT -DAdd_")
-set(EXTRA_CXX_FLAGS "-Wall -fPIC")
-set(EXTRA_CXX_FLAGS_DEBUG "-O0 -DDEBUG_OUTPUT")
-set(EXTRA_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(EXTRA_CXX_FLAGS_RELWITHDEBINFO "-O0 -DNDDEBUG")
-
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS_DEBUG}")
-set(CMAKE_CXX_FLAGS_RELEASE 
-        "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  
-        "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS_RELWITHDEBINFO}")
-
-set(SOURCES
-        src/bankstate.cc
-        src/channel_state.cc
-        src/command_queue.cc
-        src/common.cc
-        src/configuration.cc
-        src/controller.cc
-        src/cpu.cc
-        src/dram_system.cc
-        src/hmc.cc
-        src/refresh.cc
-        src/statistics.cc
-        src/timing.cc
-        src/memory_system.cc
-
-        ext/fmt/src/format.cc
-        ext/inih/src/ini.c
-        ext/inih/src/INIReader.cpp
-        )
-
-if (THERMAL)
-        set(SOURCES ${SOURCES} src/thermal.cc src/sp_ienv.c 
-                               src/thermal_solver.c)
-        set_source_files_properties(src/thermal_solver.c PROPERTIES 
-                                    COMPILE_FLAGS "${OpenMP_C_FLAGS} -O2")
-endif (THERMAL)
-
-include_directories(src ext/headers)
-
-# prefer building static because that's what gem5 likes
-add_library(dramsim3 STATIC ${SOURCES})
-add_library(dramsim3dy SHARED EXCLUDE_FROM_ALL ${SOURCES})
-
-if (THERMAL)
-        target_link_libraries(dramsim3 superlu_mt f77blas atlas m 
-                              ${OpenMP_C_FLAGS})
-        target_link_libraries(dramsim3dy superlu_mt f77blas atlas m 
-                              ${OpenMP_C_FLAGS})
-        add_executable(thermalreplay src/thermal_replay.cc)
-        target_link_libraries(thermalreplay dramsim3)
-endif (THERMAL)
-
-# use project root directory to make it easier to locate
-set_target_properties(dramsim3 PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-
+target_include_directories(format INTERFACE ext/fmt/src)
+# argparsing library, only used in main program not the library
+add_library(args INTERFACE)
+target_include_directories(args INTERFACE ext/headers)
+add_library(dramsim3 SHARED
+    src/bankstate.cc
+    src/channel_state.cc
+    src/command_queue.cc
+    src/common.cc
+    src/configuration.cc
+    src/controller.cc
+    src/cpu.cc
+    src/dram_system.cc
+    src/hmc.cc
+    src/refresh.cc
+    src/statistics.cc
+    src/timing.cc
+    src/memory_system.cc
+)
+target_include_directories(dramsim3 INTERFACE src)
+target_compile_options(dramsim3 PRIVATE -DNDEBUG -O3)
+target_link_libraries(dramsim3
+    PRIVATE
+        ini
+        format
+)
 add_executable(dramsim3main src/main.cc)
-target_link_libraries(dramsim3main dramsim3)
-
-
-
+target_link_libraries(dramsim3main PRIVATE dramsim3 args)
+target_compile_options(dramsim3main PRIVATE -O3)
