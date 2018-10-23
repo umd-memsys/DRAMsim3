@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <map>
+#include <unordered_set>
 #include <vector>
 #include "channel_state.h"
 #include "command_queue.h"
@@ -55,6 +56,7 @@ class Controller {
     // queue that takes transactions from CPU side
     std::vector<Transaction> read_queue_;
     std::vector<Transaction> write_queue_;
+    std::unordered_set<uint64_t> in_write_queue_;
 
     // transactions that are issued to command queue, use map for convenience
     std::multimap<int, Transaction> pending_queue_;

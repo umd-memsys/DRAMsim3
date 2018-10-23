@@ -145,15 +145,28 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
 
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
-    if (trans.is_write) {
-        // pretend it's done
-        stats_.num_writes_done++;
-        write_callback_(trans.addr);
-        write_queue_.push_back(trans);
-        return write_queue_.size() <= write_queue_.capacity();
+    // check if already in write buffer, can return immediately
+    if (in_write_queue_.count(trans.addr) > 0) {
+        if (trans.is_write) {
+            stats_.num_writes_done++;
+            write_callback_(trans.addr);
+        } else {
+            stats_.num_reads_done++;
+            read_callback_(trans.addr);
+        }
+        return true;
     } else {
-        read_queue_.push_back(trans);
-        return read_queue_.size() <= read_queue_.capacity();
+        if (trans.is_write) {
+            // pretend it's done
+            stats_.num_writes_done++;
+            write_callback_(trans.addr);
+            write_queue_.push_back(trans);
+            in_write_queue_.insert(trans.addr);
+            return write_queue_.size() <= write_queue_.capacity();
+        } else {
+            read_queue_.push_back(trans);
+            return read_queue_.size() <= read_queue_.capacity();
+        }
     }
 }
 
@@ -234,6 +247,7 @@ void Controller::ProcessRWCommand(const Command &cmd) {
     } else {
         // it->second.complete_cycle = clk_ + config_.write_delay +
         //                             config_.delay_queue_cycles;
+        in_write_queue_.erase(it->second.addr);
         pending_queue_.erase(it);
     }
     return;
