@@ -91,8 +91,8 @@ Command CommandQueue::GetCommandToIssue() {
     return Command();
 }
 
-const bool CommandQueue::ArbitratePrecharge(const CMDIterator& cmd_it,
-                                            const CMDQueue& queue) {
+bool CommandQueue::ArbitratePrecharge(const CMDIterator& cmd_it,
+                                      const CMDQueue& queue) const {
     auto cmd = *cmd_it;
 
     for (auto prev_itr = queue.begin(); prev_itr != cmd_it; prev_itr++) {
@@ -213,8 +213,8 @@ int CommandQueue::QueueUsage() const {
     return usage;
 }
 
-const bool CommandQueue::HasRWDependency(const CMDIterator& cmd_it,
-                                         const CMDQueue& queue) {
+bool CommandQueue::HasRWDependency(const CMDIterator& cmd_it,
+                                   const CMDQueue& queue) const {
     // Read after write has been checked in controller so we only
     // check write after read here
     for (auto it = queue.begin(); it != cmd_it; it++) {

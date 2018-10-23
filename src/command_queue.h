@@ -36,14 +36,14 @@ class CommandQueue {
     size_t queue_size_;
     uint64_t clk_;
 
-    const bool ArbitratePrecharge(const CMDIterator& cmd_it,
-                                  const CMDQueue& queue);
+    bool ArbitratePrecharge(const CMDIterator& cmd_it,
+                            const CMDQueue& queue) const;
     Command GetFristReadyInQueue(CMDQueue& queue);
     CMDQueue& GetQueue(int rank, int bankgroup, int bank);
     int GetQueueIndex(int rank, int bankgroup, int bank);
     CMDQueue& GetNextQueue();
-    const bool HasRWDependency(const CMDIterator& cmd_it,
-                               const CMDQueue& queue);
+    bool HasRWDependency(const CMDIterator& cmd_it,
+                         const CMDQueue& queue) const;
     Command PrepRefCmd(CMDIterator& it, Command& ref);
 };
 
