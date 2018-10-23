@@ -34,7 +34,6 @@ add_library(dramsim3 SHARED
     src/common.cc
     src/configuration.cc
     src/controller.cc
-    src/cpu.cc
     src/dram_system.cc
     src/hmc.cc
     src/refresh.cc
@@ -67,16 +66,17 @@ if (THERMAL)
 endif (THERMAL)
 
 target_include_directories(dramsim3 INTERFACE src)
-target_compile_options(dramsim3 PRIVATE -DNDEBUG -O3)
+target_compile_options(dramsim3 PRIVATE -O3)
 target_link_libraries(dramsim3 PRIVATE ini format)
 set_target_properties(dramsim3 PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
 )
 
 # trace CPU, .etc
-add_executable(dramsim3main src/main.cc)
+add_executable(dramsim3main src/main.cc src/cpu.cc)
 target_link_libraries(dramsim3main PRIVATE dramsim3 args)
 target_compile_options(dramsim3main PRIVATE -O3)
 set_target_properties(dramsim3main PROPERTIES
