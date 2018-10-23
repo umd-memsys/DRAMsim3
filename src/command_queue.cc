@@ -43,7 +43,7 @@ Command CommandQueue::GetCommandToIssue() {
             for (size_t i = 0; i < queues_.size(); i++) {
                 auto& queue = GetNextQueue();
                 if (next_rank_ == ref.Rank()) {
-                    for (auto it=queue.begin(); it != queue.end(); it++) {
+                    for (auto it = queue.begin(); it != queue.end(); it++) {
                         auto cmd = PrepRefCmd(it, ref);
                         if (cmd.IsValid()) {
                             return cmd;
@@ -91,16 +91,9 @@ Command CommandQueue::GetCommandToIssue() {
     return Command();
 }
 
-bool CommandQueue::ArbitratePrecharge(const Command& cmd) {
-    auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
-
-    CMDIterator cmd_it;
-    for (auto it = queue.begin(); it != queue.end(); it++) {
-        if (it->id == cmd.id) {
-            cmd_it = it;
-            break;
-        }
-    }
+const bool CommandQueue::ArbitratePrecharge(const CMDIterator& cmd_it,
+                                            const CMDQueue& queue) {
+    auto cmd = *cmd_it;
 
     for (auto prev_itr = queue.begin(); prev_itr != cmd_it; prev_itr++) {
         if (prev_itr->Rank() == cmd.Rank() &&
@@ -183,11 +176,14 @@ CMDQueue& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
 
 Command CommandQueue::GetFristReadyInQueue(CMDQueue& queue) {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        // TODO not enforcing R/W orders?
         Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
         if (channel_state_.IsReady(cmd, clk_)) {
             if (cmd.cmd_type == CommandType::PRECHARGE) {
-                if (!ArbitratePrecharge(cmd)) {
+                if (!ArbitratePrecharge(cmd_it, queue)) {
+                    continue;
+                }
+            } else if (cmd.IsWrite()) {
+                if (HasRWDependency(cmd_it, queue)) {
                     continue;
                 }
             }
@@ -215,6 +211,20 @@ int CommandQueue::QueueUsage() const {
         usage += i->size();
     }
     return usage;
+}
+
+const bool CommandQueue::HasRWDependency(const CMDIterator& cmd_it,
+                                         const CMDQueue& queue) {
+    // Read after write has been checked in controller so we only
+    // check write after read here
+    for (auto it = queue.begin(); it != cmd_it; it++) {
+        if (it->IsRead() && it->Row() == cmd_it->Row() &&
+            it->Column() == cmd_it->Column() && it->Bank() == cmd_it->Bank() &&
+            it->Bankgroup() == cmd_it->Bankgroup()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 Command CommandQueue::PrepRefCmd(CMDIterator& it, Command& ref) {

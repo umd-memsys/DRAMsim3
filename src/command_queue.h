@@ -19,7 +19,7 @@ class CommandQueue {
     CommandQueue(int channel_id, const Config& config,
                  const ChannelState& channel_state, Statistics& stats);
     Command GetCommandToIssue();
-    void ClockTick() {clk_ += 1;};
+    void ClockTick() { clk_ += 1; };
     void IssueRWCommand(const Command& cmd);
     bool WillAcceptCommand(int rank, int bankgroup, int bank);
     bool AddCommand(Command cmd);
@@ -36,11 +36,14 @@ class CommandQueue {
     size_t queue_size_;
     uint64_t clk_;
 
-    bool ArbitratePrecharge(const Command& cmd);
+    const bool ArbitratePrecharge(const CMDIterator& cmd_it,
+                                  const CMDQueue& queue);
     Command GetFristReadyInQueue(CMDQueue& queue);
     CMDQueue& GetQueue(int rank, int bankgroup, int bank);
     int GetQueueIndex(int rank, int bankgroup, int bank);
     CMDQueue& GetNextQueue();
+    const bool HasRWDependency(const CMDIterator& cmd_it,
+                               const CMDQueue& queue);
     Command PrepRefCmd(CMDIterator& it, Command& ref);
 };
 
