@@ -15,6 +15,12 @@ add_library(format SHARED
 )
 target_compile_options(format PRIVATE -O3)
 target_include_directories(format INTERFACE ext/fmt/src)
+# had to do this the old way to be able to use lower cmake versions
+set_target_properties(format PROPERTIES
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
 
 # argparsing library, only used in main program not the library
 add_library(args INTERFACE)
@@ -54,7 +60,7 @@ if (THERMAL)
         PRIVATE src/thermal.cc src/sp_ienv.c src/thermal_solver.c
     )
     target_compile_options(dramsim3 PRIVATE -DTHERMAL -D_LONGINT -DAdd_ ${OpenMP_C_FLAGS})
-            
+
     add_executable(thermalreplay src/thermal_replay.cc)
     target_link_libraries(thermalreplay dramsim3)
     target_compile_options(thermalreplay PRIVATE -DTHERMAL -D_LONGINT -DAdd_ ${OpenMP_C_FLAGS})
@@ -63,8 +69,18 @@ endif (THERMAL)
 target_include_directories(dramsim3 INTERFACE src)
 target_compile_options(dramsim3 PRIVATE -DNDEBUG -O3)
 target_link_libraries(dramsim3 PRIVATE ini format)
+set_target_properties(dramsim3 PROPERTIES
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
 
 # trace CPU, .etc
 add_executable(dramsim3main src/main.cc)
 target_link_libraries(dramsim3main PRIVATE dramsim3 args)
 target_compile_options(dramsim3main PRIVATE -O3)
+set_target_properties(dramsim3main PROPERTIES
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
