@@ -66,7 +66,7 @@ if (THERMAL)
 endif (THERMAL)
 
 target_include_directories(dramsim3 INTERFACE src)
-target_compile_options(dramsim3 PRIVATE -O3 -Wall -Werror)
+target_compile_options(dramsim3 PRIVATE -O3 -Wall)
 target_link_libraries(dramsim3 PRIVATE ini format)
 set_target_properties(dramsim3 PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}

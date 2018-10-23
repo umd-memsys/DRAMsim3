@@ -147,6 +147,7 @@ bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
     // check if already in write buffer, can return immediately
     if (in_write_queue_.count(trans.addr) > 0) {
+        stats_.num_write_buf_hits++;
         if (trans.is_write) {
             stats_.num_writes_done++;
             write_callback_(trans.addr);

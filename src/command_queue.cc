@@ -221,6 +221,7 @@ bool CommandQueue::HasRWDependency(const CMDIterator& cmd_it,
         if (it->IsRead() && it->Row() == cmd_it->Row() &&
             it->Column() == cmd_it->Column() && it->Bank() == cmd_it->Bank() &&
             it->Bankgroup() == cmd_it->Bankgroup()) {
+            stats_.num_wr_dependency++;
             return true;
         }
     }

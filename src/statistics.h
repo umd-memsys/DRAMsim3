@@ -138,6 +138,7 @@ class Statistics {
     Statistics(const Config& config);
     class CounterStat num_reads_done;
     class CounterStat num_writes_done;
+    class CounterStat num_write_buf_hits;
     class CounterStat hmc_reqs_done;
     class CounterStat num_row_hits;
     class CounterStat num_read_row_hits;
@@ -155,6 +156,7 @@ class Statistics {
     class CounterStat num_refb_cmds;
     class CounterStat num_sref_enter_cmds;
     class CounterStat num_sref_exit_cmds;
+    class CounterStat num_wr_dependency;
 
     std::vector<std::vector<CounterStat>> sref_cycles;
     std::vector<std::vector<CounterStat>> active_cycles;

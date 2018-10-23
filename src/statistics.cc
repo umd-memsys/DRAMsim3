@@ -242,6 +242,8 @@ Statistics::Statistics(const Config& config)
         CounterStat("num_reads_done", "Number of read requests issued");
     num_writes_done =
         CounterStat("num_writes_done", "Number of write requests issued");
+    num_write_buf_hits =
+        CounterStat("num_write_buf_hits", "Number of write buffer hits");
     hmc_reqs_done = CounterStat("hmc_reqs_done", "HMC Requests finished");
     num_row_hits = CounterStat("num_row_hits", "Number of row hits");
     num_read_row_hits =
@@ -276,6 +278,8 @@ Statistics::Statistics(const Config& config)
     num_sref_exit_cmds =
         CounterStat("num_sref_exit_cmds",
                     "Number of self-refresh mode exit commands issued");
+    num_wr_dependency =
+        CounterStat("num_wr_dependency", "Number of W after R dependency");
 #ifdef DEBUG_HMC
     logic_clk CounterStat("hmc_logic_clk", "HMC logic clock");
     stats_list.push_back(&logic_clk);
@@ -332,6 +336,7 @@ Statistics::Statistics(const Config& config)
 
     stats_list.push_back(&num_reads_done);
     stats_list.push_back(&num_writes_done);
+    stats_list.push_back(&num_write_buf_hits);
     stats_list.push_back(&hmc_reqs_done);
     stats_list.push_back(&num_row_hits);
     stats_list.push_back(&num_read_row_hits);
@@ -349,6 +354,7 @@ Statistics::Statistics(const Config& config)
     stats_list.push_back(&num_refb_cmds);
     stats_list.push_back(&num_sref_enter_cmds);
     stats_list.push_back(&num_sref_exit_cmds);
+    stats_list.push_back(&num_wr_dependency);
     // stats_list.push_back(&all_bank_idle_cycles);
     // stats_list.push_back(&active_cycles);
     stats_list.push_back(&act_energy);
