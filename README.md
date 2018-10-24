@@ -21,7 +21,7 @@ cd build
 # Create Makefile using the CMakeLists.txt file in the parent directory
 cmake ..
 
-# Alternatively, build with thermal module
+# Alternatively, build with thermal module enabled (still testing)
 cmake .. -DTHERMAL=1
 
 # Build dramsim3 and executables
@@ -31,25 +31,18 @@ make -j4
 
 The build process creates `dramsim3main` and executables in the build 
 directory. 
-By default, it also creates `libdramsim3.a` static library in the 
+By default, it also creates `libdramsim3.so` shared library in the 
 project root directory.
-We build a static library for portability purposes. (Simulators like gem5
-also prefers a static libarary.)
-If you want to build a shared library, you can also use the build command
-
-```
-make dramsim3dy
-```
 
 
 ### Running
 
 ```
 // Running random cpu with a config file
-dramsim3main -c ./../configs/dummy_config.ini --cpu-type random -n 100000 
+./build/dramsim3main -c configs/DDR4_8Gb_x8_3200.ini --cpu-type stream -n 100000 
 
 // Running trace cpu with a trace file and a config file
-dramsim3main -c ./../configs/dummy_config.ini -n 100000 --cpu-type trace --trace-file ./../sample_trace.txt
+./build/dramsim3main -c configs/DDR4_8Gb_x8_3200.ini -n 100000 --cpu-type trace --trace-file sample_trace.txt
 
 
 defaults:
