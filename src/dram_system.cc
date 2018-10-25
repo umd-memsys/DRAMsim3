@@ -45,7 +45,7 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
     }
 
     if (config_.output_level >= 1) {
-        epoch_stats_file_csv_.open(config_.epoch_stats_file);
+        epoch_stats_file_csv_.open(config_.epoch_stats_file_csv);
         stats_.PrintStatsCSVHeader(epoch_stats_file_csv_);
     }
 
