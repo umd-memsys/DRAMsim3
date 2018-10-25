@@ -48,7 +48,7 @@ std::vector<std::string> StringSplit(const std::string& s, char delim);
 template <typename Out>
 void StringSplit(const std::string& s, char delim, Out result);
 
-uint32_t LogBase2(uint32_t power_of_two);
+int LogBase2(int power_of_two);
 void AbruptExit(const std::string& file, int line);
 void read_callback_func(uint64_t req_id);
 void write_callback_func(uint64_t req_id);

@@ -53,8 +53,8 @@ int GetBitInPos(uint64_t bits, int pos) {
     return (bits >> pos) & 1;
 }
 
-uint32_t LogBase2(uint32_t power_of_two) {
-    uint32_t i = 0;
+int LogBase2(int power_of_two) {
+    int i = 0;
     while (power_of_two > 1) {
         power_of_two /= 2;
         i++;

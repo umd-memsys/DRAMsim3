@@ -143,8 +143,6 @@ class Config {
 
     // Computed parameters
     int request_size_bytes;
-    int channel_width, rank_width, bankgroup_width, bank_width, row_width,
-        column_width;
 
     bool IsGDDR() const {
         return (protocol == DRAMProtocol::GDDR5 ||

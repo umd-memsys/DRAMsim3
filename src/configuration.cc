@@ -396,12 +396,13 @@ void Config::InitTimingParams() {
 
 void Config::SetAddressMapping() {
     // has to strictly follow the order of chan, rank, bg, bank, row, col
-    channel_width = LogBase2(channels);
-    rank_width = LogBase2(ranks);
-    bankgroup_width = LogBase2(bankgroups);
-    bank_width = LogBase2(banks_per_group);
-    row_width = LogBase2(rows);
-    column_width = LogBase2(columns);
+    std::map<std::string, int> field_widths;
+    field_widths["ch"] = LogBase2(channels);
+    field_widths["ra"] = LogBase2(ranks);
+    field_widths["bg"] = LogBase2(bankgroups);
+    field_widths["ba"] = LogBase2(banks_per_group);
+    field_widths["ro"] = LogBase2(rows);
+    field_widths["co"] = LogBase2(columns);
 
     // memory addresses are byte addressable, but each request comes with
     // multiple bytes because of bus width, and burst length
@@ -410,81 +411,45 @@ void Config::SetAddressMapping() {
     int masked_col_bits = LogBase2(BL);
     unsigned col_mask = (0xFFFFFFFF << masked_col_bits);
 
-#ifdef DEBUG_OUTPUT
-    std::cout << "Address bits:" << std::endl;
-    std::cout << std::setw(10) << "Channel " << channel_width << std::endl;
-    std::cout << std::setw(10) << "Rank " << rank_width << std::endl;
-    std::cout << std::setw(10) << "Bankgroup " << bankgroup_width << std::endl;
-    std::cout << std::setw(10) << "Bank " << bank_width << std::endl;
-    std::cout << std::setw(10) << "Row " << row_width << std::endl;
-    std::cout << std::setw(10) << "Column " << column_width << std::endl;
-#endif  // DEBUG_OUTPUT
-
-    int field_pos[] = {0, 0, 0, 0, 0, 0};
-    int field_widths[] = {0, 0, 0, 0, 0, 0};
-
     if (address_mapping.size() != 12) {
         std::cerr << "Unknown address mapping (6 fields each 2 chars required)"
                   << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
-    // get address mapping position fields from config
-    // each field must be 2 chars
+    // // get address mapping position fields from config
+    // // each field must be 2 chars
     std::vector<std::string> fields;
     for (size_t i = 0; i < address_mapping.size(); i += 2) {
         std::string token = address_mapping.substr(i, 2);
         fields.push_back(token);
     }
 
-    // starting position ignores those caused by bus width
+    std::map<std::string, int> field_pos;
     int pos = bus_offset;
-    for (size_t i = fields.size(); i > 0; i--) {
-        // do this in reverse order so that it matches the
-        // sequence of the input string
-        auto field_str = fields[i - 1];
-        if (field_str == "ch") {
-            field_pos[0] = pos;
-            field_widths[0] = channel_width;
-            pos += channel_width;
-        } else if (field_str == "ra") {
-            field_pos[1] = pos;
-            field_widths[1] = rank_width;
-            pos += rank_width;
-        } else if (field_str == "bg") {
-            field_pos[2] = pos;
-            field_widths[2] = bankgroup_width;
-            pos += bankgroup_width;
-        } else if (field_str == "ba") {
-            field_pos[3] = pos;
-            field_widths[3] = bank_width;
-            pos += bank_width;
-        } else if (field_str == "ro") {
-            field_pos[4] = pos;
-            field_widths[4] = row_width;
-            pos += row_width;
-        } else if (field_str == "co") {
-            field_pos[5] = pos;
-            field_widths[5] = column_width;
-            pos += column_width;
-        } else {
-            std::cerr << "Unrecognized field: " << fields[i] << std::endl;
+    while (!fields.empty()) {
+        auto token = fields.back();
+        fields.pop_back();
+        if (field_widths.find(token) == field_widths.end()) {
+            std::cerr << "Unrecognized field: " << token << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
+        field_pos[token] = pos;
+        pos += field_widths[token];
     }
 
     MapChannel = [field_pos, field_widths](uint64_t hex_addr) {
-        return ModuloWidth(hex_addr, field_widths[0], field_pos[0]);
+        return ModuloWidth(hex_addr, field_widths.at("ch"), field_pos.at("ch"));
     };
 
     AddressMapping = [field_pos, field_widths, col_mask](uint64_t hex_addr) {
         int channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0, column = 0;
-        channel = ModuloWidth(hex_addr, field_widths[0], field_pos[0]);
-        rank = ModuloWidth(hex_addr, field_widths[1], field_pos[1]);
-        bankgroup = ModuloWidth(hex_addr, field_widths[2], field_pos[2]);
-        bank = ModuloWidth(hex_addr, field_widths[3], field_pos[3]);
-        row = ModuloWidth(hex_addr, field_widths[4], field_pos[4]);
-        column = ModuloWidth(hex_addr, field_widths[5], field_pos[5]);
+        channel = ModuloWidth(hex_addr, field_widths.at("ch"), field_pos.at("ch"));
+        rank = ModuloWidth(hex_addr, field_widths.at("ra"), field_pos.at("ra"));
+        bankgroup = ModuloWidth(hex_addr, field_widths.at("bg"), field_pos.at("bg"));
+        bank = ModuloWidth(hex_addr, field_widths.at("ba"), field_pos.at("ba"));
+        row = ModuloWidth(hex_addr, field_widths.at("ro"), field_pos.at("ro"));
+        column = ModuloWidth(hex_addr, field_widths.at("co"), field_pos.at("co"));
         column = column & col_mask;
         return Address(channel, rank, bankgroup, bank, row, column);
     };
