@@ -322,6 +322,8 @@ void Config::SanityCheck() {
         }
     }
     // set burst cycle according to protocol
+    // We use burst_cycle for timing and use BL for capaticyt calculation
+    // BL = 0 simulate perfect BW
     if (protocol == DRAMProtocol::GDDR5) {
         burst_cycle = (BL == 0) ? 0 : BL / 4;
         BL = (BL == 0) ? 8 : BL;
@@ -334,6 +336,8 @@ void Config::SanityCheck() {
     }
 
     // re-adjust columns from spec columns to actual columns
+    // some specs say it has x columns but x is actually the number
+    // that took into account of BL.
     if (IsGDDR()) {
         columns *= BL;
     } else if (IsHBM()) {
@@ -395,6 +399,13 @@ void Config::InitTimingParams() {
 }
 
 void Config::SetAddressMapping() {
+    // memory addresses are byte addressable, but each request comes with
+    // multiple bytes because of bus width, and burst length
+    request_size_bytes = bus_width / 8 * BL;
+    int shift_bits = LogBase2(request_size_bytes);
+    int col_low_bits = LogBase2(BL);
+    int actual_col_bits = LogBase2(columns) - col_low_bits;
+
     // has to strictly follow the order of chan, rank, bg, bank, row, col
     std::map<std::string, int> field_widths;
     field_widths["ch"] = LogBase2(channels);
@@ -402,14 +413,7 @@ void Config::SetAddressMapping() {
     field_widths["bg"] = LogBase2(bankgroups);
     field_widths["ba"] = LogBase2(banks_per_group);
     field_widths["ro"] = LogBase2(rows);
-    field_widths["co"] = LogBase2(columns);
-
-    // memory addresses are byte addressable, but each request comes with
-    // multiple bytes because of bus width, and burst length
-    int bus_offset = LogBase2(bus_width / 8);
-    request_size_bytes = bus_width / 8 * BL;
-    int masked_col_bits = LogBase2(BL);
-    unsigned col_mask = (0xFFFFFFFF << masked_col_bits);
+    field_widths["co"] = actual_col_bits;
 
     if (address_mapping.size() != 12) {
         std::cerr << "Unknown address mapping (6 fields each 2 chars required)"
@@ -426,7 +430,7 @@ void Config::SetAddressMapping() {
     }
 
     std::map<std::string, int> field_pos;
-    int pos = bus_offset;
+    int pos = 0;
     while (!fields.empty()) {
         auto token = fields.back();
         fields.pop_back();
@@ -434,23 +438,31 @@ void Config::SetAddressMapping() {
             std::cerr << "Unrecognized field: " << token << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
+#ifdef DEBUG_OUTPUT
+        std::cout << "Address mapping:" << std::endl;
+        std::cout << token << " pos:" << pos << " width:" << field_widths[token]
+                  << std::endl;
+#endif
         field_pos[token] = pos;
         pos += field_widths[token];
     }
-
-    MapChannel = [field_pos, field_widths](uint64_t hex_addr) {
+    MapChannel = [field_pos, field_widths, shift_bits](uint64_t hex_addr) {
+        hex_addr >>= shift_bits;
         return ModuloWidth(hex_addr, field_widths.at("ch"), field_pos.at("ch"));
     };
 
-    AddressMapping = [field_pos, field_widths, col_mask](uint64_t hex_addr) {
+    AddressMapping = [field_pos, field_widths, shift_bits](uint64_t hex_addr) {
+        hex_addr >>= shift_bits;
         int channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0, column = 0;
-        channel = ModuloWidth(hex_addr, field_widths.at("ch"), field_pos.at("ch"));
+        channel =
+            ModuloWidth(hex_addr, field_widths.at("ch"), field_pos.at("ch"));
         rank = ModuloWidth(hex_addr, field_widths.at("ra"), field_pos.at("ra"));
-        bankgroup = ModuloWidth(hex_addr, field_widths.at("bg"), field_pos.at("bg"));
+        bankgroup =
+            ModuloWidth(hex_addr, field_widths.at("bg"), field_pos.at("bg"));
         bank = ModuloWidth(hex_addr, field_widths.at("ba"), field_pos.at("ba"));
         row = ModuloWidth(hex_addr, field_widths.at("ro"), field_pos.at("ro"));
-        column = ModuloWidth(hex_addr, field_widths.at("co"), field_pos.at("co"));
-        column = column & col_mask;
+        column =
+            ModuloWidth(hex_addr, field_widths.at("co"), field_pos.at("co"));
         return Address(channel, rank, bankgroup, bank, row, column);
     };
 }
