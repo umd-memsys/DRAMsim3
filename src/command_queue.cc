@@ -43,6 +43,9 @@ Command CommandQueue::GetCommandToIssue() {
             for (auto it = queue.begin(); it != queue.end(); it++) {
                 cmd = PrepRefCmd(it, ref);
                 if (cmd.IsValid()) {
+                    if (cmd.IsReadWrite()) {
+                        EraseRWCommand(cmd);
+                    }
                     return cmd;
                 }
             }
@@ -54,6 +57,9 @@ Command CommandQueue::GetCommandToIssue() {
                 auto& queue = queues_[i];
                 cmd = GetFristReadyInQueue(queue);
                 if (cmd.IsValid()) {
+                    if (cmd.IsReadWrite()) {
+                        EraseRWCommand(cmd);
+                    }
                     return cmd;
                 }
             }
@@ -63,6 +69,9 @@ Command CommandQueue::GetCommandToIssue() {
             auto& queue = GetNextQueue();
             cmd = GetFristReadyInQueue(queue);
             if (cmd.IsValid()) {
+                if (cmd.IsReadWrite()) {
+                    EraseRWCommand(cmd);
+                }
                 return cmd;
             }
         }
@@ -181,10 +190,10 @@ Command CommandQueue::GetFristReadyInQueue(CMDQueue& queue) const {
     return Command();
 }
 
-void CommandQueue::IssueRWCommand(const Command& cmd) {
+void CommandQueue::EraseRWCommand(const Command& cmd) {
     auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        if (cmd.id == cmd_it->id) {
+        if (cmd.hex_addr == cmd_it->hex_addr) {
             queue.erase(cmd_it);
             return;
         }

@@ -24,16 +24,20 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       cmd_queue_(channel_id_, config, channel_state_, stats),
       refresh_(config, channel_state_),
       stats_(stats),
+      is_unified_queue_(config.unified_queue),
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
 #endif  // THERMAL
-      cmd_id_(0),
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
       write_draining_(0) {
-    read_queue_.reserve(config_.trans_queue_size);
-    write_queue_.reserve(config_.trans_queue_size);
+    if (is_unified_queue_) {
+        unified_queue_.reserve(config_.trans_queue_size);
+    } else {
+        read_queue_.reserve(config_.trans_queue_size);
+        write_queue_.reserve(config_.trans_queue_size);
+    }
 #ifdef GENERATE_TRACE
     std::string trace_file_name = config_.output_prefix + "cmd.trace";
     RenameFileWithNumber(trace_file_name, channel_id);
@@ -136,7 +140,9 @@ void Controller::ClockTick() {
 }
 
 bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
-    if (!is_write) {
+    if (is_unified_queue_) {
+        return unified_queue_.size() <unified_queue_.capacity();
+    } else if (!is_write) {
         return read_queue_.size() < read_queue_.capacity();
     } else {
         return write_queue_.size() < write_queue_.capacity();
@@ -146,7 +152,7 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
     // check if already in write buffer, can return immediately
-    if (in_write_queue_.count(trans.addr) > 0) {
+    if (in_write_buf_.count(trans.addr) > 0) {
         stats_.num_write_buf_hits++;
         if (trans.is_write) {
             stats_.num_writes_done++;
@@ -161,28 +167,39 @@ bool Controller::AddTransaction(Transaction trans) {
             // pretend it's done
             stats_.num_writes_done++;
             write_callback_(trans.addr);
-            write_queue_.push_back(trans);
-            in_write_queue_.insert(trans.addr);
-            return write_queue_.size() <= write_queue_.capacity();
+            in_write_buf_.insert(trans.addr);
+            if (is_unified_queue_) {
+                unified_queue_.push_back(trans);
+            } else {
+                write_queue_.push_back(trans);
+            }
         } else {
-            read_queue_.push_back(trans);
-            return read_queue_.size() <= read_queue_.capacity();
+            if (is_unified_queue_) {
+                unified_queue_.push_back(trans);
+            } else {
+                read_queue_.push_back(trans);
+            }
         }
+        return true;
     }
 }
 
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
-    if (write_draining_ == 0) {
+    if (write_draining_ == 0 && !is_unified_queue_) {
+        // TODO need better switching machnism
         if (write_queue_.size() >= write_queue_.capacity() ||
-            read_queue_.size() == 0) {
+            (read_queue_.size() == 0 && write_queue_.size() >=8)) {
             write_draining_ = write_queue_.size();
         }
     }
 
     std::vector<Transaction>::iterator trans_it;
     std::vector<Transaction>::iterator queue_end;
-    if (write_draining_ > 0) {
+    if (is_unified_queue_) {
+        trans_it = unified_queue_.begin();
+        queue_end = unified_queue_.end();
+    } else if (write_draining_ > 0) {
         trans_it = write_queue_.begin();
         queue_end = write_queue_.end();
     } else {
@@ -195,12 +212,10 @@ void Controller::ScheduleTransaction() {
         if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
                                          cmd.Bank())) {
             cmd_queue_.AddCommand(cmd);
-            pending_queue_.insert(std::make_pair(cmd.id, *trans_it));
-            cmd_id_++;
-            if (cmd_id_ == std::numeric_limits<int>::max()) {
-                cmd_id_ = 0;
-            }
-            if (cmd.IsRead()) {
+            pending_queue_.insert(std::make_pair(trans_it->addr, *trans_it));
+            if (is_unified_queue_) {
+                unified_queue_.erase(trans_it);
+            } else if (cmd.IsRead()) {
                 trans_it = read_queue_.erase(trans_it);
             } else {
                 write_draining_ -= 1;
@@ -214,7 +229,7 @@ void Controller::ScheduleTransaction() {
 }
 
 void Controller::IssueCommand(const Command &tmp_cmd) {
-    Command cmd = Command(tmp_cmd.cmd_type, tmp_cmd.addr, tmp_cmd.id);
+    Command cmd = Command(tmp_cmd.cmd_type, tmp_cmd.addr, tmp_cmd.hex_addr);
 #ifdef DEBUG_OUTPUT
     std::cout << std::left << std::setw(8) << clk_ << " " << cmd << std::endl;
 #endif  // DEBUG_OUTPUT
@@ -228,30 +243,23 @@ void Controller::IssueCommand(const Command &tmp_cmd) {
 #endif  // THERMAL
     // if read/write, update pending queue and return queue
     if (cmd.IsReadWrite()) {
-        ProcessRWCommand(cmd);
+        auto it = pending_queue_.find(cmd.hex_addr);
+        if (it == pending_queue_.end()) {
+            std::cerr << cmd.hex_addr << " not in pending queue!" << std::endl;
+            exit(1);
+        }
+        if (cmd.IsRead()) {
+            it->second.complete_cycle =
+                clk_ + config_.read_delay + config_.delay_queue_cycles;
+            return_queue_.push_back(it->second);
+        } else {
+            // it->second.complete_cycle = clk_ + config_.write_delay +
+            //                             config_.delay_queue_cycles;
+            in_write_buf_.erase(it->second.addr);
+        }
+        pending_queue_.erase(it);
     }
     channel_state_.UpdateTimingAndStates(cmd, clk_);
-}
-
-void Controller::ProcessRWCommand(const Command &cmd) {
-    cmd_queue_.IssueRWCommand(cmd);
-    auto it = pending_queue_.find(cmd.id);
-    if (it == pending_queue_.end()) {
-        std::cerr << cmd.id << " not in pending queue!" << std::endl;
-        exit(1);
-    }
-    if (cmd.IsRead()) {
-        it->second.complete_cycle =
-            clk_ + config_.read_delay + config_.delay_queue_cycles;
-        return_queue_.push_back(it->second);
-        pending_queue_.erase(it);
-    } else {
-        // it->second.complete_cycle = clk_ + config_.write_delay +
-        //                             config_.delay_queue_cycles;
-        in_write_queue_.erase(it->second.addr);
-        pending_queue_.erase(it);
-    }
-    return;
 }
 
 Command Controller::TransToCommand(const Transaction &trans) {
@@ -263,7 +271,7 @@ Command Controller::TransToCommand(const Transaction &trans) {
         cmd_type = trans.is_write ? CommandType::WRITE_PRECHARGE
                                   : CommandType::READ_PRECHARGE;
     }
-    Command cmd = Command(cmd_type, addr, cmd_id_);
+    Command cmd = Command(cmd_type, addr, trans.addr);
     return cmd;
 }
 

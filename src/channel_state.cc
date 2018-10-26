@@ -74,7 +74,7 @@ void ChannelState::RankNeedRefresh(int rank, bool need) {
 Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     CommandType cmd_type = cmd.cmd_type;
     Address addr = Address(cmd.addr);
-    int cmd_id = cmd.id;
+    uint64_t cmd_id = cmd.hex_addr;
     bool need_precharge = false;
     switch (cmd.cmd_type) {
         case CommandType::READ:

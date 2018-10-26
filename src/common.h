@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -73,8 +72,8 @@ enum class CommandType {
 
 struct Command {
     Command() : cmd_type(CommandType::SIZE) {}
-    Command(CommandType cmd_type, const Address& addr, int id)
-        : cmd_type(cmd_type), addr(addr), id(id) {}
+    Command(CommandType cmd_type, const Address& addr, uint64_t hex_addr)
+        : cmd_type(cmd_type), addr(addr), hex_addr(hex_addr) {}
     // Command(const Command& cmd) {}
 
     bool IsValid() const { return cmd_type != CommandType::SIZE; }
@@ -93,7 +92,7 @@ struct Command {
     bool IsReadWrite() const { return IsRead() || IsWrite(); }
     CommandType cmd_type;
     Address addr;
-    int id;
+    uint64_t hex_addr;
 
     int Channel() const { return addr.channel; }
     int Rank() const { return addr.rank; }

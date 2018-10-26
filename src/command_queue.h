@@ -21,7 +21,6 @@ class CommandQueue {
                  const ChannelState& channel_state, Statistics& stats);
     Command GetCommandToIssue();
     void ClockTick() { clk_ += 1; };
-    void IssueRWCommand(const Command& cmd);
     bool WillAcceptCommand(int rank, int bankgroup, int bank) const;
     bool AddCommand(Command cmd);
     int QueueUsage() const;
@@ -47,6 +46,7 @@ class CommandQueue {
     CMDQueue& GetNextQueue();
     bool HasRWDependency(const CMDIterator& cmd_it,
                          const CMDQueue& queue) const;
+    void EraseRWCommand(const Command& cmd);
     Command PrepRefCmd(const CMDIterator& it, const Command& ref) const;
 };
 

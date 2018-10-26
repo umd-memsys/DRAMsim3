@@ -123,6 +123,7 @@ class Config {
     std::string row_buf_policy;
     RefreshPolicy refresh_policy;
     int cmd_queue_size;
+    bool unified_queue;
     int trans_queue_size;
     int delay_queue_cycles;
     bool enable_self_refresh;

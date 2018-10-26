@@ -54,18 +54,17 @@ class Controller {
     std::ofstream cmd_trace_;
 #endif  // GENERATE_TRACE
     // queue that takes transactions from CPU side
+    bool is_unified_queue_;
+    std::vector<Transaction> unified_queue_;
     std::vector<Transaction> read_queue_;
     std::vector<Transaction> write_queue_;
-    std::unordered_set<uint64_t> in_write_queue_;
+    std::unordered_set<uint64_t> in_write_buf_;
 
     // transactions that are issued to command queue, use map for convenience
-    std::multimap<int, Transaction> pending_queue_;
+    std::multimap<uint64_t, Transaction> pending_queue_;
 
     // completed transactions
     std::vector<Transaction> return_queue_;
-
-    // An ID that is used to keep track of commands in fly
-    int cmd_id_;
 
     // row buffer policy
     RowBufPolicy row_buf_policy_;
@@ -74,7 +73,6 @@ class Controller {
     int write_draining_;
     void ScheduleTransaction();
     void IssueCommand(const Command &tmp_cmd);
-    void ProcessRWCommand(const Command &cmd);
     Command TransToCommand(const Transaction &trans);
 };
 }  // namespace dramsim3
