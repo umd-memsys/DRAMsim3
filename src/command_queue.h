@@ -2,6 +2,7 @@
 #define __COMMAND_QUEUE_H
 
 #include <functional>
+#include <unordered_set>
 #include <vector>
 #include "channel_state.h"
 #include "common.h"
@@ -21,7 +22,7 @@ class CommandQueue {
     Command GetCommandToIssue();
     void ClockTick() { clk_ += 1; };
     void IssueRWCommand(const Command& cmd);
-    bool WillAcceptCommand(int rank, int bankgroup, int bank);
+    bool WillAcceptCommand(int rank, int bankgroup, int bank) const;
     bool AddCommand(Command cmd);
     int QueueUsage() const;
     std::vector<bool> rank_q_empty;
@@ -31,20 +32,22 @@ class CommandQueue {
     const Config& config_;
     const ChannelState& channel_state_;
     Statistics& stats_;
-    int next_rank_, next_bg_, next_bank_;
     std::vector<CMDQueue> queues_;
+    int num_queues_;
     size_t queue_size_;
+    int queue_idx_;
     uint64_t clk_;
 
     bool ArbitratePrecharge(const CMDIterator& cmd_it,
                             const CMDQueue& queue) const;
-    Command GetFristReadyInQueue(CMDQueue& queue);
+    Command GetFristReadyInQueue(CMDQueue& queue) const;
     CMDQueue& GetQueue(int rank, int bankgroup, int bank);
-    int GetQueueIndex(int rank, int bankgroup, int bank);
+    int GetQueueIndex(int rank, int bankgroup, int bank) const;
+    std::unordered_set<int> GetRefQIndices(const Command& ref) const;
     CMDQueue& GetNextQueue();
     bool HasRWDependency(const CMDIterator& cmd_it,
                          const CMDQueue& queue) const;
-    Command PrepRefCmd(CMDIterator& it, Command& ref);
+    Command PrepRefCmd(const CMDIterator& it, const Command& ref) const;
 };
 
 }  // namespace dramsim3

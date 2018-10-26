@@ -75,6 +75,7 @@ struct Command {
     Command() : cmd_type(CommandType::SIZE) {}
     Command(CommandType cmd_type, const Address& addr, int id)
         : cmd_type(cmd_type), addr(addr), id(id) {}
+    // Command(const Command& cmd) {}
 
     bool IsValid() const { return cmd_type != CommandType::SIZE; }
     bool IsRefresh() const {

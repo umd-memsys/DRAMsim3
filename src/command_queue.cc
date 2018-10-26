@@ -8,26 +8,23 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
       config_(config),
       channel_state_(channel_state),
       stats_(stats),
-      next_rank_(0),
-      next_bg_(0),
-      next_bank_(0),
       queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
+      queue_idx_(0),
       clk_(0) {
-    int num_queues = 0;
     if (config_.queue_structure == "PER_BANK") {
         queue_structure_ = QueueStructure::PER_BANK;
-        num_queues = config_.banks * config_.ranks;
+        num_queues_ = config_.banks * config_.ranks;
     } else if (config_.queue_structure == "PER_RANK") {
         queue_structure_ = QueueStructure::PER_RANK;
-        num_queues = config_.ranks;
+        num_queues_ = config_.ranks;
     } else {
         std::cerr << "Unsupportted queueing structure "
                   << config_.queue_structure << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
-    queues_.reserve(num_queues);
-    for (int i = 0; i < num_queues; i++) {
+    queues_.reserve(num_queues_);
+    for (int i = 0; i < num_queues_; i++) {
         auto cmd_queue = std::vector<Command>();
         cmd_queue.reserve(config_.cmd_queue_size);
         queues_.push_back(cmd_queue);
@@ -37,55 +34,37 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
 Command CommandQueue::GetCommandToIssue() {
     // prioritize refresh
     // Rank queues, bank queues, ref and refbs, so complicated
+    Command cmd;
     if (channel_state_.IsRefreshWaiting()) {
         auto ref = channel_state_.PendingRefCommand();
-        if (ref.cmd_type == CommandType::REFRESH) {
-            for (size_t i = 0; i < queues_.size(); i++) {
-                auto& queue = GetNextQueue();
-                if (next_rank_ == ref.Rank()) {
-                    for (auto it = queue.begin(); it != queue.end(); it++) {
-                        auto cmd = PrepRefCmd(it, ref);
-                        if (cmd.IsValid()) {
-                            return cmd;
-                        }
-                    }
-                }
-            }
-        } else {  // Bank level refresh
-            auto& queue = GetQueue(ref.Rank(), ref.Bankgroup(), ref.Bank());
+        std::unordered_set<int> ref_q_idx = GetRefQIndices(ref);
+        for (auto idx : ref_q_idx) {
+            auto& queue = queues_[idx];
             for (auto it = queue.begin(); it != queue.end(); it++) {
-                if (it->Rank() == ref.Rank() &&
-                    it->Bankgroup() == ref.Bankgroup() &&
-                    it->Bank() == ref.Bank()) {
-                    auto cmd = PrepRefCmd(it, ref);
-                    if (cmd.IsValid()) {
-                        return cmd;
-                    }
-                }
-            }
-        }
-
-        // Cannot find any ref-related cmd, (no returning till here), then
-        // try to find other things to do in other ranks
-        for (size_t i = 0; i < queues_.size(); i++) {
-            if (next_rank_ != ref.Rank()) {  // not the refreshed rank
-                auto& next_queue = GetQueue(next_rank_, next_bg_, next_bank_);
-                auto cmd = GetFristReadyInQueue(next_queue);
+                cmd = PrepRefCmd(it, ref);
                 if (cmd.IsValid()) {
                     return cmd;
                 }
             }
-            GetNextQueue();
+        }
+        // Cannot find any ref-related cmd, (no returning till here), then
+        // try to find other things to do in other ranks
+        for (int i = 0; i < num_queues_; i++) {
+            if (ref_q_idx.count(i) == 0) {  // not a ref related queue
+                auto& queue = queues_[i];
+                cmd = GetFristReadyInQueue(queue);
+                if (cmd.IsValid()) {
+                    return cmd;
+                }
+            }
         }
     } else {
-        int i = queues_.size();
-        while (i > 0) {
+        for (int i = 0; i < num_queues_; i++) {
             auto& queue = GetNextQueue();
-            auto cmd = GetFristReadyInQueue(queue);
+            cmd = GetFristReadyInQueue(queue);
             if (cmd.IsValid()) {
                 return cmd;
             }
-            i--;
         }
     }
     return Command();
@@ -126,9 +105,9 @@ bool CommandQueue::ArbitratePrecharge(const CMDIterator& cmd_it,
     return false;
 }
 
-bool CommandQueue::WillAcceptCommand(int rank, int bankgroup, int bank) {
-    const auto& queue = GetQueue(rank, bankgroup, bank);
-    return queue.size() < queue_size_;
+bool CommandQueue::WillAcceptCommand(int rank, int bankgroup, int bank) const {
+    int q_idx = GetQueueIndex(rank, bankgroup, bank);
+    return queues_[q_idx].size() < queue_size_;
 }
 
 bool CommandQueue::AddCommand(Command cmd) {
@@ -143,24 +122,33 @@ bool CommandQueue::AddCommand(Command cmd) {
 }
 
 CMDQueue& CommandQueue::GetNextQueue() {
-    if (queue_structure_ == QueueStructure::PER_BANK) {
-        next_bg_ = (next_bg_ + 1) % config_.bankgroups;
-        if (next_bg_ == 0) {
-            next_bank_ = (next_bank_ + 1) % config_.banks_per_group;
-            if (next_bank_ == 0) {
-                next_rank_ = (next_rank_ + 1) % config_.ranks;
-            }
-        }
-    } else if (queue_structure_ == QueueStructure::PER_RANK) {
-        next_rank_ = (next_rank_ + 1) % config_.ranks;
-    } else {
-        std::cerr << "Unknown queue structure" << std::endl;
-        AbruptExit(__FILE__, __LINE__);
+    queue_idx_++;
+    if (queue_idx_ == num_queues_) {
+        queue_idx_ = 0;
     }
-    return GetQueue(next_rank_, next_bg_, next_bank_);
+    return queues_[queue_idx_];
 }
 
-int CommandQueue::GetQueueIndex(int rank, int bankgroup, int bank) {
+std::unordered_set<int> CommandQueue::GetRefQIndices(const Command& ref) const {
+    std::unordered_set<int> ref_q_indices;
+    if (ref.cmd_type == CommandType::REFRESH) {
+        if (queue_structure_ == QueueStructure::PER_BANK) {
+            for (int i = 0; i < num_queues_; i++) {
+                if (i / config_.banks != ref.Rank()) {
+                    ref_q_indices.insert(i);
+                }
+            }
+        } else {
+            ref_q_indices.insert(ref.Rank());
+        }
+    } else {  // refb
+        int idx = GetQueueIndex(ref.Rank(), ref.Bankgroup(), ref.Bank());
+        ref_q_indices.insert(idx);
+    }
+    return ref_q_indices;
+}
+
+int CommandQueue::GetQueueIndex(int rank, int bankgroup, int bank) const {
     if (queue_structure_ == QueueStructure::PER_RANK) {
         return rank;
     } else {
@@ -174,7 +162,7 @@ CMDQueue& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
     return queues_[index];
 }
 
-Command CommandQueue::GetFristReadyInQueue(CMDQueue& queue) {
+Command CommandQueue::GetFristReadyInQueue(CMDQueue& queue) const {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         Command cmd = channel_state_.GetRequiredCommand(*cmd_it);
         if (channel_state_.IsReady(cmd, clk_)) {
@@ -228,10 +216,17 @@ bool CommandQueue::HasRWDependency(const CMDIterator& cmd_it,
     return false;
 }
 
-Command CommandQueue::PrepRefCmd(CMDIterator& it, Command& ref) {
+Command CommandQueue::PrepRefCmd(const CMDIterator& it,
+                                 const Command& ref) const {
     int r = it->Rank();
     int g = it->Bankgroup();
     int b = it->Bank();
+    // if bank-level ref, and it is from a rank queue, ignore
+    if (ref.cmd_type == CommandType::REFRESH_BANK) {
+        if (g != ref.Bankgroup() || b != ref.Bank()) {
+            return Command();
+        }
+    }
     bool row_open = channel_state_.IsRowOpen(r, g, b);
     int hit_count = channel_state_.RowHitCount(r, g, b);
     if (row_open && hit_count) {
@@ -239,7 +234,7 @@ Command CommandQueue::PrepRefCmd(CMDIterator& it, Command& ref) {
         if (channel_state_.IsReady(cmd, clk_)) {
             return cmd;
         }
-    } else {  // precharge
+    } else {  // precharge or refresh
         Command cmd = channel_state_.GetRequiredCommand(ref);
         if (channel_state_.IsReady(cmd, clk_)) {
             return cmd;
