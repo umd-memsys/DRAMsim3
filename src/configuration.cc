@@ -184,7 +184,7 @@ void Config::InitSystemParams() {
     row_buf_policy = reader.Get("system", "row_buf_policy", "OPEN_PAGE");
     cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
     trans_queue_size = GetInteger("system", "trans_queue_size", 32);
-    unified_queue = reader.GetBoolean("system", "unified_queue", true);
+    unified_queue = reader.GetBoolean("system", "unified_queue", false);
     std::string ref_policy =
         reader.Get("system", "refresh_policy", "RANK_LEVEL_STAGGERED");
     if (ref_policy == "RANK_LEVEL_SIMULTANEOUS") {
