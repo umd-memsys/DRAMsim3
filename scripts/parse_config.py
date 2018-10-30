@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+import sys
 import tempfile
 import configparser
 
@@ -36,7 +38,7 @@ def get_ddr_speed(config_file):
     t_ck = get_val_from_file(config_file, "timing", "tCK")
     freq = int(1/t_ck * 2 * 1000.)  # to get to MHz
     freq_lookup = [800, 1333, 1600, 1866, 2133, 2400, 2666, 2933, 3200]
-    actual_freq = sys.maxint
+    actual_freq = sys.maxsize
     for f in freq_lookup:
         freq_diff = abs(actual_freq - f)
         if abs(f - freq) < freq_diff:
@@ -97,7 +99,7 @@ def sub_options(config_file, sec, opt, new_value, inplace=False):
         returned, NOTE if inplace is true all the comments in the
         original file will be gone..
     """
-    config = configparser.configparser()
+    config = configparser.ConfigParser()
     config.read(config_file)
     if not config.has_section(sec):
         config.add_section(sec)
