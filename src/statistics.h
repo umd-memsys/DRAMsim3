@@ -144,13 +144,11 @@ class Statistics {
     class CounterStat num_read_row_hits;
     class CounterStat num_write_row_hits;
     class CounterStat dramcycles;
-    class CounterStat num_buffered_trans;
     class CounterStat hbm_dual_cmds;
     class CounterStat num_read_cmds;
     class CounterStat num_write_cmds;
     class CounterStat num_act_cmds;
     class CounterStat num_pre_cmds;
-    class CounterStat num_aggressive_pres;
     class CounterStat num_ondemand_pres;
     class CounterStat num_refresh_cmds;
     class CounterStat num_refb_cmds;

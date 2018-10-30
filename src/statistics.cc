@@ -6,7 +6,7 @@ namespace dramsim3 {
 
 template <class T>
 void PrintNameValue(std::ostream& where, std::string name, T value) {
-    where << fmt::format("{:^40}{:^5}{:>12}", name, " = ", value) << std::endl;
+    where << fmt::format("{:^30}{:^5}{:>12}", name, " = ", value) << std::endl;
     return;
 }
 
@@ -15,7 +15,7 @@ void PrintNameValueDesc(std::ostream& where, std::string name, T value,
                         std::string description) {
     // not making this a class method because we need to calculate
     // power & bw later, which are not BaseStat members
-    where << fmt::format("{:<40}{:^5}{:>12}{:>8}{}", name, " = ", value, " # ",
+    where << fmt::format("{:<30}{:^3}{:>12}{:>5}{}", name, " = ", value, " # ",
                          description)
           << std::endl;
     return;
@@ -224,9 +224,6 @@ void HistogramStat::PrintCSVFormat(std::ostream& where) const {
 }
 
 void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
-    // if (epoch_count_ == 0) {
-    //     where << "name,value,count,epoch" << std::endl;
-    // }
     for (auto i = bins_.begin(); i != bins_.end(); i++) {
         where << fmt::format("{},{},{},{}", name_, i->first, i->second,
                              epoch_count_)
@@ -237,7 +234,6 @@ void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
 
 Statistics::Statistics(const Config& config)
     : stats_list(), config_(config), last_clk_(0) {
-    // TODO - Should stats be global?
     num_reads_done =
         CounterStat("num_reads_done", "Number of read requests issued");
     num_writes_done =
@@ -250,14 +246,9 @@ Statistics::Statistics(const Config& config)
         CounterStat("num_read_row_hits", "Number of read row hits");
     num_write_row_hits =
         CounterStat("num_write_row_hits", "Number of write row hits");
-    num_aggressive_pres = CounterStat("num_aggressive_pres",
-                                      "Number of aggressive precharges issued");
     num_ondemand_pres = CounterStat("num_ondemand_pres",
                                     "Number of on demand precharges issued");
     dramcycles = CounterStat("cycles", "Total number of DRAM execution cycles");
-    num_buffered_trans =
-        CounterStat("num_buffered_trans",
-                    "Number of buffered requests because queues were full");
     hbm_dual_cmds = CounterStat(
         "hbm_dual_cmds", "Number of cycles in which two commands were issued");
     num_read_cmds =
@@ -280,10 +271,6 @@ Statistics::Statistics(const Config& config)
                     "Number of self-refresh mode exit commands issued");
     num_wr_dependency =
         CounterStat("num_wr_dependency", "Number of W after R dependency");
-#ifdef DEBUG_HMC
-    logic_clk CounterStat("hmc_logic_clk", "HMC logic clock");
-    stats_list.push_back(&logic_clk);
-#endif  // DEBUG_HMC
     Init2DStats(sref_cycles, config_.channels, config_.ranks, "channel", "rank",
                 "sref_cycles", "Cycles in self-refresh state");
     Init2DStats(all_bank_idle_cycles, config_.channels, config_.ranks,
@@ -292,10 +279,6 @@ Statistics::Statistics(const Config& config)
     Init2DStats(active_cycles, config_.channels, config_.ranks, "channel",
                 "rank", "rank_active_cycles",
                 "Number of cycles the rank ramains active");
-    // sref_cycles = CounterStat("sref_cycles", "Cycles in self-refresh state");
-    // all_bank_idle_cycles = CounterStat("all_bank_idle_cycles", "Cycles of all
-    // banks are idle"); active_cycles = CounterStat("rank_active_cycles",
-    // "Number of cycles the rank ramains active"); energy and power stats
     act_energy = DoubleComputeStat("act_energy", "ACT energy");
     read_energy =
         DoubleComputeStat("read_energy", "READ energy (not including IO)");
@@ -311,11 +294,6 @@ Statistics::Statistics(const Config& config)
                 "rank", "pre_pd_energy", "Precharge powerdown energy");
     Init2DStats(sref_energy, config_.channels, config_.ranks, "channel", "rank",
                 "sref_energy", "Self-refresh energy");
-    // act_stb_energy = DoubleComputeStat("act_stb_energy", "Active standby
-    // energy"); pre_stb_energy = DoubleComputeStat("pre_stb_energy", "Precharge
-    // standby energy"); pre_pd_energy = DoubleComputeStat("pre_pd_energy",
-    // "Precharge powerdown energy"); sref_energy =
-    // DoubleComputeStat("sref_energy", "Self-refresh energy");
     total_energy =
         DoubleComputeStat("total_energy", "(pJ) Total energy consumed");
     queue_usage =
@@ -341,10 +319,8 @@ Statistics::Statistics(const Config& config)
     stats_list.push_back(&num_row_hits);
     stats_list.push_back(&num_read_row_hits);
     stats_list.push_back(&num_write_row_hits);
-    stats_list.push_back(&num_aggressive_pres);
     stats_list.push_back(&num_ondemand_pres);
     stats_list.push_back(&dramcycles);
-    stats_list.push_back(&num_buffered_trans);
     stats_list.push_back(&hbm_dual_cmds);
     stats_list.push_back(&num_read_cmds);
     stats_list.push_back(&num_write_cmds);
@@ -355,8 +331,6 @@ Statistics::Statistics(const Config& config)
     stats_list.push_back(&num_sref_enter_cmds);
     stats_list.push_back(&num_sref_exit_cmds);
     stats_list.push_back(&num_wr_dependency);
-    // stats_list.push_back(&all_bank_idle_cycles);
-    // stats_list.push_back(&active_cycles);
     stats_list.push_back(&act_energy);
     stats_list.push_back(&read_energy);
     stats_list.push_back(&write_energy);
