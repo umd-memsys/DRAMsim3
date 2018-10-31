@@ -119,15 +119,8 @@ class HMCMemorySystem : public BaseDRAMSystem {
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
 
-    // ThermalCalculator* ptr_thermCal_;
-
    private:
     uint64_t ref_tick_, logic_clk_;
-    /*
-    uint64_t logic_counter_, dram_counter_;
-    int logic_time_inc_, dram_time_inc_;
-    uint64_t time_lcm_;
-     */
     std::vector<Controller> vaults_;
     std::function<void(uint64_t)> vault_callback_;
 
@@ -147,7 +140,7 @@ class HMCMemorySystem : public BaseDRAMSystem {
 
     // had to use a multimap because the controller callback return hex addr
     // instead of unique id
-    std::multimap<uint64_t, HMCResponse*> resp_lookup_table;
+    std::multimap<uint64_t, HMCResponse*> resp_lookup_table_;
     // these are essentially input/output buffers for xbars
     std::vector<std::vector<HMCRequest*>> link_req_queues_;
     std::vector<std::vector<HMCResponse*>> link_resp_queues_;
@@ -156,11 +149,11 @@ class HMCMemorySystem : public BaseDRAMSystem {
 
     // input/output busy indicators, since each packet could be several
     // flits, as long as this != 0 then they're busy
-    std::vector<int> link_busy;
-    std::vector<int> quad_busy = {0, 0, 0, 0};
+    std::vector<int> link_busy_;
+    std::vector<int> quad_busy_ = {0, 0, 0, 0};
     // used for arbitration
-    std::vector<int> link_age_counter;
-    std::vector<int> quad_age_counter = {0, 0, 0, 0};
+    std::vector<int> link_age_counter_;
+    std::vector<int> quad_age_counter_ = {0, 0, 0, 0};
 };
 
 }  // namespace dramsim3

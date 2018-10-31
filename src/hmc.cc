@@ -295,11 +295,11 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
         quad_resp_queues_.push_back(std::vector<HMCResponse *>());
     }
 
-    link_busy.reserve(links_);
-    link_age_counter.reserve(links_);
+    link_busy_.reserve(links_);
+    link_age_counter_.reserve(links_);
     for (int i = 0; i < links_; i++) {
-        link_busy.push_back(0);
-        link_age_counter.push_back(0);
+        link_busy_.push_back(0);
+        link_age_counter_.push_back(0);
     }
 }
 
@@ -419,15 +419,15 @@ bool HMCMemorySystem::InsertReqToLink(HMCRequest *req, int link) {
     // 1. check if link queue full
     // 2. set link field in the request packet
     // 3. create corresponding response
-    // 4. increment link_age_counter so that arbitrate logic works
+    // 4. increment link_age_counter_ so that arbitrate logic works
     if (link_req_queues_[link].size() < queue_depth_) {
         req->link = link;
         link_req_queues_[link].push_back(req);
         HMCResponse *resp =
             new HMCResponse(req->mem_operand, req->type, link, req->quad);
-        resp_lookup_table.insert(
+        resp_lookup_table_.insert(
             std::pair<uint64_t, HMCResponse *>(resp->resp_id, resp));
-        link_age_counter[link] = 1;
+        link_age_counter_[link] = 1;
         stats_.interarrival_latency.AddValue(clk_ - last_req_clk_);
         last_req_clk_ = clk_;
         return true;
@@ -511,13 +511,13 @@ void HMCMemorySystem::LogicClockTickPost() {
     // the decremented values here basically represents the internal BW of
     // a xbar, to match the external link, transfering 2 flits are
     // usually be needed
-    for (auto &&i : link_busy) {
+    for (auto &&i : link_busy_) {
         if (i > 0) {
             i -= 2;
         }
     }
 
-    for (auto &&i : quad_busy) {
+    for (auto &&i : quad_busy_) {
         if (i > 0) {
             i -= 2;
         }
@@ -525,7 +525,7 @@ void HMCMemorySystem::LogicClockTickPost() {
 
     // xbar arbitrate using age/FIFO arbitration
     // What is set/updated here:
-    // - link_busy, quad_busy indicators
+    // - link_busy_, quad_busy_ indicators
     // - link req, resp queues, quad req, resp queues
     // - age counter
     XbarArbitrate();
@@ -580,50 +580,50 @@ void HMCMemorySystem::ClockTick() {
 void HMCMemorySystem::XbarArbitrate() {
     // arbitrage based on age / FIFO
     // drain requests from link to quad buffers
-    std::vector<int> age_queue = BuildAgeQueue(link_age_counter);
+    std::vector<int> age_queue = BuildAgeQueue(link_age_counter_);
     while (!age_queue.empty()) {
         int src_link = age_queue.front();
         int dest_quad = link_req_queues_[src_link].front()->quad;
         if (quad_req_queues_[dest_quad].size() < queue_depth_ &&
-            quad_busy[dest_quad] <= 0) {
+            quad_busy_[dest_quad] <= 0) {
             HMCRequest *req = link_req_queues_[src_link].front();
             link_req_queues_[src_link].erase(
                 link_req_queues_[src_link].begin());
             quad_req_queues_[dest_quad].push_back(req);
-            quad_busy[dest_quad] = req->flits;
+            quad_busy_[dest_quad] = req->flits;
             req->exit_time = logic_clk_ + req->flits;
             if (link_req_queues_[src_link].empty()) {
-                link_age_counter[src_link] = 0;
+                link_age_counter_[src_link] = 0;
             } else {
-                link_age_counter[src_link] = 1;
+                link_age_counter_[src_link] = 1;
             }
         } else {  // stalled this cycle, update age counter
-            link_age_counter[src_link]++;
+            link_age_counter_[src_link]++;
         }
         age_queue.erase(age_queue.begin());
     }
     age_queue.clear();
 
     // drain responses from quad to link buffers
-    age_queue = BuildAgeQueue(quad_age_counter);
+    age_queue = BuildAgeQueue(quad_age_counter_);
     while (!age_queue.empty()) {
         int src_quad = age_queue.front();
         int dest_link = quad_resp_queues_[src_quad].front()->link;
         if (link_resp_queues_[dest_link].size() < queue_depth_ &&
-            link_busy[dest_link] <= 0) {
+            link_busy_[dest_link] <= 0) {
             HMCResponse *resp = quad_resp_queues_[src_quad].front();
             quad_resp_queues_[src_quad].erase(
                 quad_resp_queues_[src_quad].begin());
             link_resp_queues_[dest_link].push_back(resp);
-            link_busy[dest_link] = resp->flits;
+            link_busy_[dest_link] = resp->flits;
             resp->exit_time = logic_clk_ + resp->flits;
             if (quad_resp_queues_[src_quad].size() == 0) {
-                quad_age_counter[src_quad] = 0;
+                quad_age_counter_[src_quad] = 0;
             } else {
-                quad_age_counter[src_quad] = 1;
+                quad_age_counter_[src_quad] = 1;
             }
         } else {  // stalled this cycle, update age counter
-            quad_age_counter[src_quad]++;
+            quad_age_counter_[src_quad]++;
         }
         age_queue.erase(age_queue.begin());
     }
@@ -761,13 +761,13 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // be passed to the vaults and is responsible to put the responses back to
     // response queues
 
-    auto it = resp_lookup_table.find(req_id);
+    auto it = resp_lookup_table_.find(req_id);
     HMCResponse *resp = it->second;
     // all data from dram received, put packet in xbar and return
-    resp_lookup_table.erase(it);
+    resp_lookup_table_.erase(it);
     // put it in xbar
     quad_resp_queues_[resp->quad].push_back(resp);
-    quad_age_counter[resp->quad] = 1;
+    quad_age_counter_[resp->quad] = 1;
     return;
 }
 
