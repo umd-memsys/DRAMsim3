@@ -273,7 +273,7 @@ Statistics::Statistics(const Config& config, int channel_id)
         CounterStat("num_wr_dependency", "Number of W after R dependency");
     InitVecStats(sref_cycles, config_.ranks, "rank", "sref_cycles",
                  "Cycles in self-refresh state");
-    InitVecStats(all_bank_idle_cycles, config_.channels, "rank",
+    InitVecStats(all_bank_idle_cycles, config_.ranks, "rank",
                  "all_bank_idle_cycles", "Cycles of all banks are idle");
     InitVecStats(active_cycles, config_.ranks, "rank", "rank_active_cycles",
                  "Number of cycles the rank ramains active");
