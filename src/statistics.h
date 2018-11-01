@@ -156,9 +156,9 @@ class Statistics {
     class CounterStat num_sref_exit_cmds;
     class CounterStat num_wr_dependency;
 
-    std::vector<std::vector<CounterStat>> sref_cycles;
-    std::vector<std::vector<CounterStat>> active_cycles;
-    std::vector<std::vector<CounterStat>> all_bank_idle_cycles;
+    std::vector<CounterStat> sref_cycles;
+    std::vector<CounterStat> active_cycles;
+    std::vector<CounterStat> all_bank_idle_cycles;
 
     // energy and power stats
 
@@ -169,10 +169,10 @@ class Statistics {
     class DoubleComputeStat refb_energy;
 
     // per-rank based stats
-    std::vector<std::vector<DoubleComputeStat>> act_stb_energy;
-    std::vector<std::vector<DoubleComputeStat>> pre_stb_energy;
-    std::vector<std::vector<DoubleComputeStat>> pre_pd_energy;
-    std::vector<std::vector<DoubleComputeStat>> sref_energy;
+    std::vector<DoubleComputeStat> act_stb_energy;
+    std::vector<DoubleComputeStat> pre_stb_energy;
+    std::vector<DoubleComputeStat> pre_pd_energy;
+    std::vector<DoubleComputeStat> sref_energy;
 
     class DoubleComputeStat total_energy;
     class DoubleComputeStat queue_usage;
@@ -209,6 +209,18 @@ class Statistics {
     void Init2DStats(std::vector<std::vector<T>>& stats_vector, int shape_x,
                      int shape_y, std::string x_string, std::string y_string,
                      std::string stat_name, std::string stat_desc);
+
+    // Vector (1D) stats methods
+    template <class T>
+    void InitVecStats(std::vector<T>& stats_vector, int len,
+                      std::string dim_desc, std::string stat_name,
+                      std::string stat_desc);
+    template <class T>
+    void PushVecStatsToList(std::vector<T>& stats_vector);
+    static double VecStatsEpochSum(
+        const std::vector<DoubleComputeStat>& stats_vector);
+    static double VecStatsCumuSum(
+        const std::vector<DoubleComputeStat>& stats_vector);
 
    private:
     const Config& config_;

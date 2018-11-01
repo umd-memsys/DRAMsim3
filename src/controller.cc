@@ -39,12 +39,14 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
         write_queue_.reserve(config_.trans_queue_size);
     }
 
-    std::string channel_str = std::to_string(channel_id_);
-    std::string stats_txt_name = "dramsim3ch_" + channel_str + ".txt";
-    std::string stats_csv_name = "dramsim3ch_" + channel_str + ".csv";
-    std::string epoch_txt_name = "dramsim3ch_" + channel_str + "epoch.txt";
-    std::string epoch_csv_name = "dramsim3ch_" + channel_str + "epoch.csv";
-    std::string histo_csv_name = "dramsim3ch_" + channel_str + "hist.csv";
+    // this prefix includes the output directory
+    std::string channel_str = "_" + std::to_string(channel_id_);
+    std::string pre = config_.output_prefix + channel_str;
+    std::string stats_txt_name = pre + ".txt";
+    std::string stats_csv_name = pre + ".csv";
+    std::string epoch_txt_name = pre + "epoch.txt";
+    std::string epoch_csv_name = pre + "epoch.csv";
+    std::string histo_csv_name = pre + "hist.csv";
 
     if (config_.output_level >= 0) {
         stats_txt_file_.open(stats_txt_name);
@@ -123,14 +125,14 @@ void Controller::ClockTick() {
     for (int i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
             // stats_.sref_energy[channel_id_][i]++;
-            stats_.sref_cycles[channel_id_][i]++;
+            stats_.sref_cycles[i]++;
         } else {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
-                stats_.all_bank_idle_cycles[channel_id_][i]++;
+                stats_.all_bank_idle_cycles[i]++;
                 channel_state_.rank_idle_cycles[i] += 1;
             } else {
-                stats_.active_cycles[channel_id_][i]++;
+                stats_.active_cycles[i]++;
                 // reset
                 channel_state_.rank_idle_cycles[i] = 0;
             }

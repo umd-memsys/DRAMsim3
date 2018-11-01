@@ -271,14 +271,12 @@ Statistics::Statistics(const Config& config, int channel_id)
                     "Number of self-refresh mode exit commands issued");
     num_wr_dependency =
         CounterStat("num_wr_dependency", "Number of W after R dependency");
-    Init2DStats(sref_cycles, config_.channels, config_.ranks, "channel", "rank",
-                "sref_cycles", "Cycles in self-refresh state");
-    Init2DStats(all_bank_idle_cycles, config_.channels, config_.ranks,
-                "channel", "rank", "all_bank_idle_cycles",
-                "Cycles of all banks are idle");
-    Init2DStats(active_cycles, config_.channels, config_.ranks, "channel",
-                "rank", "rank_active_cycles",
-                "Number of cycles the rank ramains active");
+    InitVecStats(sref_cycles, config_.ranks, "rank", "sref_cycles",
+                 "Cycles in self-refresh state");
+    InitVecStats(all_bank_idle_cycles, config_.channels, "rank",
+                 "all_bank_idle_cycles", "Cycles of all banks are idle");
+    InitVecStats(active_cycles, config_.ranks, "rank", "rank_active_cycles",
+                 "Number of cycles the rank ramains active");
     act_energy = DoubleComputeStat("act_energy", "ACT energy");
     read_energy =
         DoubleComputeStat("read_energy", "READ energy (not including IO)");
@@ -286,14 +284,14 @@ Statistics::Statistics(const Config& config, int channel_id)
         DoubleComputeStat("write_energy", "WRITE energy (not including IO)");
     ref_energy = DoubleComputeStat("ref_energy", "Refresh energy");
     refb_energy = DoubleComputeStat("refb_energy", "Bank-Refresh energy");
-    Init2DStats(act_stb_energy, config_.channels, config_.ranks, "channel",
-                "rank", "act_stb_energy", "Active standby Energy");
-    Init2DStats(pre_stb_energy, config_.channels, config_.ranks, "channel",
-                "rank", "pre_stb_energy", "Precharge standby energy");
-    Init2DStats(pre_pd_energy, config_.channels, config_.ranks, "channel",
-                "rank", "pre_pd_energy", "Precharge powerdown energy");
-    Init2DStats(sref_energy, config_.channels, config_.ranks, "channel", "rank",
-                "sref_energy", "Self-refresh energy");
+    InitVecStats(act_stb_energy, config_.ranks, "rank", "act_stb_energy",
+                 "Active standby Energy");
+    InitVecStats(pre_stb_energy, config_.ranks, "rank", "pre_stb_energy",
+                 "Precharge standby energy");
+    InitVecStats(pre_pd_energy, config_.ranks, "rank", "pre_pd_energy",
+                 "Precharge powerdown energy");
+    InitVecStats(sref_energy, config_.ranks, "rank", "sref_energy",
+                 "Self-refresh energy");
     total_energy =
         DoubleComputeStat("total_energy", "(pJ) Total energy consumed");
     queue_usage =
@@ -338,13 +336,13 @@ Statistics::Statistics(const Config& config, int channel_id)
     stats_list.push_back(&refb_energy);
 
     // push vectorized stats to list
-    Push2DStatsToList(all_bank_idle_cycles);
-    Push2DStatsToList(active_cycles);
-    Push2DStatsToList(sref_cycles);
-    Push2DStatsToList(act_stb_energy);
-    Push2DStatsToList(pre_stb_energy);
-    Push2DStatsToList(pre_pd_energy);
-    Push2DStatsToList(sref_energy);
+    PushVecStatsToList(all_bank_idle_cycles);
+    PushVecStatsToList(active_cycles);
+    PushVecStatsToList(sref_cycles);
+    PushVecStatsToList(act_stb_energy);
+    PushVecStatsToList(pre_stb_energy);
+    PushVecStatsToList(pre_pd_energy);
+    PushVecStatsToList(sref_energy);
     stats_list.push_back(&total_energy);
     stats_list.push_back(&queue_usage);
     stats_list.push_back(&average_power);
@@ -383,27 +381,23 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     refb_energy.epoch_value =
         (num_refb_cmds.Count() - num_refb_cmds.LastCount()) *
         config_.refb_energy_inc;
-    for (int i = 0; i < config_.channels; i++) {
-        for (int j = 0; j < config_.ranks; j++) {
-            act_stb_energy[i][j].epoch_value =
-                (active_cycles[i][j].Count() -
-                 active_cycles[i][j].LastCount()) *
-                config_.act_energy_inc;
-            pre_stb_energy[i][j].epoch_value =
-                (all_bank_idle_cycles[i][j].Count() -
-                 all_bank_idle_cycles[i][j].LastCount()) *
-                config_.pre_stb_energy_inc;
-            sref_energy[i][j].epoch_value =
-                (sref_cycles[i][j].Count() - sref_cycles[i][j].LastCount()) *
-                config_.sref_energy_inc;
-        }
+    for (int i = 0; i < config_.ranks; i++) {
+        act_stb_energy[i].epoch_value =
+            (active_cycles[i].Count() - active_cycles[i].LastCount()) *
+            config_.act_energy_inc;
+        pre_stb_energy[i].epoch_value = (all_bank_idle_cycles[i].Count() -
+                                         all_bank_idle_cycles[i].LastCount()) *
+                                        config_.pre_stb_energy_inc;
+        sref_energy[i].epoch_value =
+            (sref_cycles[i].Count() - sref_cycles[i].LastCount()) *
+            config_.sref_energy_inc;
     }
     total_energy.epoch_value =
         act_energy.epoch_value + read_energy.epoch_value +
         write_energy.epoch_value + ref_energy.epoch_value +
-        refb_energy.epoch_value + Stats2DEpochSum(act_stb_energy) +
-        Stats2DEpochSum(pre_stb_energy) + Stats2DEpochSum(pre_pd_energy) +
-        Stats2DEpochSum(sref_energy);
+        refb_energy.epoch_value + VecStatsEpochSum(act_stb_energy) +
+        VecStatsEpochSum(pre_stb_energy) + VecStatsEpochSum(pre_pd_energy) +
+        VecStatsEpochSum(sref_energy);
     average_power.epoch_value = total_energy.epoch_value / (clk - last_clk_);
     average_bandwidth.epoch_value =
         (reqs_issued_epoch * config_.request_size_bytes) /
@@ -419,22 +413,20 @@ void Statistics::PreEpochCompute(uint64_t clk) {
         num_refresh_cmds.Count() * config_.ref_energy_inc;
     refb_energy.cumulative_value =
         num_refb_cmds.Count() * config_.refb_energy_inc;
-    for (int i = 0; i < config_.channels; i++) {
-        for (int j = 0; j < config_.ranks; j++) {
-            act_stb_energy[i][j].cumulative_value =
-                active_cycles[i][j].Count() * config_.act_stb_energy_inc;
-            pre_stb_energy[i][j].cumulative_value =
-                all_bank_idle_cycles[i][j].Count() * config_.pre_stb_energy_inc;
-            sref_energy[i][j].cumulative_value =
-                sref_cycles[i][j].Count() * config_.sref_energy_inc;
-        }
+    for (int i = 0; i < config_.ranks; i++) {
+        act_stb_energy[i].cumulative_value =
+            active_cycles[i].Count() * config_.act_stb_energy_inc;
+        pre_stb_energy[i].cumulative_value =
+            all_bank_idle_cycles[i].Count() * config_.pre_stb_energy_inc;
+        sref_energy[i].cumulative_value =
+            sref_cycles[i].Count() * config_.sref_energy_inc;
     }
     total_energy.cumulative_value =
         act_energy.cumulative_value + read_energy.cumulative_value +
         write_energy.cumulative_value + ref_energy.cumulative_value +
-        refb_energy.cumulative_value + Stats2DCumuSum(act_stb_energy) +
-        Stats2DCumuSum(pre_stb_energy) + Stats2DCumuSum(pre_pd_energy) +
-        Stats2DCumuSum(sref_energy);
+        refb_energy.cumulative_value + VecStatsCumuSum(act_stb_energy) +
+        VecStatsCumuSum(pre_stb_energy) + VecStatsCumuSum(pre_pd_energy) +
+        VecStatsCumuSum(sref_energy);
     double last_queue_usage = static_cast<double>(queue_usage.epoch_value);
     double avg_queue_usage =
         (last_queue_usage * static_cast<double>(last_clk_) +
@@ -528,6 +520,7 @@ double Statistics::Stats2DCumuSum(
     }
     return stats_sum;
 }
+
 template <class T>
 void Statistics::Push2DStatsToList(std::vector<std::vector<T>>& stats_vector) {
     for (unsigned i = 0; i < stats_vector.size(); i++) {
@@ -554,6 +547,43 @@ void Statistics::Init2DStats(std::vector<std::vector<T>>& stats_vector,
         }
         stats_vector.push_back(x_stats);
     }
+}
+
+template <class T>
+void Statistics::InitVecStats(std::vector<T>& stats_vector, int len,
+                              std::string dim_desc, std::string stat_name,
+                              std::string stat_desc) {
+    for (int i = 0; i < len; i++) {
+        std::string short_desc = stat_name + "_" + std::to_string(i);
+        std::string long_desc =
+            stat_desc + " " + dim_desc + " " + std::to_string(i);
+        stats_vector.emplace_back(short_desc, long_desc);
+    }
+}
+
+template <class T>
+void Statistics::PushVecStatsToList(std::vector<T>& stats_vector) {
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        stats_list.push_back(&(stats_vector[i]));
+    }
+}
+
+double Statistics::VecStatsEpochSum(
+    const std::vector<DoubleComputeStat>& stats_vector) {
+    double stats_sum = 0.0;
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        stats_sum += stats_vector[i].epoch_value;
+    }
+    return stats_sum;
+}
+
+double Statistics::VecStatsCumuSum(
+    const std::vector<DoubleComputeStat>& stats_vector) {
+    double stats_sum = 0.0;
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        stats_sum += stats_vector[i].cumulative_value;
+    }
+    return stats_sum;
 }
 
 void Statistics::PrintEpochHistoStatsCSVFormat(std::ostream& where) const {
