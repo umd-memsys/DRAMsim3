@@ -11,7 +11,6 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
                        std::function<void(uint64_t)> write_callback)
 #else
 Controller::Controller(int channel, const Config &config, const Timing &timing,
-                       Statistics &stats,
                        std::function<void(uint64_t)> read_callback,
                        std::function<void(uint64_t)> write_callback)
 #endif  // THERMAL
@@ -20,10 +19,10 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       channel_id_(channel),
       clk_(0),
       config_(config),
-      channel_state_(config, timing, stats),
-      cmd_queue_(channel_id_, config, channel_state_, stats),
+      stats_(config_, channel),
+      channel_state_(config, timing, stats_),
+      cmd_queue_(channel_id_, config, channel_state_, stats_),
       refresh_(config, channel_state_),
-      stats_(stats),
       is_unified_queue_(config.unified_queue),
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
@@ -31,6 +30,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
+      last_trans_clk_(0),
       write_draining_(0) {
     if (is_unified_queue_) {
         unified_queue_.reserve(config_.trans_queue_size);
@@ -38,12 +38,47 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
         read_queue_.reserve(config_.trans_queue_size);
         write_queue_.reserve(config_.trans_queue_size);
     }
+
+    std::string channel_str = std::to_string(channel_id_);
+    std::string stats_txt_name = "dramsim3ch_" + channel_str + ".txt";
+    std::string stats_csv_name = "dramsim3ch_" + channel_str + ".csv";
+    std::string epoch_txt_name = "dramsim3ch_" + channel_str + "epoch.txt";
+    std::string epoch_csv_name = "dramsim3ch_" + channel_str + "epoch.csv";
+    std::string histo_csv_name = "dramsim3ch_" + channel_str + "hist.csv";
+
+    if (config_.output_level >= 0) {
+        stats_txt_file_.open(stats_txt_name);
+        stats_csv_file_.open(stats_csv_name);
+    }
+
+    if (config_.output_level >= 1) {
+        epoch_csv_file_.open(epoch_csv_name);
+        stats_.PrintStatsCSVHeader(epoch_csv_file_);
+    }
+
+    if (config_.output_level >= 2) {
+        histo_csv_file_.open(histo_csv_name);
+    }
+
+    // if (config_.output_level >= 3) {
+    //     epoch_txt_file_.open(config_.epoch_stats_file);
+    // }
+
 #ifdef GENERATE_TRACE
-    std::string trace_file_name = config_.output_prefix + "cmd.trace";
-    RenameFileWithNumber(trace_file_name, channel_id);
+    std::string trace_file_name = "dramsim3ch_" + channel_str + "cmd.trace";
     std::cout << "Command Trace write to " << trace_file_name << std::endl;
     cmd_trace_.open(trace_file_name, std::ofstream::out);
 #endif  // GENERATE_TRACE
+}
+
+Controller::~Controller() {
+    stats_txt_file_.close();
+    epoch_txt_file_.close();
+    stats_csv_file_.close();
+    epoch_csv_file_.close();
+#ifdef GENERATE_TRACE
+    cmd_trace_.close();
+#endif
 }
 
 void Controller::ClockTick() {
@@ -111,7 +146,7 @@ void Controller::ClockTick() {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_EXIT, addr, -1);
-                    if (channel_state_.IsReady(cmd, clk_)){
+                    if (channel_state_.IsReady(cmd, clk_)) {
                         IssueCommand(cmd);
                         break;
                     }
@@ -123,7 +158,7 @@ void Controller::ClockTick() {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_ENTER, addr, -1);
-                    if (channel_state_.IsReady(cmd, clk_)){
+                    if (channel_state_.IsReady(cmd, clk_)) {
                         IssueCommand(cmd);
                         break;
                     }
@@ -132,16 +167,19 @@ void Controller::ClockTick() {
         }
     }
 
-
     ScheduleTransaction();
     clk_++;
     cmd_queue_.ClockTick();
+    stats_.dramcycles++;
+    if (clk_ % config_.epoch_period == 0) {
+        PrintEpochStats();
+    }
     return;
 }
 
 bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
     if (is_unified_queue_) {
-        return unified_queue_.size() <unified_queue_.capacity();
+        return unified_queue_.size() < unified_queue_.capacity();
     } else if (!is_write) {
         return read_queue_.size() < read_queue_.capacity();
     } else {
@@ -151,6 +189,9 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
 
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
+    stats_.interarrival_latency.AddValue(clk_ - last_trans_clk_);
+    last_trans_clk_ = clk_;
+
     // check if already in write buffer, can return immediately
     if (in_write_buf_.count(trans.addr) > 0) {
         stats_.num_write_buf_hits++;
@@ -189,7 +230,7 @@ void Controller::ScheduleTransaction() {
     if (write_draining_ == 0 && !is_unified_queue_) {
         // TODO need better switching machnism
         if (write_queue_.size() >= write_queue_.capacity() ||
-            (read_queue_.size() == 0 && write_queue_.size() >=8)) {
+            (read_queue_.size() == 0 && write_queue_.size() >= 8)) {
             write_draining_ = write_queue_.size();
         }
     }
@@ -276,5 +317,41 @@ Command Controller::TransToCommand(const Transaction &trans) {
 }
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
+
+void Controller::PrintEpochStats() {
+    stats_.PreEpochCompute(clk_);
+    if (config_.output_level >= 1) {
+        stats_.PrintEpochStatsCSVFormat(epoch_csv_file_);
+    }
+
+    if (config_.output_level >= 2) {
+        stats_.PrintEpochHistoStatsCSVFormat(histo_csv_file_);
+    }
+
+    stats_.UpdateEpoch(clk_);
+    return;
+}
+
+void Controller::PrintFinalStats() {
+    stats_.PreEpochCompute(clk_);
+    stats_.UpdateEpoch(clk_);
+    std::cout << "-----------------------------------------------------"
+              << std::endl;
+    std::cout << "Printing final stats of Channel " << channel_id_ << std::endl;
+    std::cout << "-----------------------------------------------------"
+              << std::endl;
+    std::cout << stats_;
+    std::cout << "-----------------------------------------------------"
+              << std::endl;
+    if (config_.output_level >= 0) {
+        stats_.PrintStats(stats_txt_file_);
+        stats_.PrintStatsCSVHeader(stats_csv_file_);
+        stats_.PrintStatsCSVFormat(stats_csv_file_);
+#ifdef THERMAL
+        thermal_calc_.PrintFinalPT(clk_);
+#endif  // THERMAL
+    }
+    return;
+}
 
 }  // namespace dramsim3

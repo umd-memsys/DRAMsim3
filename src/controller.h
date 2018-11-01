@@ -23,36 +23,37 @@ class Controller {
    public:
 #ifdef THERMAL
     Controller(int channel, const Config &config, const Timing &timing,
-               Statistics &stats, ThermalCalculator &thermalcalc,
+               ThermalCalculator &thermalcalc,
                std::function<void(uint64_t)> read_callback,
                std::function<void(uint64_t)> write_callback);
 #else
     Controller(int channel, const Config &config, const Timing &timing,
-               Statistics &stats, std::function<void(uint64_t)> read_callback,
+               std::function<void(uint64_t)> read_callback,
                std::function<void(uint64_t)> write_callback);
 #endif  // THERMAL
-    ~Controller(){};
+    ~Controller();
     void ClockTick();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
     bool AddTransaction(Transaction trans);
+    int QueueUsage() const;
+    // Stats output
+    void PrintEpochStats();
+    void PrintFinalStats();
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
-    int QueueUsage() const;
 
    private:
     uint64_t clk_;
     const Config &config_;
+    Statistics stats_;
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;
-    Statistics &stats_;
 
 #ifdef THERMAL
     ThermalCalculator &thermal_calc_;
 #endif  // THERMAL
-#ifdef GENERATE_TRACE
-    std::ofstream cmd_trace_;
-#endif  // GENERATE_TRACE
+
     // queue that takes transactions from CPU side
     bool is_unified_queue_;
     std::vector<Transaction> unified_queue_;
@@ -68,6 +69,24 @@ class Controller {
 
     // row buffer policy
     RowBufPolicy row_buf_policy_;
+
+#ifdef GENERATE_TRACE
+    std::ofstream cmd_trace_;
+#endif  // GENERATE_TRACE
+
+    // used to calculate inter-arrival latency
+    uint64_t last_trans_clk_;
+
+    // Stats output files, the implementation bug of std::basic_istream
+    // prevenets objects having the following members to be pushed into vector
+    // final outputs
+    std::ofstream stats_txt_file_;
+    std::ofstream stats_csv_file_;
+    // epoch outputs
+    std::ofstream epoch_txt_file_;
+    std::ofstream epoch_csv_file_;
+    std::ofstream histo_csv_file_;
+
 
     // transaction queueing
     int write_draining_;

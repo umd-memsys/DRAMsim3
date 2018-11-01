@@ -232,8 +232,8 @@ void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
     return;
 }
 
-Statistics::Statistics(const Config& config)
-    : stats_list(), config_(config), last_clk_(0) {
+Statistics::Statistics(const Config& config, int channel_id)
+    : stats_list(), config_(config), channel_id_(channel_id), last_clk_(0) {
     num_reads_done =
         CounterStat("num_reads_done", "Number of read requests issued");
     num_writes_done =

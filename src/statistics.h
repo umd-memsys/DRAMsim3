@@ -135,7 +135,7 @@ class DoubleComputeStat : public BaseStat {
 
 class Statistics {
    public:
-    Statistics(const Config& config);
+    Statistics(const Config& config, int channel_id);
     class CounterStat num_reads_done;
     class CounterStat num_writes_done;
     class CounterStat num_write_buf_hits;
@@ -212,6 +212,7 @@ class Statistics {
 
    private:
     const Config& config_;
+    int channel_id_;
     uint64_t last_clk_;
 };
 

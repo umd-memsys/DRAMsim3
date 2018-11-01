@@ -136,11 +136,11 @@ class Config {
     int epoch_period;
     int output_level;
     std::string output_dir;
-    std::string stats_file;
-    std::string epoch_stats_file;
-    std::string stats_file_csv;
-    std::string epoch_stats_file_csv;
-    std::string histo_stats_file_csv;
+    // std::string stats_file;
+    // std::string epoch_stats_file;
+    // std::string stats_txt_file_csv;
+    // std::string epoch_txt_file_csv;
+    // std::string histo_stats_txt_file_csv;
 
     // Computed parameters
     int request_size_bytes;

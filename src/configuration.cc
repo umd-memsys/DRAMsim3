@@ -127,15 +127,15 @@ void Config::InitOtherParams() {
     }
     output_prefix =
         output_dir + reader.Get("other", "output_prefix", "dramsim_");
-    stats_file = reader.Get("other", "stats_file", output_prefix + "stats.txt");
-    epoch_stats_file = reader.Get("other", "epoch_stats_file",
-                                  output_prefix + "epoch_stats.txt");
-    stats_file_csv =
-        reader.Get("other", "stats_file", output_prefix + "stats.csv");
-    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file",
-                                      output_prefix + "epoch_stats.csv");
-    histo_stats_file_csv = reader.Get("other", "histo_stat_file",
-                                      output_prefix + "histo_stats.csv");
+    // stats_file = reader.Get("other", "stats_file", output_prefix +
+    // "stats.txt"); epoch_stats_file = reader.Get("other", "epoch_stats_file",
+    //                               output_prefix + "epoch_stats.txt");
+    // stats_txt_file_csv =
+    //     reader.Get("other", "stats_file", output_prefix + "stats.csv");
+    // epoch_txt_file_csv = reader.Get("other", "epoch_stats_file",
+    //                                   output_prefix + "epoch_stats.csv");
+    // histo_stats_txt_file_csv = reader.Get("other", "histo_stat_file",
+    //                                   output_prefix + "histo_stats.csv");
     return;
 }
 

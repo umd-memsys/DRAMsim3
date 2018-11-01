@@ -266,11 +266,11 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     vaults_.reserve(config_.channels);
     for (int i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
-        vaults_.emplace_back(i, config_, timing_, stats_, thermal_calc_,
+        vaults_.emplace_back(i, config_, timing_, thermal_calc_,
                              vault_callback_, vault_callback_);
 #else
-        vaults_.emplace_back(i, config_, timing_, stats_, vault_callback_,
-                             vault_callback_);
+        vaults_.push_back(new Controller(i, config_, timing_, vault_callback_,
+                                         vault_callback_));
 #endif  // THERMAL
     }
     // initialize vaults and crossbar
@@ -300,6 +300,12 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     for (int i = 0; i < links_; i++) {
         link_busy_.push_back(0);
         link_age_counter_.push_back(0);
+    }
+}
+
+HMCMemorySystem::~HMCMemorySystem() {
+    for (auto &&vault_ptr : vaults_) {
+        delete (vault_ptr);
     }
 }
 
@@ -428,7 +434,7 @@ bool HMCMemorySystem::InsertReqToLink(HMCRequest *req, int link) {
         resp_lookup_table_.insert(
             std::pair<uint64_t, HMCResponse *>(resp->resp_id, resp));
         link_age_counter_[link] = 1;
-        stats_.interarrival_latency.AddValue(clk_ - last_req_clk_);
+        // stats_.interarrival_latency.AddValue(clk_ - last_req_clk_);
         last_req_clk_ = clk_;
         return true;
     } else {
@@ -481,7 +487,7 @@ void HMCMemorySystem::LogicClockTickPre() {
                 }
                 delete (resp);
                 link_resp_queues_[i].erase(link_resp_queues_[i].begin());
-                stats_.hmc_reqs_done++;
+                // stats_.hmc_reqs_done++;
             }
         }
     }
@@ -497,8 +503,8 @@ void HMCMemorySystem::LogicClockTickPost() {
             quad_resp_queues_[i].size() < queue_depth_) {
             HMCRequest *req = quad_req_queues_[i].front();
             if (req->exit_time <= logic_clk_) {
-                if (vaults_[req->vault].WillAcceptTransaction(req->mem_operand,
-                                                              req->IsWrite())) {
+                if (vaults_[req->vault]->WillAcceptTransaction(
+                        req->mem_operand, req->IsWrite())) {
                     InsertReqToDRAM(req);
                     delete (req);
                     quad_req_queues_[i].erase(quad_req_queues_[i].begin());
@@ -534,20 +540,9 @@ void HMCMemorySystem::LogicClockTickPost() {
 
 void HMCMemorySystem::DRAMClockTick() {
     for (auto &&vault : vaults_) {
-        vault.ClockTick();
-    }
-    if (clk_ % config_.epoch_period == 0 && clk_ != 0) {
-        int queue_usage_total = 0;
-        for (const auto &vault : vaults_) {
-            queue_usage_total += vault.QueueUsage();
-        }
-        stats_.queue_usage.epoch_value = static_cast<double>(queue_usage_total);
-        stats_.PreEpochCompute(clk_);
-        PrintIntermediateStats();
-        stats_.UpdateEpoch(clk_);
+        vault->ClockTick();
     }
     clk_++;
-    stats_.dramcycles++;
     return;
 }
 
@@ -673,7 +668,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
             // block_size it will be chopped and therefore results in a waste of
             // bandwidth
             trans = Transaction(req->mem_operand, false);
-            vaults_[req->vault].AddTransaction(trans);
+            vaults_[req->vault]->AddTransaction(trans);
             break;
         case HMCReqType::WR0:
         case HMCReqType::WR16:
@@ -695,7 +690,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
         case HMCReqType::WR256:
         case HMCReqType::P_WR256:
             trans = Transaction(req->mem_operand, true);
-            vaults_[req->vault].AddTransaction(trans);
+            vaults_[req->vault]->AddTransaction(trans);
             break;
         // TODO real question here is, if an atomic operantion
         // generate a read and a write request,
@@ -771,7 +766,14 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     return;
 }
 
-HMCMemorySystem::~HMCMemorySystem() {}
+void HMCMemorySystem::PrintStats() {
+    for (auto &&vault : vaults_) {
+        vault->PrintFinalStats();
+    }
+#ifdef THERMAL
+    thermal_calc_.PrintFinalPT(clk_);
+#endif  // THERMAL
+}
 
 // the following 2 functions for domain crossing...
 uint64_t gcd(uint64_t x, uint64_t y) {
