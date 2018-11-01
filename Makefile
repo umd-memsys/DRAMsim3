@@ -42,4 +42,4 @@ $(LIB_NAME): $(OBJECTS)
 	$(CC) -fPIC -O2 -o $@ -c $<
 
 clean:
-	-rm -f $(EXE_OBJS)
+	-rm -f $(EXE_OBJS) $(LIB_NAME) $(EXE_NAME)
