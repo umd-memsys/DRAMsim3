@@ -301,6 +301,14 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
         link_busy_.push_back(0);
         link_age_counter_.push_back(0);
     }
+
+    // Only print one header at the beginning
+    if (config_.output_level >= 0) {
+        vaults_[0]->PrintCSVHeader(stats_csv_file_);
+    }
+    if (config_.output_level >= 1) {
+        vaults_[0]->PrintCSVHeader(epoch_csv_file_);
+    }
 }
 
 HMCMemorySystem::~HMCMemorySystem() {
@@ -543,6 +551,11 @@ void HMCMemorySystem::DRAMClockTick() {
         vault->ClockTick();
     }
     clk_++;
+    if (clk_ % config_.epoch_period == 0) {
+        for (auto &&vault : vaults_) {
+            vault->PrintEpochStats(epoch_csv_file_, histo_csv_file_);
+        }
+    }
     return;
 }
 
@@ -768,7 +781,7 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
 
 void HMCMemorySystem::PrintStats() {
     for (auto &&vault : vaults_) {
-        vault->PrintFinalStats();
+        vault->PrintFinalStats(stats_txt_file_, stats_csv_file_);
     }
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);

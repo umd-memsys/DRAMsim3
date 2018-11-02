@@ -37,8 +37,9 @@ class Controller {
     bool AddTransaction(Transaction trans);
     int QueueUsage() const;
     // Stats output
-    void PrintEpochStats();
-    void PrintFinalStats();
+    void PrintCSVHeader(std::ostream& epoch_csv);
+    void PrintEpochStats(std::ostream& epoch_csv, std::ostream& hist_csv);
+    void PrintFinalStats(std::ostream& stats_txt, std::ostream& stats_csv);
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
 
@@ -76,17 +77,6 @@ class Controller {
 
     // used to calculate inter-arrival latency
     uint64_t last_trans_clk_;
-
-    // Stats output files, the implementation bug of std::basic_istream
-    // prevenets objects having the following members to be pushed into vector
-    // final outputs
-    std::ofstream stats_txt_file_;
-    std::ofstream stats_csv_file_;
-    // epoch outputs
-    std::ofstream epoch_txt_file_;
-    std::ofstream epoch_csv_file_;
-    std::ofstream histo_csv_file_;
-
 
     // transaction queueing
     int write_draining_;

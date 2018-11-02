@@ -5,12 +5,6 @@
 namespace dramsim3 {
 
 template <class T>
-void PrintNameValue(std::ostream& where, std::string name, T value) {
-    where << fmt::format("{:^30}{:^5}{:>12}", name, " = ", value) << std::endl;
-    return;
-}
-
-template <class T>
 void PrintNameValueDesc(std::ostream& where, std::string name, T value,
                         std::string description) {
     // not making this a class method because we need to calculate
@@ -44,12 +38,12 @@ void CounterStat::PrintCSVHeader(std::ostream& where) const {
     return;
 }
 
-void CounterStat::PrintCSVFormat(std::ostream& where) const {
+void CounterStat::PrintCSVEntry(std::ostream& where) const {
     where << fmt::format("{},", count_);
     return;
 }
 
-void CounterStat::PrintEpochCSVFormat(std::ostream& where) const {
+void CounterStat::PrintEpochCSVEntry(std::ostream& where) const {
     where << fmt::format("{},", count_ - last_epoch_count_);
     return;
 }
@@ -77,12 +71,12 @@ void DoubleStat::PrintCSVHeader(std::ostream& where) const {
     return;
 }
 
-void DoubleStat::PrintCSVFormat(std::ostream& where) const {
+void DoubleStat::PrintCSVEntry(std::ostream& where) const {
     where << fmt::format("{},", value);
     return;
 }
 
-void DoubleStat::PrintEpochCSVFormat(std::ostream& where) const {
+void DoubleStat::PrintEpochCSVEntry(std::ostream& where) const {
     where << fmt::format("{},", value - last_epoch_value);
     return;
 }
@@ -107,27 +101,33 @@ void DoubleComputeStat::PrintCSVHeader(std::ostream& where) const {
     return;
 }
 
-void DoubleComputeStat::PrintCSVFormat(std::ostream& where) const {
+void DoubleComputeStat::PrintCSVEntry(std::ostream& where) const {
     where << fmt::format("{},", cumulative_value);
     return;
 }
 
-void DoubleComputeStat::PrintEpochCSVFormat(std::ostream& where) const {
+void DoubleComputeStat::PrintEpochCSVEntry(std::ostream& where) const {
     where << fmt::format("{},", epoch_value);
     return;
 }
 
-HistogramStat::HistogramStat(int start, int end, int numb_bins,
-                             std::string name, std::string desc)
+HistogramStat::HistogramStat(int start, int end, int num_bins, std::string name,
+                             std::string desc)
     : BaseStat(name, desc),
       start_(start),
       end_(end),
-      numb_bins_(numb_bins),
+      num_bins_(num_bins),
+      bin_width_((end_ - start_) / num_bins_),
+      buckets_(num_bins_, 0),
+      last_epoch_buckets_(num_bins_, 0),
       epoch_count_(0) {
-    if (start_ >= end_ || numb_bins <= 0) {
-        std::cout << "Histogram stat improperly specified" << std::endl;
-        AbruptExit(__FILE__, __LINE__);
+    bucket_headers_.push_back(fmt::format("{}[-{}]", name_, start_));
+    for (int i = 1; i < num_bins_ - 1; i++) {
+        int bucket_start = start_ + (i - 1) * bin_width_;
+        int bucket_end = start_ + i * bin_width_ - 1;
+        bucket_headers_.push_back(fmt::format("{}[{}-{}]", name_, bucket_start, bucket_end));
     }
+    bucket_headers_.push_back(fmt::format("{}[{}-]", name_, end_));
 }
 
 void HistogramStat::AddValue(int val) {
@@ -136,24 +136,15 @@ void HistogramStat::AddValue(int val) {
     } else {
         bins_[val] += 1;
     }
-}
-
-std::vector<uint64_t> HistogramStat::GetAggregatedBins() const {
-    int bin_width = (end_ - start_) / numb_bins_;
-    // 2 extra slots to insert positive and negative outliers
-    std::vector<uint64_t> aggr_bins(numb_bins_ + 2, 0);
-    for (auto i = bins_.begin(); i != bins_.end(); i++) {
-        if (i->first < start_) {
-            aggr_bins.front() += i->second;
-        } else if (i->first > end_) {
-            aggr_bins.back() += i->second;
-        } else {
-            int bin_index = (i->first - start_) / bin_width +
-                            1;  // +1 to offset the negative outlier
-            aggr_bins[bin_index] += i->second;
-        }
+    int bucket_idx = -1;
+    if (val < start_) {
+        bucket_idx = 0;
+    } else if (val > end_) {
+        bucket_idx = buckets_.size() - 1;
+    } else {
+        bucket_idx = (val - start_) / bin_width_ + 1;
     }
-    return aggr_bins;
+    buckets_[bucket_idx]++;
 }
 
 uint64_t HistogramStat::AccuSum() const {
@@ -179,61 +170,45 @@ double HistogramStat::GetAverage() const {
 }
 
 void HistogramStat::Print(std::ostream& where) const {
-    // ONLY print aggregated histograms in the final text output
-    PrintNameValueDesc(where, name_, " ", description_);
-    std::vector<uint64_t> aggr_bins = GetAggregatedBins();
-
-    // get strings
-    std::vector<std::string> bin_strs;
-    std::string bin_str = fmt::format("[ < {} ]", start_);
-    bin_strs.push_back(bin_str);
-    int bin_width = (end_ - start_) / numb_bins_;
-    for (int i = 1; i < numb_bins_ + 1; i++) {
-        auto bin_start = start_ + (i - 1) * bin_width;
-        auto bin_end = start_ + i * bin_width - 1;
-        bin_str = fmt::format("[ {}-{} ]", bin_start, bin_end);
-        bin_strs.push_back(bin_str);
-    }
-    bin_str = fmt::format("[ > {} ]", end_);
-    bin_strs.push_back(bin_str);
-
-    for (unsigned i = 0; i < aggr_bins.size(); i++) {
-        PrintNameValue(where, bin_strs[i], aggr_bins[i]);
+    for (int i = 0; i < num_bins_; i++) {
+        PrintNameValueDesc(where, bucket_headers_[i], buckets_[i], description_);
     }
     return;
 }
 
 void HistogramStat::UpdateEpoch() {
-    last_epoch_bins_ = bins_;
+    last_epoch_buckets_ = buckets_;
     epoch_count_++;
     return;
 }
 
 void HistogramStat::PrintCSVHeader(std::ostream& where) const {
-    for (auto i = bins_.begin(); i != bins_.end(); i++) {
-        where << fmt::format("{}-{},", name_, i->first);
+    for (auto header : bucket_headers_) {
+        where << header << ",";
     }
     return;
 }
 
-void HistogramStat::PrintCSVFormat(std::ostream& where) const {
-    for (auto i = bins_.begin(); i != bins_.end(); i++) {
-        where << fmt::format("{},", i->second);
+void HistogramStat::PrintCSVEntry(std::ostream& where) const {
+    for (auto bucket_count : buckets_) {
+        where << bucket_count << ",";
     }
     return;
 }
 
-void HistogramStat::PrintEpochCSVFormat(std::ostream& where) const {
-    for (auto i = bins_.begin(); i != bins_.end(); i++) {
-        where << fmt::format("{},{},{},{}", name_, i->first, i->second,
-                             epoch_count_)
-              << std::endl;
+void HistogramStat::PrintEpochCSVEntry(std::ostream& where) const {
+    for (size_t i = 0; i < buckets_.size(); i++) {
+        where << buckets_[i] - last_epoch_buckets_[i] << ",";
     }
     return;
 }
 
 Statistics::Statistics(const Config& config, int channel_id)
-    : stats_list(), config_(config), channel_id_(channel_id), last_clk_(0) {
+    : stats_list(),
+      config_(config),
+      channel_id_(channel_id),
+      epoch_count_(0),
+      last_clk_(0) {
     num_reads_done =
         CounterStat("num_reads_done", "Number of read requests issued");
     num_writes_done =
@@ -470,6 +445,7 @@ void Statistics::PrintEpochStats(std::ostream& where) const {
 }
 
 void Statistics::PrintStatsCSVHeader(std::ostream& where) const {
+    where << "epoch,channel,";
     for (auto stat : stats_list) {
         stat->PrintCSVHeader(where);
     }
@@ -480,23 +456,76 @@ void Statistics::PrintStatsCSVHeader(std::ostream& where) const {
     return;
 }
 
-void Statistics::PrintStatsCSVFormat(std::ostream& where) const {
+void Statistics::PrintStatsCSVRow(std::ostream& where) const {
+    where << epoch_count_ << "," << channel_id_ << ",";
     for (auto stat : stats_list) {
-        stat->PrintCSVFormat(where);
+        stat->PrintCSVEntry(where);
     }
     for (auto stat : histo_stats_list) {
-        stat->PrintCSVFormat(where);
+        stat->PrintCSVEntry(where);
     }
     where << std::endl;
     return;
 }
 
-void Statistics::PrintEpochStatsCSVFormat(std::ostream& where) const {
+void Statistics::PrintEpochStatsCSVRow(std::ostream& where) {
+    where << epoch_count_ << "," << channel_id_ << ",";
     for (auto stat : stats_list) {
-        stat->PrintEpochCSVFormat(where);
+        stat->PrintEpochCSVEntry(where);
+    }
+    for (auto stat : histo_stats_list) {
+        stat->PrintEpochCSVEntry(where);
     }
     where << std::endl;
+    epoch_count_++;
     return;
+}
+
+void Statistics::PrintEpochHistoStatsCSV(std::ostream& where) const {
+    if (last_clk_ == 0) {
+        where << "name,value,count,epoch" << std::endl;
+    }
+    for (auto stat : histo_stats_list) {
+        stat->PrintEpochCSVEntry(where);
+    }
+    return;
+}
+
+template <class T>
+void Statistics::InitVecStats(std::vector<T>& stats_vector, int len,
+                              std::string dim_desc, std::string stat_name,
+                              std::string stat_desc) {
+    for (int i = 0; i < len; i++) {
+        std::string short_desc = stat_name + "_" + std::to_string(i);
+        std::string long_desc =
+            stat_desc + " " + dim_desc + " " + std::to_string(i);
+        stats_vector.emplace_back(short_desc, long_desc);
+    }
+}
+
+template <class T>
+void Statistics::PushVecStatsToList(std::vector<T>& stats_vector) {
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        stats_list.push_back(&(stats_vector[i]));
+    }
+}
+
+double Statistics::VecStatsEpochSum(
+    const std::vector<DoubleComputeStat>& stats_vector) {
+    double stats_sum = 0.0;
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        stats_sum += stats_vector[i].epoch_value;
+    }
+    return stats_sum;
+}
+
+double Statistics::VecStatsCumuSum(
+    const std::vector<DoubleComputeStat>& stats_vector) {
+    double stats_sum = 0.0;
+    for (unsigned i = 0; i < stats_vector.size(); i++) {
+        stats_sum += stats_vector[i].cumulative_value;
+    }
+    return stats_sum;
 }
 
 double Statistics::Stats2DEpochSum(
@@ -547,53 +576,6 @@ void Statistics::Init2DStats(std::vector<std::vector<T>>& stats_vector,
         }
         stats_vector.push_back(x_stats);
     }
-}
-
-template <class T>
-void Statistics::InitVecStats(std::vector<T>& stats_vector, int len,
-                              std::string dim_desc, std::string stat_name,
-                              std::string stat_desc) {
-    for (int i = 0; i < len; i++) {
-        std::string short_desc = stat_name + "_" + std::to_string(i);
-        std::string long_desc =
-            stat_desc + " " + dim_desc + " " + std::to_string(i);
-        stats_vector.emplace_back(short_desc, long_desc);
-    }
-}
-
-template <class T>
-void Statistics::PushVecStatsToList(std::vector<T>& stats_vector) {
-    for (unsigned i = 0; i < stats_vector.size(); i++) {
-        stats_list.push_back(&(stats_vector[i]));
-    }
-}
-
-double Statistics::VecStatsEpochSum(
-    const std::vector<DoubleComputeStat>& stats_vector) {
-    double stats_sum = 0.0;
-    for (unsigned i = 0; i < stats_vector.size(); i++) {
-        stats_sum += stats_vector[i].epoch_value;
-    }
-    return stats_sum;
-}
-
-double Statistics::VecStatsCumuSum(
-    const std::vector<DoubleComputeStat>& stats_vector) {
-    double stats_sum = 0.0;
-    for (unsigned i = 0; i < stats_vector.size(); i++) {
-        stats_sum += stats_vector[i].cumulative_value;
-    }
-    return stats_sum;
-}
-
-void Statistics::PrintEpochHistoStatsCSVFormat(std::ostream& where) const {
-    if (last_clk_ == 0) {
-        where << "name,value,count,epoch" << std::endl;
-    }
-    for (auto stat : histo_stats_list) {
-        stat->PrintEpochCSVFormat(where);
-    }
-    return;
 }
 
 std::ostream& operator<<(std::ostream& os, Statistics& stats) {

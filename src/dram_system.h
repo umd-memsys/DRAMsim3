@@ -42,6 +42,13 @@ class BaseDRAMSystem {
 #endif  // THERMAL
     uint64_t clk_;
 
+
+    // Output files
+    std::ofstream stats_txt_file_;
+    std::ofstream stats_csv_file_;
+    std::ofstream epoch_txt_file_;
+    std::ofstream epoch_csv_file_;
+    std::ofstream histo_csv_file_;
 #ifdef GENERATE_TRACE
     std::ofstream address_trace_;
 #endif  // GENERATE_TRACE

@@ -39,33 +39,6 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
         write_queue_.reserve(config_.trans_queue_size);
     }
 
-    // this prefix includes the output directory
-    std::string channel_str = "_" + std::to_string(channel_id_);
-    std::string pre = config_.output_prefix + channel_str;
-    std::string stats_txt_name = pre + ".txt";
-    std::string stats_csv_name = pre + ".csv";
-    std::string epoch_txt_name = pre + "epoch.txt";
-    std::string epoch_csv_name = pre + "epoch.csv";
-    std::string histo_csv_name = pre + "hist.csv";
-
-    if (config_.output_level >= 0) {
-        stats_txt_file_.open(stats_txt_name);
-        stats_csv_file_.open(stats_csv_name);
-    }
-
-    if (config_.output_level >= 1) {
-        epoch_csv_file_.open(epoch_csv_name);
-        stats_.PrintStatsCSVHeader(epoch_csv_file_);
-    }
-
-    if (config_.output_level >= 2) {
-        histo_csv_file_.open(histo_csv_name);
-    }
-
-    // if (config_.output_level >= 3) {
-    //     epoch_txt_file_.open(config_.epoch_stats_file);
-    // }
-
 #ifdef GENERATE_TRACE
     std::string trace_file_name = "dramsim3ch_" + channel_str + "cmd.trace";
     std::cout << "Command Trace write to " << trace_file_name << std::endl;
@@ -74,10 +47,6 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
 }
 
 Controller::~Controller() {
-    stats_txt_file_.close();
-    epoch_txt_file_.close();
-    stats_csv_file_.close();
-    epoch_csv_file_.close();
 #ifdef GENERATE_TRACE
     cmd_trace_.close();
 #endif
@@ -173,9 +142,6 @@ void Controller::ClockTick() {
     clk_++;
     cmd_queue_.ClockTick();
     stats_.dramcycles++;
-    if (clk_ % config_.epoch_period == 0) {
-        PrintEpochStats();
-    }
     return;
 }
 
@@ -320,35 +286,43 @@ Command Controller::TransToCommand(const Transaction &trans) {
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
 
-void Controller::PrintEpochStats() {
+void Controller::PrintCSVHeader(std::ostream& epoch_csv) {
+    if (config_.output_level >= 1) {
+        stats_.PrintStatsCSVHeader(epoch_csv);
+    }
+}
+
+void Controller::PrintEpochStats(std::ostream &epoch_csv,
+                                 std::ostream &hist_csv) {
     stats_.PreEpochCompute(clk_);
     if (config_.output_level >= 1) {
-        stats_.PrintEpochStatsCSVFormat(epoch_csv_file_);
+        stats_.PrintEpochStatsCSVRow(epoch_csv);
     }
 
-    if (config_.output_level >= 2) {
-        stats_.PrintEpochHistoStatsCSVFormat(histo_csv_file_);
-    }
+    // TODO not working
+    // if (config_.output_level >= 2) {
+    //     stats_.PrintEpochHistoStatsCSV(hist_csv);
+    // }
 
     stats_.UpdateEpoch(clk_);
     return;
 }
 
-void Controller::PrintFinalStats() {
+void Controller::PrintFinalStats(std::ostream &stats_txt,
+                                 std::ostream &stats_csv) {
     stats_.PreEpochCompute(clk_);
     stats_.UpdateEpoch(clk_);
-    std::cout << "-----------------------------------------------------"
-              << std::endl;
-    std::cout << "Printing final stats of Channel " << channel_id_ << std::endl;
-    std::cout << "-----------------------------------------------------"
-              << std::endl;
+    std::cout << "-----------------------------------------------" << std::endl;
+    std::cout << "Printing final stats of channel " << channel_id_ << std::endl;
+    std::cout << "-----------------------------------------------" << std::endl;
     std::cout << stats_;
-    std::cout << "-----------------------------------------------------"
-              << std::endl;
+    std::cout << "-----------------------------------------------" << std::endl;
     if (config_.output_level >= 0) {
-        stats_.PrintStats(stats_txt_file_);
-        stats_.PrintStatsCSVHeader(stats_csv_file_);
-        stats_.PrintStatsCSVFormat(stats_csv_file_);
+        stats_txt << "-------------------------------------------" << std::endl;
+        stats_txt << "Stats of channel " << channel_id_ << std::endl;
+        stats_txt << "-------------------------------------------" << std::endl;
+        stats_.PrintStats(stats_txt);
+        stats_.PrintStatsCSVRow(stats_csv);
 #ifdef THERMAL
         thermal_calc_.PrintFinalPT(clk_);
 #endif  // THERMAL

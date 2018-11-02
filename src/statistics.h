@@ -2,7 +2,6 @@
 #define __STATISTICS_H
 
 #include <iostream>
-#include <list>
 #include <map>
 #include <string>
 #include <vector>
@@ -21,8 +20,8 @@ class BaseStat {
     virtual void UpdateEpoch() = 0;
     virtual void PrintEpoch(std::ostream& where) const = 0;
     virtual void PrintCSVHeader(std::ostream& where) const = 0;
-    virtual void PrintCSVFormat(std::ostream& where) const = 0;
-    virtual void PrintEpochCSVFormat(std::ostream& where) const = 0;
+    virtual void PrintCSVEntry(std::ostream& where) const = 0;
+    virtual void PrintEpochCSVEntry(std::ostream& where) const = 0;
     friend std::ostream& operator<<(std::ostream& os,
                                     const BaseStat& basestat) {
         basestat.Print(os);
@@ -63,8 +62,8 @@ class CounterStat : public BaseStat {
     void UpdateEpoch() override;
     void PrintEpoch(std::ostream& where) const override;
     void PrintCSVHeader(std::ostream& where) const override;
-    void PrintCSVFormat(std::ostream& where) const override;
-    void PrintEpochCSVFormat(std::ostream& where) const override;
+    void PrintCSVEntry(std::ostream& where) const override;
+    void PrintEpochCSVEntry(std::ostream& where) const override;
 
    private:
     uint64_t count_;
@@ -74,16 +73,15 @@ class CounterStat : public BaseStat {
 class HistogramStat : public BaseStat {
    public:
     HistogramStat() : BaseStat() {}
-    HistogramStat(int start, int end, int numb_bins, std::string name,
+    HistogramStat(int start, int end, int num_bins, std::string name,
                   std::string desc);
     void AddValue(int val);
     void Print(std::ostream& where) const override;
     void UpdateEpoch() override;
     void PrintEpoch(std::ostream& where) const override {}
     void PrintCSVHeader(std::ostream& where) const override;
-    void PrintCSVFormat(std::ostream& where) const override;
-    void PrintEpochCSVFormat(std::ostream& where) const override;
-    std::vector<uint64_t> GetAggregatedBins() const;
+    void PrintCSVEntry(std::ostream& where) const override;
+    void PrintEpochCSVEntry(std::ostream& where) const override;
     double GetAverage() const;
     uint64_t AccuSum() const;  // Accumulated Sum (value * count)
     uint64_t CountSum() const;
@@ -91,9 +89,12 @@ class HistogramStat : public BaseStat {
    private:
     int start_;
     int end_;
-    int numb_bins_;
+    int num_bins_;
+    int bin_width_;
     std::map<int, uint64_t> bins_;
-    std::map<int, uint64_t> last_epoch_bins_;
+    std::vector<uint64_t> buckets_;
+    std::vector<uint64_t> last_epoch_buckets_;
+    std::vector<std::string> bucket_headers_;
     uint64_t epoch_count_;
 };
 
@@ -110,8 +111,8 @@ class DoubleStat : public BaseStat {
     void UpdateEpoch() override;
     void PrintEpoch(std::ostream& where) const override;
     void PrintCSVHeader(std::ostream& where) const override;
-    void PrintCSVFormat(std::ostream& where) const override;
-    void PrintEpochCSVFormat(std::ostream& where) const override;
+    void PrintCSVEntry(std::ostream& where) const override;
+    void PrintEpochCSVEntry(std::ostream& where) const override;
     double value;
     double last_epoch_value;
 
@@ -127,8 +128,8 @@ class DoubleComputeStat : public BaseStat {
     void UpdateEpoch() override;
     void PrintEpoch(std::ostream& where) const override;
     void PrintCSVHeader(std::ostream& where) const override;
-    void PrintCSVFormat(std::ostream& where) const override;
-    void PrintEpochCSVFormat(std::ostream& where) const override;
+    void PrintCSVEntry(std::ostream& where) const override;
+    void PrintEpochCSVEntry(std::ostream& where) const override;
     double epoch_value;
     double cumulative_value;
 };
@@ -185,17 +186,17 @@ class Statistics {
     class HistogramStat access_latency;
     class HistogramStat interarrival_latency;
 
-    std::list<class BaseStat*> stats_list;
-    std::list<class HistogramStat*> histo_stats_list;
+    std::vector<class BaseStat*> stats_list;
+    std::vector<class HistogramStat*> histo_stats_list;
 
     void PrintStats(std::ostream& where) const;
     void UpdateEpoch(uint64_t clk);
     void PreEpochCompute(uint64_t clk);
     void PrintEpochStats(std::ostream& where) const;
     void PrintStatsCSVHeader(std::ostream& where) const;
-    void PrintStatsCSVFormat(std::ostream& where) const;
-    void PrintEpochStatsCSVFormat(std::ostream& where) const;
-    void PrintEpochHistoStatsCSVFormat(std::ostream& where) const;
+    void PrintStatsCSVRow(std::ostream& where) const;
+    void PrintEpochStatsCSVRow(std::ostream& where);
+    void PrintEpochHistoStatsCSV(std::ostream& where) const;
 
     friend std::ostream& operator<<(std::ostream& os, Statistics& stats);
 
@@ -225,6 +226,7 @@ class Statistics {
    private:
     const Config& config_;
     int channel_id_;
+    uint64_t epoch_count_;
     uint64_t last_clk_;
 };
 

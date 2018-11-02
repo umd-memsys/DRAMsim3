@@ -26,6 +26,29 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
       clk_(0) {
     total_channels_ += config_.channels;
 
+    std::string stats_txt_name = config_.output_prefix + ".txt";
+    std::string stats_csv_name = config_.output_prefix + ".csv";
+    std::string epoch_txt_name = config_.output_prefix + "epoch.txt";
+    std::string epoch_csv_name = config_.output_prefix + "epoch.csv";
+    std::string histo_csv_name = config_.output_prefix + "hist.csv";
+
+    if (config_.output_level >= 0) {
+        stats_txt_file_.open(stats_txt_name);
+        stats_csv_file_.open(stats_csv_name);
+    }
+
+    if (config_.output_level >= 1) {
+        epoch_csv_file_.open(epoch_csv_name);
+    }
+
+    // TODO Not working
+    // if (config_.output_level >= 2) {
+    //     histo_csv_file_.open(histo_csv_name);
+    // }
+
+    // if (config_.output_level >= 3) {
+    //     epoch_txt_file_.open(config_.epoch_stats_file);
+    // }
 #ifdef GENERATE_TRACE
     std::string addr_trace_name("dramsim3addr.trace");
     address_trace_.open(addr_trace_name);
@@ -33,6 +56,10 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
 }
 
 BaseDRAMSystem::~BaseDRAMSystem() {
+    stats_txt_file_.close();
+    epoch_txt_file_.close();
+    stats_csv_file_.close();
+    epoch_csv_file_.close();
 #ifdef GENERATE_TRACE
     address_trace_.close();
 #endif
@@ -44,7 +71,6 @@ void BaseDRAMSystem::RegisterCallbacks(
     read_callback_ = read_callback;
     write_callback_ = write_callback;
 }
-
 
 JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
@@ -66,9 +92,18 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
                                         write_callback_));
 #endif  // THERMAL
     }
+
+    // Only print one header at the beginning
+    if (config_.output_level >= 0) {
+        ctrls_[0]->PrintCSVHeader(stats_csv_file_);
+    }
+    if (config_.output_level >= 1) {
+        ctrls_[0]->PrintCSVHeader(epoch_csv_file_);
+    }
 }
 
 JedecDRAMSystem::~JedecDRAMSystem() {
+    // TODO deleting causes seg fault
     for (auto &&ctrl_ptr : ctrls_) {
         delete(ctrl_ptr);
     }
@@ -100,24 +135,25 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
-
     for (auto &&ctrl : ctrls_) ctrl->ClockTick();
 
     clk_++;
 
     if (clk_ % config_.epoch_period == 0) {
-        for (auto &&ctrl : ctrls_) ctrl->PrintEpochStats();
+        for (auto &&ctrl : ctrls_) {
+            ctrl->PrintEpochStats(epoch_csv_file_, histo_csv_file_);
+        }
     }
     return;
 }
 
 void JedecDRAMSystem::PrintStats() {
-    for (auto&& ctrl : ctrls_) {
-        ctrl->PrintFinalStats();
+    for (auto &&ctrl : ctrls_) {
+        ctrl->PrintFinalStats(stats_txt_file_, stats_csv_file_);
     }
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);
-#endif // THERMAL
+#endif  // THERMAL
 }
 
 IdealDRAMSystem::IdealDRAMSystem(Config &config, const std::string &output_dir,
