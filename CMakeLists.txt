@@ -37,6 +37,7 @@ add_library(dramsim3 SHARED
     src/dram_system.cc
     src/hmc.cc
     src/refresh.cc
+    src/simple_stats.cc
     src/statistics.cc
     src/timing.cc
     src/memory_system.cc

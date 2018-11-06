@@ -10,6 +10,7 @@
 #include "common.h"
 #include "refresh.h"
 #include "statistics.h"
+#include "simple_stats.h"
 
 #ifdef THERMAL
 #include "thermal.h"
@@ -47,6 +48,7 @@ class Controller {
     uint64_t clk_;
     const Config &config_;
     Statistics stats_;
+    SimpleStats simple_stats_;
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;

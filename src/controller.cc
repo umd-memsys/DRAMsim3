@@ -20,6 +20,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       clk_(0),
       config_(config),
       stats_(config_, channel),
+      simple_stats_(config_, channel_id_),
       channel_state_(config, timing, stats_),
       cmd_queue_(channel_id_, config, channel_state_, stats_),
       refresh_(config, channel_state_),
@@ -61,6 +62,7 @@ void Controller::ClockTick() {
                 std::cerr << "cmd id overflow!" << std::endl;
                 exit(1);
             } else {
+                simple_stats_.Increment("num_reads_done");
                 stats_.num_reads_done++;
                 read_callback_(it->addr);
                 it = return_queue_.erase(it);
@@ -98,6 +100,7 @@ void Controller::ClockTick() {
         } else {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
+                simple_stats_.Increment("all_bank_idle_cycles", i);
                 stats_.all_bank_idle_cycles[i]++;
                 channel_state_.rank_idle_cycles[i] += 1;
             } else {
@@ -141,6 +144,7 @@ void Controller::ClockTick() {
     ScheduleTransaction();
     clk_++;
     cmd_queue_.ClockTick();
+    simple_stats_.Increment("num_cycles");
     stats_.dramcycles++;
     return;
 }
@@ -174,6 +178,7 @@ bool Controller::AddTransaction(Transaction trans) {
     } else {
         if (trans.is_write) {
             // pretend it's done
+            simple_stats_.Increment("num_writes_done");
             stats_.num_writes_done++;
             write_callback_(trans.addr);
             in_write_buf_.insert(trans.addr);
@@ -305,6 +310,8 @@ void Controller::PrintEpochStats(std::ostream &epoch_csv,
     // }
 
     stats_.UpdateEpoch(clk_);
+    simple_stats_.Increment("num_epochs");
+    simple_stats_.PrintEpochStats(clk_, epoch_csv, hist_csv);
     return;
 }
 
@@ -327,6 +334,9 @@ void Controller::PrintFinalStats(std::ostream &stats_txt,
         thermal_calc_.PrintFinalPT(clk_);
 #endif  // THERMAL
     }
+
+    std::cout << "Simple stats:::::::::::::::" << std::endl;
+    simple_stats_.PrintStats(clk_, stats_txt, stats_csv, std::cout);
     return;
 }
 
