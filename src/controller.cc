@@ -63,7 +63,6 @@ void Controller::ClockTick() {
                 exit(1);
             } else {
                 simple_stats_.Increment("num_reads_done");
-                stats_.num_reads_done++;
                 read_callback_(it->addr);
                 it = return_queue_.erase(it);
             }
@@ -86,7 +85,7 @@ void Controller::ClockTick() {
             if (second_cmd.IsValid()) {
                 if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
                     IssueCommand(second_cmd);
-                    stats_.hbm_dual_cmds++;
+                    simple_stats_.Increment("hbm_dual_cmds");
                 }
             }
         }
@@ -95,15 +94,16 @@ void Controller::ClockTick() {
     // power updates pt 1
     for (int i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
-            // stats_.sref_energy[channel_id_][i]++;
+            simple_stats_.IncrementVec("sref_cycles", i);
             stats_.sref_cycles[i]++;
         } else {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
-                simple_stats_.Increment("all_bank_idle_cycles", i);
+                simple_stats_.IncrementVec("all_bank_idle_cycles", i);
                 stats_.all_bank_idle_cycles[i]++;
                 channel_state_.rank_idle_cycles[i] += 1;
             } else {
+                simple_stats_.IncrementVec("rank_active_cycles", i);
                 stats_.active_cycles[i]++;
                 // reset
                 channel_state_.rank_idle_cycles[i] = 0;
@@ -145,7 +145,6 @@ void Controller::ClockTick() {
     clk_++;
     cmd_queue_.ClockTick();
     simple_stats_.Increment("num_cycles");
-    stats_.dramcycles++;
     return;
 }
 
@@ -179,7 +178,6 @@ bool Controller::AddTransaction(Transaction trans) {
         if (trans.is_write) {
             // pretend it's done
             simple_stats_.Increment("num_writes_done");
-            stats_.num_writes_done++;
             write_callback_(trans.addr);
             in_write_buf_.insert(trans.addr);
             if (is_unified_queue_) {
@@ -242,8 +240,7 @@ void Controller::ScheduleTransaction() {
     }
 }
 
-void Controller::IssueCommand(const Command &tmp_cmd) {
-    Command cmd = Command(tmp_cmd.cmd_type, tmp_cmd.addr, tmp_cmd.hex_addr);
+void Controller::IssueCommand(const Command &cmd) {
 #ifdef DEBUG_OUTPUT
     std::cout << std::left << std::setw(8) << clk_ << " " << cmd << std::endl;
 #endif  // DEBUG_OUTPUT
@@ -274,6 +271,7 @@ void Controller::IssueCommand(const Command &tmp_cmd) {
         pending_queue_.erase(it);
     }
     channel_state_.UpdateTimingAndStates(cmd, clk_);
+    UpdateCommandStats(cmd);
 }
 
 Command Controller::TransToCommand(const Transaction &trans) {
@@ -291,7 +289,7 @@ Command Controller::TransToCommand(const Transaction &trans) {
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
 
-void Controller::PrintCSVHeader(std::ostream& epoch_csv) {
+void Controller::PrintCSVHeader(std::ostream &epoch_csv) {
     if (config_.output_level >= 1) {
         stats_.PrintStatsCSVHeader(epoch_csv);
     }
@@ -336,8 +334,41 @@ void Controller::PrintFinalStats(std::ostream &stats_txt,
     }
 
     std::cout << "Simple stats:::::::::::::::" << std::endl;
-    simple_stats_.PrintStats(clk_, stats_txt, stats_csv, std::cout);
+    simple_stats_.PrintFinalStats(clk_, stats_txt, stats_csv, std::cout);
     return;
+}
+
+void Controller::UpdateCommandStats(const Command &cmd) {
+    switch (cmd.cmd_type) {
+        case CommandType::READ:
+        case CommandType::READ_PRECHARGE:
+            simple_stats_.Increment("num_read_cmds");
+            break;
+        case CommandType::WRITE:
+        case CommandType::WRITE_PRECHARGE:
+            simple_stats_.Increment("num_write_cmds");
+            break;
+        case CommandType::ACTIVATE:
+            simple_stats_.Increment("num_act_cmds");
+            break;
+        case CommandType::PRECHARGE:
+            simple_stats_.Increment("num_pre_cmds");
+            break;
+        case CommandType::REFRESH:
+            simple_stats_.Increment("num_ref_cmds");
+            break;
+        case CommandType::REFRESH_BANK:
+            simple_stats_.Increment("num_refb_cmds");
+            break;
+        case CommandType::SREF_ENTER:
+            simple_stats_.Increment("num_srefe_cmds");
+            break;
+        case CommandType::SREF_EXIT:
+            simple_stats_.Increment("num_srefx_cmds");
+            break;
+        default:
+            AbruptExit(__FILE__, __LINE__);
+    }
 }
 
 }  // namespace dramsim3

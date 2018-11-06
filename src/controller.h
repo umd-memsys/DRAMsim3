@@ -85,6 +85,7 @@ class Controller {
     void ScheduleTransaction();
     void IssueCommand(const Command &tmp_cmd);
     Command TransToCommand(const Transaction &trans);
+    void UpdateCommandStats(const Command &cmd);
 };
 }  // namespace dramsim3
 #endif

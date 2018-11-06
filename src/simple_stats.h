@@ -18,14 +18,14 @@ class SimpleStats {
     void Increment(const std::string name);
 
     // incrementing for vec counter
-    void Increment(const std::string name, int pos);
+    void IncrementVec(const std::string name, int pos);
 
     // Epoch update
     void PrintEpochStats(uint64_t clk, std::ostream& csv_output,
                          std::ostream& histo_output);
 
     // Final statas output
-    void PrintStats(uint64_t clk, std::ostream& txt_output,
+    void PrintFinalStats(uint64_t clk, std::ostream& txt_output,
                     std::ostream& csv_output, std::ostream& hist_output);
 
    private:
@@ -39,7 +39,8 @@ class SimpleStats {
                      std::string description, std::string part_name,
                      int vec_len);
 
-    void UpdateStats(bool epoch);
+    void UpdateEpochStats();
+    void UpdateFinalStats();
 
     const Config& config_;
     uint64_t last_clk_;
@@ -68,6 +69,10 @@ class SimpleStats {
     std::vector<std::string> vec_double_names_;
     std::unordered_map<std::string, std::vector<double> > vec_doubles_;
     std::unordered_map<std::string, std::vector<double> > last_vec_doubles_;
+
+    // calculated stats, similar to double, but not the same
+    std::vector<std::string> calculated_names_;
+    std::unordered_map<std::string, double> calculated_;
 };
 
 }  // namespace dramsim3

@@ -359,7 +359,7 @@ void Statistics::PreEpochCompute(uint64_t clk) {
     for (int i = 0; i < config_.ranks; i++) {
         act_stb_energy[i].epoch_value =
             (active_cycles[i].Count() - active_cycles[i].LastCount()) *
-            config_.act_energy_inc;
+            config_.act_stb_energy_inc;
         pre_stb_energy[i].epoch_value = (all_bank_idle_cycles[i].Count() -
                                          all_bank_idle_cycles[i].LastCount()) *
                                         config_.pre_stb_energy_inc;
