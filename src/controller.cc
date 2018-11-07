@@ -62,6 +62,7 @@ void Controller::ClockTick() {
                 std::cerr << "cmd id overflow!" << std::endl;
                 exit(1);
             } else {
+                simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
                 simple_stats_.Increment("num_reads_done");
                 read_callback_(it->addr);
                 it = return_queue_.erase(it);
@@ -161,6 +162,7 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
     stats_.interarrival_latency.AddValue(clk_ - last_trans_clk_);
+    simple_stats_.AddValue("interarrival_latency", clk_ - last_trans_clk_);
     last_trans_clk_ = clk_;
 
     // check if already in write buffer, can return immediately
@@ -270,8 +272,9 @@ void Controller::IssueCommand(const Command &cmd) {
         }
         pending_queue_.erase(it);
     }
-    channel_state_.UpdateTimingAndStates(cmd, clk_);
+    // NOTE: must update stats before update states (to get correct row hits)
     UpdateCommandStats(cmd);
+    channel_state_.UpdateTimingAndStates(cmd, clk_);
 }
 
 Command Controller::TransToCommand(const Transaction &trans) {
@@ -343,10 +346,18 @@ void Controller::UpdateCommandStats(const Command &cmd) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
             simple_stats_.Increment("num_read_cmds");
+            if (channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(),
+                                           cmd.Bank()) != 0) {
+                simple_stats_.Increment("num_read_row_hits");
+            }
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
             simple_stats_.Increment("num_write_cmds");
+            if (channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(),
+                                           cmd.Bank()) != 0) {
+                simple_stats_.Increment("num_write_row_hits");
+            }
             break;
         case CommandType::ACTIVATE:
             simple_stats_.Increment("num_act_cmds");

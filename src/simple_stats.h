@@ -20,25 +20,36 @@ class SimpleStats {
     // incrementing for vec counter
     void IncrementVec(const std::string name, int pos);
 
+    // add historgram value
+    void AddValue(const std::string name, const int value);
+
     // Epoch update
     void PrintEpochStats(uint64_t clk, std::ostream& csv_output,
                          std::ostream& histo_output);
 
     // Final statas output
     void PrintFinalStats(uint64_t clk, std::ostream& txt_output,
-                    std::ostream& csv_output, std::ostream& hist_output);
+                         std::ostream& csv_output, std::ostream& hist_output);
 
    private:
-    uint64_t CounterEpoch(const std::string name) {
-        return counters_[name] - last_counters_[name];
-    }
-
     void InitStat(std::string name, std::string stat_type,
                   std::string description);
     void InitVecStat(std::string name, std::string stat_type,
                      std::string description, std::string part_name,
                      int vec_len);
+    void InitHistoStat(std::string name, std::string description, int start_val,
+                       int end_val, int num_bins);
 
+    uint64_t CounterEpoch(const std::string name) {
+        return counters_[name] - last_counters_[name];
+    }
+
+    uint64_t VecCounterEpoch(const std::string name, const int i) {
+        return vec_counters_[name][i] - last_vec_counters_[name][i];
+    }
+
+    double GetHistoAvg(const std::string name);
+    double GetHistoEpochAvg(const std::string name);
     void UpdateEpochStats();
     void UpdateFinalStats();
 
@@ -64,15 +75,23 @@ class SimpleStats {
     // double type counterparts
     std::vector<std::string> double_names_;
     std::unordered_map<std::string, double> doubles_;
-    std::unordered_map<std::string, double> last_doubles_;
 
     std::vector<std::string> vec_double_names_;
     std::unordered_map<std::string, std::vector<double> > vec_doubles_;
-    std::unordered_map<std::string, std::vector<double> > last_vec_doubles_;
 
     // calculated stats, similar to double, but not the same
     std::vector<std::string> calculated_names_;
     std::unordered_map<std::string, double> calculated_;
+
+    // histogram stats
+    std::vector<std::string> histo_names_;
+    std::unordered_map<std::string, std::vector<std::string> > histo_headers_;
+
+    std::unordered_map<std::string, std::pair<int, int> > histo_bounds_;
+    std::unordered_map<std::string, int> bin_widths_;
+    std::unordered_map<std::string, std::unordered_map<int, uint64_t> > histo_counts_;
+    std::unordered_map<std::string, std::unordered_map<int, uint64_t> > last_histo_counts_;
+    std::unordered_map<std::string, std::vector<uint64_t> > histo_bins_;
 };
 
 }  // namespace dramsim3
