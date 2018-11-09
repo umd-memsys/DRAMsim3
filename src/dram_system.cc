@@ -21,7 +21,7 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
       config_(config),
       timing_(config_),
 #ifdef THERMAL
-      thermal_calc_(config_, stats_),
+      thermal_calc_(config_),
 #endif  // THERMAL
       clk_(0) {
     total_channels_ += config_.channels;
@@ -143,6 +143,16 @@ void JedecDRAMSystem::ClockTick() {
         for (auto &&ctrl : ctrls_) {
             ctrl->PrintEpochStats(epoch_csv_file_, histo_csv_file_);
         }
+#ifdef THERMAL
+        for (int c = 0; c < config_.channels; c++) {
+            for (int r = 0; r < config_.ranks; r++) {
+                double bg_energy = ctrls_[c]->RankBackgroundEnergy(r);
+                thermal_calc_.UpdateBackgroundEnergy(c, r, bg_energy);
+            }
+        }
+        thermal_calc_.UpdateEpoch(clk_);
+        // TODO printing ... 
+#endif  // THERMAL
     }
     return;
 }
@@ -152,6 +162,14 @@ void JedecDRAMSystem::PrintStats() {
         ctrl->PrintFinalStats(stats_txt_file_, stats_csv_file_);
     }
 #ifdef THERMAL
+    std::cout << "updating final thermal stats!" << std::endl;
+    // for (int c = 0; c < config_.channels; c++) {
+    //     for (int r = 0; r < config_.ranks; r++) {
+    //         double bg_energy = ctrls_[c]->RankBackgroundEnergy(r);
+    //         thermal_calc_.UpdateBackgroundEnergy(c, r, bg_energy);
+    //     }
+    // }
+    std::cout << "print final thermal stats!" << std::endl;
     thermal_calc_.PrintFinalPT(clk_);
 #endif  // THERMAL
 }

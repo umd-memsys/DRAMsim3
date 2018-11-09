@@ -44,6 +44,10 @@ class Controller {
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
 
+#ifdef THERMAL
+    double RankBackgroundEnergy(const int rank) { return simple_stats_.RankBackgroundEnergy(rank); }
+#endif  // THERMAL
+
    private:
     uint64_t clk_;
     const Config &config_;

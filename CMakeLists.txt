@@ -51,7 +51,10 @@ if (THERMAL)
     # YOU need to build superlu on your own. Do the following:
     # git submodule update --init
     # cd ext/SuperLU_MT_3.1 && make lib
-    find_library(SUPERLU superlu_mt_OPENMP PATH_SUFFIXES ext/SuperLU_MT_3.1/lib/)
+    find_library(SUPERLU
+        NAME superlu_mt_OPENMP libsuperlu_mt_OPENMP
+        HINTS ${PROJECT_SOURCE_DIR}/ext/SuperLU_MT_3.1/lib/
+    )
 
     target_link_libraries(dramsim3
         PRIVATE ${SUPERLU} f77blas atlas m ${OpenMP_C_FLAGS}

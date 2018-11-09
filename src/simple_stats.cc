@@ -119,6 +119,12 @@ void SimpleStats::PrintFinalStats(uint64_t clk, std::ostream& txt_output,
     }
 }
 
+double SimpleStats::RankBackgroundEnergy(const int rank) const {
+    return vec_doubles_.at("act_stb_energy")[rank] +
+           vec_doubles_.at("pre_stb_energy")[rank] +
+           vec_doubles_.at("sref_energy")[rank];
+}
+
 void SimpleStats::InitStat(std::string name, std::string stat_type,
                            std::string description) {
     header_descs_.emplace(name, description);
@@ -344,6 +350,7 @@ void SimpleStats::UpdateFinalStats() {
         vec_doubles_["sref_energy"][i] = sref_energy;
         background_energy += act_stb + pre_stb + sref_energy;
     }
+    std::cout << "final bg " << background_energy << std::endl;
     for (const auto& name : vec_double_names_) {
         const auto& vec = vec_doubles_[name];
         for (size_t i = 0; i < vec.size(); i++) {

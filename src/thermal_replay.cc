@@ -7,8 +7,8 @@ using namespace dramsim3;
 ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file,
                              std::string output_dir, uint64_t repeat)
     : config_(config_file, output_dir),
-      stats_(config_),
-      thermal_calc_(config_, stats_),
+      stats_(config_, 0),
+      thermal_calc_(config_),
       repeat_(repeat),
       last_clk_(0) {
     // Initialize bank states, for power calculation we only need to know
@@ -56,7 +56,7 @@ void ThermalReplay::Run() {
             clk_offset = timed_commands_[j].first;
             Command &cmd = timed_commands_[j].second;
             ProcessCMD(cmd, clk + clk_offset);
-            thermal_calc_.UpdatePower(cmd, clk + clk_offset);
+            thermal_calc_.UpdateCMDPower(0, cmd, clk + clk_offset);
         }
         clk += clk_offset;
 
@@ -118,12 +118,13 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
     uint64_t past_clks = clk - last_clk_;
     for (int i = 0; i < config_.channels; i++) {
         for (int j = 0; j < config_.ranks; j++) {
+            // TODO these NEEDs to be 2D stats
             if (IsRankActive(i, j)) {
-                stats_.active_cycles[i][j] =
-                    (stats_.active_cycles[i][j].Count() + past_clks);
+                stats_.active_cycles[j] =
+                    (stats_.active_cycles[j].Count() + past_clks);
             } else {
-                stats_.all_bank_idle_cycles[i][j] =
-                    (stats_.all_bank_idle_cycles[i][j].Count() + past_clks);
+                stats_.all_bank_idle_cycles[j] =
+                    (stats_.all_bank_idle_cycles[j].Count() + past_clks);
             }
         }
     }

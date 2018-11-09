@@ -6,7 +6,7 @@ namespace dramsim3 {
 
 #ifdef THERMAL
 Controller::Controller(int channel, const Config &config, const Timing &timing,
-                       Statistics &stats, ThermalCalculator &thermal_calc,
+                       ThermalCalculator &thermal_calc,
                        std::function<void(uint64_t)> read_callback,
                        std::function<void(uint64_t)> write_callback)
 #else
@@ -24,10 +24,10 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       channel_state_(config, timing, stats_),
       cmd_queue_(channel_id_, config, channel_state_, stats_),
       refresh_(config, channel_state_),
-      is_unified_queue_(config.unified_queue),
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
 #endif  // THERMAL
+      is_unified_queue_(config.unified_queue),
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
@@ -251,8 +251,7 @@ void Controller::IssueCommand(const Command &cmd) {
 #endif  // GENERATE_TRACE
 #ifdef THERMAL
     // add channel in, only needed by thermal module
-    cmd.addr.channel = channel_id_;
-    thermal_calc_.UpdatePower(cmd, clk_);
+    thermal_calc_.UpdateCMDPower(channel_id_, cmd, clk_);
 #endif  // THERMAL
     // if read/write, update pending queue and return queue
     if (cmd.IsReadWrite()) {
@@ -331,13 +330,19 @@ void Controller::PrintFinalStats(std::ostream &stats_txt,
         stats_txt << "-------------------------------------------" << std::endl;
         stats_.PrintStats(stats_txt);
         stats_.PrintStatsCSVRow(stats_csv);
-#ifdef THERMAL
-        thermal_calc_.PrintFinalPT(clk_);
-#endif  // THERMAL
     }
-
     std::cout << "Simple stats:::::::::::::::" << std::endl;
     simple_stats_.PrintFinalStats(clk_, stats_txt, stats_csv, std::cout);
+
+#ifdef THERMAL
+        // thermal_calc_.PrintFinalPT(clk_);
+    for (int r = 0; r < config_.ranks; r++) {
+        double bg_energy = RankBackgroundEnergy(r);
+        std::cout << "rank " << r << " bg " << bg_energy << std::endl;
+        thermal_calc_.UpdateBackgroundEnergy(channel_id_, r, bg_energy);
+    }
+#endif  // THERMAL
+
     return;
 }
 

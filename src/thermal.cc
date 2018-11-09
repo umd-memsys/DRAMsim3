@@ -22,14 +22,14 @@ namespace dramsim3 {
 
 std::function<Address(const Address &addr)> GetPhyAddress;
 
-ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
+ThermalCalculator::ThermalCalculator(const Config &config)
     : time_iter0(10),
       config_(config),
-      stats_(stats),
+      // stats_(stats),
       sample_id(0),
-      save_clk(0),
       logic_max_power_(config_.logic_max_power),
-      logic_bg_power_(config_.logic_bg_power) {
+      logic_bg_power_(config_.logic_bg_power),
+      background_energy_(config_.channels, std::vector<double>(config_.ranks, 0)) {
     // Initialize dimX, dimY, numP
     // The dimension of the chip is determined such that the floorplan is
     // as square as possilbe. If a square floorplan cannot be reached,
@@ -118,7 +118,8 @@ ThermalCalculator::ThermalCalculator(const Config &config, Statistics &stats)
 
     // a quick preview of max temperature for each layer of each epoch
     epoch_max_temp_file_csv_.open(config_.epoch_max_temp_file_csv);
-    epoch_max_temp_file_csv_ << "layer,power,max_temp,bw_usage,epoch_time"
+    // epoch_max_temp_file_csv_ << "layer,power,max_temp,bw_usage,epoch_time"
+    epoch_max_temp_file_csv_ << "layer,max_temp,epoch_time"
                              << std::endl;
 
     // print header to csv files
@@ -349,13 +350,13 @@ std::pair<std::vector<int>, std::vector<int>> ThermalCalculator::MapToXY(
     return std::make_pair(x, y);
 }
 
-void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd,
+void ThermalCalculator::LocationMappingANDaddEnergy(const int channel, const Command &cmd,
                                                     int bank0, int row0,
                                                     int caseID_,
                                                     double add_energy) {
     // get vault x y first
     int vault_id_x, vault_id_y;
-    std::tie(vault_id_x, vault_id_y) = MapToVault(cmd.Channel());
+    std::tie(vault_id_x, vault_id_y) = MapToVault(channel);
 
     // get bank id x y
     int bank_id_x, bank_id_y;
@@ -365,7 +366,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd,
     auto xy = MapToXY(cmd, vault_id_x, vault_id_y, bank_id_x, bank_id_y);
     auto &x = xy.first;
     auto &y = xy.second;
-    int z = MapToZ(cmd.Channel(), cmd.Bank());
+    int z = MapToZ(channel, cmd.Bank());
 
     int z_offset = z * dimX * dimY;
     double energy = add_energy / config_.device_width;
@@ -379,7 +380,8 @@ void ThermalCalculator::LocationMappingANDaddEnergy(const Command &cmd,
     }
 }
 
-void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd,
+void ThermalCalculator::LocationMappingANDaddEnergy_RF(
+    const int channel, const Command &cmd,
                                                        int bank0, int row0,
                                                        int caseID_,
                                                        double add_energy) {
@@ -395,13 +397,13 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd,
     new_addr.bank = bank_id;
 
     int vault_id_x, vault_id_y;
-    std::tie(vault_id_x, vault_id_y) = MapToVault(cmd.Channel());
+    std::tie(vault_id_x, vault_id_y) = MapToVault(channel);
 
     // get bank id x y
     int bank_id_x, bank_id_y;
     std::tie(bank_id_x, bank_id_y) = MapToBank(bankgroup_id, bank_id);
 
-    int z = MapToZ(cmd.Channel(), bank_id);
+    int z = MapToZ(channel, bank_id);
 
     Address phy_addr = GetPhyAddress(new_addr);  // actual row after mapping
     // calculate x y z
@@ -429,7 +431,7 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const Command &cmd,
 void ThermalCalculator::UpdatePowerMaps(double add_energy, bool trans,
                                         uint64_t clk) {
     auto &p_map = trans ? cur_Pmap : accu_Pmap;
-    double period = trans ? static_cast<double>(config_.power_epoch_period)
+    double period = trans ? static_cast<double>(config_.epoch_period)
                           : static_cast<double>(clk);
     for (int j = 0; j < num_case; j++) {
         // universally update power map
@@ -437,17 +439,17 @@ void ThermalCalculator::UpdatePowerMaps(double add_energy, bool trans,
             p_map[j][i] += add_energy;
         }
         // update logic power map
-        UpdateLogicPower();
+        // UpdateLogicPower();
         for (int i = dimX * dimY * (numP - 1); i < dimX * dimY * numP; i++) {
             p_map[j][i] += avg_logic_power_ / dimX / dimY * period;
         }
     }
 }
 
-void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
-    save_clk = clk;
+void ThermalCalculator::UpdateCMDPower(const int channel, const Command &cmd,
+                                       const uint64_t clk) {
     int rank = cmd.Rank();
-    int channel = cmd.Channel();
+    // int channel = cmd.Channel();
     int case_id;
     double device_scale;
     if (config_.IsHMC() || config_.IsHBM()) {
@@ -470,7 +472,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
             energy = config_.ref_energy_inc / config_.numRowRefresh /
                      config_.banks / config_.numYgrids;
             for (int ir = row_s; ir < row_s + config_.numRowRefresh; ir++) {
-                LocationMappingANDaddEnergy_RF(cmd, ib, ir, case_id,
+                LocationMappingANDaddEnergy_RF(channel, cmd, ib, ir, case_id,
                                                energy / 1000.0 / device_scale);
             }
         }
@@ -484,7 +486,7 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
         energy =
             config_.refb_energy_inc / config_.numRowRefresh / config_.numYgrids;
         for (int ir = row_s; ir < row_s + config_.numRowRefresh; ir++) {
-            LocationMappingANDaddEnergy_RF(cmd, ib, ir, case_id,
+            LocationMappingANDaddEnergy_RF(channel, cmd, ib, ir, case_id,
                                            energy / 1000.0 / device_scale);
         }
     } else {
@@ -506,74 +508,112 @@ void ThermalCalculator::UpdatePower(const Command &cmd, uint64_t clk) {
         }
         if (energy > 0) {
             energy /= config_.BL;
-            LocationMappingANDaddEnergy(cmd, -1, -1, case_id,
+            LocationMappingANDaddEnergy(channel, cmd, -1, -1, case_id,
                                         energy / 1000.0 / device_scale);
         }
     }
+    return;
 
     // print transient power and temperature
-    if (clk > static_cast<uint64_t>(sample_id + 1) *
-                  static_cast<uint64_t>(config_.power_epoch_period)) {
-        // add the background energy
-        if (config_.IsHMC() || config_.IsHBM()) {
-            double pre_stb_sum =
-                Statistics::Stats2DCumuSum(stats_.pre_stb_energy);
-            double act_stb_sum =
-                Statistics::Stats2DCumuSum(stats_.act_stb_energy);
-            double pre_pd_sum =
-                Statistics::Stats2DCumuSum(stats_.pre_pd_energy);
-            double sref_sum = Statistics::Stats2DCumuSum(stats_.sref_energy);
-            double extra_energy =
-                sref_sum + pre_stb_sum + act_stb_sum + pre_pd_sum -
-                sref_energy_prev[0] - pre_stb_energy_prev[0] -
-                act_stb_energy_prev[0] - pre_pd_energy_prev[0];
-            extra_energy = extra_energy / (dimX * dimY * (numP - 1));
-            sref_energy_prev[0] = sref_sum;
-            pre_stb_energy_prev[0] = pre_stb_sum;
-            act_stb_energy_prev[0] = act_stb_sum;
-            pre_pd_energy_prev[0] = pre_pd_sum;
-            UpdatePowerMaps(extra_energy / 1000 / device_scale, true,
-                            config_.power_epoch_period);
-        } else {
-            int case_id;
-            for (int jch = 0; jch < config_.channels; jch++) {
-                for (int jrk = 0; jrk < config_.ranks; jrk++) {
-                    case_id = jch * config_.ranks + jrk;  // case_id is
-                                                          // determined by the
-                                                          // channel and rank
-                                                          // index
-                    double extra_energy =
-                        stats_.sref_energy[jch][jrk].cumulative_value +
-                        stats_.pre_stb_energy[jch][jrk].cumulative_value +
-                        stats_.act_stb_energy[jch][jrk].cumulative_value +
-                        stats_.pre_pd_energy[jch][jrk].cumulative_value -
-                        sref_energy_prev[case_id] -
-                        pre_stb_energy_prev[case_id] -
-                        act_stb_energy_prev[case_id] -
-                        pre_pd_energy_prev[case_id];
-                    extra_energy = extra_energy / (dimX * dimY * numP);
-                    sref_energy_prev[case_id] =
-                        stats_.sref_energy[jch][jrk].cumulative_value;
-                    pre_stb_energy_prev[case_id] =
-                        stats_.pre_stb_energy[jch][jrk].cumulative_value;
-                    act_stb_energy_prev[case_id] =
-                        stats_.act_stb_energy[jch][jrk].cumulative_value;
-                    pre_pd_energy_prev[case_id] =
-                        stats_.pre_pd_energy[jch][jrk].cumulative_value;
-                    for (int i = 0; i < dimX * dimY * numP; i++) {
-                        cur_Pmap[case_id][i] +=
-                            extra_energy / 1000 / device_scale;
-                    }
+    // if (clk > static_cast<uint64_t>(sample_id + 1) *
+    //               static_cast<uint64_t>(config_.epoch_period)) {
+    //     // add the background energy
+    //     if (config_.IsHMC() || config_.IsHBM()) {
+    //         double pre_stb_sum =
+    //             Statistics::Stats2DCumuSum(stats_.pre_stb_energy);
+    //         double act_stb_sum =
+    //             Statistics::Stats2DCumuSum(stats_.act_stb_energy);
+    //         double pre_pd_sum =
+    //             Statistics::Stats2DCumuSum(stats_.pre_pd_energy);
+    //         double sref_sum = Statistics::Stats2DCumuSum(stats_.sref_energy);
+    //         double extra_energy =
+    //             sref_sum + pre_stb_sum + act_stb_sum + pre_pd_sum -
+    //             sref_energy_prev[0] - pre_stb_energy_prev[0] -
+    //             act_stb_energy_prev[0] - pre_pd_energy_prev[0];
+    //         extra_energy = extra_energy / (dimX * dimY * (numP - 1));
+    //         sref_energy_prev[0] = sref_sum;
+    //         pre_stb_energy_prev[0] = pre_stb_sum;
+    //         act_stb_energy_prev[0] = act_stb_sum;
+    //         pre_pd_energy_prev[0] = pre_pd_sum;
+    //         UpdatePowerMaps(extra_energy / 1000 / device_scale, true,
+    //                         config_.epoch_period);
+    //     } else {
+    //         int case_id;
+    //         for (int jch = 0; jch < config_.channels; jch++) {
+    //             for (int jrk = 0; jrk < config_.ranks; jrk++) {
+    //                 case_id = jch * config_.ranks + jrk;  // case_id is
+    //                                                       // determined by
+    //                                                       the
+    //                                                       // channel and rank
+    //                                                       // index
+    //                 double extra_energy =
+    //                     stats_.sref_energy[jch][jrk].cumulative_value +
+    //                     stats_.pre_stb_energy[jch][jrk].cumulative_value +
+    //                     stats_.act_stb_energy[jch][jrk].cumulative_value +
+    //                     stats_.pre_pd_energy[jch][jrk].cumulative_value -
+    //                     sref_energy_prev[case_id] -
+    //                     pre_stb_energy_prev[case_id] -
+    //                     act_stb_energy_prev[case_id] -
+    //                     pre_pd_energy_prev[case_id];
+    //                 extra_energy = extra_energy / (dimX * dimY * numP);
+    //                 sref_energy_prev[case_id] =
+    //                     stats_.sref_energy[jch][jrk].cumulative_value;
+    //                 pre_stb_energy_prev[case_id] =
+    //                     stats_.pre_stb_energy[jch][jrk].cumulative_value;
+    //                 act_stb_energy_prev[case_id] =
+    //                     stats_.act_stb_energy[jch][jrk].cumulative_value;
+    //                 pre_pd_energy_prev[case_id] =
+    //                     stats_.pre_pd_energy[jch][jrk].cumulative_value;
+    //                 for (int i = 0; i < dimX * dimY * numP; i++) {
+    //                     cur_Pmap[case_id][i] +=
+    //                         extra_energy / 1000 / device_scale;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     PrintTransPT(clk);
+    //     for (size_t i = 0; i < cur_Pmap.size(); i++) {
+    //         std::fill_n(cur_Pmap[i].begin(), numP * dimX * dimY, 0.0);
+    //     }
+    //     sample_id++;
+    // }
+}
+
+void ThermalCalculator::UpdateBackgroundEnergy(const int channel,
+                                               const int rank,
+                                               const double energy) {
+    background_energy_[channel][rank] = energy;
+}
+
+void ThermalCalculator::UpdateEpoch(uint64_t clk) {
+    if (config_.IsHBM() || config_.IsHMC()) {
+        double bg_energy = 0;
+        for (const auto &vec_rank_energy : background_energy_) {
+            for (const auto &rank_energy : vec_rank_energy) {
+                bg_energy += rank_energy;
+            }
+        }
+        bg_energy = bg_energy / (dimX * dimY * (numP - 1));
+        UpdatePowerMaps(bg_energy / 1000, true, config_.epoch_period);
+    } else {
+        double num_devices = static_cast<double>(config_.devices_per_rank);
+        for (int i = 0; i < config_.channels; i++) {
+            for (int j = 0; j < config_.ranks; j++) {
+                int case_id = i * config_.ranks + j;
+                double bg_energy =
+                    background_energy_[i][j] / (dimX * dimY * numP);
+                for (int k = 0; k < dimX * dimY * numP; i++) {
+                    cur_Pmap[case_id][k] += bg_energy / 1000 / num_devices;
                 }
             }
         }
-
-        PrintTransPT(clk);
-        for (size_t i = 0; i < cur_Pmap.size(); i++) {
-            std::fill_n(cur_Pmap[i].begin(), numP * dimX * dimY, 0.0);
-        }
-        sample_id++;
     }
+
+    PrintTransPT(clk);
+    for (size_t i = 0; i < cur_Pmap.size(); i++) {
+        std::fill_n(cur_Pmap[i].begin(), numP * dimX * dimY, 0.0);
+    }
+    sample_id += 1;
 }
 
 void ThermalCalculator::PrintTransPT(uint64_t clk) {
@@ -583,9 +623,9 @@ void ThermalCalculator::PrintTransPT(uint64_t clk) {
         double maxT = 0;
         for (int layer = 0; layer < numP; layer++) {
             double maxT_layer = GetMaxTofCaseLayer(T_trans, ir, layer);
-            epoch_max_temp_file_csv_
-                << layer << "," << stats_.average_power.epoch_value << ","
-                << maxT_layer << "," << bw_usage_ << "," << ms << std::endl;
+            epoch_max_temp_file_csv_ << layer << "," << maxT_layer << "," << ms << std::endl;
+                // << layer << "," << stats_.average_power.epoch_value << ","
+                // << maxT_layer << "," << bw_usage_ << "," << ms << std::endl;
             std::cout << "MaxT of case " << ir << " in layer " << layer
                       << " is " << maxT_layer << " [C]\n";
             maxT = maxT > maxT_layer ? maxT : maxT_layer;
@@ -595,56 +635,80 @@ void ThermalCalculator::PrintTransPT(uint64_t clk) {
         // only outputs full file when output level >= 2
         if (config_.output_level >= 2) {
             PrintCSV_trans(epoch_temperature_file_csv_, cur_Pmap, T_trans, ir,
-                           config_.power_epoch_period);
+                           config_.epoch_period);
         }
     }
 }
 
 void ThermalCalculator::PrintFinalPT(uint64_t clk) {
-    double device_scale = (double)config_.devices_per_rank;
-
-    if (config_.IsHMC() || config_.IsHBM()) device_scale = 1;
-
-    // first add the background energy
-    if (config_.IsHMC() || config_.IsHBM()) {
-        double extra_energy =
-            (Statistics::Stats2DCumuSum(stats_.act_stb_energy) +
-             Statistics::Stats2DCumuSum(stats_.pre_stb_energy) +
-             Statistics::Stats2DCumuSum(stats_.sref_energy) +
-             Statistics::Stats2DCumuSum(stats_.pre_pd_energy)) /
-            (dimX * dimY * (numP - 1));
-        std::cout << "background energy " << extra_energy * (dimX * dimY * numP)
-                  << std::endl;
-        UpdatePowerMaps(extra_energy / 1000 / device_scale, false, clk);
+    // double device_scale = (double)config_.devices_per_rank;
+    // if (config_.IsHMC() || config_.IsHBM()) device_scale = 1;
+    // // first add the background energy
+    // if (config_.IsHMC() || config_.IsHBM()) {
+    //     double extra_energy =
+    //         (Statistics::Stats2DCumuSum(stats_.act_stb_energy) +
+    //          Statistics::Stats2DCumuSum(stats_.pre_stb_energy) +
+    //          Statistics::Stats2DCumuSum(stats_.sref_energy) +
+    //          Statistics::Stats2DCumuSum(stats_.pre_pd_energy)) /
+    //         (dimX * dimY * (numP - 1));
+    //     std::cout << "background energy " << extra_energy * (dimX * dimY *
+    //     numP)
+    //               << std::endl;
+    //     UpdatePowerMaps(extra_energy / 1000 / device_scale, false, clk);
+    // } else {
+    //     double extra_energy;
+    //     int case_id;
+    //     for (int jch = 0; jch < config_.channels; jch++) {
+    //         for (int jrk = 0; jrk < config_.ranks; jrk++) {
+    //             case_id =
+    //                 jch * config_.ranks +
+    //                 jrk;  // case_id is determined by the channel and rank
+    //                 index
+    //             extra_energy =
+    //                 (stats_.sref_energy[jch][jrk].cumulative_value +
+    //                  stats_.pre_stb_energy[jch][jrk].cumulative_value +
+    //                  stats_.act_stb_energy[jch][jrk].cumulative_value +
+    //                  stats_.pre_pd_energy[jch][jrk].cumulative_value) /
+    //                 (dimX * dimY * numP);
+    //             std::cout << "background energy "
+    //                       << extra_energy * (dimX * dimY * numP) <<
+    //                       std::endl;
+    //             double sum_energy = 0.0;
+    //             for (int i = 0; i < dimX * dimY * numP; i++) {
+    //                 sum_energy += accu_Pmap[case_id][i];
+    //             }
+    //             std::cout << "other energy "
+    //                       << sum_energy * 1000.0 * device_scale << std::endl;
+    //             for (int i = 0; i < dimX * dimY * numP; i++) {
+    //                 accu_Pmap[case_id][i] += extra_energy / 1000 /
+    //                 device_scale;
+    //             }
+    //         }
+    //     }
+    // }
+    if (config_.IsHBM() || config_.IsHMC()) {
+        double bg_energy = 0;
+        for (const auto &vec_rank_energy : background_energy_) {
+            for (const auto &rank_energy : vec_rank_energy) {
+                bg_energy += rank_energy;
+            }
+        }
+        bg_energy /= (dimX * dimY * (numP - 1)); 
+        std::cout << "thermal calc bg energy " << bg_energy << std::endl;
+        UpdatePowerMaps(bg_energy / 1000, false, clk);
     } else {
-        double extra_energy;
-        int case_id;
-        for (int jch = 0; jch < config_.channels; jch++) {
-            for (int jrk = 0; jrk < config_.ranks; jrk++) {
-                case_id =
-                    jch * config_.ranks +
-                    jrk;  // case_id is determined by the channel and rank index
-                extra_energy =
-                    (stats_.sref_energy[jch][jrk].cumulative_value +
-                     stats_.pre_stb_energy[jch][jrk].cumulative_value +
-                     stats_.act_stb_energy[jch][jrk].cumulative_value +
-                     stats_.pre_pd_energy[jch][jrk].cumulative_value) /
-                    (dimX * dimY * numP);
-                std::cout << "background energy "
-                          << extra_energy * (dimX * dimY * numP) << std::endl;
-                double sum_energy = 0.0;
-                for (int i = 0; i < dimX * dimY * numP; i++) {
-                    sum_energy += accu_Pmap[case_id][i];
-                }
-                std::cout << "other energy "
-                          << sum_energy * 1000.0 * device_scale << std::endl;
-                for (int i = 0; i < dimX * dimY * numP; i++) {
-                    accu_Pmap[case_id][i] += extra_energy / 1000 / device_scale;
+        double num_devices = static_cast<double>(config_.devices_per_rank);
+        for (int i = 0; i < config_.channels; i++) {
+            for (int j = 0; j < config_.ranks; j++) {
+                int case_id = i * config_.ranks + j;
+                double bg_energy =
+                    background_energy_[i][j] / (dimX * dimY * numP);
+                for (int k = 0; k < dimX * dimY * numP; i++) {
+                    accu_Pmap[case_id][i] += bg_energy / 1000 / num_devices;
                 }
             }
         }
     }
-
     // calculate the final temperature for each case
     for (int ir = 0; ir < num_case; ir++) {
         CalcFinalT(ir, clk);
@@ -661,10 +725,11 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk) {
     if (config_.output_level >= 2) {
         epoch_temperature_file_csv_.close();
     }
+    std::cout << "finish calculation!" << std::endl;
 }
 
 void ThermalCalculator::CalcTransT(int case_id) {
-    double time = config_.power_epoch_period * config_.tCK * 1e-9;
+    double time = config_.epoch_period * config_.tCK * 1e-9;
     double ***powerM = InitPowerM(case_id, 0);
     double totP = GetTotalPower(powerM);
     std::cout << "total trans power is " << totP * 1000 << " [mW]" << std::endl;
@@ -700,7 +765,7 @@ double ***ThermalCalculator::InitPowerM(int case_id, uint64_t clk) {
             std::fill_n(powerM[i][j], numP, 0.0);
 
     // when clk is 0 then it's trans otherwise it's final
-    double div = clk == 0 ? (double)config_.power_epoch_period : (double)clk;
+    double div = clk == 0 ? (double)config_.epoch_period : (double)clk;
     auto &power_map = clk == 0 ? cur_Pmap : accu_Pmap;
     // fill in powerM
     for (int i = 0; i < dimX; i++) {
@@ -792,8 +857,7 @@ void ThermalCalculator::calculate_time_step() {
     std::cout << "maximum dt is " << dt << std::endl;
 
     // calculate time_iter
-    double power_epoch_time =
-        config_.power_epoch_period * config_.tCK * 1e-9;  // [s]
+    double power_epoch_time = config_.epoch_period * config_.tCK * 1e-9;  // [s]
     std::cout << "power_epoch_time = " << power_epoch_time << std::endl;
     time_iter = time_iter0;
     while (power_epoch_time / time_iter >= dt) time_iter++;
@@ -907,17 +971,17 @@ void ThermalCalculator::PrintCSVHeader_final(std::ofstream &csvfile) {
     csvfile << "rank_channel_index,x,y,z,power,temperature" << std::endl;
 }
 
-void ThermalCalculator::UpdateLogicPower() {
-    // suppose the logic power is linearly corellated with bandwidth usage
-    // and if max bandwidth <-> max power + constant background power
-    uint64_t num_reads = stats_.num_read_cmds.EpochCount();
-    uint64_t num_writes = stats_.num_write_cmds.EpochCount();
-    uint64_t total_rw =
-        (num_reads + num_writes) * config_.burst_cycle / config_.channels;
-    // a little problem here: the epoch period is not necessarily power epoch
-    bw_usage_ = static_cast<double>(total_rw) /
-                static_cast<double>(config_.epoch_period);
-    avg_logic_power_ = logic_max_power_ * bw_usage_ + logic_bg_power_;
-}
+// void ThermalCalculator::UpdateLogicPower() {
+//     // suppose the logic power is linearly corellated with bandwidth usage
+//     // and if max bandwidth <-> max power + constant background power
+//     uint64_t num_reads = stats_.num_read_cmds.EpochCount();
+//     uint64_t num_writes = stats_.num_write_cmds.EpochCount();
+//     uint64_t total_rw =
+//         (num_reads + num_writes) * config_.burst_cycle / config_.channels;
+//     // a little problem here: the epoch period is not necessarily power epoch
+//     bw_usage_ = static_cast<double>(total_rw) /
+//                 static_cast<double>(config_.epoch_period);
+//     avg_logic_power_ = logic_max_power_ * bw_usage_ + logic_bg_power_;
+// }
 
 }  // namespace dramsim3

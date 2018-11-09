@@ -24,7 +24,7 @@ class ThermalCalculator {
     const int num_dummy = 2;
 
     const Config &config_;
-    Statistics &stats_;
+    // Statistics &stats_;
 
     int dimX, dimY, numP;   // Dimension of the memory
     double **Midx;          // Midx storing thermal conductance
@@ -34,12 +34,11 @@ class ThermalCalculator {
     double **T_trans, **T_final;
 
     int sample_id;      // index of the sampling power
-    uint64_t save_clk;  // saved clk
 
     double avg_logic_power_;
     double logic_max_power_;
     double logic_bg_power_;
-    double bw_usage_;
+    // double bw_usage_;
 
     std::vector<std::vector<double>> accu_Pmap;  // accumulative power map
     std::vector<std::vector<double>> cur_Pmap;   // current power map
@@ -75,9 +74,9 @@ class ThermalCalculator {
                                                           int vault_id_y,
                                                           int bank_id_x,
                                                           int bank_id_y);
-    void LocationMappingANDaddEnergy_RF(const Command &cmd, int bank0, int row0,
+    void LocationMappingANDaddEnergy_RF(const int channel, const Command &cmd, int bank0, int row0,
                                         int caseID_, double add_energy);
-    void LocationMappingANDaddEnergy(const Command &cmd, int bank0, int row0,
+    void LocationMappingANDaddEnergy(const int channel, const Command &cmd, int bank0, int row0,
                                      int caseID_, double add_energy);
     void UpdatePowerMaps(double add_energy, bool trans, uint64_t clk);
     void CalcTransT(int case_id);
@@ -101,14 +100,20 @@ class ThermalCalculator {
     void PrintCSV_bank(std::ofstream &csvfile);
 
    public:
-    ThermalCalculator(const Config &config, Statistics &stats);
+    ThermalCalculator(const Config &config);
     ~ThermalCalculator();
-    void UpdatePower(const Command &cmd, uint64_t clk);
-
+    void UpdateCMDPower(const int channel, const Command &cmd,
+                        const uint64_t clk);
+    void UpdateBackgroundEnergy(const int channel, const int rank,
+                                const double energy);
+    void UpdateEpoch(uint64_t clk);
     void PrintTransPT(uint64_t clk);
     void PrintFinalPT(uint64_t clk);
 
     void UpdateLogicPower();
+
+   private:
+    std::vector<std::vector<double>> background_energy_;
 };
 }  // namespace dramsim3
 

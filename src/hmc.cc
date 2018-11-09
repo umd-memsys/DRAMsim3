@@ -266,8 +266,8 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     vaults_.reserve(config_.channels);
     for (int i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
-        vaults_.emplace_back(i, config_, timing_, thermal_calc_,
-                             vault_callback_, vault_callback_);
+        vaults_.push_back(new Controller(i, config_, timing_, thermal_calc_,
+                             vault_callback_, vault_callback_));
 #else
         vaults_.push_back(new Controller(i, config_, timing_, vault_callback_,
                                          vault_callback_));

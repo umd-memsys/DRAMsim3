@@ -31,6 +31,9 @@ class SimpleStats {
     void PrintFinalStats(uint64_t clk, std::ostream& txt_output,
                          std::ostream& csv_output, std::ostream& hist_output);
 
+    // Return rank background energy for thermal calculation
+    double RankBackgroundEnergy(const int rank) const;
+
    private:
     void InitStat(std::string name, std::string stat_type,
                   std::string description);
@@ -72,7 +75,9 @@ class SimpleStats {
     std::unordered_map<std::string, std::vector<uint64_t> > vec_counters_;
     std::unordered_map<std::string, std::vector<uint64_t> > last_vec_counters_;
 
-    // double type counterparts
+    // NOTE: doubles_ vec_doubles_ and calculated_ are basically one time
+    // placeholders after each epoch they store the value for that epoch
+    // (different from the counters) and in the end updated to the overall value
     std::vector<std::string> double_names_;
     std::unordered_map<std::string, double> doubles_;
 
@@ -89,8 +94,10 @@ class SimpleStats {
 
     std::unordered_map<std::string, std::pair<int, int> > histo_bounds_;
     std::unordered_map<std::string, int> bin_widths_;
-    std::unordered_map<std::string, std::unordered_map<int, uint64_t> > histo_counts_;
-    std::unordered_map<std::string, std::unordered_map<int, uint64_t> > last_histo_counts_;
+    std::unordered_map<std::string, std::unordered_map<int, uint64_t> >
+        histo_counts_;
+    std::unordered_map<std::string, std::unordered_map<int, uint64_t> >
+        last_histo_counts_;
     std::unordered_map<std::string, std::vector<uint64_t> > histo_bins_;
 };
 
