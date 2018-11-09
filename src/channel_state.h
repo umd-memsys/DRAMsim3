@@ -7,10 +7,6 @@
 #include "configuration.h"
 #include "timing.h"
 
-#ifdef THERMAL
-#include "thermal.h"
-#endif  // THERMAL
-
 namespace dramsim3 {
 
 class ChannelState {

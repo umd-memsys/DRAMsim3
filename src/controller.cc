@@ -312,6 +312,12 @@ void Controller::PrintEpochStats(std::ostream &epoch_csv,
     stats_.UpdateEpoch(clk_);
     simple_stats_.Increment("num_epochs");
     simple_stats_.PrintEpochStats(clk_, epoch_csv, hist_csv);
+#ifdef THERMAL
+    for (int r = 0; r < config_.ranks; r++) {
+        double bg_energy = simple_stats_.RankBackgroundEnergy(r);
+        thermal_calc_.UpdateBackgroundEnergy(channel_id_, r, bg_energy);
+    }
+#endif  // THERMAL
     return;
 }
 
@@ -335,14 +341,11 @@ void Controller::PrintFinalStats(std::ostream &stats_txt,
     simple_stats_.PrintFinalStats(clk_, stats_txt, stats_csv, std::cout);
 
 #ifdef THERMAL
-        // thermal_calc_.PrintFinalPT(clk_);
     for (int r = 0; r < config_.ranks; r++) {
-        double bg_energy = RankBackgroundEnergy(r);
-        std::cout << "rank " << r << " bg " << bg_energy << std::endl;
+        double bg_energy = simple_stats_.RankBackgroundEnergy(r);
         thermal_calc_.UpdateBackgroundEnergy(channel_id_, r, bg_energy);
     }
 #endif  // THERMAL
-
     return;
 }
 
