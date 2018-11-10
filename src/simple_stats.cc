@@ -74,12 +74,6 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
              "Average request interarrival latency");
 }
 
-void SimpleStats::Increment(const std::string name) { counters_[name] += 1; }
-
-void SimpleStats::IncrementVec(const std::string name, int pos) {
-    vec_counters_[name][pos] += 1;
-}
-
 void SimpleStats::AddValue(const std::string name, const int value) {
     auto& counts = histo_counts_[name];
     if (counts.count(value) <= 0) {
@@ -115,7 +109,8 @@ void SimpleStats::PrintCSVHeader(std::ostream& csv_output) const {
 std::string SimpleStats::GetTextHeader(bool is_final) const {
     std::string header =
         "###########################################\n## Statistics of "
-        "Channel " + std::to_string(channel_id_);
+        "Channel " +
+        std::to_string(channel_id_);
     if (!is_final) {
         header += " of epoch " + std::to_string(counters_.at("num_epochs"));
     }

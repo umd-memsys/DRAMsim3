@@ -15,10 +15,17 @@ class SimpleStats {
     SimpleStats(const Config& config, int channel_id);
 
     // incrementing counter
-    void Increment(const std::string name);
+    void Increment(const std::string name) { counters_[name] += 1; }
 
     // incrementing for vec counter
-    void IncrementVec(const std::string name, int pos);
+    void IncrementVec(const std::string name, int pos) {
+        vec_counters_[name][pos] += 1;
+    }
+
+    // increment vec counter by number
+    void IncrementVecBy(const std::string name, int pos, int num) {
+        vec_counters_[name][pos] += num;
+    }
 
     // add historgram value
     void AddValue(const std::string name, const int value);

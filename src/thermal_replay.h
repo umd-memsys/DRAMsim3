@@ -7,7 +7,7 @@
 
 #include "common.h"
 #include "configuration.h"
-#include "statistics.h"
+#include "simple_stats.h"
 #include "thermal.h"
 
 namespace dramsim3 {
@@ -22,10 +22,10 @@ class ThermalReplay {
    private:
     std::vector<std::pair<uint64_t, Command>> timed_commands_;
     Config config_;
-    Statistics stats_;
     ThermalCalculator thermal_calc_;
     uint64_t repeat_;
     uint64_t last_clk_;
+    std::vector<SimpleStats> channel_stats_;
     std::vector<std::vector<std::vector<std::vector<bool>>>> bank_active_;
     void ParseLine(std::string line, uint64_t &clk, Command &cmd);
     void ProcessCMD(Command &cmd, uint64_t clk);
