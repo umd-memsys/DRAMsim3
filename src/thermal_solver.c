@@ -446,7 +446,7 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
     int_t *perm_c; /* column permutation vector */
     SCPformat *Lstore;
     NCPformat *Ustore;
-    int_t nrhs, ldx, info, m, n, nnz, b;
+    int_t nrhs, info, m, n, nnz, b;
     int_t nprocs; /* maximum number of processors to use. */
     int_t panel_size, relax, maxsup;
     int_t permc_spec;
@@ -548,7 +548,6 @@ double *steady_thermal_solver(double ***powerM, double W, double Lc, int numP,
     // extract the Temperature from B
     DNformat *Astore = (DNformat *)B.Store;
     // double *Tt; // vector stores the temperature for all grids
-    double ***T;  // matrix stores the temperature for active layers
 
     double *Ttp, *Tt;
     if (!(Tt = (double *)malloc(dimX * dimZ * (numP * 3 + 1) * sizeof(double))))

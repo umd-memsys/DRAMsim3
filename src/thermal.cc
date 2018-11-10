@@ -23,8 +23,8 @@ namespace dramsim3 {
 std::function<Address(const Address &addr)> GetPhyAddress;
 
 ThermalCalculator::ThermalCalculator(const Config &config)
-    : time_iter0(10),
-      config_(config),
+    : config_(config),
+      time_iter0(10),
       sample_id(0),
       background_energy_(config_.channels,
                          std::vector<double>(config_.ranks, 0)),
