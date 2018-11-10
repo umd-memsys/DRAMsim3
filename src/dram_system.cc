@@ -2,10 +2,6 @@
 
 #include <assert.h>
 
-#ifdef GENERATE_TRACE
-#include "../ext/fmt/src/format.h"
-#endif  // GENERATE_TRACE
-
 namespace dramsim3 {
 
 // alternative way is to assign the id in constructor but this is less
@@ -28,7 +24,6 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
 
     std::string stats_txt_name = config_.output_prefix + ".txt";
     std::string stats_csv_name = config_.output_prefix + ".csv";
-    std::string epoch_txt_name = config_.output_prefix + "epoch.txt";
     std::string epoch_csv_name = config_.output_prefix + "epoch.csv";
     std::string histo_csv_name = config_.output_prefix + "hist.csv";
 
@@ -46,9 +41,6 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
     //     histo_csv_file_.open(histo_csv_name);
     // }
 
-    // if (config_.output_level >= 3) {
-    //     epoch_txt_file_.open(config_.epoch_stats_file);
-    // }
 #ifdef GENERATE_TRACE
     std::string addr_trace_name("dramsim3addr.trace");
     address_trace_.open(addr_trace_name);
@@ -91,14 +83,6 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
         ctrls_.push_back(new Controller(i, config_, timing_, read_callback_,
                                         write_callback_));
 #endif  // THERMAL
-    }
-
-    // Only print one header at the beginning
-    if (config_.output_level >= 0) {
-        ctrls_[0]->PrintCSVHeader(stats_csv_file_);
-    }
-    if (config_.output_level >= 1) {
-        ctrls_[0]->PrintCSVHeader(epoch_csv_file_);
     }
 }
 

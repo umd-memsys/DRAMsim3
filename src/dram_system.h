@@ -7,7 +7,6 @@
 #include "common.h"
 #include "configuration.h"
 #include "controller.h"
-#include "statistics.h"
 #include "timing.h"
 
 #ifdef THERMAL

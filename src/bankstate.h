@@ -1,16 +1,14 @@
 #ifndef __BANKSTATE_H
 #define __BANKSTATE_H
 
-#include <utility>
 #include <vector>
 #include "common.h"
-#include "statistics.h"
 
 namespace dramsim3 {
 
 class BankState {
    public:
-    BankState(Statistics& stats);
+    BankState();
 
     // Get the command that needs to executed first to execute the comand of
     // interest given the state of the bank
@@ -33,7 +31,6 @@ class BankState {
     int RowHitCount() const { return row_hit_count_; }
 
    private:
-    Statistics& stats_;
     // Current state of the Bank
     // Apriori or instantaneously transitions on a command.
     State state_;

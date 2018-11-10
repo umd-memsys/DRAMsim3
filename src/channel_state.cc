@@ -2,12 +2,11 @@
 #include "../ext/fmt/src/format.h"
 
 namespace dramsim3 {
-ChannelState::ChannelState(const Config& config, const Timing& timing,
-                           Statistics& stats)
+ChannelState::ChannelState(const Config& config, const Timing& timing)
     : rank_idle_cycles(config.ranks, 0),
       config_(config),
       timing_(timing),
-      stats_(stats),
+      // stats_(stats),
       rank_is_sref_(config.ranks, false),
       four_aw_(config_.ranks, std::vector<uint64_t>()),
       thirty_two_aw_(config_.ranks, std::vector<uint64_t>()) {
@@ -17,7 +16,7 @@ ChannelState::ChannelState(const Config& config, const Timing& timing,
         rank_states.reserve(config_.bankgroups);
         for (auto j = 0; j < config_.bankgroups; j++) {
             auto bg_states = std::vector<BankState>(config_.banks_per_group,
-                                                    BankState(stats));
+                                                    BankState());
             rank_states.push_back(bg_states);
         }
         bank_states_.push_back(rank_states);
@@ -316,7 +315,7 @@ void ChannelState::UpdateSameRankTiming(
 void ChannelState::UpdateTimingAndStates(const Command& cmd, uint64_t clk) {
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
-    UpdateCommandIssueStats(cmd);
+    // UpdateCommandIssueStats(cmd);
     return;
 }
 
@@ -363,40 +362,6 @@ bool ChannelState::Is32AWReady(int rank, uint64_t curr_time) const {
         }
     }
     return true;
-}
-
-void ChannelState::UpdateCommandIssueStats(const Command& cmd) const {
-    switch (cmd.cmd_type) {
-        case CommandType::READ:
-        case CommandType::READ_PRECHARGE:
-            stats_.num_read_cmds++;
-            break;
-        case CommandType::WRITE:
-        case CommandType::WRITE_PRECHARGE:
-            stats_.num_write_cmds++;
-            break;
-        case CommandType::ACTIVATE:
-            stats_.num_act_cmds++;
-            break;
-        case CommandType::PRECHARGE:
-            stats_.num_pre_cmds++;
-            break;
-        case CommandType::REFRESH:
-            stats_.num_refresh_cmds++;
-            break;
-        case CommandType::REFRESH_BANK:
-            stats_.num_refb_cmds++;
-            break;
-        case CommandType::SREF_ENTER:
-            stats_.num_sref_enter_cmds++;
-            break;
-        case CommandType::SREF_EXIT:
-            stats_.num_sref_exit_cmds++;
-            break;
-        default:
-            AbruptExit(__FILE__, __LINE__);
-    }
-    return;
 }
 
 }  // namespace dramsim3

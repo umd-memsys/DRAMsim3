@@ -301,14 +301,6 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
         link_busy_.push_back(0);
         link_age_counter_.push_back(0);
     }
-
-    // Only print one header at the beginning
-    if (config_.output_level >= 0) {
-        vaults_[0]->PrintCSVHeader(stats_csv_file_);
-    }
-    if (config_.output_level >= 1) {
-        vaults_[0]->PrintCSVHeader(epoch_csv_file_);
-    }
 }
 
 HMCMemorySystem::~HMCMemorySystem() {

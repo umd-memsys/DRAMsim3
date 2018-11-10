@@ -19,10 +19,9 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       channel_id_(channel),
       clk_(0),
       config_(config),
-      stats_(config_, channel),
       simple_stats_(config_, channel_id_),
-      channel_state_(config, timing, stats_),
-      cmd_queue_(channel_id_, config, channel_state_, stats_),
+      channel_state_(config, timing),
+      cmd_queue_(channel_id_, config, channel_state_, simple_stats_),
       refresh_(config, channel_state_),
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
@@ -57,7 +56,6 @@ void Controller::ClockTick() {
     // Return completed read transactions back to the CPU
     for (auto it = return_queue_.begin(); it != return_queue_.end();) {
         if (clk_ >= it->complete_cycle) {
-            stats_.access_latency.AddValue(clk_ - it->added_cycle);
             if (it->is_write) {
                 std::cerr << "cmd id overflow!" << std::endl;
                 exit(1);
@@ -96,16 +94,13 @@ void Controller::ClockTick() {
     for (int i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
             simple_stats_.IncrementVec("sref_cycles", i);
-            stats_.sref_cycles[i]++;
         } else {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
                 simple_stats_.IncrementVec("all_bank_idle_cycles", i);
-                stats_.all_bank_idle_cycles[i]++;
                 channel_state_.rank_idle_cycles[i] += 1;
             } else {
                 simple_stats_.IncrementVec("rank_active_cycles", i);
-                stats_.active_cycles[i]++;
                 // reset
                 channel_state_.rank_idle_cycles[i] = 0;
             }
@@ -161,18 +156,17 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
 
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
-    stats_.interarrival_latency.AddValue(clk_ - last_trans_clk_);
     simple_stats_.AddValue("interarrival_latency", clk_ - last_trans_clk_);
     last_trans_clk_ = clk_;
 
     // check if already in write buffer, can return immediately
     if (in_write_buf_.count(trans.addr) > 0) {
-        stats_.num_write_buf_hits++;
+        simple_stats_.Increment("num_write_buf_hits");
         if (trans.is_write) {
-            stats_.num_writes_done++;
+            simple_stats_.Increment("num_writes_done");
             write_callback_(trans.addr);
         } else {
-            stats_.num_reads_done++;
+            simple_stats_.Increment("num_reads_done");
             read_callback_(trans.addr);
         }
         return true;
@@ -291,25 +285,8 @@ Command Controller::TransToCommand(const Transaction &trans) {
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
 
-void Controller::PrintCSVHeader(std::ostream &epoch_csv) {
-    if (config_.output_level >= 1) {
-        stats_.PrintStatsCSVHeader(epoch_csv);
-    }
-}
-
 void Controller::PrintEpochStats(std::ostream &epoch_csv,
                                  std::ostream &hist_csv) {
-    stats_.PreEpochCompute(clk_);
-    if (config_.output_level >= 1) {
-        stats_.PrintEpochStatsCSVRow(epoch_csv);
-    }
-
-    // TODO not working
-    // if (config_.output_level >= 2) {
-    //     stats_.PrintEpochHistoStatsCSV(hist_csv);
-    // }
-
-    stats_.UpdateEpoch(clk_);
     simple_stats_.Increment("num_epochs");
     simple_stats_.PrintEpochStats(clk_, epoch_csv, hist_csv);
 #ifdef THERMAL
@@ -323,21 +300,6 @@ void Controller::PrintEpochStats(std::ostream &epoch_csv,
 
 void Controller::PrintFinalStats(std::ostream &stats_txt,
                                  std::ostream &stats_csv) {
-    stats_.PreEpochCompute(clk_);
-    stats_.UpdateEpoch(clk_);
-    std::cout << "-----------------------------------------------" << std::endl;
-    std::cout << "Printing final stats of channel " << channel_id_ << std::endl;
-    std::cout << "-----------------------------------------------" << std::endl;
-    std::cout << stats_;
-    std::cout << "-----------------------------------------------" << std::endl;
-    if (config_.output_level >= 0) {
-        stats_txt << "-------------------------------------------" << std::endl;
-        stats_txt << "Stats of channel " << channel_id_ << std::endl;
-        stats_txt << "-------------------------------------------" << std::endl;
-        stats_.PrintStats(stats_txt);
-        stats_.PrintStatsCSVRow(stats_csv);
-    }
-    std::cout << "Simple stats:::::::::::::::" << std::endl;
     simple_stats_.PrintFinalStats(clk_, stats_txt, stats_csv, std::cout);
 
 #ifdef THERMAL

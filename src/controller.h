@@ -9,7 +9,6 @@
 #include "command_queue.h"
 #include "common.h"
 #include "refresh.h"
-#include "statistics.h"
 #include "simple_stats.h"
 
 #ifdef THERMAL
@@ -38,7 +37,6 @@ class Controller {
     bool AddTransaction(Transaction trans);
     int QueueUsage() const;
     // Stats output
-    void PrintCSVHeader(std::ostream& epoch_csv);
     void PrintEpochStats(std::ostream& epoch_csv, std::ostream& hist_csv);
     void PrintFinalStats(std::ostream& stats_txt, std::ostream& stats_csv);
     std::function<void(uint64_t)> read_callback_, write_callback_;
@@ -47,7 +45,6 @@ class Controller {
    private:
     uint64_t clk_;
     const Config &config_;
-    Statistics stats_;
     SimpleStats simple_stats_;
     ChannelState channel_state_;
     CommandQueue cmd_queue_;

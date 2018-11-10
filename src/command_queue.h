@@ -7,7 +7,7 @@
 #include "channel_state.h"
 #include "common.h"
 #include "configuration.h"
-#include "statistics.h"
+#include "simple_stats.h"
 
 namespace dramsim3 {
 
@@ -18,7 +18,7 @@ enum class QueueStructure { PER_RANK, PER_BANK, SIZE };
 class CommandQueue {
    public:
     CommandQueue(int channel_id, const Config& config,
-                 const ChannelState& channel_state, Statistics& stats);
+                 const ChannelState& channel_state, SimpleStats& simple_stats);
     Command GetCommandToIssue();
     void ClockTick() { clk_ += 1; };
     bool WillAcceptCommand(int rank, int bankgroup, int bank) const;
@@ -30,7 +30,8 @@ class CommandQueue {
     QueueStructure queue_structure_;
     const Config& config_;
     const ChannelState& channel_state_;
-    Statistics& stats_;
+    // Statistics& stats_;
+    SimpleStats& simple_stats_;
     std::vector<CMDQueue> queues_;
     int num_queues_;
     size_t queue_size_;

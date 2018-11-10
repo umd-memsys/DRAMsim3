@@ -4,9 +4,6 @@
 #include <fstream>
 #include <random>
 #include <vector>
-#include "common.h"
-#include "configuration.h"
-#include "controller.h"
 #include "memory_system.h"
 
 namespace dramsim3 {

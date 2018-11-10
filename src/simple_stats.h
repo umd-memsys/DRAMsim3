@@ -23,6 +23,10 @@ class SimpleStats {
     // add historgram value
     void AddValue(const std::string name, const int value);
 
+    // Print CSV stuff: same format for epoch and final outputs
+    void PrintCSVHeader(std::ostream& csv_output) const;
+    void PrintCSVRow(std::ostream& csv_output) const;
+
     // Epoch update
     void PrintEpochStats(uint64_t clk, std::ostream& csv_output,
                          std::ostream& histo_output);
@@ -53,11 +57,11 @@ class SimpleStats {
 
     double GetHistoAvg(const std::string name);
     double GetHistoEpochAvg(const std::string name);
+    std::string GetTextHeader(bool is_final) const;
     void UpdateEpochStats();
     void UpdateFinalStats();
 
     const Config& config_;
-    uint64_t last_clk_;
     int channel_id_;
 
     // map names to descriptions

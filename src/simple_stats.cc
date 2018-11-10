@@ -15,7 +15,7 @@ void PrintStatText(std::ostream& where, std::string name, T value,
 }
 
 SimpleStats::SimpleStats(const Config& config, int channel_id)
-    : config_(config), last_clk_(0), channel_id_(channel_id) {
+    : config_(config), channel_id_(channel_id) {
     // counter stats
     InitStat("num_cycles", "counter", "Number of DRAM cycles");
     InitStat("num_epochs", "counter", "Number of epochs");
@@ -100,12 +100,52 @@ void SimpleStats::AddValue(const std::string name, const int value) {
     bins[bin_idx] += 1;
 }
 
+void SimpleStats::PrintCSVHeader(std::ostream& csv_output) const {
+    // a little hacky but should work as long as iterating channel 0 first
+    if (channel_id_ != 0) {
+        return;
+    }
+    csv_output << "channel,";
+    for (const auto& it : print_pairs_) {
+        csv_output << it.first << ",";
+    }
+    csv_output << std::endl;
+}
+
+std::string SimpleStats::GetTextHeader(bool is_final) const {
+    std::string header =
+        "###########################################\n## Statistics of "
+        "Channel " + std::to_string(channel_id_);
+    if (!is_final) {
+        header += " of epoch " + std::to_string(counters_.at("num_epochs"));
+    }
+    header += "\n###########################################\n";
+    return header;
+}
+
+void SimpleStats::PrintCSVRow(std::ostream& csv_output) const {
+    csv_output << channel_id_ << ",";
+    for (const auto& it : print_pairs_) {
+        csv_output << it.second << ",";
+    }
+    csv_output << std::endl;
+}
+
 void SimpleStats::PrintEpochStats(uint64_t clk, std::ostream& csv_output,
                                   std::ostream& histo_output) {
     UpdateEpochStats();
-    std::cout << "Channel " << channel_id_ << " Epoch Stats!" << std::endl;
-    for (const auto& it : print_pairs_) {
-        PrintStatText(std::cout, it.first, it.second, header_descs_[it.first]);
+    if (config_.output_level >= 0) {
+        std::cout << GetTextHeader(false);
+        for (const auto& it : print_pairs_) {
+            PrintStatText(std::cout, it.first, it.second,
+                          header_descs_[it.first]);
+        }
+    }
+    if (config_.output_level >= 1) {
+        if (counters_["num_epochs"] == 1) {
+            PrintCSVHeader(csv_output);
+        }
+        PrintCSVRow(csv_output);
     }
     print_pairs_.clear();
 }
@@ -114,8 +154,36 @@ void SimpleStats::PrintFinalStats(uint64_t clk, std::ostream& txt_output,
                                   std::ostream& csv_output,
                                   std::ostream& hist_output) {
     UpdateFinalStats();
-    for (const auto& it : print_pairs_) {
-        PrintStatText(std::cout, it.first, it.second, header_descs_[it.first]);
+    if (config_.output_level >= 0) {
+        std::cout << GetTextHeader(true);
+        for (const auto& it : print_pairs_) {
+            PrintStatText(std::cout, it.first, it.second,
+                          header_descs_[it.first]);
+        }
+    }
+
+    if (config_.output_level >= 1) {
+        txt_output << GetTextHeader(true);
+        for (const auto& it : print_pairs_) {
+            PrintStatText(txt_output, it.first, it.second,
+                          header_descs_[it.first]);
+        }
+        PrintCSVHeader(csv_output);
+        PrintCSVRow(csv_output);
+    }
+
+    // print detailed histogram breakdown
+    if (config_.output_level >= 2) {
+        // header
+        if (channel_id_ == 0) {
+            hist_output << "channel, name, value, count" << std::endl;
+        }
+        for (const auto& name : histo_names_) {
+            for (auto it : histo_counts_[name]) {
+                hist_output << channel_id_ << "," << name << "," << it.first
+                            << "," << it.second << std::endl;
+            }
+        }
     }
 }
 
@@ -350,7 +418,6 @@ void SimpleStats::UpdateFinalStats() {
         vec_doubles_["sref_energy"][i] = sref_energy;
         background_energy += act_stb + pre_stb + sref_energy;
     }
-    std::cout << "final bg " << background_energy << std::endl;
     for (const auto& name : vec_double_names_) {
         const auto& vec = vec_doubles_[name];
         for (size_t i = 0; i < vec.size(); i++) {
