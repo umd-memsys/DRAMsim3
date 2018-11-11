@@ -13,7 +13,6 @@ namespace dramsim3 {
 class SimpleStats {
    public:
     SimpleStats(const Config& config, int channel_id);
-
     // incrementing counter
     void Increment(const std::string name) { counters_[name] += 1; }
 

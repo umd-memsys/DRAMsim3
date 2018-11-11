@@ -49,7 +49,6 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
 
 BaseDRAMSystem::~BaseDRAMSystem() {
     stats_txt_file_.close();
-    epoch_txt_file_.close();
     stats_csv_file_.close();
     epoch_csv_file_.close();
 #ifdef GENERATE_TRACE
@@ -87,9 +86,9 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
 }
 
 JedecDRAMSystem::~JedecDRAMSystem() {
-    // TODO deleting causes seg fault
-    for (auto &&ctrl_ptr : ctrls_) {
-        delete(ctrl_ptr);
+    // TODO seg fault here
+    for (auto it = ctrls_.begin(); it != ctrls_.end(); it++) {
+        delete (*it);
     }
 }
 

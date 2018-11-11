@@ -236,7 +236,7 @@ void SimpleStats::InitHistoStat(std::string name, std::string description,
     auto header = fmt::format("{}[-{}]", name, start_val);
     headers.push_back(header);
     header_descs_.emplace(header, description);
-    for (int i = 1; i < num_bins - 1; i++) {
+    for (int i = 1; i < num_bins + 1; i++) {
         int bucket_start = start_val + (i - 1) * bin_width;
         int bucket_end = start_val + i * bin_width - 1;
         header = fmt::format("{}[{}-{}]", name, bucket_start, bucket_end);
@@ -249,7 +249,8 @@ void SimpleStats::InitHistoStat(std::string name, std::string description,
 
     histo_headers_.emplace(name, headers);
 
-    histo_bins_.emplace(name, std::vector<uint64_t>(num_bins, 0));
+    // +2 for front and end
+    histo_bins_.emplace(name, std::vector<uint64_t>(num_bins+2, 0));
 }
 
 double SimpleStats::GetHistoAvg(const std::string name) {

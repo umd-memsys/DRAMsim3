@@ -30,7 +30,6 @@ class CommandQueue {
     QueueStructure queue_structure_;
     const Config& config_;
     const ChannelState& channel_state_;
-    // Statistics& stats_;
     SimpleStats& simple_stats_;
     std::vector<CMDQueue> queues_;
     int num_queues_;
