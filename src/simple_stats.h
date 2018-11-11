@@ -61,8 +61,9 @@ class SimpleStats {
         return vec_counters_[name][i] - last_vec_counters_[name][i];
     }
 
-    double GetHistoAvg(const std::string name);
-    double GetHistoEpochAvg(const std::string name);
+    void UpdateHistoBins();
+    double GetHistoAvg(const std::string name) const;
+    double GetHistoEpochAvg(const std::string name) const;
     std::string GetTextHeader(bool is_final) const;
     void UpdateEpochStats();
     void UpdateFinalStats();
@@ -109,6 +110,7 @@ class SimpleStats {
     std::unordered_map<std::string, std::unordered_map<int, uint64_t> >
         last_histo_counts_;
     std::unordered_map<std::string, std::vector<uint64_t> > histo_bins_;
+    std::unordered_map<std::string, std::vector<uint64_t> > last_histo_bins_;
 };
 
 }  // namespace dramsim3

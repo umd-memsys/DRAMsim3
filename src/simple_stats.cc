@@ -81,17 +81,6 @@ void SimpleStats::AddValue(const std::string name, const int value) {
     } else {
         counts[value] += 1;
     }
-    // TODO actually do this each epoch
-    auto& bins = histo_bins_[name];
-    int bin_idx = 0;
-    if (value < histo_bounds_[name].first) {
-        bin_idx = 0;
-    } else if (value > histo_bounds_[name].second) {
-        bin_idx = bins.size() - 1;
-    } else {
-        bin_idx = (value - histo_bounds_[name].first) / bin_widths_[name] + 1;
-    }
-    bins[bin_idx] += 1;
 }
 
 void SimpleStats::PrintCSVHeader(std::ostream& csv_output) const {
@@ -230,6 +219,7 @@ void SimpleStats::InitHistoStat(std::string name, std::string description,
     bin_widths_.emplace(name, bin_width);
     histo_bounds_.emplace(name, std::make_pair(start_val, end_val));
     histo_counts_.emplace(name, std::unordered_map<int, uint64_t>());
+    last_histo_counts_.emplace(name, std::unordered_map<int, uint64_t>());
 
     // initialize headers, descriptions
     std::vector<std::string> headers;
@@ -250,11 +240,33 @@ void SimpleStats::InitHistoStat(std::string name, std::string description,
     histo_headers_.emplace(name, headers);
 
     // +2 for front and end
-    histo_bins_.emplace(name, std::vector<uint64_t>(num_bins+2, 0));
+    histo_bins_.emplace(name, std::vector<uint64_t>(num_bins + 2, 0));
+    last_histo_bins_.emplace(name, std::vector<uint64_t>(num_bins + 2, 0));
 }
 
-double SimpleStats::GetHistoAvg(const std::string name) {
-    const auto& counts = histo_counts_[name];
+void SimpleStats::UpdateHistoBins() {
+    for (const auto& name : histo_names_) {
+        auto& bins = histo_bins_[name];
+        std::fill(bins.begin(), bins.end(), 0);
+        for (const auto it : histo_counts_[name]) {
+            int value = it.first;
+            uint64_t count = it.second;
+            int bin_idx = 0;
+            if (value < histo_bounds_[name].first) {
+                bin_idx = 0;
+            } else if (value > histo_bounds_[name].second) {
+                bin_idx = bins.size() - 1;
+            } else {
+                bin_idx =
+                    (value - histo_bounds_[name].first) / bin_widths_[name] + 1;
+            }
+            bins[bin_idx] += count;
+        }
+    }
+}
+
+double SimpleStats::GetHistoAvg(const std::string name) const {
+    const auto& counts = histo_counts_.at(name);
     uint64_t accu_sum = 0;
     uint64_t count = 0;
     for (auto i = counts.begin(); i != counts.end(); i++) {
@@ -264,23 +276,22 @@ double SimpleStats::GetHistoAvg(const std::string name) {
     return static_cast<double>(accu_sum) / static_cast<double>(count);
 }
 
-double SimpleStats::GetHistoEpochAvg(const std::string name) {
-    const auto& counts = histo_counts_[name];
-    const auto& last_counts = last_histo_counts_[name];
+double SimpleStats::GetHistoEpochAvg(const std::string name) const {
+    const auto& counts = histo_counts_.at(name);
     uint64_t accu_sum = 0;
     uint64_t count = 0;
     for (auto i = counts.begin(); i != counts.end(); i++) {
-        uint64_t epoch_count = 0;
-        // may not present in the last epoch
-        if (last_counts.count(i->first) > 0) {
-            epoch_count = i->second - last_counts.at(i->first);
-        } else {
-            epoch_count = i->second;
-        }
-        accu_sum += epoch_count * i->first;
-        count += epoch_count;
+        accu_sum += i->first * i->second;
+        count += i->second;
     }
-    return static_cast<double>(accu_sum) / static_cast<double>(count);
+    const auto& last_counts = last_histo_counts_.at(name);
+    uint64_t last_sum = 0;
+    uint64_t last_count = 0;
+    for (auto i = last_counts.begin(); i != last_counts.end(); i++) {
+        last_sum += i->first * i->second;
+        last_count += i->second;
+    }
+    return static_cast<double>(accu_sum - last_sum) / static_cast<double>(count - last_count);
 }
 
 void SimpleStats::UpdateEpochStats() {
@@ -337,6 +348,17 @@ void SimpleStats::UpdateEpochStats() {
         }
     }
 
+    UpdateHistoBins();
+    for (const auto& name : histo_names_) {
+        const auto& headers = histo_headers_[name];
+        const auto& bins = histo_bins_[name];
+        const auto& last_bins = last_histo_bins_[name];
+        for (size_t i = 0; i < bins.size(); i++) {
+            auto epoch_count = bins[i] - last_bins[i];
+            print_pairs_.emplace_back(headers[i], std::to_string(epoch_count));
+        }
+    }
+
     // calculated stats
     uint64_t total_reqs =
         CounterEpoch("num_reads_done") + CounterEpoch("num_writes_done");
@@ -367,6 +389,7 @@ void SimpleStats::UpdateEpochStats() {
     }
     for (const auto& name : histo_names_) {
         last_histo_counts_[name] = histo_counts_[name];
+        last_histo_bins_[name] = histo_bins_[name];
     }
     return;
 }
@@ -424,6 +447,7 @@ void SimpleStats::UpdateFinalStats() {
     }
 
     // histograms
+    UpdateHistoBins();
     for (const auto& name : histo_names_) {
         const auto& headers = histo_headers_[name];
         const auto& bins = histo_bins_[name];
