@@ -36,10 +36,9 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
         epoch_csv_file_.open(epoch_csv_name);
     }
 
-    // TODO Not working
-    // if (config_.output_level >= 2) {
-    //     histo_csv_file_.open(histo_csv_name);
-    // }
+    if (config_.output_level >= 2) {
+        histo_csv_file_.open(histo_csv_name);
+    }
 
 #ifdef GENERATE_TRACE
     std::string addr_trace_name("dramsim3addr.trace");
@@ -86,7 +85,6 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
 }
 
 JedecDRAMSystem::~JedecDRAMSystem() {
-    // TODO seg fault here
     for (auto it = ctrls_.begin(); it != ctrls_.end(); it++) {
         delete (*it);
     }
@@ -124,7 +122,7 @@ void JedecDRAMSystem::ClockTick() {
 
     if (clk_ % config_.epoch_period == 0) {
         for (auto &&ctrl : ctrls_) {
-            ctrl->PrintEpochStats(epoch_csv_file_, histo_csv_file_);
+            ctrl->PrintEpochStats(epoch_csv_file_);
         }
 #ifdef THERMAL
         thermal_calc_.PrintTransPT(clk_);
@@ -135,7 +133,7 @@ void JedecDRAMSystem::ClockTick() {
 
 void JedecDRAMSystem::PrintStats() {
     for (auto &&ctrl : ctrls_) {
-        ctrl->PrintFinalStats(stats_txt_file_, stats_csv_file_);
+        ctrl->PrintFinalStats(stats_txt_file_, stats_csv_file_, histo_csv_file_);
     }
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);

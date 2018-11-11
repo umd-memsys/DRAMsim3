@@ -267,7 +267,7 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     for (int i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
         vaults_.push_back(new Controller(i, config_, timing_, thermal_calc_,
-                             vault_callback_, vault_callback_));
+                                         vault_callback_, vault_callback_));
 #else
         vaults_.push_back(new Controller(i, config_, timing_, vault_callback_,
                                          vault_callback_));
@@ -545,7 +545,7 @@ void HMCMemorySystem::DRAMClockTick() {
     clk_++;
     if (clk_ % config_.epoch_period == 0) {
         for (auto &&vault : vaults_) {
-            vault->PrintEpochStats(epoch_csv_file_, histo_csv_file_);
+            vault->PrintEpochStats(epoch_csv_file_);
         }
     }
     return;
@@ -773,7 +773,8 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
 
 void HMCMemorySystem::PrintStats() {
     for (auto &&vault : vaults_) {
-        vault->PrintFinalStats(stats_txt_file_, stats_csv_file_);
+        vault->PrintFinalStats(stats_txt_file_, stats_csv_file_,
+                               histo_csv_file_);
     }
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);

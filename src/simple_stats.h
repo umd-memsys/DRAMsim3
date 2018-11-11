@@ -34,8 +34,7 @@ class SimpleStats {
     void PrintCSVRow(std::ostream& csv_output) const;
 
     // Epoch update
-    void PrintEpochStats(uint64_t clk, std::ostream& csv_output,
-                         std::ostream& histo_output);
+    void PrintEpochStats(uint64_t clk, std::ostream& csv_output);
 
     // Final statas output
     void PrintFinalStats(uint64_t clk, std::ostream& txt_output,

@@ -37,8 +37,9 @@ class Controller {
     bool AddTransaction(Transaction trans);
     int QueueUsage() const;
     // Stats output
-    void PrintEpochStats(std::ostream& epoch_csv, std::ostream& hist_csv);
-    void PrintFinalStats(std::ostream& stats_txt, std::ostream& stats_csv);
+    void PrintEpochStats(std::ostream &epoch_csv);
+    void PrintFinalStats(std::ostream &stats_txt, std::ostream &stats_csv,
+                         std::ostream &histo_csv);
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
 

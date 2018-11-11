@@ -115,8 +115,7 @@ void SimpleStats::PrintCSVRow(std::ostream& csv_output) const {
     csv_output << std::endl;
 }
 
-void SimpleStats::PrintEpochStats(uint64_t clk, std::ostream& csv_output,
-                                  std::ostream& histo_output) {
+void SimpleStats::PrintEpochStats(uint64_t clk, std::ostream& csv_output) {
     UpdateEpochStats();
     if (config_.output_level >= 0) {
         std::cout << GetTextHeader(false);
@@ -162,6 +161,7 @@ void SimpleStats::PrintFinalStats(uint64_t clk, std::ostream& txt_output,
         if (channel_id_ == 0) {
             hist_output << "channel, name, value, count" << std::endl;
         }
+        //will be out of order but you already need some lib to process it
         for (const auto& name : histo_names_) {
             for (auto it : histo_counts_[name]) {
                 hist_output << channel_id_ << "," << name << "," << it.first
@@ -291,7 +291,8 @@ double SimpleStats::GetHistoEpochAvg(const std::string name) const {
         last_sum += i->first * i->second;
         last_count += i->second;
     }
-    return static_cast<double>(accu_sum - last_sum) / static_cast<double>(count - last_count);
+    return static_cast<double>(accu_sum - last_sum) /
+           static_cast<double>(count - last_count);
 }
 
 void SimpleStats::UpdateEpochStats() {
