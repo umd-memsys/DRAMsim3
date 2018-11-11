@@ -43,8 +43,8 @@ ThermalCalculator::ThermalCalculator(const Config &config)
         vault_x = determineXY(xd, yd, config_.channels);
         vault_y = config_.channels / vault_x;
 
-        dimX = vault_x * bank_x * config_.numXgrids;
-        dimY = vault_y * bank_y * config_.numYgrids;
+        dimX = vault_x * bank_x * config_.num_x_grids;
+        dimY = vault_y * bank_y * config_.num_y_grids;
 
         num_case = 1;
     } else if (config_.IsHBM()) {
@@ -53,8 +53,8 @@ ThermalCalculator::ThermalCalculator(const Config &config)
         bank_y = 2;
         vault_x = 1;
         vault_y = 2;
-        dimX = vault_x * bank_x * config_.numXgrids;
-        dimY = vault_y * bank_y * config_.numYgrids;
+        dimX = vault_x * bank_x * config_.num_x_grids;
+        dimY = vault_y * bank_y * config_.num_y_grids;
 
         num_case = 1;
     } else {
@@ -62,8 +62,8 @@ ThermalCalculator::ThermalCalculator(const Config &config)
         bank_x = determineXY(config_.bank_asr, 1.0, config_.banks);
         bank_y = config_.banks / bank_x;
 
-        dimX = bank_x * config_.numXgrids;
-        dimY = bank_y * config_.numYgrids;
+        dimX = bank_x * config_.num_x_grids;
+        dimY = bank_y * config_.num_y_grids;
 
         num_case = config_.ranks * config_.channels;
     }
@@ -73,8 +73,8 @@ ThermalCalculator::ThermalCalculator(const Config &config)
     std::cout << "bank aspect ratio = " << config_.bank_asr << std::endl;
     // std::cout << "#rows = " << config_.rows << "; #columns = " <<
     // config_.rows / config_.bank_asr << std::endl;
-    std::cout << "numXgrids = " << config_.numXgrids
-              << "; numYgrids = " << config_.numYgrids << std::endl;
+    std::cout << "num_x_grids = " << config_.num_x_grids
+              << "; num_y_grids = " << config_.num_y_grids << std::endl;
     std::cout << "vault_x = " << vault_x << "; vault_y = " << vault_y
               << std::endl;
     std::cout << "bank_x = " << bank_x << "; bank_y = " << bank_y << std::endl;
@@ -102,22 +102,26 @@ ThermalCalculator::ThermalCalculator(const Config &config)
     refresh_count = std::vector<std::vector<int>>(
         config_.channels * config_.ranks, std::vector<int>(config_.banks, 0));
 
-    // Initialize the output file
-    final_temperature_file_csv_.open(config_.final_temperature_file_csv);
-    PrintCSVHeader_final(final_temperature_file_csv_);
+    if (config_.output_level >= 0) {
+        // Initialize the output file
+        final_temperature_file_csv_.open(config_.output_prefix +
+                                         "final_temp.csv");
+        PrintCSVHeader_final(final_temperature_file_csv_);
 
-    // print bank position
-    bank_position_csv_.open(config_.bank_position_csv);
-    PrintCSV_bank(bank_position_csv_);
+        // print bank position
+        bank_position_csv_.open(config_.output_prefix + "bank_pos.csv");
+        PrintCSV_bank(bank_position_csv_);
 
-    // a quick preview of max temperature for each layer of each epoch
-    epoch_max_temp_file_csv_.open(config_.epoch_max_temp_file_csv);
-    // epoch_max_temp_file_csv_ << "layer,power,max_temp,bw_usage,epoch_time"
-    epoch_max_temp_file_csv_ << "layer,max_temp,epoch_time" << std::endl;
+        // a quick preview of max temperature for each layer of each epoch
+        epoch_max_temp_file_csv_.open(config_.output_prefix +
+                                      "epoch_max_temp.csv");
+        epoch_max_temp_file_csv_ << "layer,max_temp,epoch_time" << std::endl;
+    }
 
     // print header to csv files
     if (config_.output_level >= 2) {
-        epoch_temperature_file_csv_.open(config_.epoch_temperature_file_csv);
+        epoch_temperature_file_csv_.open(config_.output_prefix +
+                                         "epoch_temp.csv");
         epoch_temperature_file_csv_
             << "rank_channel_index,x,y,z,power,temperature,epoch" << std::endl;
     }
@@ -318,23 +322,24 @@ std::pair<std::vector<int>, std::vector<int>> ThermalCalculator::MapToXY(
     std::vector<int> y;
 
     int row_id = cmd.Row();
-    int col_tile_id = row_id / config_.TileRowNum;
-    int grid_id_x = row_id / config_.mat_dim_x / config_.RowTile;
+    int col_tile_id = row_id / config_.tile_row_num;
+    int grid_id_x = row_id / config_.mat_dim_x / config_.row_tile;
 
     Address temp_addr = Address(cmd.addr);
     for (int i = 0; i < config_.BL; i++) {
         Address phy_loc = GetPhyAddress(temp_addr);
         int col_id = phy_loc.column * config_.device_width;
-        int bank_x_offset = bank_x * config_.numXgrids;
-        int bank_y_offset = bank_y * config_.numYgrids;
+        int bank_x_offset = bank_x * config_.num_x_grids;
+        int bank_y_offset = bank_y * config_.num_y_grids;
         for (int j = 0; j < config_.device_width; j++) {
-            int grid_id_y = col_id / config_.mat_dim_y +
-                            col_tile_id * (config_.numYgrids / config_.RowTile);
+            int grid_id_y =
+                col_id / config_.mat_dim_y +
+                col_tile_id * (config_.num_y_grids / config_.row_tile);
             int temp_x = vault_id_x * bank_x_offset +
-                         bank_id_x * config_.numXgrids + grid_id_x;
+                         bank_id_x * config_.num_x_grids + grid_id_x;
             x.push_back(temp_x);
             int temp_y = vault_id_y * bank_y_offset +
-                         bank_id_y * config_.numYgrids + grid_id_y;
+                         bank_id_y * config_.num_y_grids + grid_id_y;
             y.push_back(temp_y);
             col_id++;
         }
@@ -403,17 +408,17 @@ void ThermalCalculator::LocationMappingANDaddEnergy_RF(const int channel,
     // calculate x y z
     int row_id = phy_addr.row;
     int col_id = 0;  // refresh all units
-    int col_tile_id = row_id / config_.TileRowNum;
-    int grid_id_x = row_id / config_.mat_dim_x / config_.RowTile;
+    int col_tile_id = row_id / config_.tile_row_num;
+    int grid_id_x = row_id / config_.mat_dim_x / config_.row_tile;
     int grid_id_y = col_id / config_.mat_dim_y +
-                    col_tile_id * (config_.numYgrids / config_.RowTile);
-    int x = vault_id_x * (bank_x * config_.numXgrids) +
-            bank_id_x * config_.numXgrids + grid_id_x;
-    int y = vault_id_y * (bank_y * config_.numYgrids) +
-            bank_id_y * config_.numYgrids + grid_id_y;
+                    col_tile_id * (config_.num_y_grids / config_.row_tile);
+    int x = vault_id_x * (bank_x * config_.num_x_grids) +
+            bank_id_x * config_.num_x_grids + grid_id_x;
+    int y = vault_id_y * (bank_y * config_.num_y_grids) +
+            bank_id_y * config_.num_y_grids + grid_id_y;
 
     int z_offset = z * (dimX * dimY);
-    for (int i = 0; i < config_.numYgrids; i++) {
+    for (int i = 0; i < config_.num_y_grids; i++) {
         int y_offset = y * dimX;
         int idx = z_offset + y_offset + x;
         accu_Pmap[caseID_][idx] += add_energy;
@@ -458,14 +463,14 @@ void ThermalCalculator::UpdateCMDPower(const int channel, const Command &cmd,
     if (cmd.cmd_type == CommandType::REFRESH) {
         int rank_idx = channel * config_.ranks + rank;
         for (int ib = 0; ib < config_.banks; ib++) {
-            int row_s = refresh_count[rank_idx][ib] * config_.numRowRefresh;
+            int row_s = refresh_count[rank_idx][ib] * config_.num_row_refresh;
             refresh_count[rank_idx][ib]++;
-            if (refresh_count[rank_idx][ib] * config_.numRowRefresh ==
+            if (refresh_count[rank_idx][ib] * config_.num_row_refresh ==
                 config_.rows)
                 refresh_count[rank_idx][ib] = 0;
-            energy = config_.ref_energy_inc / config_.numRowRefresh /
-                     config_.banks / config_.numYgrids;
-            for (int ir = row_s; ir < row_s + config_.numRowRefresh; ir++) {
+            energy = config_.ref_energy_inc / config_.num_row_refresh /
+                     config_.banks / config_.num_y_grids;
+            for (int ir = row_s; ir < row_s + config_.num_row_refresh; ir++) {
                 LocationMappingANDaddEnergy_RF(channel, cmd, ib, ir, case_id,
                                                energy / 1000.0 / device_scale);
             }
@@ -473,13 +478,14 @@ void ThermalCalculator::UpdateCMDPower(const int channel, const Command &cmd,
     } else if (cmd.cmd_type == CommandType::REFRESH_BANK) {
         int ib = cmd.Bank();
         int rank_idx = channel * config_.ranks + rank;
-        int row_s = refresh_count[rank_idx][ib] * config_.numRowRefresh;
+        int row_s = refresh_count[rank_idx][ib] * config_.num_row_refresh;
         refresh_count[rank_idx][ib]++;
-        if (refresh_count[rank_idx][ib] * config_.numRowRefresh == config_.rows)
+        if (refresh_count[rank_idx][ib] * config_.num_row_refresh ==
+            config_.rows)
             refresh_count[rank_idx][ib] = 0;
-        energy =
-            config_.refb_energy_inc / config_.numRowRefresh / config_.numYgrids;
-        for (int ir = row_s; ir < row_s + config_.numRowRefresh; ir++) {
+        energy = config_.refb_energy_inc / config_.num_row_refresh /
+                 config_.num_y_grids;
+        for (int ir = row_s; ir < row_s + config_.num_row_refresh; ir++) {
             LocationMappingANDaddEnergy_RF(channel, cmd, ib, ir, case_id,
                                            energy / 1000.0 / device_scale);
         }
@@ -836,17 +842,17 @@ void ThermalCalculator::PrintCSV_bank(std::ofstream &csvfile) {
                 int bank_id_x, bank_id_y;
                 std::tie(bank_id_x, bank_id_y) = MapToBank(bg, bank);
 
-                int bank_offset = bank_x * config_.numXgrids;
+                int bank_offset = bank_x * config_.num_x_grids;
                 int start_x =
-                    vault_id_x * bank_offset + bank_id_x * config_.numXgrids;
+                    vault_id_x * bank_offset + bank_id_x * config_.num_x_grids;
                 int end_x = vault_id_x * bank_offset +
-                            (bank_id_x + 1) * config_.numXgrids - 1;
+                            (bank_id_x + 1) * config_.num_x_grids - 1;
 
-                bank_offset = bank_y * config_.numYgrids;
+                bank_offset = bank_y * config_.num_y_grids;
                 int start_y =
-                    vault_id_y * bank_offset + bank_id_y * config_.numYgrids;
+                    vault_id_y * bank_offset + bank_id_y * config_.num_y_grids;
                 int end_y = vault_id_y * bank_offset +
-                            (bank_id_y + 1) * config_.numYgrids - 1;
+                            (bank_id_y + 1) * config_.num_y_grids - 1;
                 csvfile << vault_id << "," << abs_bank_id << "," << start_x
                         << "," << end_x << "," << start_y << "," << end_y << ","
                         << z << std::endl;

@@ -156,29 +156,23 @@ class Config {
 
 #ifdef THERMAL
     std::string loc_mapping;
-    int power_epoch_period;
-    int numRowRefresh;       // number of rows to be refreshed for one time
+    int num_row_refresh;       // number of rows to be refreshed for one time
     double amb_temp;         // the ambient temperature in [C]
-    double logic_bg_power;   // background power of logic layer
-    double logic_max_power;  // max power of logic layer
+    double const_logic_power;
 
     double chip_dim_x;
     double chip_dim_y;
-    int numXgrids;
-    int numYgrids;
+    int num_x_grids;
+    int num_y_grids;
     int mat_dim_x;
     int mat_dim_y;
     // 0: x-direction priority, 1: y-direction priority
     int bank_order;
     // 0; low-layer priority, 1: high-layer priority
     int bank_layer_order;
-    int RowTile;
-    int TileRowNum;
+    int row_tile;
+    int tile_row_num;
     double bank_asr;  // the aspect ratio of a bank: #row_bits / #col_bits
-    std::string epoch_max_temp_file_csv;
-    std::string epoch_temperature_file_csv;
-    std::string final_temperature_file_csv;
-    std::string bank_position_csv;
 #endif  // THERMAL
 
    private:

@@ -187,7 +187,7 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
         for (int c = 0; c < config_.channels; c++) {
             // where to print isn't important here what we really need is the
             // updated stats
-            channel_stats_[c].PrintEpochStats(clk, std::cout, std::cout);
+            channel_stats_[c].PrintEpochStats(clk, std::cout);
             for (int r = 0; r < config_.ranks; r++) {
                 double bg_energy = channel_stats_[c].RankBackgroundEnergy(r);
                 thermal_calc_.UpdateBackgroundEnergy(c, r, bg_energy);
