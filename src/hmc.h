@@ -2,6 +2,8 @@
 #define __HMC_H
 
 #include <map>
+#include <vector>
+
 #include "dram_system.h"
 
 namespace dramsim3 {

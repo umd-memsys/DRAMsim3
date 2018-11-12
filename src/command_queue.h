@@ -1,7 +1,6 @@
 #ifndef __COMMAND_QUEUE_H
 #define __COMMAND_QUEUE_H
 
-#include <functional>
 #include <unordered_set>
 #include <vector>
 #include "channel_state.h"

@@ -1,11 +1,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#include <cassert>
-#include <cmath>
 #include <string>
-#include <utility>
-#include <vector>
 #include "common.h"
 
 #include "../ext/inih/src/INIReader.h"

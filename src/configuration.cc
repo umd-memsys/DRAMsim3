@@ -1,5 +1,7 @@
 #include "configuration.h"
 
+#include <vector>
+
 namespace dramsim3 {
 
 std::function<Address(uint64_t)> AddressMapping;
