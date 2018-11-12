@@ -1,6 +1,7 @@
 #ifndef __HMC_H
 #define __HMC_H
 
+#include <functional>
 #include <map>
 #include <vector>
 
@@ -38,31 +39,35 @@ enum class HMCReqType {
     P_WR112,
     P_WR128,
     P_WR256,
-    ADD8,  // 2ADD8, cannot name it like that...
+    // TODO haven't properly implement the following atomic operations
+    ADD8,  // 2ADD8, cannot name it like that in c++...
     ADD16,
-    P_2ADD8,
+    P_2ADD8,  // 2 8Byte imm operands + 8 8Byte mem operands read then write
     P_ADD16,
     ADDS8R,  // 2ADD8, cannot name it like that...
     ADDS16R,
-    INC8,
-    P_INC8,
-    XOR16,
+    INC8,  // read, return(the original), then write
+    P_INC8, // read, return(the original), then posted write
+    // boolean op on imm operand and mem operand, read update write
+    XOR16,  
     OR16,
     NOR16,
     AND16,
     NAND16,
+    // comparison instructions, not sure if there's write untill read done
     CASGT8,
     CASGT16,
     CASLT8,
     CASLT16,
     CASEQ8,
     CASZERO16,
+    // eq, only read
     EQ8,
     EQ16,
     BWR,
-    P_BWR,
-    BWR8R,
-    SWAP16,
+    P_BWR,  // bit write, 8B mask, 8B value, read update write
+    BWR8R,  // bit write with return
+    SWAP16,  // swap imm operand and mem operand, read then write
     SIZE
 };
 
@@ -80,13 +85,9 @@ class HMCRequest {
     int quad;
     int vault;
     int flits;
+    bool is_write;
     // this exit_time is the time to exit xbar to vaults
     uint64_t exit_time;
-
-    // HACK: HMC type by range
-    bool IsWrite() const {
-        return type >= HMCReqType::WR0 && type <= HMCReqType::P_WR256;
-    }
 };
 
 class HMCResponse {

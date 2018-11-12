@@ -8,6 +8,7 @@ uint64_t lcm(uint64_t x, uint64_t y);
 HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr)
     : type(req_type), mem_operand(hex_addr) {
     Address addr = AddressMapping(mem_operand);
+    is_write = type >= HMCReqType::WR0 && type <= HMCReqType::P_WR256;
     vault = addr.channel;
     // given that vaults could be 16 (Gen1) or 32(Gen2), using % 4
     // to partition vaults to quads
@@ -504,7 +505,7 @@ void HMCMemorySystem::LogicClockTickPost() {
             HMCRequest *req = quad_req_queues_[i].front();
             if (req->exit_time <= logic_clk_) {
                 if (vaults_[req->vault]->WillAcceptTransaction(
-                        req->mem_operand, req->IsWrite())) {
+                        req->mem_operand, req->is_write)) {
                     InsertReqToDRAM(req);
                     delete (req);
                     quad_req_queues_[i].erase(quad_req_queues_[i].begin());
@@ -657,101 +658,8 @@ std::vector<int> HMCMemorySystem::BuildAgeQueue(std::vector<int> &age_counter) {
 }
 
 void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
-    Transaction trans;
-    switch (req->type) {
-        case HMCReqType::RD0:
-        case HMCReqType::RD16:
-        case HMCReqType::RD32:
-        case HMCReqType::RD48:
-        case HMCReqType::RD64:
-        case HMCReqType::RD80:
-        case HMCReqType::RD96:
-        case HMCReqType::RD112:
-        case HMCReqType::RD128:
-        case HMCReqType::RD256:
-            // only 1 request is needed, if the request length is shorter than
-            // block_size it will be chopped and therefore results in a waste of
-            // bandwidth
-            trans = Transaction(req->mem_operand, false);
-            vaults_[req->vault]->AddTransaction(trans);
-            break;
-        case HMCReqType::WR0:
-        case HMCReqType::WR16:
-        case HMCReqType::WR32:
-        case HMCReqType::P_WR16:
-        case HMCReqType::P_WR32:
-        case HMCReqType::WR48:
-        case HMCReqType::WR64:
-        case HMCReqType::P_WR48:
-        case HMCReqType::P_WR64:
-        case HMCReqType::WR80:
-        case HMCReqType::WR96:
-        case HMCReqType::P_WR80:
-        case HMCReqType::P_WR96:
-        case HMCReqType::WR112:
-        case HMCReqType::WR128:
-        case HMCReqType::P_WR112:
-        case HMCReqType::P_WR128:
-        case HMCReqType::WR256:
-        case HMCReqType::P_WR256:
-            trans = Transaction(req->mem_operand, true);
-            vaults_[req->vault]->AddTransaction(trans);
-            break;
-        // TODO real question here is, if an atomic operantion
-        // generate a read and a write request,
-        // where is the computation performed
-        // and when is the write request issued
-        case HMCReqType::ADD8:
-        case HMCReqType::P_2ADD8:
-            // 2 8Byte imm operands + 8 8Byte mem operands
-            // read then write
-        case HMCReqType::ADD16:
-        case HMCReqType::P_ADD16:
-            // single 16B imm operand + 16B mem operand
-            // read then write
-        case HMCReqType::ADDS8R:
-        case HMCReqType::ADDS16R:
-            // read, return(the original), then write
-        case HMCReqType::INC8:
-        case HMCReqType::P_INC8:
-            // 8 Byte increment
-            // read update write
-        case HMCReqType::XOR16:
-        case HMCReqType::OR16:
-        case HMCReqType::NOR16:
-        case HMCReqType::AND16:
-        case HMCReqType::NAND16:
-            // boolean op on imm operand and mem operand
-            // read update write
-            break;
-        // comparison are the most headache ones...
-        // since you don't know if you need to issue
-        // a write request until you get the data
-        case HMCReqType::CASGT8:
-        case HMCReqType::CASGT16:
-        case HMCReqType::CASLT8:
-        case HMCReqType::CASLT16:
-        case HMCReqType::CASEQ8:
-        case HMCReqType::CASZERO16:
-            // read then may-or-may-not write
-            break;
-        // For EQ ops, only a READ is issued, no WRITE
-        case HMCReqType::EQ8:
-        case HMCReqType::EQ16:
-            break;
-        case HMCReqType::BWR:
-        case HMCReqType::P_BWR:
-            // bit write, 8 Byte mask, 8 Byte value
-            // read update write
-        case HMCReqType::BWR8R:
-            // bit write with return
-        case HMCReqType::SWAP16:
-            // swap imm operand and mem operand
-            // read and then write
-            break;
-        default:
-            break;
-    }
+    Transaction trans(req->mem_operand, req->is_write);
+    vaults_[req->vault]->AddTransaction(trans);
     return;
 }
 
