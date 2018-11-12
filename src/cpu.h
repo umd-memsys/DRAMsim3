@@ -26,6 +26,7 @@ class RandomCPU : public CPU {
 
    private:
     uint64_t last_addr_;
+    bool last_write_ = false;
     std::mt19937_64 gen;
     bool get_next_ = true;
 };
