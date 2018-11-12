@@ -36,7 +36,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
         unified_queue_.reserve(config_.trans_queue_size);
     } else {
         read_queue_.reserve(config_.trans_queue_size);
-        write_queue_.reserve(config_.trans_queue_size);
+        write_buffer_.reserve(config_.trans_queue_size);
     }
 
 #ifdef GENERATE_TRACE
@@ -150,7 +150,7 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
     } else if (!is_write) {
         return read_queue_.size() < read_queue_.capacity();
     } else {
-        return write_queue_.size() < write_queue_.capacity();
+        return write_buffer_.size() < write_buffer_.capacity();
     }
 }
 
@@ -179,7 +179,7 @@ bool Controller::AddTransaction(Transaction trans) {
             if (is_unified_queue_) {
                 unified_queue_.push_back(trans);
             } else {
-                write_queue_.push_back(trans);
+                write_buffer_.push_back(trans);
             }
         } else {
             if (is_unified_queue_) {
@@ -195,10 +195,11 @@ bool Controller::AddTransaction(Transaction trans) {
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
     if (write_draining_ == 0 && !is_unified_queue_) {
-        // TODO need better switching machnism
-        if (write_queue_.size() >= write_queue_.capacity() ||
-            (read_queue_.size() == 0 && write_queue_.size() >= 8)) {
-            write_draining_ = write_queue_.size();
+        // we basically have a upper and lower threshold for write buffer
+        if (write_buffer_.size() >= write_buffer_.capacity() ||
+            (read_queue_.empty() &&
+             (int)write_buffer_.size() >= config_.write_buf_size)) {
+            write_draining_ = write_buffer_.size();
         }
     }
 
@@ -208,8 +209,8 @@ void Controller::ScheduleTransaction() {
         trans_it = unified_queue_.begin();
         queue_end = unified_queue_.end();
     } else if (write_draining_ > 0) {
-        trans_it = write_queue_.begin();
-        queue_end = write_queue_.end();
+        trans_it = write_buffer_.begin();
+        queue_end = write_buffer_.end();
     } else {
         trans_it = read_queue_.begin();
         queue_end = read_queue_.end();
@@ -227,7 +228,7 @@ void Controller::ScheduleTransaction() {
                 trans_it = read_queue_.erase(trans_it);
             } else {
                 write_draining_ -= 1;
-                trans_it = write_queue_.erase(trans_it);
+                trans_it = write_buffer_.erase(trans_it);
             }
             break;  // only allow one transaction scheduled per cycle
         } else {
@@ -298,7 +299,8 @@ void Controller::PrintEpochStats(std::ostream &epoch_csv) {
 }
 
 void Controller::PrintFinalStats(std::ostream &stats_txt,
-                                 std::ostream &stats_csv, std::ostream &histo_csv) {
+                                 std::ostream &stats_csv,
+                                 std::ostream &histo_csv) {
     simple_stats_.PrintFinalStats(clk_, stats_txt, stats_csv, histo_csv);
 
 #ifdef THERMAL

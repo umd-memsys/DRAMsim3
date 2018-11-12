@@ -176,6 +176,7 @@ void Config::InitSystemParams() {
     cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
     trans_queue_size = GetInteger("system", "trans_queue_size", 32);
     unified_queue = reader.GetBoolean("system", "unified_queue", false);
+    write_buf_size = GetInteger("system", "write_buf_size", 16);
     std::string ref_policy =
         reader.Get("system", "refresh_policy", "RANK_LEVEL_STAGGERED");
     if (ref_policy == "RANK_LEVEL_SIMULTANEOUS") {

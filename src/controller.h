@@ -59,7 +59,7 @@ class Controller {
     bool is_unified_queue_;
     std::vector<Transaction> unified_queue_;
     std::vector<Transaction> read_queue_;
-    std::vector<Transaction> write_queue_;
+    std::vector<Transaction> write_buffer_;
     std::unordered_set<uint64_t> in_write_buf_;
 
     // transactions that are issued to command queue, use map for convenience
