@@ -59,9 +59,10 @@ void StreamCPU::ClockTick() {
     return;
 }
 
-TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system,
-                             std::string trace_file)
-    : CPU(memory_system) {
+TraceBasedCPU::TraceBasedCPU(const std::string& config_file,
+                             const std::string& output_dir,
+                             const std::string& trace_file)
+    : CPU(config_file, output_dir) {
     trace_file_.open(trace_file);
     if (trace_file_.fail()) {
         std::cerr << "Trace file does not exist" << std::endl;
@@ -77,8 +78,8 @@ void TraceBasedCPU::ClockTick() {
             trace_file_ >> trans_;
         }
         if (trans_.added_cycle <= clk_) {
-            get_next_ = memory_system_.WillAcceptTransaction(
-                trans_.addr, trans_.is_write);
+            get_next_ = memory_system_.WillAcceptTransaction(trans_.addr,
+                                                             trans_.is_write);
             if (get_next_) {
                 memory_system_.AddTransaction(trans_.addr, trans_.is_write);
             }

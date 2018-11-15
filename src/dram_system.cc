@@ -58,6 +58,7 @@ BaseDRAMSystem::~BaseDRAMSystem() {
 void BaseDRAMSystem::RegisterCallbacks(
     std::function<void(uint64_t)> read_callback,
     std::function<void(uint64_t)> write_callback) {
+    // TODO this should be propagated to controllers
     read_callback_ = read_callback;
     write_callback_ = write_callback;
 }

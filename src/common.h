@@ -45,10 +45,7 @@ void StringSplit(const std::string& s, char delim, Out result);
 
 int LogBase2(int power_of_two);
 void AbruptExit(const std::string& file, int line);
-void read_callback_func(uint64_t req_id);
-void write_callback_func(uint64_t req_id);
 bool DirExist(std::string dir);
-void RenameFileWithNumber(std::string& file_name, int number);
 
 enum class State { OPEN, CLOSED, SREF, SIZE };
 

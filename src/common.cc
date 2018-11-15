@@ -86,23 +86,6 @@ void AbruptExit(const std::string& file, int line) {
     std::exit(-1);
 }
 
-// Dummy callback functions for use when the simulator is not integrated with a
-// frontend feeders
-void read_callback_func(uint64_t addr) {
-#ifdef LOG_REQUESTS
-    std::cout << "Read Request with address = " << addr << " is returned"
-              << std::endl;
-#endif
-    return;
-}
-
-void write_callback_func(uint64_t addr) {
-#ifdef LOG_REQUESTS
-    std::cout << "Write Request with address = " << addr << " is returned"
-              << std::endl;
-#endif
-}
-
 bool DirExist(std::string dir) {
     // courtesy to stackoverflow
     struct stat info;
