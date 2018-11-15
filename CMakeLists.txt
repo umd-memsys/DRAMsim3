@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(dramsim3)
 
+set(default_build_type "Release")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+      STRING "Choose the type of build." FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
 add_library(inih INTERFACE)
 target_include_directories(inih INTERFACE ext/headers)
 
@@ -67,7 +77,7 @@ set_target_properties(dramsim3 PROPERTIES
 # trace CPU, .etc
 add_executable(dramsim3main src/main.cc src/cpu.cc)
 target_link_libraries(dramsim3main PRIVATE dramsim3 args)
-target_compile_options(dramsim3main PRIVATE -O3)
+target_compile_options(dramsim3main PRIVATE)
 set_target_properties(dramsim3main PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES
