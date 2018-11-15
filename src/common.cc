@@ -1,5 +1,5 @@
 #include "common.h"
-#include "../ext/fmt/src/format.h"
+#include <fmt/format.h>
 
 namespace dramsim3 {
 

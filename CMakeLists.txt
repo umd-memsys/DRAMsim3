@@ -4,18 +4,9 @@ project(dramsim3)
 add_library(inih INTERFACE)
 target_include_directories(inih INTERFACE ext/headers)
 
-# for printing
-add_library(format SHARED
-    ext/fmt/src/format.cc
-)
-target_compile_options(format PRIVATE -O3)
-target_include_directories(format INTERFACE ext/fmt/src)
-# had to do this the old way to be able to use lower cmake versions
-set_target_properties(format PROPERTIES
-    CXX_STANDARD 11
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-)
+add_library(format INTERFACE)
+target_include_directories(format INTERFACE ext/fmt/include)
+target_compile_definitions(format INTERFACE FMT_HEADER_ONLY=1)
 
 # argparsing library, only used in main program not the library
 add_library(args INTERFACE)

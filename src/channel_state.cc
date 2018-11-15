@@ -1,5 +1,4 @@
 #include "channel_state.h"
-#include "../ext/fmt/src/format.h"
 
 namespace dramsim3 {
 ChannelState::ChannelState(const Config& config, const Timing& timing)
