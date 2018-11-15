@@ -1,13 +1,8 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(dramsim3)
 
-# for config file parsing
-add_library(ini SHARED
-    ext/inih/src/INIReader.cpp
-    ext/inih/src/ini.c
-)
-target_compile_options(ini PRIVATE -O3)
-target_include_directories(ini PUBLIC ext/inih/src)
+add_library(inih INTERFACE)
+target_include_directories(inih INTERFACE ext/headers)
 
 # for printing
 add_library(format SHARED
@@ -70,7 +65,7 @@ endif (THERMAL)
 
 target_include_directories(dramsim3 INTERFACE src)
 target_compile_options(dramsim3 PRIVATE -Wall)
-target_link_libraries(dramsim3 PRIVATE ini format)
+target_link_libraries(dramsim3 PRIVATE inih format)
 set_target_properties(dramsim3 PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}
     CXX_STANDARD 11
