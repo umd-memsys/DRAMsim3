@@ -1,5 +1,7 @@
 #include "common.h"
 #include <fmt/format.h>
+#include <sstream>
+#include <unordered_set>
 
 namespace dramsim3 {
 
@@ -25,17 +27,18 @@ std::ostream& operator<<(std::ostream& os, const Command& cmd) {
 
 std::ostream& operator<<(std::ostream& os, const Transaction& trans) {
     const std::string trans_type = trans.is_write ? "WRITE" : "READ";
-    os << std::setw(30) << trans.addr << std::setw(8) << trans_type;
+    os << fmt::format("{:<30} {:>8}", trans.addr, trans_type);
     return os;
 }
 
-std::istream& operator>>(std::istream& is, Access& access) {
-    is >> std::hex >> access.hex_addr_ >> access.access_type_ >> std::dec >>
-        access.time_;
+std::istream& operator>>(std::istream& is, Transaction& trans) {
+    std::unordered_set<std::string> write_types = {"WRITE", "write", "P_MEM_WR",
+                                                   "BOFF"};
+    std::string mem_op;
+    is >> std::hex >> trans.addr >> mem_op >> std::dec >> trans.added_cycle;
+    trans.is_write = write_types.count(mem_op) == 1;
     return is;
 }
-
-std::ostream& operator<<(std::ostream& os, const Access& access) { return os; }
 
 uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
     addr >>= pos;
@@ -110,14 +113,6 @@ bool DirExist(std::string dir) {
     } else {  // exists but is file
         return false;
     }
-}
-
-void RenameFileWithNumber(std::string& file_name, int number) {
-    int last_dot_index = file_name.find_last_of(".");
-    std::string prefix = file_name.substr(0, last_dot_index);
-    std::string postfix = file_name.substr(last_dot_index, file_name.size());
-    file_name = prefix + "_" + std::to_string(number) + postfix;
-    return;
 }
 
 }  // namespace dramsim3

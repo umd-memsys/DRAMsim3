@@ -3,12 +3,8 @@
 
 #include <stdint.h>
 #include <sys/stat.h>
-#include <fstream>
 #include <functional>
-#include <iomanip>
 #include <iostream>
-#include <iterator>
-#include <sstream>
 #include <vector>
 
 namespace dramsim3 {
@@ -114,16 +110,8 @@ struct Transaction {
     bool is_write;
 
     friend std::ostream& operator<<(std::ostream& os, const Transaction& trans);
+    friend std::istream& operator>>(std::istream& is, Transaction& trans);
 };
 
-
-class Access {
-   public:
-    uint64_t hex_addr_;
-    std::string access_type_;
-    uint64_t time_;
-    friend std::istream& operator>>(std::istream& is, Access& access);
-    friend std::ostream& operator<<(std::ostream& os, const Access& access);
-};
 }  // namespace dramsim3
 #endif

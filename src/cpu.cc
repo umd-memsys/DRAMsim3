@@ -74,14 +74,13 @@ void TraceBasedCPU::ClockTick() {
     if (!trace_file_.eof()) {
         if (get_next_) {
             get_next_ = false;
-            trace_file_ >> access_;
+            trace_file_ >> trans_;
         }
-        if (access_.time_ <= clk_) {
-            bool is_write = access_.access_type_ == "WRITE";
-            bool get_next_ = memory_system_.WillAcceptTransaction(
-                access_.hex_addr_, is_write);
+        if (trans_.added_cycle <= clk_) {
+            get_next_ = memory_system_.WillAcceptTransaction(
+                trans_.addr, trans_.is_write);
             if (get_next_) {
-                memory_system_.AddTransaction(access_.hex_addr_, is_write);
+                memory_system_.AddTransaction(trans_.addr, trans_.is_write);
             }
         }
     }

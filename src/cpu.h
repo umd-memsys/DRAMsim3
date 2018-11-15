@@ -54,7 +54,7 @@ class TraceBasedCPU : public CPU {
 
    private:
     std::ifstream trace_file_;
-    Access access_;
+    Transaction trans_;
     bool get_next_ = true;
 };
 
