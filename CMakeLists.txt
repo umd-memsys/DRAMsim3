@@ -60,7 +60,7 @@ if (THERMAL)
     target_compile_options(dramsim3 PRIVATE -DTHERMAL -D_LONGINT -DAdd_ ${OpenMP_C_FLAGS})
 
     add_executable(thermalreplay src/thermal_replay.cc)
-    target_link_libraries(thermalreplay dramsim3)
+    target_link_libraries(thermalreplay dramsim3 inih)
     target_compile_options(thermalreplay PRIVATE -DTHERMAL -D_LONGINT -DAdd_ ${OpenMP_C_FLAGS})
 endif (THERMAL)
 

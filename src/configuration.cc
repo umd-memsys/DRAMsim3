@@ -2,6 +2,10 @@
 
 #include <vector>
 
+#ifdef THERMAL
+#include <math.h>
+#endif  // THERMAL
+
 namespace dramsim3 {
 
 std::function<Address(uint64_t)> AddressMapping;

@@ -1,5 +1,5 @@
 #include "simple_stats.h"
-#include <fmt/format.h>
+#include "fmt/format.h"
 
 namespace dramsim3 {
 
