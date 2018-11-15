@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <string>
-#include <vector>
 
 #include "configuration.h"
 #include "dram_system.h"

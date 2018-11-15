@@ -2,40 +2,46 @@
 #define __CPU_H
 
 #include <fstream>
+#include <functional>
 #include <random>
-#include <vector>
-#include "common.h"
-#include "configuration.h"
-#include "controller.h"
+#include <string>
 #include "memory_system.h"
 
 namespace dramsim3 {
 
 class CPU {
    public:
-    CPU(MemorySystem& memory_system) : memory_system_(memory_system), clk_(0) {}
+    CPU(const std::string& config_file, const std::string& output_dir)
+        : memory_system_(
+              config_file, output_dir,
+              std::bind(&CPU::ReadCallBack, this, std::placeholders::_1),
+              std::bind(&CPU::WriteCallBack, this, std::placeholders::_1)),
+          clk_(0) {}
     virtual ~CPU() { memory_system_.PrintStats(); }
     virtual void ClockTick() = 0;
+    void ReadCallBack(uint64_t addr) { return; }
+    void WriteCallBack(uint64_t addr) { return; }
 
    protected:
-    MemorySystem& memory_system_;
+    MemorySystem memory_system_;
     uint64_t clk_;
 };
 
 class RandomCPU : public CPU {
    public:
-    RandomCPU(MemorySystem& memory_system) : CPU(memory_system) {}
+    using CPU::CPU;
     void ClockTick() override;
 
    private:
     uint64_t last_addr_;
+    bool last_write_ = false;
     std::mt19937_64 gen;
     bool get_next_ = true;
 };
 
 class StreamCPU : public CPU {
    public:
-    StreamCPU(MemorySystem& memory_system) : CPU(memory_system) {}
+    using CPU::CPU;
     void ClockTick() override;
 
    private:
@@ -50,13 +56,14 @@ class StreamCPU : public CPU {
 
 class TraceBasedCPU : public CPU {
    public:
-    TraceBasedCPU(MemorySystem& memory_system, std::string trace_file);
+    TraceBasedCPU(const std::string& config_file, const std::string& output_dir,
+                  const std::string& trace_file);
     ~TraceBasedCPU() { trace_file_.close(); }
     void ClockTick() override;
 
    private:
     std::ifstream trace_file_;
-    Access access_;
+    Transaction trans_;
     bool get_next_ = true;
 };
 

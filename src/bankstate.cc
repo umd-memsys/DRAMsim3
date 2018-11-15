@@ -1,12 +1,9 @@
 #include "bankstate.h"
-#include <algorithm>
-#include "statistics.h"
 
 namespace dramsim3 {
 
-BankState::BankState(Statistics& stats)
-    : stats_(stats),
-      state_(State::CLOSED),
+BankState::BankState()
+    : state_(State::CLOSED),
       cmd_timing_(static_cast<int>(CommandType::SIZE)),
       open_row_(-1),
       row_hit_count_(0) {
@@ -94,13 +91,6 @@ void BankState::UpdateState(const Command& cmd) {
             switch (cmd.cmd_type) {
                 case CommandType::READ:
                 case CommandType::WRITE:
-                    if (row_hit_count_ != 0) {
-                        stats_.num_row_hits++;
-                        if (cmd.cmd_type == CommandType::READ)
-                            stats_.num_read_row_hits++;
-                        if (cmd.cmd_type == CommandType::WRITE)
-                            stats_.num_write_row_hits++;
-                    }
                     row_hit_count_++;
                     break;
                 case CommandType::READ_PRECHARGE:

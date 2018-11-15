@@ -9,7 +9,7 @@
 #include "command_queue.h"
 #include "common.h"
 #include "refresh.h"
-#include "statistics.h"
+#include "simple_stats.h"
 
 #ifdef THERMAL
 #include "thermal.h"
@@ -23,41 +23,43 @@ class Controller {
    public:
 #ifdef THERMAL
     Controller(int channel, const Config &config, const Timing &timing,
-               Statistics &stats, ThermalCalculator &thermalcalc,
+               ThermalCalculator &thermalcalc,
                std::function<void(uint64_t)> read_callback,
                std::function<void(uint64_t)> write_callback);
 #else
     Controller(int channel, const Config &config, const Timing &timing,
-               Statistics &stats, std::function<void(uint64_t)> read_callback,
+               std::function<void(uint64_t)> read_callback,
                std::function<void(uint64_t)> write_callback);
 #endif  // THERMAL
-    ~Controller(){};
+    ~Controller();
     void ClockTick();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
     bool AddTransaction(Transaction trans);
+    int QueueUsage() const;
+    // Stats output
+    void PrintEpochStats(std::ostream &epoch_csv);
+    void PrintFinalStats(std::ostream &stats_txt, std::ostream &stats_csv,
+                         std::ostream &histo_csv);
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
-    int QueueUsage() const;
 
    private:
     uint64_t clk_;
     const Config &config_;
+    SimpleStats simple_stats_;
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;
-    Statistics &stats_;
 
 #ifdef THERMAL
     ThermalCalculator &thermal_calc_;
 #endif  // THERMAL
-#ifdef GENERATE_TRACE
-    std::ofstream cmd_trace_;
-#endif  // GENERATE_TRACE
+
     // queue that takes transactions from CPU side
     bool is_unified_queue_;
     std::vector<Transaction> unified_queue_;
     std::vector<Transaction> read_queue_;
-    std::vector<Transaction> write_queue_;
+    std::vector<Transaction> write_buffer_;
     std::unordered_set<uint64_t> in_write_buf_;
 
     // transactions that are issued to command queue, use map for convenience
@@ -69,11 +71,19 @@ class Controller {
     // row buffer policy
     RowBufPolicy row_buf_policy_;
 
+#ifdef GENERATE_TRACE
+    std::ofstream cmd_trace_;
+#endif  // GENERATE_TRACE
+
+    // used to calculate inter-arrival latency
+    uint64_t last_trans_clk_;
+
     // transaction queueing
     int write_draining_;
     void ScheduleTransaction();
     void IssueCommand(const Command &tmp_cmd);
     Command TransToCommand(const Transaction &trans);
+    void UpdateCommandStats(const Command &cmd);
 };
 }  // namespace dramsim3
 #endif

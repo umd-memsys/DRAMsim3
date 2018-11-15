@@ -7,15 +7,11 @@
 #include "configuration.h"
 #include "timing.h"
 
-#ifdef THERMAL
-#include "thermal.h"
-#endif  // THERMAL
-
 namespace dramsim3 {
 
 class ChannelState {
    public:
-    ChannelState(const Config& config, const Timing& timing, Statistics& stats);
+    ChannelState(const Config& config, const Timing& timing);
     Command GetRequiredCommand(const Command& cmd) const;
     bool IsReady(const Command& cmd, uint64_t clk) const;
     void UpdateState(const Command& cmd);
@@ -44,7 +40,6 @@ class ChannelState {
    private:
     const Config& config_;
     const Timing& timing_;
-    Statistics& stats_;
 
     std::vector<bool> rank_is_sref_;
     std::vector<std::vector<std::vector<BankState> > > bank_states_;
@@ -84,8 +79,6 @@ class ChannelState {
         const Address& addr,
         const std::vector<std::pair<CommandType, int> >& cmd_timing_list,
         uint64_t clk);
-
-    void UpdateCommandIssueStats(const Command& cmd) const;
 };
 
 }  // namespace dramsim3

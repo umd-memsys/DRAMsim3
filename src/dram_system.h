@@ -1,13 +1,13 @@
 #ifndef __DRAM_SYSTEM_H
 #define __DRAM_SYSTEM_H
 
+#include <fstream>
 #include <string>
 #include <vector>
 
 #include "common.h"
 #include "configuration.h"
 #include "controller.h"
-#include "statistics.h"
 #include "timing.h"
 
 #ifdef THERMAL
@@ -28,30 +28,26 @@ class BaseDRAMSystem {
                                        bool is_write) const = 0;
     virtual bool AddTransaction(uint64_t hex_addr, bool is_write) = 0;
     virtual void ClockTick() = 0;
-    virtual void PrintIntermediateStats();
-    virtual void PrintStats();
+    virtual void PrintStats() = 0;
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
-    // TODO remove this
-    static int num_mems_;
+    static int total_channels_;
 
    protected:
-    uint64_t clk_;
     uint64_t id_;
     uint64_t last_req_clk_;
     Config &config_;
     Timing timing_;
-    Statistics stats_;
 #ifdef THERMAL
     ThermalCalculator thermal_calc_;
 #endif  // THERMAL
-    int mem_sys_id_;
+    uint64_t clk_;
 
-    // Stats output files
-    std::ofstream stats_file_;
-    std::ofstream epoch_stats_file_;
-    std::ofstream stats_file_csv_;
-    std::ofstream epoch_stats_file_csv_;
-    std::ofstream histo_stats_file_csv_;
+
+    // Output files
+    std::ofstream stats_txt_file_;
+    std::ofstream stats_csv_file_;
+    std::ofstream epoch_csv_file_;
+    std::ofstream histo_csv_file_;
 #ifdef GENERATE_TRACE
     std::ofstream address_trace_;
 #endif  // GENERATE_TRACE
@@ -67,9 +63,10 @@ class JedecDRAMSystem : public BaseDRAMSystem {
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const override;
     bool AddTransaction(uint64_t hex_addr, bool is_write) override;
     void ClockTick() override;
+    void PrintStats() override;
 
    private:
-    std::vector<Controller> ctrls_;
+    std::vector<Controller*> ctrls_;
 };
 
 // Model a memorysystem with an infinite bandwidth and a fixed latency (possibly

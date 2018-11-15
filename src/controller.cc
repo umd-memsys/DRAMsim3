@@ -6,12 +6,11 @@ namespace dramsim3 {
 
 #ifdef THERMAL
 Controller::Controller(int channel, const Config &config, const Timing &timing,
-                       Statistics &stats, ThermalCalculator &thermal_calc,
+                       ThermalCalculator &thermal_calc,
                        std::function<void(uint64_t)> read_callback,
                        std::function<void(uint64_t)> write_callback)
 #else
 Controller::Controller(int channel, const Config &config, const Timing &timing,
-                       Statistics &stats,
                        std::function<void(uint64_t)> read_callback,
                        std::function<void(uint64_t)> write_callback)
 #endif  // THERMAL
@@ -20,42 +19,49 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
       channel_id_(channel),
       clk_(0),
       config_(config),
-      channel_state_(config, timing, stats),
-      cmd_queue_(channel_id_, config, channel_state_, stats),
+      simple_stats_(config_, channel_id_),
+      channel_state_(config, timing),
+      cmd_queue_(channel_id_, config, channel_state_, simple_stats_),
       refresh_(config, channel_state_),
-      stats_(stats),
-      is_unified_queue_(config.unified_queue),
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
 #endif  // THERMAL
+      is_unified_queue_(config.unified_queue),
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE"
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
+      last_trans_clk_(0),
       write_draining_(0) {
     if (is_unified_queue_) {
         unified_queue_.reserve(config_.trans_queue_size);
     } else {
         read_queue_.reserve(config_.trans_queue_size);
-        write_queue_.reserve(config_.trans_queue_size);
+        write_buffer_.reserve(config_.trans_queue_size);
     }
+
 #ifdef GENERATE_TRACE
-    std::string trace_file_name = config_.output_prefix + "cmd.trace";
-    RenameFileWithNumber(trace_file_name, channel_id);
+    std::string trace_file_name = "dramsim3ch_" + channel_str + "cmd.trace";
     std::cout << "Command Trace write to " << trace_file_name << std::endl;
     cmd_trace_.open(trace_file_name, std::ofstream::out);
 #endif  // GENERATE_TRACE
+}
+
+Controller::~Controller() {
+#ifdef GENERATE_TRACE
+    cmd_trace_.close();
+#endif
 }
 
 void Controller::ClockTick() {
     // Return completed read transactions back to the CPU
     for (auto it = return_queue_.begin(); it != return_queue_.end();) {
         if (clk_ >= it->complete_cycle) {
-            stats_.access_latency.AddValue(clk_ - it->added_cycle);
             if (it->is_write) {
                 std::cerr << "cmd id overflow!" << std::endl;
                 exit(1);
             } else {
-                stats_.num_reads_done++;
+                simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
+                simple_stats_.Increment("num_reads_done");
                 read_callback_(it->addr);
                 it = return_queue_.erase(it);
             }
@@ -78,7 +84,7 @@ void Controller::ClockTick() {
             if (second_cmd.IsValid()) {
                 if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
                     IssueCommand(second_cmd);
-                    stats_.hbm_dual_cmds++;
+                    simple_stats_.Increment("hbm_dual_cmds");
                 }
             }
         }
@@ -87,15 +93,14 @@ void Controller::ClockTick() {
     // power updates pt 1
     for (int i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
-            // stats_.sref_energy[channel_id_][i]++;
-            stats_.sref_cycles[channel_id_][i]++;
+            simple_stats_.IncrementVec("sref_cycles", i);
         } else {
             bool all_idle = channel_state_.IsAllBankIdleInRank(i);
             if (all_idle) {
-                stats_.all_bank_idle_cycles[channel_id_][i]++;
+                simple_stats_.IncrementVec("all_bank_idle_cycles", i);
                 channel_state_.rank_idle_cycles[i] += 1;
             } else {
-                stats_.active_cycles[channel_id_][i]++;
+                simple_stats_.IncrementVec("rank_active_cycles", i);
                 // reset
                 channel_state_.rank_idle_cycles[i] = 0;
             }
@@ -111,7 +116,7 @@ void Controller::ClockTick() {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_EXIT, addr, -1);
-                    if (channel_state_.IsReady(cmd, clk_)){
+                    if (channel_state_.IsReady(cmd, clk_)) {
                         IssueCommand(cmd);
                         break;
                     }
@@ -123,7 +128,7 @@ void Controller::ClockTick() {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_ENTER, addr, -1);
-                    if (channel_state_.IsReady(cmd, clk_)){
+                    if (channel_state_.IsReady(cmd, clk_)) {
                         IssueCommand(cmd);
                         break;
                     }
@@ -132,46 +137,49 @@ void Controller::ClockTick() {
         }
     }
 
-
     ScheduleTransaction();
     clk_++;
     cmd_queue_.ClockTick();
+    simple_stats_.Increment("num_cycles");
     return;
 }
 
 bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
     if (is_unified_queue_) {
-        return unified_queue_.size() <unified_queue_.capacity();
+        return unified_queue_.size() < unified_queue_.capacity();
     } else if (!is_write) {
         return read_queue_.size() < read_queue_.capacity();
     } else {
-        return write_queue_.size() < write_queue_.capacity();
+        return write_buffer_.size() < write_buffer_.capacity();
     }
 }
 
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
+    simple_stats_.AddValue("interarrival_latency", clk_ - last_trans_clk_);
+    last_trans_clk_ = clk_;
+
     // check if already in write buffer, can return immediately
     if (in_write_buf_.count(trans.addr) > 0) {
-        stats_.num_write_buf_hits++;
+        simple_stats_.Increment("num_write_buf_hits");
         if (trans.is_write) {
-            stats_.num_writes_done++;
+            simple_stats_.Increment("num_writes_done");
             write_callback_(trans.addr);
         } else {
-            stats_.num_reads_done++;
+            simple_stats_.Increment("num_reads_done");
             read_callback_(trans.addr);
         }
         return true;
     } else {
         if (trans.is_write) {
             // pretend it's done
-            stats_.num_writes_done++;
+            simple_stats_.Increment("num_writes_done");
             write_callback_(trans.addr);
             in_write_buf_.insert(trans.addr);
             if (is_unified_queue_) {
                 unified_queue_.push_back(trans);
             } else {
-                write_queue_.push_back(trans);
+                write_buffer_.push_back(trans);
             }
         } else {
             if (is_unified_queue_) {
@@ -187,10 +195,11 @@ bool Controller::AddTransaction(Transaction trans) {
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
     if (write_draining_ == 0 && !is_unified_queue_) {
-        // TODO need better switching machnism
-        if (write_queue_.size() >= write_queue_.capacity() ||
-            (read_queue_.size() == 0 && write_queue_.size() >=8)) {
-            write_draining_ = write_queue_.size();
+        // we basically have a upper and lower threshold for write buffer
+        if (write_buffer_.size() >= write_buffer_.capacity() ||
+            (read_queue_.empty() &&
+             (int)write_buffer_.size() >= config_.write_buf_size)) {
+            write_draining_ = write_buffer_.size();
         }
     }
 
@@ -200,8 +209,8 @@ void Controller::ScheduleTransaction() {
         trans_it = unified_queue_.begin();
         queue_end = unified_queue_.end();
     } else if (write_draining_ > 0) {
-        trans_it = write_queue_.begin();
-        queue_end = write_queue_.end();
+        trans_it = write_buffer_.begin();
+        queue_end = write_buffer_.end();
     } else {
         trans_it = read_queue_.begin();
         queue_end = read_queue_.end();
@@ -219,7 +228,7 @@ void Controller::ScheduleTransaction() {
                 trans_it = read_queue_.erase(trans_it);
             } else {
                 write_draining_ -= 1;
-                trans_it = write_queue_.erase(trans_it);
+                trans_it = write_buffer_.erase(trans_it);
             }
             break;  // only allow one transaction scheduled per cycle
         } else {
@@ -228,8 +237,7 @@ void Controller::ScheduleTransaction() {
     }
 }
 
-void Controller::IssueCommand(const Command &tmp_cmd) {
-    Command cmd = Command(tmp_cmd.cmd_type, tmp_cmd.addr, tmp_cmd.hex_addr);
+void Controller::IssueCommand(const Command &cmd) {
 #ifdef DEBUG_OUTPUT
     std::cout << std::left << std::setw(8) << clk_ << " " << cmd << std::endl;
 #endif  // DEBUG_OUTPUT
@@ -238,8 +246,7 @@ void Controller::IssueCommand(const Command &tmp_cmd) {
 #endif  // GENERATE_TRACE
 #ifdef THERMAL
     // add channel in, only needed by thermal module
-    cmd.addr.channel = channel_id_;
-    thermal_calc_.UpdatePower(cmd, clk_);
+    thermal_calc_.UpdateCMDPower(channel_id_, cmd, clk_);
 #endif  // THERMAL
     // if read/write, update pending queue and return queue
     if (cmd.IsReadWrite()) {
@@ -259,6 +266,8 @@ void Controller::IssueCommand(const Command &tmp_cmd) {
         }
         pending_queue_.erase(it);
     }
+    // NOTE: must update stats before update states (to get correct row hits)
+    UpdateCommandStats(cmd);
     channel_state_.UpdateTimingAndStates(cmd, clk_);
 }
 
@@ -276,5 +285,72 @@ Command Controller::TransToCommand(const Transaction &trans) {
 }
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
+
+void Controller::PrintEpochStats(std::ostream &epoch_csv) {
+    simple_stats_.Increment("num_epochs");
+    simple_stats_.PrintEpochStats(clk_, epoch_csv);
+#ifdef THERMAL
+    for (int r = 0; r < config_.ranks; r++) {
+        double bg_energy = simple_stats_.RankBackgroundEnergy(r);
+        thermal_calc_.UpdateBackgroundEnergy(channel_id_, r, bg_energy);
+    }
+#endif  // THERMAL
+    return;
+}
+
+void Controller::PrintFinalStats(std::ostream &stats_txt,
+                                 std::ostream &stats_csv,
+                                 std::ostream &histo_csv) {
+    simple_stats_.PrintFinalStats(clk_, stats_txt, stats_csv, histo_csv);
+
+#ifdef THERMAL
+    for (int r = 0; r < config_.ranks; r++) {
+        double bg_energy = simple_stats_.RankBackgroundEnergy(r);
+        thermal_calc_.UpdateBackgroundEnergy(channel_id_, r, bg_energy);
+    }
+#endif  // THERMAL
+    return;
+}
+
+void Controller::UpdateCommandStats(const Command &cmd) {
+    switch (cmd.cmd_type) {
+        case CommandType::READ:
+        case CommandType::READ_PRECHARGE:
+            simple_stats_.Increment("num_read_cmds");
+            if (channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(),
+                                           cmd.Bank()) != 0) {
+                simple_stats_.Increment("num_read_row_hits");
+            }
+            break;
+        case CommandType::WRITE:
+        case CommandType::WRITE_PRECHARGE:
+            simple_stats_.Increment("num_write_cmds");
+            if (channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(),
+                                           cmd.Bank()) != 0) {
+                simple_stats_.Increment("num_write_row_hits");
+            }
+            break;
+        case CommandType::ACTIVATE:
+            simple_stats_.Increment("num_act_cmds");
+            break;
+        case CommandType::PRECHARGE:
+            simple_stats_.Increment("num_pre_cmds");
+            break;
+        case CommandType::REFRESH:
+            simple_stats_.Increment("num_ref_cmds");
+            break;
+        case CommandType::REFRESH_BANK:
+            simple_stats_.Increment("num_refb_cmds");
+            break;
+        case CommandType::SREF_ENTER:
+            simple_stats_.Increment("num_srefe_cmds");
+            break;
+        case CommandType::SREF_EXIT:
+            simple_stats_.Increment("num_srefx_cmds");
+            break;
+        default:
+            AbruptExit(__FILE__, __LINE__);
+    }
+}
 
 }  // namespace dramsim3

@@ -9,11 +9,11 @@ void RandomCPU::ClockTick() {
     memory_system_.ClockTick();
     if (get_next_) {
         last_addr_ = gen();
+        last_write_ = (gen() % 3 == 0);
     }
-    bool is_write = (gen() % 3 == 0);  // R/W ratio 2:1
-    get_next_ = memory_system_.WillAcceptTransaction(last_addr_, is_write);
+    get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_);
     if (get_next_) {
-        memory_system_.AddTransaction(last_addr_, is_write);
+        memory_system_.AddTransaction(last_addr_, last_write_);
     }
     clk_++;
     return;
@@ -59,9 +59,10 @@ void StreamCPU::ClockTick() {
     return;
 }
 
-TraceBasedCPU::TraceBasedCPU(MemorySystem& memory_system,
-                             std::string trace_file)
-    : CPU(memory_system) {
+TraceBasedCPU::TraceBasedCPU(const std::string& config_file,
+                             const std::string& output_dir,
+                             const std::string& trace_file)
+    : CPU(config_file, output_dir) {
     trace_file_.open(trace_file);
     if (trace_file_.fail()) {
         std::cerr << "Trace file does not exist" << std::endl;
@@ -74,14 +75,13 @@ void TraceBasedCPU::ClockTick() {
     if (!trace_file_.eof()) {
         if (get_next_) {
             get_next_ = false;
-            trace_file_ >> access_;
+            trace_file_ >> trans_;
         }
-        if (access_.time_ <= clk_) {
-            bool is_write = access_.access_type_ == "WRITE";
-            bool get_next_ = memory_system_.WillAcceptTransaction(
-                access_.hex_addr_, is_write);
+        if (trans_.added_cycle <= clk_) {
+            get_next_ = memory_system_.WillAcceptTransaction(trans_.addr,
+                                                             trans_.is_write);
             if (get_next_) {
-                memory_system_.AddTransaction(access_.hex_addr_, is_write);
+                memory_system_.AddTransaction(trans_.addr, trans_.is_write);
             }
         }
     }

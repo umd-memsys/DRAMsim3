@@ -8,6 +8,7 @@ uint64_t lcm(uint64_t x, uint64_t y);
 HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr)
     : type(req_type), mem_operand(hex_addr) {
     Address addr = AddressMapping(mem_operand);
+    is_write = type >= HMCReqType::WR0 && type <= HMCReqType::P_WR256;
     vault = addr.channel;
     // given that vaults could be 16 (Gen1) or 32(Gen2), using % 4
     // to partition vaults to quads
@@ -266,11 +267,11 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     vaults_.reserve(config_.channels);
     for (int i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
-        vaults_.emplace_back(i, config_, timing_, stats_, thermal_calc_,
-                             vault_callback_, vault_callback_);
+        vaults_.push_back(new Controller(i, config_, timing_, thermal_calc_,
+                                         vault_callback_, vault_callback_));
 #else
-        vaults_.emplace_back(i, config_, timing_, stats_, vault_callback_,
-                             vault_callback_);
+        vaults_.push_back(new Controller(i, config_, timing_, vault_callback_,
+                                         vault_callback_));
 #endif  // THERMAL
     }
     // initialize vaults and crossbar
@@ -295,11 +296,17 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
         quad_resp_queues_.push_back(std::vector<HMCResponse *>());
     }
 
-    link_busy.reserve(links_);
-    link_age_counter.reserve(links_);
+    link_busy_.reserve(links_);
+    link_age_counter_.reserve(links_);
     for (int i = 0; i < links_; i++) {
-        link_busy.push_back(0);
-        link_age_counter.push_back(0);
+        link_busy_.push_back(0);
+        link_age_counter_.push_back(0);
+    }
+}
+
+HMCMemorySystem::~HMCMemorySystem() {
+    for (auto &&vault_ptr : vaults_) {
+        delete (vault_ptr);
     }
 }
 
@@ -419,16 +426,16 @@ bool HMCMemorySystem::InsertReqToLink(HMCRequest *req, int link) {
     // 1. check if link queue full
     // 2. set link field in the request packet
     // 3. create corresponding response
-    // 4. increment link_age_counter so that arbitrate logic works
+    // 4. increment link_age_counter_ so that arbitrate logic works
     if (link_req_queues_[link].size() < queue_depth_) {
         req->link = link;
         link_req_queues_[link].push_back(req);
         HMCResponse *resp =
             new HMCResponse(req->mem_operand, req->type, link, req->quad);
-        resp_lookup_table.insert(
+        resp_lookup_table_.insert(
             std::pair<uint64_t, HMCResponse *>(resp->resp_id, resp));
-        link_age_counter[link] = 1;
-        stats_.interarrival_latency.AddValue(clk_ - last_req_clk_);
+        link_age_counter_[link] = 1;
+        // stats_.interarrival_latency.AddValue(clk_ - last_req_clk_);
         last_req_clk_ = clk_;
         return true;
     } else {
@@ -481,7 +488,7 @@ void HMCMemorySystem::LogicClockTickPre() {
                 }
                 delete (resp);
                 link_resp_queues_[i].erase(link_resp_queues_[i].begin());
-                stats_.hmc_reqs_done++;
+                // stats_.hmc_reqs_done++;
             }
         }
     }
@@ -497,8 +504,8 @@ void HMCMemorySystem::LogicClockTickPost() {
             quad_resp_queues_[i].size() < queue_depth_) {
             HMCRequest *req = quad_req_queues_[i].front();
             if (req->exit_time <= logic_clk_) {
-                if (vaults_[req->vault].WillAcceptTransaction(req->mem_operand,
-                                                              req->IsWrite())) {
+                if (vaults_[req->vault]->WillAcceptTransaction(
+                        req->mem_operand, req->is_write)) {
                     InsertReqToDRAM(req);
                     delete (req);
                     quad_req_queues_[i].erase(quad_req_queues_[i].begin());
@@ -511,13 +518,13 @@ void HMCMemorySystem::LogicClockTickPost() {
     // the decremented values here basically represents the internal BW of
     // a xbar, to match the external link, transfering 2 flits are
     // usually be needed
-    for (auto &&i : link_busy) {
+    for (auto &&i : link_busy_) {
         if (i > 0) {
             i -= 2;
         }
     }
 
-    for (auto &&i : quad_busy) {
+    for (auto &&i : quad_busy_) {
         if (i > 0) {
             i -= 2;
         }
@@ -525,7 +532,7 @@ void HMCMemorySystem::LogicClockTickPost() {
 
     // xbar arbitrate using age/FIFO arbitration
     // What is set/updated here:
-    // - link_busy, quad_busy indicators
+    // - link_busy_, quad_busy_ indicators
     // - link req, resp queues, quad req, resp queues
     // - age counter
     XbarArbitrate();
@@ -534,20 +541,14 @@ void HMCMemorySystem::LogicClockTickPost() {
 
 void HMCMemorySystem::DRAMClockTick() {
     for (auto &&vault : vaults_) {
-        vault.ClockTick();
-    }
-    if (clk_ % config_.epoch_period == 0 && clk_ != 0) {
-        int queue_usage_total = 0;
-        for (const auto &vault : vaults_) {
-            queue_usage_total += vault.QueueUsage();
-        }
-        stats_.queue_usage.epoch_value = static_cast<double>(queue_usage_total);
-        stats_.PreEpochCompute(clk_);
-        PrintIntermediateStats();
-        stats_.UpdateEpoch(clk_);
+        vault->ClockTick();
     }
     clk_++;
-    stats_.dramcycles++;
+    if (clk_ % config_.epoch_period == 0) {
+        for (auto &&vault : vaults_) {
+            vault->PrintEpochStats(epoch_csv_file_);
+        }
+    }
     return;
 }
 
@@ -580,50 +581,50 @@ void HMCMemorySystem::ClockTick() {
 void HMCMemorySystem::XbarArbitrate() {
     // arbitrage based on age / FIFO
     // drain requests from link to quad buffers
-    std::vector<int> age_queue = BuildAgeQueue(link_age_counter);
+    std::vector<int> age_queue = BuildAgeQueue(link_age_counter_);
     while (!age_queue.empty()) {
         int src_link = age_queue.front();
         int dest_quad = link_req_queues_[src_link].front()->quad;
         if (quad_req_queues_[dest_quad].size() < queue_depth_ &&
-            quad_busy[dest_quad] <= 0) {
+            quad_busy_[dest_quad] <= 0) {
             HMCRequest *req = link_req_queues_[src_link].front();
             link_req_queues_[src_link].erase(
                 link_req_queues_[src_link].begin());
             quad_req_queues_[dest_quad].push_back(req);
-            quad_busy[dest_quad] = req->flits;
+            quad_busy_[dest_quad] = req->flits;
             req->exit_time = logic_clk_ + req->flits;
             if (link_req_queues_[src_link].empty()) {
-                link_age_counter[src_link] = 0;
+                link_age_counter_[src_link] = 0;
             } else {
-                link_age_counter[src_link] = 1;
+                link_age_counter_[src_link] = 1;
             }
         } else {  // stalled this cycle, update age counter
-            link_age_counter[src_link]++;
+            link_age_counter_[src_link]++;
         }
         age_queue.erase(age_queue.begin());
     }
     age_queue.clear();
 
     // drain responses from quad to link buffers
-    age_queue = BuildAgeQueue(quad_age_counter);
+    age_queue = BuildAgeQueue(quad_age_counter_);
     while (!age_queue.empty()) {
         int src_quad = age_queue.front();
         int dest_link = quad_resp_queues_[src_quad].front()->link;
         if (link_resp_queues_[dest_link].size() < queue_depth_ &&
-            link_busy[dest_link] <= 0) {
+            link_busy_[dest_link] <= 0) {
             HMCResponse *resp = quad_resp_queues_[src_quad].front();
             quad_resp_queues_[src_quad].erase(
                 quad_resp_queues_[src_quad].begin());
             link_resp_queues_[dest_link].push_back(resp);
-            link_busy[dest_link] = resp->flits;
+            link_busy_[dest_link] = resp->flits;
             resp->exit_time = logic_clk_ + resp->flits;
             if (quad_resp_queues_[src_quad].size() == 0) {
-                quad_age_counter[src_quad] = 0;
+                quad_age_counter_[src_quad] = 0;
             } else {
-                quad_age_counter[src_quad] = 1;
+                quad_age_counter_[src_quad] = 1;
             }
         } else {  // stalled this cycle, update age counter
-            quad_age_counter[src_quad]++;
+            quad_age_counter_[src_quad]++;
         }
         age_queue.erase(age_queue.begin());
     }
@@ -657,101 +658,8 @@ std::vector<int> HMCMemorySystem::BuildAgeQueue(std::vector<int> &age_counter) {
 }
 
 void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
-    Transaction trans;
-    switch (req->type) {
-        case HMCReqType::RD0:
-        case HMCReqType::RD16:
-        case HMCReqType::RD32:
-        case HMCReqType::RD48:
-        case HMCReqType::RD64:
-        case HMCReqType::RD80:
-        case HMCReqType::RD96:
-        case HMCReqType::RD112:
-        case HMCReqType::RD128:
-        case HMCReqType::RD256:
-            // only 1 request is needed, if the request length is shorter than
-            // block_size it will be chopped and therefore results in a waste of
-            // bandwidth
-            trans = Transaction(req->mem_operand, false);
-            vaults_[req->vault].AddTransaction(trans);
-            break;
-        case HMCReqType::WR0:
-        case HMCReqType::WR16:
-        case HMCReqType::WR32:
-        case HMCReqType::P_WR16:
-        case HMCReqType::P_WR32:
-        case HMCReqType::WR48:
-        case HMCReqType::WR64:
-        case HMCReqType::P_WR48:
-        case HMCReqType::P_WR64:
-        case HMCReqType::WR80:
-        case HMCReqType::WR96:
-        case HMCReqType::P_WR80:
-        case HMCReqType::P_WR96:
-        case HMCReqType::WR112:
-        case HMCReqType::WR128:
-        case HMCReqType::P_WR112:
-        case HMCReqType::P_WR128:
-        case HMCReqType::WR256:
-        case HMCReqType::P_WR256:
-            trans = Transaction(req->mem_operand, true);
-            vaults_[req->vault].AddTransaction(trans);
-            break;
-        // TODO real question here is, if an atomic operantion
-        // generate a read and a write request,
-        // where is the computation performed
-        // and when is the write request issued
-        case HMCReqType::ADD8:
-        case HMCReqType::P_2ADD8:
-            // 2 8Byte imm operands + 8 8Byte mem operands
-            // read then write
-        case HMCReqType::ADD16:
-        case HMCReqType::P_ADD16:
-            // single 16B imm operand + 16B mem operand
-            // read then write
-        case HMCReqType::ADDS8R:
-        case HMCReqType::ADDS16R:
-            // read, return(the original), then write
-        case HMCReqType::INC8:
-        case HMCReqType::P_INC8:
-            // 8 Byte increment
-            // read update write
-        case HMCReqType::XOR16:
-        case HMCReqType::OR16:
-        case HMCReqType::NOR16:
-        case HMCReqType::AND16:
-        case HMCReqType::NAND16:
-            // boolean op on imm operand and mem operand
-            // read update write
-            break;
-        // comparison are the most headache ones...
-        // since you don't know if you need to issue
-        // a write request until you get the data
-        case HMCReqType::CASGT8:
-        case HMCReqType::CASGT16:
-        case HMCReqType::CASLT8:
-        case HMCReqType::CASLT16:
-        case HMCReqType::CASEQ8:
-        case HMCReqType::CASZERO16:
-            // read then may-or-may-not write
-            break;
-        // For EQ ops, only a READ is issued, no WRITE
-        case HMCReqType::EQ8:
-        case HMCReqType::EQ16:
-            break;
-        case HMCReqType::BWR:
-        case HMCReqType::P_BWR:
-            // bit write, 8 Byte mask, 8 Byte value
-            // read update write
-        case HMCReqType::BWR8R:
-            // bit write with return
-        case HMCReqType::SWAP16:
-            // swap imm operand and mem operand
-            // read and then write
-            break;
-        default:
-            break;
-    }
+    Transaction trans(req->mem_operand, req->is_write);
+    vaults_[req->vault]->AddTransaction(trans);
     return;
 }
 
@@ -761,17 +669,25 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // be passed to the vaults and is responsible to put the responses back to
     // response queues
 
-    auto it = resp_lookup_table.find(req_id);
+    auto it = resp_lookup_table_.find(req_id);
     HMCResponse *resp = it->second;
     // all data from dram received, put packet in xbar and return
-    resp_lookup_table.erase(it);
+    resp_lookup_table_.erase(it);
     // put it in xbar
     quad_resp_queues_[resp->quad].push_back(resp);
-    quad_age_counter[resp->quad] = 1;
+    quad_age_counter_[resp->quad] = 1;
     return;
 }
 
-HMCMemorySystem::~HMCMemorySystem() {}
+void HMCMemorySystem::PrintStats() {
+    for (auto &&vault : vaults_) {
+        vault->PrintFinalStats(stats_txt_file_, stats_csv_file_,
+                               histo_csv_file_);
+    }
+#ifdef THERMAL
+    thermal_calc_.PrintFinalPT(clk_);
+#endif  // THERMAL
+}
 
 // the following 2 functions for domain crossing...
 uint64_t gcd(uint64_t x, uint64_t y) {

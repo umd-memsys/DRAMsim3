@@ -1,8 +1,6 @@
 #include <iostream>
 #include "./../ext/headers/args.hxx"
 #include "cpu.h"
-#include "hmc.h"
-#include "memory_system.h"
 
 // only exception of namespace as this will never collide with other namespaces
 using namespace dramsim3;
@@ -42,16 +40,13 @@ int main(int argc, const char **argv) {
     trace_file = args::get(trace_file_arg);
     cpu_type = args::get(cpu_arg);
 
-    MemorySystem mem_sys(config_file, output_dir, read_callback_func,
-                         write_callback_func);
-
     CPU *cpu;
     if (cpu_type == "random") {
-        cpu = new RandomCPU(mem_sys);
+        cpu = new RandomCPU(config_file, output_dir);
     } else if (cpu_type == "trace") {
-        cpu = new TraceBasedCPU(mem_sys, trace_file);
+        cpu = new TraceBasedCPU(config_file, output_dir, trace_file);
     } else if (cpu_type == "stream") {
-        cpu = new StreamCPU(mem_sys);
+        cpu = new StreamCPU(config_file, output_dir);
     } else {
         cpu = nullptr;
         std::cerr << "Unknown cpu type" << std::endl;

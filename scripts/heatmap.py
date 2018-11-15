@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import argparse
 import os
 import sys
@@ -9,7 +9,7 @@ try:
     import pandas as pd
     import matplotlib
 except:
-    print "please install numpy, matplotlib and pandas"
+    print("please install numpy, matplotlib and pandas")
     raise
 
 matplotlib.use("Agg")
@@ -92,7 +92,7 @@ def prep_fig_axes(num_plots):
         n_cols = 1
     # create axes in subplot
     plot_num = 1
-    for i in xrange(num_plots):
+    for i in range(num_plots):
         # args in add_subplot start from 1
         ax = fig.add_subplot(n_rows, n_cols, plot_num)
         plot_num += 1
@@ -148,7 +148,7 @@ def save_figs(figs, prefix, img_format="png"):
     for i, fig_axes in enumerate(figs):
         fig = fig_axes["fig"]
         fig_name = prefix + str(i) + "." + img_format
-        print "generating ",fig_name
+        print("generating ",fig_name)
         fig.savefig(fig_name)
 
 
@@ -206,16 +206,16 @@ if __name__ == "__main__":
         bank_pos_file = prefix + "bank_position.csv"
     else:
         if  args.stats_csv:
-            print args.stats_csv
+            print(args.stats_csv)
             csv_file = args.stats_csv
         else:
-            print "need stats csv file for temp and power!"
+            print("need stats csv file for temp and power!")
             exit(1)
         if args.bank_csv:
-            print args.bank_csv
+            print(args.bank_csv)
             bank_pos_file = args.bank_csv
         else:
-            print "need bank position file!"
+            print("need bank position file!")
             exit(1)
     p_figs, t_figs = plot_simulation(csv_file, bank_pos_file)
     save_figs(p_figs, prefix + "fig_power_")

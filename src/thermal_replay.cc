@@ -7,10 +7,13 @@ using namespace dramsim3;
 ThermalReplay::ThermalReplay(std::string trace_name, std::string config_file,
                              std::string output_dir, uint64_t repeat)
     : config_(config_file, output_dir),
-      stats_(config_),
-      thermal_calc_(config_, stats_),
+      thermal_calc_(config_),
       repeat_(repeat),
       last_clk_(0) {
+    for (int i = 0; i < config_.channels; i++) {
+        channel_stats_.emplace_back(config_, i);
+    }
+
     // Initialize bank states, for power calculation we only need to know
     // if it's active
     for (int i = 0; i < config_.channels; i++) {
@@ -56,7 +59,7 @@ void ThermalReplay::Run() {
             clk_offset = timed_commands_[j].first;
             Command &cmd = timed_commands_[j].second;
             ProcessCMD(cmd, clk + clk_offset);
-            thermal_calc_.UpdatePower(cmd, clk + clk_offset);
+            thermal_calc_.UpdateCMDPower(0, cmd, clk + clk_offset);
         }
         clk += clk_offset;
 
@@ -70,6 +73,9 @@ void ThermalReplay::Run() {
                 }
             }
         }
+    }
+    for (int c = 0; c < config_.channels; c++) {
+        channel_stats_[c].PrintFinalStats(clk, std::cout, std::cout, std::cout);
     }
     thermal_calc_.PrintFinalPT(clk);
 }
@@ -119,42 +125,43 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
     for (int i = 0; i < config_.channels; i++) {
         for (int j = 0; j < config_.ranks; j++) {
             if (IsRankActive(i, j)) {
-                stats_.active_cycles[i][j] =
-                    (stats_.active_cycles[i][j].Count() + past_clks);
+                channel_stats_[i].IncrementVecBy("rank_active_cycles", j,
+                                                 past_clks);
             } else {
-                stats_.all_bank_idle_cycles[i][j] =
-                    (stats_.all_bank_idle_cycles[i][j].Count() + past_clks);
+                channel_stats_[i].IncrementVecBy("all_bank_idle_cycles", j,
+                                                 past_clks);
             }
         }
     }
 
+    int channel = cmd.Channel();
     // update cmd count
     switch (cmd.cmd_type) {
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
-            stats_.num_read_cmds++;
+            channel_stats_[channel].Increment("num_read_cmds");
             break;
         case CommandType::WRITE:
         case CommandType::WRITE_PRECHARGE:
-            stats_.num_write_cmds++;
+            channel_stats_[channel].Increment("num_write_cmds");
             break;
         case CommandType::ACTIVATE:
-            stats_.num_act_cmds++;
+            channel_stats_[channel].Increment("num_act_cmds");
             break;
         case CommandType::PRECHARGE:
-            stats_.num_pre_cmds++;
+            channel_stats_[channel].Increment("num_pre_cmds");
             break;
         case CommandType::REFRESH:
-            stats_.num_refresh_cmds++;
+            channel_stats_[channel].Increment("num_ref_cmds");
             break;
         case CommandType::REFRESH_BANK:
-            stats_.num_refb_cmds++;
+            channel_stats_[channel].Increment("num_refb_cmds");
             break;
         case CommandType::SREF_ENTER:
-            stats_.num_sref_enter_cmds++;
+            channel_stats_[channel].Increment("num_srefe_cmds");
             break;
         case CommandType::SREF_EXIT:
-            stats_.num_sref_exit_cmds++;
+            channel_stats_[channel].Increment("num_srefx_cmds");
             break;
         default:
             AbruptExit(__FILE__, __LINE__);
@@ -176,9 +183,17 @@ void ThermalReplay::ProcessCMD(Command &cmd, uint64_t clk) {
             break;
     }
 
-    // update stats
-    stats_.PreEpochCompute(clk);
-    stats_.UpdateEpoch(clk);
+    if (clk % config_.epoch_period) {
+        for (int c = 0; c < config_.channels; c++) {
+            // where to print isn't important here what we really need is the
+            // updated stats
+            channel_stats_[c].PrintEpochStats(clk, std::cout);
+            for (int r = 0; r < config_.ranks; r++) {
+                double bg_energy = channel_stats_[c].RankBackgroundEnergy(r);
+                thermal_calc_.UpdateBackgroundEnergy(c, r, bg_energy);
+            }
+        }
+    }
     last_clk_ = clk;
     return;
 }

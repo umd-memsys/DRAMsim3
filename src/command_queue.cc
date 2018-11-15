@@ -3,11 +3,11 @@
 namespace dramsim3 {
 
 CommandQueue::CommandQueue(int channel_id, const Config& config,
-                           const ChannelState& channel_state, Statistics& stats)
+                           const ChannelState& channel_state, SimpleStats& simple_stats)
     : rank_q_empty(config.ranks, true),
       config_(config),
       channel_state_(channel_state),
-      stats_(stats),
+      simple_stats_(simple_stats),
       queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
       queue_idx_(0),
       clk_(0) {
@@ -108,7 +108,7 @@ bool CommandQueue::ArbitratePrecharge(const CMDIterator& cmd_it,
         channel_state_.RowHitCount(cmd.Rank(), cmd.Bankgroup(), cmd.Bank()) >=
         4;
     if (!pending_row_hits_exist || rowhit_limit_reached) {
-        stats_.num_ondemand_pres++;
+        simple_stats_.Increment("num_ondemand_pres");
         return true;
     }
     return false;
@@ -218,7 +218,6 @@ bool CommandQueue::HasRWDependency(const CMDIterator& cmd_it,
         if (it->IsRead() && it->Row() == cmd_it->Row() &&
             it->Column() == cmd_it->Column() && it->Bank() == cmd_it->Bank() &&
             it->Bankgroup() == cmd_it->Bankgroup()) {
-            stats_.num_wr_dependency++;
             return true;
         }
     }

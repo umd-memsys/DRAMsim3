@@ -1,5 +1,7 @@
 #include "configuration.h"
 
+#include <vector>
+
 namespace dramsim3 {
 
 std::function<Address(uint64_t)> AddressMapping;
@@ -127,15 +129,6 @@ void Config::InitOtherParams() {
     }
     output_prefix =
         output_dir + reader.Get("other", "output_prefix", "dramsim_");
-    stats_file = reader.Get("other", "stats_file", output_prefix + "stats.txt");
-    epoch_stats_file = reader.Get("other", "epoch_stats_file",
-                                  output_prefix + "epoch_stats.txt");
-    stats_file_csv =
-        reader.Get("other", "stats_file", output_prefix + "stats.csv");
-    epoch_stats_file_csv = reader.Get("other", "epoch_stats_file",
-                                      output_prefix + "epoch_stats.csv");
-    histo_stats_file_csv = reader.Get("other", "histo_stat_file",
-                                      output_prefix + "histo_stats.csv");
     return;
 }
 
@@ -185,6 +178,7 @@ void Config::InitSystemParams() {
     cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
     trans_queue_size = GetInteger("system", "trans_queue_size", 32);
     unified_queue = reader.GetBoolean("system", "unified_queue", false);
+    write_buf_size = GetInteger("system", "write_buf_size", 16);
     std::string ref_policy =
         reader.Get("system", "refresh_policy", "RANK_LEVEL_STAGGERED");
     if (ref_policy == "RANK_LEVEL_SIMULTANEOUS") {
@@ -208,59 +202,43 @@ void Config::InitSystemParams() {
 #ifdef THERMAL
 void Config::InitThermalParams() {
     const auto& reader = *reader_;
-    power_epoch_period = GetInteger("thermal", "power_epoch_period", 100000);
+    const_logic_power = reader.GetReal("thermal", "const_logic_power", 5.0);
     mat_dim_x = GetInteger("thermal", "mat_dim_x", 512);
     mat_dim_y = GetInteger("thermal", "mat_dim_y", 512);
-    // RowTile = GetInteger("thermal", "RowTile", 1));
-    numXgrids = rows / mat_dim_x;
-    TileRowNum = rows;
+    // row_tile = GetInteger("thermal", "row_tile", 1));
+    num_x_grids = rows / mat_dim_x;
+    tile_row_num = rows;
 
-    numYgrids = columns * device_width / mat_dim_y;
-    bank_asr = (double)numXgrids / numYgrids;
-    RowTile = 1;
+    num_y_grids = columns * device_width / mat_dim_y;
+    bank_asr = (double)num_x_grids / num_y_grids;
+    row_tile = 1;
     if (bank_asr > 4 && banks_per_group == 1) {
         // YZY: I set the aspect ratio as 4
         // I assume if bank_asr <= 4, the dimension can be corrected by
         // arranging banks/vaults
-        while (RowTile * RowTile * 4 < bank_asr) {
-            RowTile *= 2;
+        while (row_tile * row_tile * 4 < bank_asr) {
+            row_tile *= 2;
         }
-        // RowTile = numXgrids / (numYgrids * 8);
+        // row_tile = num_x_grids / (num_y_grids * 8);
 #ifdef DEBUG_OUTPUT
-        std::cout << "RowTile = " << RowTile << std::endl;
+        std::cout << "row_tile = " << row_tile << std::endl;
 #endif  // DEBUG_OUTPUT
-        numXgrids = numXgrids / RowTile;
-        TileRowNum = TileRowNum / RowTile;
-        numYgrids = numYgrids * RowTile;
-        bank_asr = (double)numXgrids / numYgrids;
+        num_x_grids = num_x_grids / row_tile;
+        tile_row_num = tile_row_num / row_tile;
+        num_y_grids = num_y_grids * row_tile;
+        bank_asr = (double)num_x_grids / num_y_grids;
     } else {
 #ifdef DEBUG_OUTPUT
         std::cout << "No Need to Tile Rows\n";
 #endif  // DEBUG_OUTPUT
         loc_mapping = reader.Get("thermal", "loc_mapping", "");
-        logic_bg_power = reader.GetReal("thermal", "logic_bg_power", 1.0);
-        logic_max_power = reader.GetReal("thermal", "logic_max_power", 20.0);
         bank_order = GetInteger("thermal", "bank_order", 1);
         bank_layer_order = GetInteger("thermal", "bank_layer_order", 0);
-        numRowRefresh =
+        num_row_refresh =
             static_cast<int>(ceil(rows / (64 * 1e6 / (tREFI * tCK))));
         chip_dim_x = reader.GetReal("thermal", "chip_dim_x", 0.01);
         chip_dim_y = reader.GetReal("thermal", "chip_dim_y", 0.01);
         amb_temp = reader.GetReal("thermal", "amb_temp", 40);
-
-        // Technically the following ones are in "other" section but they're
-        // only available when THREMAL is defined
-        epoch_temperature_file_csv =
-            reader.Get("other", "epoch_temperature_file",
-                       output_prefix + "epoch_power_temperature.csv");
-        epoch_max_temp_file_csv =
-            reader.Get("other", "epoch_max_temp_file",
-                       output_prefix + "epoch_max_temp.csv");
-        final_temperature_file_csv =
-            reader.Get("other", "final_temperature_file",
-                       output_prefix + "final_power_temperature.csv");
-        bank_position_csv = reader.Get("other", "final_temperature_file",
-                                       output_prefix + "bank_position.csv");
     }
     return;
 }

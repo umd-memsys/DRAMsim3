@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "channel_state.h"
-#include "command_queue.h"
 #include "common.h"
 #include "configuration.h"
 

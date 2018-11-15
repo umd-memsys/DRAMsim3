@@ -3,12 +3,8 @@
 
 #include <stdint.h>
 #include <sys/stat.h>
-#include <fstream>
 #include <functional>
-#include <iomanip>
 #include <iostream>
-#include <iterator>
-#include <sstream>
 #include <vector>
 
 namespace dramsim3 {
@@ -49,10 +45,7 @@ void StringSplit(const std::string& s, char delim, Out result);
 
 int LogBase2(int power_of_two);
 void AbruptExit(const std::string& file, int line);
-void read_callback_func(uint64_t req_id);
-void write_callback_func(uint64_t req_id);
 bool DirExist(std::string dir);
-void RenameFileWithNumber(std::string& file_name, int number);
 
 enum class State { OPEN, CLOSED, SREF, SIZE };
 
@@ -114,16 +107,8 @@ struct Transaction {
     bool is_write;
 
     friend std::ostream& operator<<(std::ostream& os, const Transaction& trans);
+    friend std::istream& operator>>(std::istream& is, Transaction& trans);
 };
 
-
-class Access {
-   public:
-    uint64_t hex_addr_;
-    std::string access_type_;
-    uint64_t time_;
-    friend std::istream& operator>>(std::istream& is, Access& access);
-    friend std::ostream& operator<<(std::ostream& os, const Access& access);
-};
 }  // namespace dramsim3
 #endif

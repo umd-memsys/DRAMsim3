@@ -1,7 +1,10 @@
 #ifndef __HMC_H
 #define __HMC_H
 
+#include <functional>
 #include <map>
+#include <vector>
+
 #include "dram_system.h"
 
 namespace dramsim3 {
@@ -36,31 +39,35 @@ enum class HMCReqType {
     P_WR112,
     P_WR128,
     P_WR256,
-    ADD8,  // 2ADD8, cannot name it like that...
+    // TODO haven't properly implement the following atomic operations
+    ADD8,  // 2ADD8, cannot name it like that in c++...
     ADD16,
-    P_2ADD8,
+    P_2ADD8,  // 2 8Byte imm operands + 8 8Byte mem operands read then write
     P_ADD16,
     ADDS8R,  // 2ADD8, cannot name it like that...
     ADDS16R,
-    INC8,
-    P_INC8,
-    XOR16,
+    INC8,  // read, return(the original), then write
+    P_INC8, // read, return(the original), then posted write
+    // boolean op on imm operand and mem operand, read update write
+    XOR16,  
     OR16,
     NOR16,
     AND16,
     NAND16,
+    // comparison instructions, not sure if there's write untill read done
     CASGT8,
     CASGT16,
     CASLT8,
     CASLT16,
     CASEQ8,
     CASZERO16,
+    // eq, only read
     EQ8,
     EQ16,
     BWR,
-    P_BWR,
-    BWR8R,
-    SWAP16,
+    P_BWR,  // bit write, 8B mask, 8B value, read update write
+    BWR8R,  // bit write with return
+    SWAP16,  // swap imm operand and mem operand, read then write
     SIZE
 };
 
@@ -78,13 +85,9 @@ class HMCRequest {
     int quad;
     int vault;
     int flits;
+    bool is_write;
     // this exit_time is the time to exit xbar to vaults
     uint64_t exit_time;
-
-    // HACK: HMC type by range
-    bool IsWrite() const {
-        return type >= HMCReqType::WR0 && type <= HMCReqType::P_WR256;
-    }
 };
 
 class HMCResponse {
@@ -118,17 +121,11 @@ class HMCMemorySystem : public BaseDRAMSystem {
     bool AddTransaction(uint64_t hex_addr, bool is_write) override;
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
-
-    // ThermalCalculator* ptr_thermCal_;
+    void PrintStats() override;
 
    private:
     uint64_t ref_tick_, logic_clk_;
-    /*
-    uint64_t logic_counter_, dram_counter_;
-    int logic_time_inc_, dram_time_inc_;
-    uint64_t time_lcm_;
-     */
-    std::vector<Controller> vaults_;
+    std::vector<Controller*> vaults_;
     std::function<void(uint64_t)> vault_callback_;
 
     void SetClockRatio();
@@ -147,7 +144,7 @@ class HMCMemorySystem : public BaseDRAMSystem {
 
     // had to use a multimap because the controller callback return hex addr
     // instead of unique id
-    std::multimap<uint64_t, HMCResponse*> resp_lookup_table;
+    std::multimap<uint64_t, HMCResponse*> resp_lookup_table_;
     // these are essentially input/output buffers for xbars
     std::vector<std::vector<HMCRequest*>> link_req_queues_;
     std::vector<std::vector<HMCResponse*>> link_resp_queues_;
@@ -156,11 +153,11 @@ class HMCMemorySystem : public BaseDRAMSystem {
 
     // input/output busy indicators, since each packet could be several
     // flits, as long as this != 0 then they're busy
-    std::vector<int> link_busy;
-    std::vector<int> quad_busy = {0, 0, 0, 0};
+    std::vector<int> link_busy_;
+    std::vector<int> quad_busy_ = {0, 0, 0, 0};
     // used for arbitration
-    std::vector<int> link_age_counter;
-    std::vector<int> quad_age_counter = {0, 0, 0, 0};
+    std::vector<int> link_age_counter_;
+    std::vector<int> quad_age_counter_ = {0, 0, 0, 0};
 };
 
 }  // namespace dramsim3
