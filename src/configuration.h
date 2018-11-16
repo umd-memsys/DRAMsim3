@@ -186,7 +186,6 @@ class Config {
     void InitThermalParams();
 #endif  // THERMAL
     void InitTimingParams();
-    void SanityCheck();
     void SetAddressMapping();
 };
 

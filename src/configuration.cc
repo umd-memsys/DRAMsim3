@@ -105,7 +105,38 @@ void Config::InitDRAMParams() {
     link_speed = GetInteger("hmc", "link_speed", 30);
     block_size = GetInteger("hmc", "block_size", 32);
     xbar_queue_depth = GetInteger("hmc", "xbar_queue_depth", 16);
-    SanityCheck();
+    if (IsHMC()) {
+        // the BL for HMC is determined by max block_size, which is a multiple of
+        // 32B, each "device" transfer 32b per half cycle
+        // therefore BL is 8 for 32B block size
+        BL = block_size * 8 / device_width;
+    }
+    // set burst cycle according to protocol
+    // We use burst_cycle for timing and use BL for capaticyt calculation
+    // BL = 0 simulate perfect BW
+    if (protocol == DRAMProtocol::GDDR5) {
+        burst_cycle = (BL == 0) ? 0 : BL / 4;
+        BL = (BL == 0) ? 8 : BL;
+    } else if (protocol == DRAMProtocol::GDDR5X) {
+        burst_cycle = (BL == 0) ? 0 : BL / 8;
+        BL = (BL == 0) ? 8 : BL;
+    } else {
+        burst_cycle = (BL == 0) ? 0 : BL / 2;
+        BL = (BL == 0) ? (IsHBM() ? 4 : 8) : BL;
+    }
+    // every protocol has a different defination of "column",
+    // in DDR3/4, each column is exactly device_width bits,
+    // but in GDDR5, a column is device_width * BL bits
+    // and for HBM each column is device_width * 2 (prefetch)
+    // as a result, different protocol has different method of calculating
+    // page size, and address mapping...
+    // To make life easier, we regulate the use of the term "column"
+    // to only represent physical column (device width)
+    if (IsGDDR()) {
+        columns *= BL;
+    } else if (IsHBM()) {
+        columns *= 2;
+    }
     return;
 }
 
@@ -113,11 +144,10 @@ void Config::InitOtherParams() {
     const auto& reader = *reader_;
     epoch_period = GetInteger("other", "epoch_period", 100000);
     // determine how much output we want:
-    // -1: no file output at all
+    // -1: no file output at all (NOT implemented yet)
     // 0: no epoch file output, only outputs the summary in the end
     // 1: default value, adds epoch CSV output on level 0
-    // 2: adds histogram epoch outputs in a different CSV format
-    // 3: excessive output, adds epoch text output on level 2
+    // 2: adds histogram outputs in a different CSV format
     output_level = reader.GetInteger("other", "output_level", 1);
     // Other Parameters
     // give a prefix instead of specify the output name one by one...
@@ -132,7 +162,7 @@ void Config::InitOtherParams() {
         output_dir = output_dir + "/";
     }
     output_prefix =
-        output_dir + reader.Get("other", "output_prefix", "dramsim_");
+        output_dir + reader.Get("other", "output_prefix", "dramsim");
     return;
 }
 
@@ -247,87 +277,6 @@ void Config::InitThermalParams() {
     return;
 }
 #endif  // THERMAL
-
-void Config::SanityCheck() {
-    // Sanity checks and adjust parameters for different protocols
-    // The most messed up thing that has to be done here is that
-    // every protocol has a different defination of "column",
-    // in DDR3/4, each column is exactly device_width bits,
-    // but in GDDR5, a column is device_width * BL bits
-    // and for HBM each column is device_width * 2 (prefetch)
-    // as a result, different protocol has different method of calculating
-    // page size, and address mapping...
-    // To make life easier, we regulate the use of the term "column"
-    // to only represent physical column (device width)
-    if (IsHMC()) {
-        if (num_links != 2 && num_links != 4) {
-            std::cerr << "HMC can only have 2 or 4 links!" << std::endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        if (num_dies != 4 && num_dies != 8) {
-            std::cerr << "HMC can only have 4/8 layers of dies!" << std::endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        if (link_width != 4 && link_width != 8 && link_width != 16) {
-            std::cerr
-                << "HMC link width can only be 4 (quater), 8 (half) or 16 "
-                   "(full)!"
-                << std::endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        if (link_speed != 10000 && link_speed != 12500 && link_speed != 15000 &&
-            link_speed != 25000 && link_speed != 28000 && link_speed != 30000) {
-            std::cerr << "HMC speed options: 12/13, 15, 25, 28, 30 Gbps"
-                      << std::endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        // block_size = 0 to simulate ideal bandwidth situation
-        if (block_size != 0 && block_size != 32 && block_size != 64 &&
-            block_size != 128 && block_size != 256) {
-            std::cerr << "HMC block size options: 32, 64, 128, 256 (bytes)!"
-                      << std::endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        if (channels != 16 && channels != 32) {
-            // vaults are basically channels here
-            std::cerr << "HMC channel options: 16/32" << std::endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-        // the BL for is determined by max block_size, which is a multiple of
-        // 32B, each "device" transfer 32b per half cycle
-        // therefore BL is 8 for 32B block size
-        BL = block_size * 8 / device_width;
-    } else if (IsHBM()) {
-        // HBM is more flexible layout
-        if (num_dies != 2 && num_dies != 4 && num_dies != 8) {
-            std::cerr << "HBM die options: 2/4/8" << std::endl;
-            AbruptExit(__FILE__, __LINE__);
-        }
-    }
-    // set burst cycle according to protocol
-    // We use burst_cycle for timing and use BL for capaticyt calculation
-    // BL = 0 simulate perfect BW
-    if (protocol == DRAMProtocol::GDDR5) {
-        burst_cycle = (BL == 0) ? 0 : BL / 4;
-        BL = (BL == 0) ? 8 : BL;
-    } else if (protocol == DRAMProtocol::GDDR5X) {
-        burst_cycle = (BL == 0) ? 0 : BL / 8;
-        BL = (BL == 0) ? 8 : BL;
-    } else {
-        burst_cycle = (BL == 0) ? 0 : BL / 2;
-        BL = (BL == 0) ? (IsHBM() ? 4 : 8) : BL;
-    }
-
-    // re-adjust columns from spec columns to actual columns
-    // some specs say it has x columns but x is actually the number
-    // that took into account of BL.
-    if (IsGDDR()) {
-        columns *= BL;
-    } else if (IsHBM()) {
-        columns *= 2;
-    }
-    return;
-}
 
 void Config::InitTimingParams() {
     // Timing Parameters
