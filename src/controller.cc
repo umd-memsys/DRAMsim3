@@ -312,6 +312,17 @@ void Controller::PrintFinalStats(std::ostream &stats_txt,
     return;
 }
 
+Address Controller::AddressMapping(uint64_t hex_addr) {
+    hex_addr >>= config_.shift_bits;
+    int channel = ModuloWidth(hex_addr, config_.ch_width, config_.ch_pos);
+    int rank = ModuloWidth(hex_addr, config_.ra_width, config_.ra_pos);
+    int bg = ModuloWidth(hex_addr, config_.bg_width, config_.bg_pos);
+    int ba = ModuloWidth(hex_addr, config_.ba_width, config_.ba_pos);
+    int ro = ModuloWidth(hex_addr, config_.ro_width, config_.ro_pos);
+    int co = ModuloWidth(hex_addr, config_.co_width, config_.co_pos);
+    return Address(channel, rank, bg, ba, ro, co);
+}
+
 void Controller::UpdateCommandStats(const Command &cmd) {
     switch (cmd.cmd_type) {
         case CommandType::READ:

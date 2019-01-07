@@ -7,9 +7,8 @@ uint64_t lcm(uint64_t x, uint64_t y);
 
 HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr)
     : type(req_type), mem_operand(hex_addr) {
-    Address addr = AddressMapping(mem_operand);
+    vault = MapChannel(mem_operand);
     is_write = type >= HMCReqType::WR0 && type <= HMCReqType::P_WR256;
-    vault = addr.channel;
     // given that vaults could be 16 (Gen1) or 32(Gen2), using % 4
     // to partition vaults to quads
     quad = vault % 4;

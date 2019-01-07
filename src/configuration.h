@@ -48,6 +48,11 @@ class Config {
     int devices_per_rank;
     int BL;
 
+    // Address mapping numbers
+    int shift_bits;
+    int ch_width, ra_width, bg_width, ba_width, ro_width, co_width;
+    int ch_pos, ra_pos, bg_pos, ba_pos, ro_pos, co_pos;
+
     // Generic DRAM timing parameters
     double tCK;
     int burst_cycle;  // seperate BL with timing since fot GDDRx it's not BL/2

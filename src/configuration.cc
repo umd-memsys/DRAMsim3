@@ -334,7 +334,7 @@ void Config::SetAddressMapping() {
     // memory addresses are byte addressable, but each request comes with
     // multiple bytes because of bus width, and burst length
     request_size_bytes = bus_width / 8 * BL;
-    int shift_bits = LogBase2(request_size_bytes);
+    shift_bits = LogBase2(request_size_bytes);
     int col_low_bits = LogBase2(BL);
     int actual_col_bits = LogBase2(columns) - col_low_bits;
 
@@ -378,25 +378,25 @@ void Config::SetAddressMapping() {
         field_pos[token] = pos;
         pos += field_widths[token];
     }
-    MapChannel = [field_pos, field_widths, shift_bits](uint64_t hex_addr) {
-        hex_addr >>= shift_bits;
+    int local_shift_bits = shift_bits;
+    MapChannel = [field_pos, field_widths, local_shift_bits](uint64_t hex_addr) {
+        hex_addr >>= local_shift_bits;
         return ModuloWidth(hex_addr, field_widths.at("ch"), field_pos.at("ch"));
     };
 
-    AddressMapping = [field_pos, field_widths, shift_bits](uint64_t hex_addr) {
-        hex_addr >>= shift_bits;
-        int channel = 0, rank = 0, bankgroup = 0, bank = 0, row = 0, column = 0;
-        channel =
-            ModuloWidth(hex_addr, field_widths.at("ch"), field_pos.at("ch"));
-        rank = ModuloWidth(hex_addr, field_widths.at("ra"), field_pos.at("ra"));
-        bankgroup =
-            ModuloWidth(hex_addr, field_widths.at("bg"), field_pos.at("bg"));
-        bank = ModuloWidth(hex_addr, field_widths.at("ba"), field_pos.at("ba"));
-        row = ModuloWidth(hex_addr, field_widths.at("ro"), field_pos.at("ro"));
-        column =
-            ModuloWidth(hex_addr, field_widths.at("co"), field_pos.at("co"));
-        return Address(channel, rank, bankgroup, bank, row, column);
-    };
+    ch_width = field_widths.at("ch");
+    ra_width = field_widths.at("ra");
+    bg_width = field_widths.at("bg");
+    ba_width = field_widths.at("ba");
+    ro_width = field_widths.at("ro");
+    co_width = field_widths.at("co");
+
+    ch_pos = field_pos.at("ch");
+    ra_pos = field_pos.at("ra");
+    bg_pos = field_pos.at("bg");
+    ba_pos = field_pos.at("ba");
+    ro_pos = field_pos.at("ro");
+    co_pos = field_pos.at("co");
 }
 
 }  // namespace dramsim3
