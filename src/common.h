@@ -34,7 +34,14 @@ struct Address {
     int column;
 };
 
-uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos);
+inline uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
+    addr >>= pos;
+    auto store = addr;
+    addr >>= bit_width;
+    addr <<= bit_width;
+    return static_cast<uint32_t>(store ^ addr);
+}
+
 // extern std::function<Address(uint64_t)> AddressMapping;
 extern std::function<int(uint64_t)> MapChannel;
 int GetBitInPos(uint64_t bits, int pos);

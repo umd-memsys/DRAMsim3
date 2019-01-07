@@ -40,14 +40,6 @@ std::istream& operator>>(std::istream& is, Transaction& trans) {
     return is;
 }
 
-uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
-    addr >>= pos;
-    auto store = addr;
-    addr >>= bit_width;
-    addr <<= bit_width;
-    return static_cast<uint32_t>(store ^ addr);
-}
-
 int GetBitInPos(uint64_t bits, int pos) {
     // given a uint64_t value get the binary value of pos-th bit
     // from MSB to LSB indexed as 63 - 0
