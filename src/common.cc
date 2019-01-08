@@ -2,6 +2,7 @@
 #include "fmt/format.h"
 #include <sstream>
 #include <unordered_set>
+#include <sys/stat.h>
 
 namespace dramsim3 {
 

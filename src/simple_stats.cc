@@ -60,18 +60,18 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
                 config_.ranks);
 
     // Histogram stats
-    InitHistoStat("read_latency", "Read request latency in cycles", 0, 200, 10);
-    InitHistoStat("interarrival_latency", "Request interarrival latency", 0,
-                  100, 10);
+    InitHistoStat("read_latency", "Read request latency (cycles)", 0, 200, 10);
+    InitHistoStat("interarrival_latency",
+                  "Request interarrival latency (cycles)", 0, 100, 10);
 
     // some irregular stats
     InitStat("average_bandwidth", "calculated", "Average bandwidth");
     InitStat("total_energy", "calculated", "Total energy (pJ)");
     InitStat("average_power", "calculated", "Average power (mW)");
     InitStat("average_read_latency", "calculated",
-             "Average read request latency");
+             "Average read request latency (cycles)");
     InitStat("average_interarrival", "calculated",
-             "Average request interarrival latency");
+             "Average request interarrival latency (cycles)");
 }
 
 void SimpleStats::AddValue(const std::string name, const int value) {

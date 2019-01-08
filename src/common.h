@@ -2,7 +2,6 @@
 #define __COMMON_H
 
 #include <stdint.h>
-#include <sys/stat.h>
 #include <functional>
 #include <iostream>
 #include <vector>
