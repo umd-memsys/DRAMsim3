@@ -55,6 +55,11 @@ BaseDRAMSystem::~BaseDRAMSystem() {
 #endif
 }
 
+int BaseDRAMSystem::GetChannel(uint64_t hex_addr) const {
+    hex_addr >>= config_.shift_bits;
+    return ModuloWidth(hex_addr, config_.ch_width, config_.ch_pos);
+}
+
 void BaseDRAMSystem::RegisterCallbacks(
     std::function<void(uint64_t)> read_callback,
     std::function<void(uint64_t)> write_callback) {
@@ -93,7 +98,7 @@ JedecDRAMSystem::~JedecDRAMSystem() {
 
 bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr,
                                             bool is_write) const {
-    int channel = MapChannel(hex_addr);
+    int channel = GetChannel(hex_addr);
     return ctrls_[channel]->WillAcceptTransaction(hex_addr, is_write);
 }
 
@@ -105,7 +110,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
                    << std::endl;
 #endif
 
-    int channel = MapChannel(hex_addr);
+    int channel = GetChannel(hex_addr);
     bool ok = ctrls_[channel]->WillAcceptTransaction(hex_addr, is_write);
 
     assert(ok);

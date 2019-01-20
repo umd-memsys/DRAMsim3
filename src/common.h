@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <sys/stat.h>
-#include <functional>
 #include <iostream>
 #include <vector>
 
@@ -35,8 +34,6 @@ struct Address {
 };
 
 uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos);
-// extern std::function<Address(uint64_t)> AddressMapping;
-extern std::function<int(uint64_t)> MapChannel;
 int GetBitInPos(uint64_t bits, int pos);
 // it's 2017 and c++ std::string still lacks a split function, oh well
 std::vector<std::string> StringSplit(const std::string& s, char delim);

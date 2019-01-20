@@ -8,9 +8,6 @@
 
 namespace dramsim3 {
 
-std::function<Address(uint64_t)> AddressMapping;
-std::function<int(uint64_t)> MapChannel;
-
 Config::Config(std::string config_file, std::string out_dir)
     : output_dir(out_dir), reader_(new INIReader(config_file)) {
     if (reader_->ParseError() < 0) {
@@ -378,11 +375,6 @@ void Config::SetAddressMapping() {
         field_pos[token] = pos;
         pos += field_widths[token];
     }
-    int local_shift_bits = shift_bits;
-    MapChannel = [field_pos, field_widths, local_shift_bits](uint64_t hex_addr) {
-        hex_addr >>= local_shift_bits;
-        return ModuloWidth(hex_addr, field_widths.at("ch"), field_pos.at("ch"));
-    };
 
     ch_width = field_widths.at("ch");
     ra_width = field_widths.at("ra");

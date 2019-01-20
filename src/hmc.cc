@@ -5,9 +5,8 @@ namespace dramsim3 {
 uint64_t gcd(uint64_t x, uint64_t y);
 uint64_t lcm(uint64_t x, uint64_t y);
 
-HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr)
-    : type(req_type), mem_operand(hex_addr) {
-    vault = MapChannel(mem_operand);
+HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr, int vault)
+    : type(req_type), mem_operand(hex_addr), vault(vault) {
     is_write = type >= HMCReqType::WR0 && type <= HMCReqType::P_WR256;
     // given that vaults could be 16 (Gen1) or 32(Gen2), using % 4
     // to partition vaults to quads
@@ -416,7 +415,8 @@ bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
                 break;
         }
     }
-    HMCRequest *req = new HMCRequest(req_type, hex_addr);
+    int vault = GetChannel(hex_addr);
+    HMCRequest *req = new HMCRequest(req_type, hex_addr, vault);
     return InsertHMCReq(req);
 }
 

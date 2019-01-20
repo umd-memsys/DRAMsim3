@@ -78,7 +78,7 @@ enum class HMCLinkType { HOST_TO_DEV, DEV_TO_DEV, SIZE };
 
 class HMCRequest {
    public:
-    HMCRequest(HMCReqType req_type, uint64_t hex_addr);
+    HMCRequest(HMCReqType req_type, uint64_t hex_addr, int vault);
     HMCReqType type;
     uint64_t mem_operand;
     int link;
