@@ -2,6 +2,7 @@
 #include "fmt/format.h"
 #include <sstream>
 #include <unordered_set>
+#include <sys/stat.h>
 
 namespace dramsim3 {
 
@@ -38,14 +39,6 @@ std::istream& operator>>(std::istream& is, Transaction& trans) {
     is >> std::hex >> trans.addr >> mem_op >> std::dec >> trans.added_cycle;
     trans.is_write = write_types.count(mem_op) == 1;
     return is;
-}
-
-uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
-    addr >>= pos;
-    auto store = addr;
-    addr >>= bit_width;
-    addr <<= bit_width;
-    return static_cast<uint32_t>(store ^ addr);
 }
 
 int GetBitInPos(uint64_t bits, int pos) {

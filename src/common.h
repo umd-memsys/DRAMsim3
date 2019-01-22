@@ -2,7 +2,6 @@
 #define __COMMON_H
 
 #include <stdint.h>
-#include <sys/stat.h>
 #include <iostream>
 #include <vector>
 
@@ -33,7 +32,15 @@ struct Address {
     int column;
 };
 
-uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos);
+inline uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
+    addr >>= pos;
+    auto store = addr;
+    addr >>= bit_width;
+    addr <<= bit_width;
+    return static_cast<uint32_t>(store ^ addr);
+}
+
+// extern std::function<Address(uint64_t)> AddressMapping;
 int GetBitInPos(uint64_t bits, int pos);
 // it's 2017 and c++ std::string still lacks a split function, oh well
 std::vector<std::string> StringSplit(const std::string& s, char delim);

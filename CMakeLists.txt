@@ -74,6 +74,10 @@ set_target_properties(dramsim3 PROPERTIES
     CXX_EXTENSIONS NO
 )
 
+if (CMD_TRACE)
+    target_compile_options(dramsim3 PRIVATE -DCMD_TRACE)
+endif (CMD_TRACE)
+
 # trace CPU, .etc
 add_executable(dramsim3main src/main.cc src/cpu.cc)
 target_link_libraries(dramsim3main PRIVATE dramsim3 args)

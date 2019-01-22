@@ -1,5 +1,6 @@
 #include "controller.h"
 #include <iostream>
+#include <iomanip>
 #include <limits>
 
 namespace dramsim3 {
@@ -39,15 +40,16 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
         write_buffer_.reserve(config_.trans_queue_size);
     }
 
-#ifdef GENERATE_TRACE
-    std::string trace_file_name = "dramsim3ch_" + channel_str + "cmd.trace";
+#ifdef CMD_TRACE
+    std::string trace_file_name = config_.output_prefix + "ch_" + \
+                                  std::to_string(channel_id_) + "cmd.trace";
     std::cout << "Command Trace write to " << trace_file_name << std::endl;
     cmd_trace_.open(trace_file_name, std::ofstream::out);
-#endif  // GENERATE_TRACE
+#endif  // CMD_TRACE
 }
 
 Controller::~Controller() {
-#ifdef GENERATE_TRACE
+#ifdef CMD_TRACE
     cmd_trace_.close();
 #endif
 }
@@ -241,9 +243,9 @@ void Controller::IssueCommand(const Command &cmd) {
 #ifdef DEBUG_OUTPUT
     std::cout << std::left << std::setw(8) << clk_ << " " << cmd << std::endl;
 #endif  // DEBUG_OUTPUT
-#ifdef GENERATE_TRACE
+#ifdef CMD_TRACE
     cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd << std::endl;
-#endif  // GENERATE_TRACE
+#endif  // CMD_TRACE
 #ifdef THERMAL
     // add channel in, only needed by thermal module
     thermal_calc_.UpdateCMDPower(channel_id_, cmd, clk_);

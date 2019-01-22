@@ -2,6 +2,7 @@
 #define __CONTROLLER_H
 
 #include <functional>
+#include <fstream>
 #include <map>
 #include <unordered_set>
 #include <vector>
@@ -71,9 +72,9 @@ class Controller {
     // row buffer policy
     RowBufPolicy row_buf_policy_;
 
-#ifdef GENERATE_TRACE
+#ifdef CMD_TRACE
     std::ofstream cmd_trace_;
-#endif  // GENERATE_TRACE
+#endif  // CMD_TRACE
 
     // used to calculate inter-arrival latency
     uint64_t last_trans_clk_;

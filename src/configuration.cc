@@ -159,7 +159,7 @@ void Config::InitOtherParams() {
         output_dir = output_dir + "/";
     }
     output_prefix =
-        output_dir + reader.Get("other", "output_prefix", "dramsim");
+        output_dir + reader.Get("other", "output_prefix", "dramsim3");
     return;
 }
 
