@@ -12,6 +12,7 @@ namespace dramsim3 {
 class ChannelState {
    public:
     ChannelState(const Config& config, const Timing& timing);
+    Command GetReadyCommand(const Command& cmd, uint64_t clk) const;
     Command GetRequiredCommand(const Command& cmd) const;
     bool IsReady(const Command& cmd, uint64_t clk) const;
     void UpdateState(const Command& cmd);

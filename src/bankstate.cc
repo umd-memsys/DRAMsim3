@@ -18,6 +18,81 @@ BankState::BankState()
     cmd_timing_[static_cast<int>(CommandType::SREF_EXIT)] = 0;
 }
 
+
+Command BankState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
+    CommandType required_type = CommandType::SIZE;
+    switch (state_) {
+        case State::CLOSED:
+            switch (cmd.cmd_type) {
+                case CommandType::READ:
+                case CommandType::READ_PRECHARGE:
+                case CommandType::WRITE:
+                case CommandType::WRITE_PRECHARGE:
+                    required_type = CommandType::ACTIVATE;
+                    break;
+                case CommandType::REFRESH:
+                case CommandType::REFRESH_BANK:
+                case CommandType::SREF_ENTER:
+                    required_type = cmd.cmd_type;
+                    break;
+                default:
+                    std::cerr << "Unknown type!" << std::endl;
+                    AbruptExit(__FILE__, __LINE__);
+                    break;
+            }
+            break;
+        case State::OPEN:
+            switch (cmd.cmd_type) {
+                case CommandType::READ:
+                case CommandType::READ_PRECHARGE:
+                case CommandType::WRITE:
+                case CommandType::WRITE_PRECHARGE:
+                    if (cmd.Row() == open_row_) {
+                        required_type = cmd.cmd_type;
+                    } else {
+                        required_type = CommandType::PRECHARGE;
+                    }
+                    break;
+                case CommandType::REFRESH:
+                case CommandType::REFRESH_BANK:
+                case CommandType::SREF_ENTER:
+                    required_type = CommandType::PRECHARGE;
+                    break;
+                default:
+                    std::cerr << "Unknown type!" << std::endl;
+                    AbruptExit(__FILE__, __LINE__);
+                    break;
+            }
+            break;
+        case State::SREF:
+            switch (cmd.cmd_type) {
+                case CommandType::READ:
+                case CommandType::READ_PRECHARGE:
+                case CommandType::WRITE:
+                case CommandType::WRITE_PRECHARGE:
+                    required_type = CommandType::SREF_EXIT;
+                    break;
+                default:
+                    std::cerr << "Unknown type!" << std::endl;
+                    AbruptExit(__FILE__, __LINE__);
+                    break;
+            }
+            break;
+        case State::PD:
+        case State::SIZE:
+            std::cerr << "In unknown state" << std::endl;
+            AbruptExit(__FILE__, __LINE__);
+            break;
+    }
+
+    if (required_type != CommandType::SIZE) {
+        if (clk >= cmd_timing_[static_cast<int>(cmd.cmd_type)]) {
+            return Command(required_type, cmd.addr, cmd.hex_addr);
+        }
+    }
+    return Command();
+}
+
 CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
     CommandType required_type = CommandType::SIZE;
     switch (state_) {
@@ -77,6 +152,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
                     break;
             }
             break;
+        case State::PD:
         case State::SIZE:
             std::cout << "In unknown state" << std::endl;
             AbruptExit(__FILE__, __LINE__);

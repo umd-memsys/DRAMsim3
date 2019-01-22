@@ -10,6 +10,7 @@ class BankState {
    public:
     BankState();
 
+    Command GetReadyCommand(const Command& cmd, uint64_t clk) const;
     // Get the command that needs to executed first to execute the comand of
     // interest given the state of the bank
     CommandType GetRequiredCommandType(const Command& cmd) const;

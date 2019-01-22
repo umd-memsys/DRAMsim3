@@ -69,6 +69,9 @@ void ChannelState::RankNeedRefresh(int rank, bool need) {
     return;
 }
 
+Command ChannelState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
+}
+
 Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     CommandType cmd_type = cmd.cmd_type;
     Address addr = Address(cmd.addr);
@@ -116,6 +119,7 @@ Command ChannelState::GetRequiredCommand(const Command& cmd) const {
     }
     return Command(cmd_type, addr, cmd_id);
 }
+
 
 bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
     switch (cmd.cmd_type) {
@@ -314,7 +318,6 @@ void ChannelState::UpdateSameRankTiming(
 void ChannelState::UpdateTimingAndStates(const Command& cmd, uint64_t clk) {
     UpdateState(cmd);
     UpdateTiming(cmd, clk);
-    // UpdateCommandIssueStats(cmd);
     return;
 }
 
