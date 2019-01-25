@@ -19,6 +19,7 @@ class CommandQueue {
     CommandQueue(int channel_id, const Config& config,
                  const ChannelState& channel_state, SimpleStats& simple_stats);
     Command GetCommandToIssue();
+    Command FinishRefresh();
     void ClockTick() { clk_ += 1; };
     bool WillAcceptCommand(int rank, int bankgroup, int bank) const;
     bool AddCommand(Command cmd);
@@ -26,27 +27,33 @@ class CommandQueue {
     std::vector<bool> rank_q_empty;
 
    private:
+    bool ArbitratePrecharge(const CMDIterator& cmd_it,
+                            const CMDQueue& queue) const;
+    bool HasRWDependency(const CMDIterator& cmd_it,
+                         const CMDQueue& queue) const;
+    Command GetFristReadyInQueue(CMDQueue& queue) const;
+    int GetQueueIndex(int rank, int bankgroup, int bank) const;
+    CMDQueue& GetQueue(int rank, int bankgroup, int bank);
+    CMDQueue& GetNextQueue();
+    void GetRefQIndices(const Command& ref);
+    void EraseRWCommand(const Command& cmd);
+    Command PrepRefCmd(const CMDIterator& it, const Command& ref) const;
+
     QueueStructure queue_structure_;
     const Config& config_;
     const ChannelState& channel_state_;
     SimpleStats& simple_stats_;
+
     std::vector<CMDQueue> queues_;
+
+    // Refresh related data structures
+    std::unordered_set<int> ref_q_indices_;
+    bool start_ref_;
+
     int num_queues_;
     size_t queue_size_;
     int queue_idx_;
     uint64_t clk_;
-
-    bool ArbitratePrecharge(const CMDIterator& cmd_it,
-                            const CMDQueue& queue) const;
-    Command GetFristReadyInQueue(CMDQueue& queue) const;
-    CMDQueue& GetQueue(int rank, int bankgroup, int bank);
-    int GetQueueIndex(int rank, int bankgroup, int bank) const;
-    std::unordered_set<int> GetRefQIndices(const Command& ref) const;
-    CMDQueue& GetNextQueue();
-    bool HasRWDependency(const CMDIterator& cmd_it,
-                         const CMDQueue& queue) const;
-    void EraseRWCommand(const Command& cmd);
-    Command PrepRefCmd(const CMDIterator& it, const Command& ref) const;
 };
 
 }  // namespace dramsim3

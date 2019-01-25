@@ -5,7 +5,6 @@ ChannelState::ChannelState(const Config& config, const Timing& timing)
     : rank_idle_cycles(config.ranks, 0),
       config_(config),
       timing_(timing),
-      // stats_(stats),
       rank_is_sref_(config.ranks, false),
       four_aw_(config_.ranks, std::vector<uint64_t>()),
       thirty_two_aw_(config_.ranks, std::vector<uint64_t>()) {
@@ -14,8 +13,8 @@ ChannelState::ChannelState(const Config& config, const Timing& timing)
         auto rank_states = std::vector<std::vector<BankState>>();
         rank_states.reserve(config_.bankgroups);
         for (auto j = 0; j < config_.bankgroups; j++) {
-            auto bg_states = std::vector<BankState>(config_.banks_per_group,
-                                                    BankState());
+            auto bg_states =
+                std::vector<BankState>(config_.banks_per_group, BankState());
             rank_states.push_back(bg_states);
         }
         bank_states_.push_back(rank_states);
@@ -33,8 +32,13 @@ bool ChannelState::IsAllBankIdleInRank(int rank) const {
     return true;
 }
 
-bool ChannelState::IsRefreshWaiting() const {
-    return !refresh_q_.empty();
+bool ChannelState::IsRWPendingOnRef(const Command& cmd) const {
+    int rank = cmd.Rank();
+    int bankgroup = cmd.Bankgroup();
+    int bank = cmd.Bank();
+    return (IsRowOpen(rank, bankgroup, bank) &&
+            RowHitCount(rank, bankgroup, bank) == 0 &&
+            bank_states_[rank][bankgroup][bank].OpenRow() == cmd.Row());
 }
 
 void ChannelState::BankNeedRefresh(int rank, int bankgroup, int bank,
@@ -70,121 +74,65 @@ void ChannelState::RankNeedRefresh(int rank, bool need) {
 }
 
 Command ChannelState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
-}
-
-Command ChannelState::GetRequiredCommand(const Command& cmd) const {
-    CommandType cmd_type = cmd.cmd_type;
-    Address addr = Address(cmd.addr);
-    uint64_t cmd_id = cmd.hex_addr;
-    bool need_precharge = false;
-    switch (cmd.cmd_type) {
-        case CommandType::READ:
-        case CommandType::READ_PRECHARGE:
-        case CommandType::WRITE:
-        case CommandType::WRITE_PRECHARGE:
-        case CommandType::ACTIVATE:
-        case CommandType::PRECHARGE:
-        case CommandType::REFRESH_BANK:
-            cmd_type = bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]
-                           .GetRequiredCommandType(cmd);
-            break;
-        case CommandType::REFRESH:
-        case CommandType::SREF_ENTER:
-        case CommandType::SREF_EXIT:
-            // Static fixed order to check banks
-            for (auto j = 0; j < config_.bankgroups; j++) {
-                for (auto k = 0; k < config_.banks_per_group; k++) {
-                    CommandType tmp_type =
-                        bank_states_[cmd.Rank()][j][k].GetRequiredCommandType(
-                            cmd);
-                    if (tmp_type != cmd.cmd_type) {  // precharge
-                        need_precharge = true;
-                        cmd_type = tmp_type;
-                        addr.bankgroup = j;
-                        addr.bank = k;
-                        addr.row = bank_states_[cmd.Rank()][j][k].OpenRow();
-                        cmd_id = -1;
-                        break;
-                    }
+    Command ready_cmd = Command();
+    if (cmd.IsRankCMD()) {
+        int num_ready = 0;
+        for (auto j = 0; j < config_.bankgroups; j++) {
+            for (auto k = 0; k < config_.banks_per_group; k++) {
+                ready_cmd =
+                    bank_states_[cmd.Rank()][j][k].GetReadyCommand(cmd, clk);
+                if (!ready_cmd.IsValid()) {  // Not ready
+                    continue;
                 }
-                if (need_precharge) {
-                    break;
+                if (ready_cmd.cmd_type != cmd.cmd_type) {  // likely PRECHARGE
+                    Address new_addr = Address(-1, cmd.Rank(), j, k, -1, -1);
+                    ready_cmd.addr = new_addr;
+                    return ready_cmd;
+                } else {
+                    num_ready++;
                 }
             }
-            break;
-        default:
-            std::cerr << cmd << std::endl;
-            AbruptExit(__FILE__, __LINE__);
-            break;
-    }
-    return Command(cmd_type, addr, cmd_id);
-}
-
-
-bool ChannelState::IsReady(const Command& cmd, uint64_t clk) const {
-    switch (cmd.cmd_type) {
-        case CommandType::ACTIVATE:
-            if (!ActivationWindowOk(cmd.Rank(), clk))
-                return false;  // TODO - Bad coding. Case statement is not
-                               // supposed to be used like this
-        case CommandType::READ:
-        case CommandType::READ_PRECHARGE:
-        case CommandType::WRITE:
-        case CommandType::WRITE_PRECHARGE:
-        case CommandType::PRECHARGE:
-        case CommandType::REFRESH_BANK:
-            return bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]
-                .IsReady(cmd.cmd_type, clk);
-        case CommandType::REFRESH:
-        case CommandType::SREF_ENTER:
-        case CommandType::SREF_EXIT: {
-            bool is_ready = true;
-            for (auto j = 0; j < config_.bankgroups; j++) {
-                for (auto k = 0; k < config_.banks_per_group; k++) {
-                    is_ready &= bank_states_[cmd.Rank()][j][k].IsReady(
-                        cmd.cmd_type, clk);
-                    // if(!is_ready) return false //Early return for simulator
-                    // performance?
-                }
-            }
-            return is_ready;
         }
-        default:
-            AbruptExit(__FILE__, __LINE__);
-            return true;
+        // All bank ready
+        if (num_ready == config_.banks) {
+            return ready_cmd;
+        } else {
+            return Command();
+        }
+    } else {
+        ready_cmd = bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()]
+                        .GetReadyCommand(cmd, clk);
+        if (!ready_cmd.IsValid()) {
+            return Command();
+        }
+        if (cmd.cmd_type == CommandType::ACTIVATE) {
+            if (!ActivationWindowOk(cmd.Rank(), clk)) {
+                return Command();
+            }
+        }
+        return ready_cmd;
     }
 }
 
 void ChannelState::UpdateState(const Command& cmd) {
-    switch (cmd.cmd_type) {
-        case CommandType::READ:
-        case CommandType::READ_PRECHARGE:
-        case CommandType::WRITE:
-        case CommandType::WRITE_PRECHARGE:
-        case CommandType::ACTIVATE:
-        case CommandType::PRECHARGE:
-            bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()].UpdateState(
-                cmd);
-            break;
-        case CommandType::REFRESH_BANK:
-            bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()].UpdateState(
-                cmd);
-            BankNeedRefresh(cmd.Rank(), cmd.Bankgroup(), cmd.Bank(), false);
-            break;
-        case CommandType::REFRESH:
-            RankNeedRefresh(cmd.Rank(), false);
-        case CommandType::SREF_ENTER:
-        case CommandType::SREF_EXIT:
-            rank_is_sref_[cmd.Rank()] =
-                (cmd.cmd_type == CommandType::SREF_ENTER ? true : false);
-            for (auto j = 0; j < config_.bankgroups; j++) {
-                for (auto k = 0; k < config_.banks_per_group; k++) {
-                    bank_states_[cmd.Rank()][j][k].UpdateState(cmd);
-                }
+    if (cmd.IsRankCMD()) {
+        for (auto j = 0; j < config_.bankgroups; j++) {
+            for (auto k = 0; k < config_.banks_per_group; k++) {
+                bank_states_[cmd.Rank()][j][k].UpdateState(cmd);
             }
-            break;
-        default:
-            AbruptExit(__FILE__, __LINE__);
+        }
+        if (cmd.IsRefresh()) {
+            RankNeedRefresh(cmd.Rank(), false);
+        } else if (cmd.cmd_type == CommandType::SREF_ENTER) {
+            rank_is_sref_[cmd.Rank()] = true;
+        } else if (cmd.cmd_type == CommandType::SREF_EXIT) {
+            rank_is_sref_[cmd.Rank()] = false;
+        }
+    } else {
+        bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()].UpdateState(cmd);
+        if (cmd.IsRefresh()) {
+            BankNeedRefresh(cmd.Rank(), cmd.Bankgroup(), cmd.Bank(), false);
+        }
     }
     return;
 }
@@ -192,8 +140,7 @@ void ChannelState::UpdateState(const Command& cmd) {
 void ChannelState::UpdateTiming(const Command& cmd, uint64_t clk) {
     switch (cmd.cmd_type) {
         case CommandType::ACTIVATE:
-            UpdateActivationTimes(
-                cmd.Rank(), clk);  // TODO - Bad coding. Note : no break here
+            UpdateActivationTimes(cmd.Rank(), clk);
         case CommandType::READ:
         case CommandType::READ_PRECHARGE:
         case CommandType::WRITE:

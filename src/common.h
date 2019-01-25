@@ -68,7 +68,7 @@ enum class CommandType {
 };
 
 struct Command {
-    Command() : cmd_type(CommandType::SIZE) {}
+    Command() : cmd_type(CommandType::SIZE), hex_addr(0) {}
     Command(CommandType cmd_type, const Address& addr, uint64_t hex_addr)
         : cmd_type(cmd_type), addr(addr), hex_addr(hex_addr) {}
     // Command(const Command& cmd) {}
@@ -87,6 +87,11 @@ struct Command {
                cmd_type == CommandType ::WRITE_PRECHARGE;
     }
     bool IsReadWrite() const { return IsRead() || IsWrite(); }
+    bool IsRankCMD() const {
+        return cmd_type == CommandType::REFRESH ||
+               cmd_type == CommandType::SREF_ENTER ||
+               cmd_type == CommandType::SREF_EXIT;
+    }
     CommandType cmd_type;
     Address addr;
     uint64_t hex_addr;

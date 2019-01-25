@@ -13,8 +13,6 @@ class ChannelState {
    public:
     ChannelState(const Config& config, const Timing& timing);
     Command GetReadyCommand(const Command& cmd, uint64_t clk) const;
-    Command GetRequiredCommand(const Command& cmd) const;
-    bool IsReady(const Command& cmd, uint64_t clk) const;
     void UpdateState(const Command& cmd);
     void UpdateTiming(const Command& cmd, uint64_t clk);
     void UpdateTimingAndStates(const Command& cmd, uint64_t clk);
@@ -25,7 +23,8 @@ class ChannelState {
     }
     bool IsAllBankIdleInRank(int rank) const;
     bool IsRankSelfRefreshing(int rank) const { return rank_is_sref_[rank]; }
-    bool IsRefreshWaiting() const;
+    bool IsRefreshWaiting() const { return !refresh_q_.empty(); }
+    bool IsRWPendingOnRef(const Command& cmd) const;
     const Command& PendingRefCommand() const {return refresh_q_.front(); }
     void BankNeedRefresh(int rank, int bankgroup, int bank, bool need);
     void RankNeedRefresh(int rank, bool need);
