@@ -31,7 +31,7 @@ class CommandQueue {
                             const CMDQueue& queue) const;
     bool HasRWDependency(const CMDIterator& cmd_it,
                          const CMDQueue& queue) const;
-    Command GetFristReadyInQueue(CMDQueue& queue) const;
+    Command GetFirstReadyInQueue(CMDQueue& queue) const;
     int GetQueueIndex(int rank, int bankgroup, int bank) const;
     CMDQueue& GetQueue(int rank, int bankgroup, int bank);
     CMDQueue& GetNextQueue();
@@ -48,7 +48,7 @@ class CommandQueue {
 
     // Refresh related data structures
     std::unordered_set<int> ref_q_indices_;
-    bool start_ref_;
+    bool is_in_ref_;
 
     int num_queues_;
     size_t queue_size_;

@@ -9,7 +9,7 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
       config_(config),
       channel_state_(channel_state),
       simple_stats_(simple_stats),
-      start_ref_(false),
+      is_in_ref_(false),
       queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
       queue_idx_(0),
       clk_(0) {
@@ -37,12 +37,12 @@ Command CommandQueue::GetCommandToIssue() {
     for (int i = 0; i < num_queues_; i++) {
         auto& queue = GetNextQueue();
         // if we're refresing, skip the command queues that are involved
-        if (start_ref_) {
+        if (is_in_ref_) {
             if (ref_q_indices_.find(queue_idx_) != ref_q_indices_.end()) {
                 continue;
             }
         }
-        auto cmd = GetFristReadyInQueue(queue);
+        auto cmd = GetFirstReadyInQueue(queue);
         if (cmd.IsValid()) {
             if (cmd.IsReadWrite()) {
                 EraseRWCommand(cmd);
@@ -59,9 +59,9 @@ Command CommandQueue::FinishRefresh() {
     // significantly pushes back the timing for a refresh
     // so we simply implement an ASAP approach
     auto ref = channel_state_.PendingRefCommand();
-    if (!start_ref_) {
+    if (!is_in_ref_) {
         GetRefQIndices(ref);
-        start_ref_ = true;
+        is_in_ref_ = true;
     }
 
     // either precharge or refresh
@@ -69,7 +69,7 @@ Command CommandQueue::FinishRefresh() {
 
     if (cmd.IsRefresh()) {
         ref_q_indices_.clear();
-        start_ref_ = false;
+        is_in_ref_ = false;
     }
     return cmd;
 }
@@ -165,9 +165,12 @@ CMDQueue& CommandQueue::GetQueue(int rank, int bankgroup, int bank) {
     return queues_[index];
 }
 
-Command CommandQueue::GetFristReadyInQueue(CMDQueue& queue) const {
+Command CommandQueue::GetFirstReadyInQueue(CMDQueue& queue) const {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         Command cmd = channel_state_.GetReadyCommand(*cmd_it, clk_);
+        if (!cmd.IsValid()) {
+            continue;
+        }
         if (cmd.cmd_type == CommandType::PRECHARGE) {
             if (!ArbitratePrecharge(cmd_it, queue)) {
                 continue;
