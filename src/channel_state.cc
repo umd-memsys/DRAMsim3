@@ -105,8 +105,8 @@ Command ChannelState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
         if (!ready_cmd.IsValid()) {
             return Command();
         }
-        if (cmd.cmd_type == CommandType::ACTIVATE) {
-            if (!ActivationWindowOk(cmd.Rank(), clk)) {
+        if (ready_cmd.cmd_type == CommandType::ACTIVATE) {
+            if (!ActivationWindowOk(ready_cmd.Rank(), clk)) {
                 return Command();
             }
         }
