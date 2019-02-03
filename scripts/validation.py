@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import os
 import sys
 import parse_config
@@ -68,7 +68,7 @@ class Command(object):
     def get_drampower_str(self, config):
         """
         translate to generate command trace that DRAMPower can take as input
-        to validate power calculation, but 
+        to validate power calculation, but
         we need to know the config in order to calculate bank number
         """
         str_map = {
@@ -109,7 +109,7 @@ class DRAMValidation(object):
         """
         if (not os.path.exists(config_file_name)) or \
            (not os.path.exists(trace_file_name)):
-            print "config file or path file does not exist!"
+            print("config file or path file does not exist!")
             exit(1)
 
         if verilog_output:
@@ -147,7 +147,7 @@ class DRAMValidation(object):
         pass
 
     def generate_drampower_trace(self):
-        with open(self.drampower_out, "wb") as fp:
+        with open(self.drampower_out, "w") as fp:
             for cmd_str in self.commands:
                 cmd = Command(cmd_str)
                 fp.write(cmd.get_drampower_str(self.configs))
@@ -177,7 +177,7 @@ class DDR3Validation(DRAMValidation):
             mod_1_str = "b0000010110"
         else:
             mod_1_str = "b0000000110"
-            print "Invalid AL/CL values!"
+            print("Invalid AL/CL values!")
             exit(1)
 
         prefix_str = """
@@ -217,7 +217,7 @@ class DDR3Validation(DRAMValidation):
             odt_out <=  1'b0;
             dq_en   <=  1'b0;
             dqs_en  <=  1'b0;
-            // POWERUP SECTION 
+            // POWERUP SECTION
             power_up;
             // INITIALIZE SECTION
             zq_calibration  (1);                            // perform Long ZQ Calibration
@@ -230,7 +230,7 @@ class DDR3Validation(DRAMValidation):
             load_mode       (0, {14'b0_1_000_1_0_000_1_0_00} | mr_wr<<9 | mr_cl<<2); // Mode Register with DLL Reset
             nop             (683);  // make sure tDLLK and tZQINIT satisify
             odt_out         <= 0;                           // turn off odt, making life much easier...
-            nop (7);  
+            nop (7);
             """ % (mod_1_str)
         return prefix_str
 
@@ -248,7 +248,7 @@ class DDR3Validation(DRAMValidation):
         elif megs == 8192:
             density = "den8192Mb"
         else:
-            print "unknown device density: %d! MBs" % (megs)
+            print("unknown device density: %d! MBs" % (megs))
             exit(1)
         width = self.configs["dram_structure"]["device_width"]
         tck = self.configs["timing"]["tck"]
@@ -261,8 +261,8 @@ class DDR3Validation(DRAMValidation):
             2.5:   "sg25",  # 800, there is also sg25E
         }
         if tck not in speed_table.keys():
-            print "Invalid tCK value in ini file, use the followings for DDR3:" +\
-                str([k for k in speed_table])
+            print("Invalid tCK value in ini file, use the followings for DDR3:" +\
+                str([k for k in speed_table]))
         speed = speed_table[tck]
 
         # generate script to run modelsim simulation in command line mode
@@ -276,12 +276,12 @@ class DDR3Validation(DRAMValidation):
 
         """ % (density, width, speed)
 
-        with open(self.script_out, "wb") as fp:
+        with open(self.script_out, "w") as fp:
             fp.write(cmd_str)
         return
 
     def generate_verilog_bench(self, bench_name=""):
-        with open(self.verilog_out, "wb") as fp:
+        with open(self.verilog_out, "w") as fp:
             # write prefix that initializes device
             fp.write(self.get_prefix_str())
 
@@ -322,8 +322,8 @@ class DDR4Validation(DRAMValidation):
         }
         ts = self.configs["timing"]["tck"]
         if ts not in ts_table.keys():
-            print "Invalid tCK value in ini file, use the followings for DDR4:" +\
-                str([k for k in ts_table])
+            print("Invalid tCK value in ini file, use the followings for DDR4:" +\
+                str([k for k in ts_table]))
         ddr4_prefix_str = """
         initial begin : test
                 UTYPE_TS min_ts, nominal_ts, max_ts;
@@ -364,7 +364,7 @@ class DDR4Validation(DRAMValidation):
         dq_en <= 1'b0;
         dqs_en <= 1'b0;
         default_period(nominal_ts);
-        // POWERUP SECTION 
+        // POWERUP SECTION
         power_up();
         // Reset DLL
         dut_mode_config = _state.DefaultDutModeConfig(.cl(%d),
@@ -383,7 +383,7 @@ class DDR4Validation(DRAMValidation):
         dut_mode_config.BL = 8;
         _state.ModeToAddrDecode(dut_mode_config, mode_regs);
         load_mode(.bg(0), .ba(1), .addr(mode_regs[1]));
-        deselect(timing.tDLLKc); 
+        deselect(timing.tDLLKc);
         dut_mode_config.DLL_reset = 0;
         _state.ModeToAddrDecode(dut_mode_config, mode_regs);
         load_mode(.bg(0), .ba(3), .addr(mode_regs[3]));
@@ -436,7 +436,7 @@ class DDR4Validation(DRAMValidation):
         elif megs == 16384:
             density = "16G"
         else:
-            print "unknown device density: %d! MBs" % (megs)
+            print("unknown device density: %d! MBs" % (megs))
             exit(1)
 
         width = self.configs["dram_structure"]["device_width"]
@@ -449,14 +449,14 @@ class DDR4Validation(DRAMValidation):
                   "interface.sv StateTable.svp MemoryArray.svp ddr4_model.svp tb.sv \n" % dev_str
         vsim_str = "vsim -quiet -nostdout -c -l v_out.log -novopt tb -do \"run -all\"\n"
 
-        with open(self.script_out, "wb") as fp:
+        with open(self.script_out, "w") as fp:
             fp.write(vlib_str)
             fp.write(cmd_str)
             fp.write(vsim_str)
         return
 
     def generate_verilog_bench(self, bench_name=""):
-        with open(self.verilog_out, "wb") as fp:
+        with open(self.verilog_out, "w") as fp:
             # write prefix that initializes device
             fp.write(self.get_prefix_str())
 
@@ -505,7 +505,7 @@ class LPDDRValidtion(DRAMValidation):
         ras_n  <= 1'bz;
         cas_n  <= 1'bz;
         we_n   <= 1'bz;
-        a      <= {ADDR_BITS{1'bz}}; 
+        a      <= {ADDR_BITS{1'bz}};
         ba     <= {BA_BITS{1'bz}};
         dq_en  <= 1'b0;
         dqs_en <= 1'b0;
@@ -537,8 +537,8 @@ class LPDDRValidtion(DRAMValidation):
             7.5 : "sg75",
         }
         if tck not in speed_table.keys():
-            print "Invalid tCK value in ini file, use the followings for DDR3:" +\
-                str([k for k in speed_table])
+            print("Invalid tCK value in ini file, use the followings for DDR3:" +\
+                str([k for k in speed_table]))
         speed = speed_table[tck]
         width = self.configs["dram_structure"]["device_width"]
         cmd_str = \
@@ -548,12 +548,12 @@ class LPDDRValidtion(DRAMValidation):
         vsim -quiet -nostdout -c -l v_out.log -novopt tb -do "run -all"
         """ % (density, speed, width)
 
-        with open(self.script_out, "wb") as fp:
+        with open(self.script_out, "w") as fp:
             fp.write(cmd_str)
         return
 
     def generate_verilog_bench(self, bench_name=""):
-        with open(self.verilog_out, "wb") as fp:
+        with open(self.verilog_out, "w") as fp:
             # write prefix that initializes device
             fp.write(self.get_prefix_str())
 
@@ -578,7 +578,7 @@ if __name__ == "__main__":
     assert len(sys.argv) == 3, "Need 2 arguments, 1. config file name  2. command trace file name"
 
     if not (os.path.exists(sys.argv[1]) and os.path.exists(sys.argv[2])):
-        print "cannot locate input files, please check your input file name and path"
+        print("cannot locate input files, please check your input file name and path")
         exit(1)
 
     ini_file = sys.argv[1]
