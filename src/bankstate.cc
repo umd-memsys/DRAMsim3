@@ -18,7 +18,8 @@ BankState::BankState()
     cmd_timing_[static_cast<int>(CommandType::SREF_EXIT)] = 0;
 }
 
-CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
+
+Command BankState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
     CommandType required_type = CommandType::SIZE;
     switch (state_) {
         case State::CLOSED:
@@ -35,7 +36,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
                     required_type = cmd.cmd_type;
                     break;
                 default:
-                    std::cout << "In unknown state" << std::endl;
+                    std::cerr << "Unknown type!" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
                     break;
             }
@@ -58,7 +59,7 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
                     required_type = CommandType::PRECHARGE;
                     break;
                 default:
-                    std::cout << "In unknown state" << std::endl;
+                    std::cerr << "Unknown type!" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
                     break;
             }
@@ -72,17 +73,24 @@ CommandType BankState::GetRequiredCommandType(const Command& cmd) const {
                     required_type = CommandType::SREF_EXIT;
                     break;
                 default:
-                    std::cout << "In unknown state" << std::endl;
+                    std::cerr << "Unknown type!" << std::endl;
                     AbruptExit(__FILE__, __LINE__);
                     break;
             }
             break;
+        case State::PD:
         case State::SIZE:
-            std::cout << "In unknown state" << std::endl;
+            std::cerr << "In unknown state" << std::endl;
             AbruptExit(__FILE__, __LINE__);
             break;
     }
-    return required_type;
+
+    if (required_type != CommandType::SIZE) {
+        if (clk >= cmd_timing_[static_cast<int>(required_type)]) {
+            return Command(required_type, cmd.addr, cmd.hex_addr);
+        }
+    }
+    return Command();
 }
 
 void BankState::UpdateState(const Command& cmd) {

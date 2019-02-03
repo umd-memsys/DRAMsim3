@@ -76,7 +76,16 @@ void Controller::ClockTick() {
     refresh_.ClockTick();
 
     bool cmd_issued = false;
-    auto cmd = cmd_queue_.GetCommandToIssue();
+    Command cmd;
+    if (channel_state_.IsRefreshWaiting()) {
+        cmd = cmd_queue_.FinishRefresh();
+    } 
+
+    // cannot find a refresh related command or there's no refresh
+    if (!cmd.IsValid()) {
+        cmd = cmd_queue_.GetCommandToIssue();
+    }
+
     if (cmd.IsValid()) {
         IssueCommand(cmd);
         cmd_issued = true;
@@ -118,7 +127,8 @@ void Controller::ClockTick() {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_EXIT, addr, -1);
-                    if (channel_state_.IsReady(cmd, clk_)) {
+                    cmd = channel_state_.GetReadyCommand(cmd, clk_);
+                    if (cmd.IsValid()) {
                         IssueCommand(cmd);
                         break;
                     }
@@ -130,7 +140,8 @@ void Controller::ClockTick() {
                     auto addr = Address();
                     addr.rank = i;
                     auto cmd = Command(CommandType::SREF_ENTER, addr, -1);
-                    if (channel_state_.IsReady(cmd, clk_)) {
+                    cmd = channel_state_.GetReadyCommand(cmd, clk_);
+                    if (cmd.IsValid()) {
                         IssueCommand(cmd);
                         break;
                     }

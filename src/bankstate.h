@@ -10,21 +10,13 @@ class BankState {
    public:
     BankState();
 
-    // Get the command that needs to executed first to execute the comand of
-    // interest given the state of the bank
-    CommandType GetRequiredCommandType(const Command& cmd) const;
+    Command GetReadyCommand(const Command& cmd, uint64_t clk) const;
 
     // Update the state of the bank resulting after the execution of the command
     void UpdateState(const Command& cmd);
 
     // Update the existing timing constraints for the command
     void UpdateTiming(const CommandType cmd_type, uint64_t time);
-
-    // Check the timing constraints to see if the command can executed at the
-    // given time
-    bool IsReady(CommandType cmd_type, uint64_t time) const {
-        return time >= cmd_timing_[static_cast<int>(cmd_type)];
-    }
 
     bool IsRowOpen() const { return state_ == State::OPEN; }
     int OpenRow() const { return open_row_; }
