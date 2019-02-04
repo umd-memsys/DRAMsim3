@@ -37,13 +37,23 @@ class BaseDRAMSystem {
    protected:
     uint64_t id_;
     uint64_t last_req_clk_;
-    Config &config_;
-    Timing timing_;
+    const Config &config_;
+    const Timing timing_;
+
+    // configs
+    int num_channels_;
+    std::string output_prefix_;
+    int output_level_;
+    int epoch_period_;
+    int shift_bits_;
+    int ch_width_;
+    int ch_pos_;
+
 #ifdef THERMAL
     ThermalCalculator thermal_calc_;
 #endif  // THERMAL
-    uint64_t clk_;
 
+    uint64_t clk_;
 
     // Output files
     std::ofstream stats_txt_file_;

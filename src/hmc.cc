@@ -249,6 +249,9 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     : BaseDRAMSystem(config, output_dir, read_callback, write_callback),
       ref_tick_(0),
       logic_clk_(0),
+      num_links_(config.num_links),
+      queue_depth_((size_t)config.xbar_queue_depth),
+      block_size_(config.block_size),
       next_link_(0) {
     // sanity check, this constructor should only be intialized using HMC
     if (!config_.IsHMC()) {
@@ -258,12 +261,12 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     }
 
     // setting up clock
-    SetClockRatio();
+    SetClockRatio(config.link_speed, config.link_width);
 
     vault_callback_ =
         std::bind(&HMCMemorySystem::VaultCallback, this, std::placeholders::_1);
-    vaults_.reserve(config_.channels);
-    for (int i = 0; i < config_.channels; i++) {
+    vaults_.reserve(num_channels_);
+    for (int i = 0; i < num_channels_; i++) {
 #ifdef THERMAL
         vaults_.push_back(new Controller(i, config_, timing_, thermal_calc_,
                                          vault_callback_, vault_callback_));
@@ -277,11 +280,9 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     // the second layer will be a 1:8 xbar
     // (each quadrant has 8 vaults and each quadrant can access any ohter
     // quadrant)
-    queue_depth_ = static_cast<size_t>(config_.xbar_queue_depth);
-    links_ = config_.num_links;
-    link_req_queues_.reserve(links_);
-    link_resp_queues_.reserve(links_);
-    for (int i = 0; i < links_; i++) {
+    link_req_queues_.reserve(num_links_);
+    link_resp_queues_.reserve(num_links_);
+    for (int i = 0; i < num_links_; i++) {
         link_req_queues_.push_back(std::vector<HMCRequest *>());
         link_resp_queues_.push_back(std::vector<HMCResponse *>());
     }
@@ -294,9 +295,9 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
         quad_resp_queues_.push_back(std::vector<HMCResponse *>());
     }
 
-    link_busy_.reserve(links_);
-    link_age_counter_.reserve(links_);
-    for (int i = 0; i < links_; i++) {
+    link_busy_.reserve(num_links_);
+    link_age_counter_.reserve(num_links_);
+    for (int i = 0; i < num_links_; i++) {
         link_busy_.push_back(0);
         link_age_counter_.push_back(0);
     }
@@ -308,17 +309,14 @@ HMCMemorySystem::~HMCMemorySystem() {
     }
 }
 
-void HMCMemorySystem::SetClockRatio() {
+void HMCMemorySystem::SetClockRatio(int link_speed_mhz, int link_width) {
     int dram_speed = 1250;
-    int link_speed = config_.link_speed;
-
     // 128 bits per flit, this is to calculate logic speed
     // e.g. if it takes 8 link cycles to transfer a flit
     // the logic has to be running in similar speed so that
     // the logic or the link don't have to wait for each other
-    int cycles_per_flit =
-        128 / config_.link_width;  // Unit interval per flit: 8, 16, or 32
-    int logic_speed_needed = link_speed / cycles_per_flit;
+    int cycles_per_flit = 128 / link_width;
+    int logic_speed_needed = link_speed_mhz / cycles_per_flit;
 
     // In the ClockTick() we will use DRAM's 1250MHz as basic clock ticks
     // because logic clock speed should vary to reflect link speed or link width
@@ -349,7 +347,7 @@ inline void HMCMemorySystem::IterateNextLink() {
     // performance round robin , we can implement other schemes here later such
     // as random but there're only at most 4 links so I suspect it would make a
     // difference
-    next_link_ = (next_link_ + 1) % links_;
+    next_link_ = (next_link_ + 1) % num_links_;
     return;
 }
 
@@ -371,7 +369,7 @@ bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     // when using this intreface the size of each transaction will be block_size
     HMCReqType req_type;
     if (is_write) {
-        switch (config_.block_size) {
+        switch (block_size_) {
             case 0:
                 req_type = HMCReqType::WR0;
                 break;
@@ -393,7 +391,7 @@ bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
                 break;
         }
     } else {
-        switch (config_.block_size) {
+        switch (block_size_) {
             case 0:
                 req_type = HMCReqType::RD0;
                 break;
@@ -476,7 +474,7 @@ void HMCMemorySystem::LogicClockTickPre() {
     // so 2 layers just sounds about right
 
     // return responses to CPU
-    for (int i = 0; i < links_; i++) {
+    for (int i = 0; i < num_links_; i++) {
         if (!link_resp_queues_[i].empty()) {
             HMCResponse *resp = link_resp_queues_[i].front();
             if (resp->exit_time <= logic_clk_) {
@@ -543,7 +541,7 @@ void HMCMemorySystem::DRAMClockTick() {
         vault->ClockTick();
     }
     clk_++;
-    if (clk_ % config_.epoch_period == 0) {
+    if (clk_ % epoch_period_ == 0) {
         for (auto &&vault : vaults_) {
             vault->PrintEpochStats(epoch_csv_file_);
         }

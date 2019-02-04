@@ -128,16 +128,17 @@ class HMCMemorySystem : public BaseDRAMSystem {
     std::vector<Controller*> vaults_;
     std::function<void(uint64_t)> vault_callback_;
 
-    void SetClockRatio();
+    void SetClockRatio(int link_speed_mhz, int link_width);
     void InsertReqToDRAM(HMCRequest* req);
     void VaultCallback(uint64_t req_id);
     std::vector<int> BuildAgeQueue(std::vector<int>& age_counter);
     void XbarArbitrate();
     inline void IterateNextLink();
 
-    int next_link_;
-    int links_;
+    int num_links_;
     size_t queue_depth_;
+    int block_size_;
+    int next_link_;
     int dram_clk_ticks_;
     int logic_clk_ticks_;
     int clk_tick_product_;

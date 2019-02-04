@@ -15,28 +15,35 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
       write_callback_(write_callback),
       last_req_clk_(0),
       config_(config),
-      timing_(config_),
+      timing_(config),
+      num_channels_(config.channels),
+      output_prefix_(config.output_prefix),
+      output_level_(config.output_level),
+      epoch_period_(config.epoch_period),
+      shift_bits_(config.shift_bits),
+      ch_width_(config.ch_width),
+      ch_pos_(config.ch_pos),
 #ifdef THERMAL
       thermal_calc_(config_),
 #endif  // THERMAL
       clk_(0) {
-    total_channels_ += config_.channels;
+    total_channels_ += num_channels_;
 
-    std::string stats_txt_name = config_.output_prefix + ".txt";
-    std::string stats_csv_name = config_.output_prefix + ".csv";
-    std::string epoch_csv_name = config_.output_prefix + "epoch.csv";
-    std::string histo_csv_name = config_.output_prefix + "hist.csv";
+    std::string stats_txt_name = output_prefix_ + ".txt";
+    std::string stats_csv_name = output_prefix_ + ".csv";
+    std::string epoch_csv_name = output_prefix_ + "epoch.csv";
+    std::string histo_csv_name = output_prefix_ + "hist.csv";
 
-    if (config_.output_level >= 0) {
+    if (output_level_ >= 0) {
         stats_txt_file_.open(stats_txt_name);
         stats_csv_file_.open(stats_csv_name);
     }
 
-    if (config_.output_level >= 1) {
+    if (output_level_ >= 1) {
         epoch_csv_file_.open(epoch_csv_name);
     }
 
-    if (config_.output_level >= 2) {
+    if (output_level_ >= 2) {
         histo_csv_file_.open(histo_csv_name);
     }
 
@@ -56,8 +63,8 @@ BaseDRAMSystem::~BaseDRAMSystem() {
 }
 
 int BaseDRAMSystem::GetChannel(uint64_t hex_addr) const {
-    hex_addr >>= config_.shift_bits;
-    return ModuloWidth(hex_addr, config_.ch_width, config_.ch_pos);
+    hex_addr >>= shift_bits_;
+    return ModuloWidth(hex_addr, ch_width_, ch_pos_);
 }
 
 void BaseDRAMSystem::RegisterCallbacks(
@@ -78,8 +85,8 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
         AbruptExit(__FILE__, __LINE__);
     }
 
-    ctrls_.reserve(config_.channels);
-    for (auto i = 0; i < config_.channels; i++) {
+    ctrls_.reserve(num_channels_);
+    for (auto i = 0; i < num_channels_; i++) {
 #ifdef THERMAL
         ctrls_.push_back(new Controller(i, config_, timing_, thermal_calc_,
                                         read_callback_, write_callback_));
@@ -126,7 +133,7 @@ void JedecDRAMSystem::ClockTick() {
 
     clk_++;
 
-    if (clk_ % config_.epoch_period == 0) {
+    if (clk_ % epoch_period_ == 0) {
         for (auto &&ctrl : ctrls_) {
             ctrl->PrintEpochStats(epoch_csv_file_);
         }
