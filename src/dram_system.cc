@@ -1,5 +1,6 @@
 #include "dram_system.h"
 
+#include "omp.h"
 #include <assert.h>
 
 namespace dramsim3 {
@@ -122,8 +123,10 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
-    for (auto &&ctrl : ctrls_) ctrl->ClockTick();
-
+    #pragma omp parallel for 
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->ClockTick();
+    }
     clk_++;
 
     if (clk_ % config_.epoch_period == 0) {

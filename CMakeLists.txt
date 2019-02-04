@@ -64,6 +64,12 @@ if (THERMAL)
     target_compile_options(thermalreplay PRIVATE -DTHERMAL -D_LONGINT -DAdd_ ${OpenMP_C_FLAGS})
 endif (THERMAL)
 
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    target_compile_options(dramsim3 PRIVATE ${OpenMP_CXX_FLAGS})
+    target_link_libraries(dramsim3 INTERFACE ${OpenMP_CXX_FLAGS})
+endif (OPENMP_FOUND)
+
 target_include_directories(dramsim3 INTERFACE src)
 target_compile_options(dramsim3 PRIVATE -Wall)
 target_link_libraries(dramsim3 PRIVATE inih format)
