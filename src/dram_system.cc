@@ -1,7 +1,10 @@
 #include "dram_system.h"
 
-#include "omp.h"
 #include <assert.h>
+
+#ifdef _OPENMP
+#include "omp.h"
+#endif  // _OPENMP
 
 namespace dramsim3 {
 
@@ -123,7 +126,9 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
-    #pragma omp parallel for 
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif  // _OPENMP
     for (size_t i = 0; i < ctrls_.size(); i++) {
         ctrls_[i]->ClockTick();
     }
@@ -142,7 +147,8 @@ void JedecDRAMSystem::ClockTick() {
 
 void JedecDRAMSystem::PrintStats() {
     for (auto &&ctrl : ctrls_) {
-        ctrl->PrintFinalStats(stats_txt_file_, stats_csv_file_, histo_csv_file_);
+        ctrl->PrintFinalStats(stats_txt_file_, stats_csv_file_,
+                              histo_csv_file_);
     }
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);

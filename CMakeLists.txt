@@ -65,10 +65,14 @@ if (THERMAL)
 endif (THERMAL)
 
 find_package(OpenMP)
-if (OPENMP_FOUND)
+if (OPENMP_FOUND AND USE_OPENMP)  # only use OpenMP explicitly
     target_compile_options(dramsim3 PRIVATE ${OpenMP_CXX_FLAGS})
     target_link_libraries(dramsim3 INTERFACE ${OpenMP_CXX_FLAGS})
-endif (OPENMP_FOUND)
+endif (OPENMP_FOUND AND USE_OPENMP)
+
+if (CMD_TRACE)
+    target_compile_options(dramsim3 PRIVATE -DCMD_TRACE)
+endif (CMD_TRACE)
 
 target_include_directories(dramsim3 INTERFACE src)
 target_compile_options(dramsim3 PRIVATE -Wall)
@@ -79,10 +83,6 @@ set_target_properties(dramsim3 PROPERTIES
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
 )
-
-if (CMD_TRACE)
-    target_compile_options(dramsim3 PRIVATE -DCMD_TRACE)
-endif (CMD_TRACE)
 
 # trace CPU, .etc
 add_executable(dramsim3main src/main.cc src/cpu.cc)
