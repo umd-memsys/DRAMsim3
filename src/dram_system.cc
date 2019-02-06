@@ -2,10 +2,6 @@
 
 #include <assert.h>
 
-#ifdef _OPENMP
-#include "omp.h"
-#endif  // _OPENMP
-
 namespace dramsim3 {
 
 // alternative way is to assign the id in constructor but this is less

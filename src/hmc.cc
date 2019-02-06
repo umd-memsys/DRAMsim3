@@ -539,8 +539,11 @@ void HMCMemorySystem::LogicClockTickPost() {
 }
 
 void HMCMemorySystem::DRAMClockTick() {
-    for (auto &&vault : vaults_) {
-        vault->ClockTick();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif  // _OPENMP
+    for (int i = 0; i < vaults_.size(); i++) {
+        vaults_[i]->ClockTick();
     }
     clk_++;
     if (clk_ % config_.epoch_period == 0) {
@@ -662,6 +665,7 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
     return;
 }
 
+// TODO this is not thread safe
 void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // we will use hex addr as the req_id and use a multimap to lookup the
     // requests the vaults cannot directly talk to the CPU so this callback will
