@@ -542,7 +542,7 @@ void HMCMemorySystem::DRAMClockTick() {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif  // _OPENMP
-    for (int i = 0; i < vaults_.size(); i++) {
+    for (size_t i = 0; i < vaults_.size(); i++) {
         vaults_[i]->ClockTick();
     }
     clk_++;
@@ -672,6 +672,9 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // be passed to the vaults and is responsible to put the responses back to
     // response queues
 
+#ifdef _OPENMP
+    mtx.lock();
+#endif  // _OPENMP
     auto it = resp_lookup_table_.find(req_id);
     HMCResponse *resp = it->second;
     // all data from dram received, put packet in xbar and return
@@ -679,6 +682,9 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // put it in xbar
     quad_resp_queues_[resp->quad].push_back(resp);
     quad_age_counter_[resp->quad] = 1;
+#ifdef _OPENMP
+    mtx.unlock();
+#endif  // _OPENMP
     return;
 }
 

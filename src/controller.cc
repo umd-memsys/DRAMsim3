@@ -279,7 +279,7 @@ void Controller::IssueCommand(const Command &cmd) {
         }
         pending_queue_.erase(it);
     }
-    // NOTE: must update stats before update states (to get correct row hits)
+    // must update stats before states (for row hits)
     UpdateCommandStats(cmd);
     channel_state_.UpdateTimingAndStates(cmd, clk_);
 }

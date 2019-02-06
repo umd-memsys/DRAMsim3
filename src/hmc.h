@@ -5,6 +5,10 @@
 #include <map>
 #include <vector>
 
+#ifdef _OPENMP
+#include <mutex>
+#endif
+
 #include "dram_system.h"
 
 namespace dramsim3 {
@@ -141,6 +145,10 @@ class HMCMemorySystem : public BaseDRAMSystem {
     int dram_clk_ticks_;
     int logic_clk_ticks_;
     int clk_tick_product_;
+
+#ifdef _OPENMP
+    std::mutex mtx_;
+#endif  // _OPENMP
 
     // had to use a multimap because the controller callback return hex addr
     // instead of unique id

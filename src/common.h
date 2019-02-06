@@ -51,8 +51,6 @@ int LogBase2(int power_of_two);
 void AbruptExit(const std::string& file, int line);
 bool DirExist(std::string dir);
 
-enum class State { OPEN, CLOSED, SREF, PD, SIZE };
-
 enum class CommandType {
     READ,
     READ_PRECHARGE,

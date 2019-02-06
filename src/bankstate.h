@@ -10,6 +10,7 @@ class BankState {
    public:
     BankState();
 
+    enum class State { OPEN, CLOSED, SREF, PD, SIZE };
     Command GetReadyCommand(const Command& cmd, uint64_t clk) const;
 
     // Update the state of the bank resulting after the execution of the command
@@ -31,11 +32,9 @@ class BankState {
     std::vector<uint64_t> cmd_timing_;
 
     // Currently open row
-    // Applicable only if the bank is in OPEN state
     int open_row_;
 
-    // Maximum allowed row hits to a bank before aggressively precharing it
-    // To prevent starvation and allow fairness
+    // consecutive accesses to one row
     int row_hit_count_;
 };
 
