@@ -76,30 +76,24 @@ class SimpleStats {
     std::vector<std::pair<std::string, std::string> > print_pairs_;
 
     // counter stats, indexed by their name
-    std::vector<std::string> counter_names_;
     std::unordered_map<std::string, uint64_t> counters_;
     std::unordered_map<std::string, uint64_t> last_counters_;
 
     // vectored counter stats, first indexed by name then by index
-    std::vector<std::string> vec_counter_names_;
     std::unordered_map<std::string, std::vector<uint64_t> > vec_counters_;
     std::unordered_map<std::string, std::vector<uint64_t> > last_vec_counters_;
 
     // NOTE: doubles_ vec_doubles_ and calculated_ are basically one time
     // placeholders after each epoch they store the value for that epoch
     // (different from the counters) and in the end updated to the overall value
-    std::vector<std::string> double_names_;
     std::unordered_map<std::string, double> doubles_;
 
-    std::vector<std::string> vec_double_names_;
     std::unordered_map<std::string, std::vector<double> > vec_doubles_;
 
     // calculated stats, similar to double, but not the same
-    std::vector<std::string> calculated_names_;
     std::unordered_map<std::string, double> calculated_;
 
     // histogram stats
-    std::vector<std::string> histo_names_;
     std::unordered_map<std::string, std::vector<std::string> > histo_headers_;
 
     std::unordered_map<std::string, std::pair<int, int> > histo_bounds_;
@@ -107,9 +101,9 @@ class SimpleStats {
     std::unordered_map<std::string, std::unordered_map<int, uint64_t> >
         histo_counts_;
     std::unordered_map<std::string, std::unordered_map<int, uint64_t> >
-        last_histo_counts_;
+        epoch_histo_counts_;
     std::unordered_map<std::string, std::vector<uint64_t> > histo_bins_;
-    std::unordered_map<std::string, std::vector<uint64_t> > last_histo_bins_;
+    std::unordered_map<std::string, std::vector<uint64_t> > epoch_histo_bins_;
 };
 
 }  // namespace dramsim3

@@ -76,11 +76,11 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
 }
 
 void SimpleStats::AddValue(const std::string name, const int value) {
-    auto& counts = histo_counts_[name];
-    if (counts.count(value) <= 0) {
-        counts[value] = 1;
+    auto& epoch_counts = epoch_histo_counts_[name];
+    if (epoch_counts.count(value) <= 0) {
+        epoch_counts[value] = 1;
     } else {
-        counts[value] += 1;
+        epoch_counts[value] += 1;
     }
 }
 
@@ -162,53 +162,53 @@ void SimpleStats::PrintFinalStats(uint64_t clk, std::ostream& txt_output,
         if (channel_id_ == 0) {
             hist_output << "channel, name, value, count" << std::endl;
         }
-        //will be out of order but you already need some lib to process it
-        for (const auto& name : histo_names_) {
-            for (auto it : histo_counts_[name]) {
-                hist_output << channel_id_ << "," << name << "," << it.first
-                            << "," << it.second << std::endl;
+        // will be out of order but you already need some lib to process it
+        for (const auto& name_hist : histo_counts_) {
+            for (auto val_cnt : name_hist.second) {
+                hist_output << channel_id_ << "," << name_hist.first << ","
+                            << val_cnt.first << "," << val_cnt.second
+                            << std::endl;
             }
         }
     }
 
     nlohmann::json j;
-    for (const auto& name : counter_names_) {
-        j[name] = counters_[name];
+    for (const auto it : counters_) {
+        j[it.first] = it.second;
     }
-    for (const auto& name : vec_counter_names_) {
+    for (const auto& it : vec_counters_) {
         nlohmann::json j_list;
-        for (size_t i = 0; i < vec_counters_[name].size(); i++) {
-            j_list[std::to_string(i)] = vec_counters_[name][i];
+        for (size_t i = 0; i < it.second.size(); i++) {
+            j_list[std::to_string(i)] = it.second[i];
         }
-        j[name] = j_list;
+        j[it.first] = j_list;
     }
 
-    for (const auto& name : double_names_) {
-        j[name] = doubles_[name];
+    for (const auto& it : doubles_) {
+        j[it.first] = it.second;
     }
 
-    for (const auto& name : vec_double_names_) {
+    for (const auto& it : vec_doubles_) {
         nlohmann::json j_list;
-        for (size_t i = 0; i < vec_doubles_[name].size(); i++) {
-            j_list[std::to_string(i)] = vec_doubles_[name][i];
+        for (size_t i = 0; i < it.second.size(); i++) {
+            j_list[std::to_string(i)] = it.second[i];
         }
-        j[name] = j_list;
+        j[it.first] = j_list;
     }
 
-    for (const auto& name : calculated_names_) {
-        j[name] = calculated_[name];
+    for (const auto& it : calculated_) {
+        j[it.first] = it.second;
     }
 
-    for (const auto& name : histo_names_) {
-        const auto& counts = histo_counts_[name];
+    for (const auto& name_hist : histo_counts_) {
         nlohmann::json j_list;
-        for (auto it = counts.begin(); it != counts.end(); it++) {
-            j_list[std::to_string(it->first)] = it->second;
+        for (const auto& it : name_hist.second) {
+            j_list[std::to_string(it.first)] = it.second;
         }
-        j[name] = j_list;
+        j[name_hist.first] = j_list;
     }
-    std::cout << j.dump(4) << std::endl;;
-}
+    // std::cout << j.dump(4) << std::endl;;
+}  // namespace dramsim3
 
 double SimpleStats::RankBackgroundEnergy(const int rank) const {
     return vec_doubles_.at("act_stb_energy")[rank] +
@@ -220,14 +220,11 @@ void SimpleStats::InitStat(std::string name, std::string stat_type,
                            std::string description) {
     header_descs_.emplace(name, description);
     if (stat_type == "counter") {
-        counter_names_.push_back(name);
         counters_.emplace(name, 0);
         last_counters_.emplace(name, 0);
     } else if (stat_type == "double") {
-        double_names_.push_back(name);
         doubles_.emplace(name, 0.0);
     } else if (stat_type == "calculated") {
-        calculated_names_.push_back(name);
         calculated_.emplace(name, 0.0);
     }
 }
@@ -242,23 +239,20 @@ void SimpleStats::InitVecStat(std::string name, std::string stat_type,
         header_descs_.emplace(actual_name, actual_desc);
     }
     if (stat_type == "vec_counter") {
-        vec_counter_names_.push_back(name);
         vec_counters_.emplace(name, std::vector<uint64_t>(vec_len, 0));
         last_vec_counters_.emplace(name, std::vector<uint64_t>(vec_len, 0));
     } else if (stat_type == "vec_double") {
-        vec_double_names_.push_back(name);
         vec_doubles_.emplace(name, std::vector<double>(vec_len, 0));
     }
 }
 
 void SimpleStats::InitHistoStat(std::string name, std::string description,
                                 int start_val, int end_val, int num_bins) {
-    histo_names_.push_back(name);
     int bin_width = (end_val - start_val) / num_bins;
     bin_widths_.emplace(name, bin_width);
     histo_bounds_.emplace(name, std::make_pair(start_val, end_val));
     histo_counts_.emplace(name, std::unordered_map<int, uint64_t>());
-    last_histo_counts_.emplace(name, std::unordered_map<int, uint64_t>());
+    epoch_histo_counts_.emplace(name, std::unordered_map<int, uint64_t>());
 
     // initialize headers, descriptions
     std::vector<std::string> headers;
@@ -280,14 +274,15 @@ void SimpleStats::InitHistoStat(std::string name, std::string description,
 
     // +2 for front and end
     histo_bins_.emplace(name, std::vector<uint64_t>(num_bins + 2, 0));
-    last_histo_bins_.emplace(name, std::vector<uint64_t>(num_bins + 2, 0));
+    epoch_histo_bins_.emplace(name, std::vector<uint64_t>(num_bins + 2, 0));
 }
 
 void SimpleStats::UpdateHistoBins() {
-    for (const auto& name : histo_names_) {
-        auto& bins = histo_bins_[name];
+    for (auto& name_bins : epoch_histo_bins_) {
+        const auto& name = name_bins.first;
+        auto& bins = name_bins.second;
         std::fill(bins.begin(), bins.end(), 0);
-        for (const auto it : histo_counts_[name]) {
+        for (const auto it : epoch_histo_counts_[name]) {
             int value = it.first;
             uint64_t count = it.second;
             int bin_idx = 0;
@@ -300,6 +295,24 @@ void SimpleStats::UpdateHistoBins() {
                     (value - histo_bounds_[name].first) / bin_widths_[name] + 1;
             }
             bins[bin_idx] += count;
+        }
+    }
+
+    // update overall histogram counts based on epoch histo counts
+    for (auto& name_counts : epoch_histo_counts_) {
+        const auto& name = name_counts.first;
+        auto& epoch_counts = name_counts.second;
+        auto& final_counts = histo_counts_[name];
+        for (const auto& val_cnt : epoch_counts) {
+            if (final_counts.count(val_cnt.first) <= 0) {
+                final_counts[val_cnt.first] = val_cnt.second;
+            } else {
+                final_counts[val_cnt.first] += val_cnt.second;
+            }
+        }
+        auto& final_bins = histo_bins_[name];
+        for (size_t i = 0; i < final_bins.size(); i++) {
+            final_bins[i] += epoch_histo_bins_[name][i];
         }
     }
 }
@@ -316,28 +329,21 @@ double SimpleStats::GetHistoAvg(const std::string name) const {
 }
 
 double SimpleStats::GetHistoEpochAvg(const std::string name) const {
-    const auto& counts = histo_counts_.at(name);
+    const auto& counts = epoch_histo_counts_.at(name);
     uint64_t accu_sum = 0;
     uint64_t count = 0;
     for (auto i = counts.begin(); i != counts.end(); i++) {
         accu_sum += i->first * i->second;
         count += i->second;
     }
-    const auto& last_counts = last_histo_counts_.at(name);
-    uint64_t last_sum = 0;
-    uint64_t last_count = 0;
-    for (auto i = last_counts.begin(); i != last_counts.end(); i++) {
-        last_sum += i->first * i->second;
-        last_count += i->second;
-    }
-    return static_cast<double>(accu_sum - last_sum) /
-           static_cast<double>(count - last_count);
+    return static_cast<double>(accu_sum) / static_cast<double>(count);
 }
 
 void SimpleStats::UpdateEpochStats() {
     // push counter values as is
-    for (const auto& name : counter_names_) {
-        print_pairs_.emplace_back(name, std::to_string(CounterEpoch(name)));
+    for (const auto& it : counters_) {
+        print_pairs_.emplace_back(it.first,
+                                  std::to_string(CounterEpoch(it.first)));
     }
 
     // update computed stats
@@ -351,17 +357,16 @@ void SimpleStats::UpdateEpochStats() {
         CounterEpoch("num_ref_cmds") * config_.ref_energy_inc;
     doubles_["refb_energy"] =
         CounterEpoch("num_refb_cmds") * config_.refb_energy_inc;
-    for (const auto& name : double_names_) {
-        print_pairs_.emplace_back(name, fmt::format("{}", doubles_[name]));
+    for (const auto& it : doubles_) {
+        print_pairs_.emplace_back(it.first, fmt::format("{}", it.second));
     }
 
     // vector counters
-    for (const auto& name : vec_counter_names_) {
-        for (size_t i = 0; i < vec_counters_[name].size(); i++) {
-            std::string trailing = "." + std::to_string(i);
-            std::string print_name = name + trailing;
-            print_pairs_.emplace_back(print_name,
-                                      std::to_string(VecCounterEpoch(name, i)));
+    for (const auto& it : vec_counters_) {
+        for (size_t i = 0; i < it.second.size(); i++) {
+            std::string print_name = it.first + "." + std::to_string(i);
+            print_pairs_.emplace_back(
+                print_name, std::to_string(VecCounterEpoch(it.first, i)));
         }
     }
 
@@ -379,22 +384,20 @@ void SimpleStats::UpdateEpochStats() {
         vec_doubles_["sref_energy"][i] = sref_energy;
         background_energy += act_stb + pre_stb + sref_energy;
     }
-    for (const auto& name : vec_double_names_) {
-        const auto& vec = vec_doubles_[name];
-        for (size_t i = 0; i < vec.size(); i++) {
-            std::string trailing = "." + std::to_string(i);
-            std::string print_name = name + trailing;
-            print_pairs_.emplace_back(print_name, fmt::format("{}", vec[i]));
+    for (const auto& it : vec_doubles_) {
+        for (size_t i = 0; i < it.second.size(); i++) {
+            std::string print_name = it.first + "." + std::to_string(i);
+            print_pairs_.emplace_back(print_name,
+                                      fmt::format("{}", it.second[i]));
         }
     }
 
     UpdateHistoBins();
-    for (const auto& name : histo_names_) {
-        const auto& headers = histo_headers_[name];
-        const auto& bins = histo_bins_[name];
-        const auto& last_bins = last_histo_bins_[name];
+    for (const auto& name_bins : epoch_histo_bins_) {
+        const auto& headers = histo_headers_[name_bins.first];
+        const auto& bins = name_bins.second;
         for (size_t i = 0; i < bins.size(); i++) {
-            auto epoch_count = bins[i] - last_bins[i];
+            auto epoch_count = bins[i];
             print_pairs_.emplace_back(headers[i], std::to_string(epoch_count));
         }
     }
@@ -415,29 +418,28 @@ void SimpleStats::UpdateEpochStats() {
     calculated_["average_interarrival"] =
         GetHistoEpochAvg("interarrival_latency");
 
-    for (const auto& name : calculated_names_) {
-        print_pairs_.emplace_back(name, fmt::format("{}", calculated_[name]));
+    for (const auto& it : calculated_) {
+        print_pairs_.emplace_back(it.first, fmt::format("{}", it.second));
     }
 
     // finally update last epoch values
-    for (const auto& name : counter_names_) {
-        last_counters_[name] = counters_[name];
+    for (const auto& it : counters_) {
+        last_counters_[it.first] = it.second;
     }
     last_counters_["num_epochs"] = 0;  // NOTE: this is an exception
-    for (const auto& name : vec_counter_names_) {
-        last_vec_counters_[name] = vec_counters_[name];
+    for (const auto& it : vec_counters_) {
+        last_vec_counters_[it.first] = it.second;
     }
-    for (const auto& name : histo_names_) {
-        last_histo_counts_[name] = histo_counts_[name];
-        last_histo_bins_[name] = histo_bins_[name];
+    for (auto& it : epoch_histo_counts_) {
+        it.second.clear();
     }
     return;
 }
 
 void SimpleStats::UpdateFinalStats() {
     // push counter values as is
-    for (const auto& name : counter_names_) {
-        print_pairs_.emplace_back(name, std::to_string(counters_[name]));
+    for (const auto& it : counters_) {
+        print_pairs_.emplace_back(it.first, std::to_string(it.second));
     }
 
     // update computed stats
@@ -449,17 +451,15 @@ void SimpleStats::UpdateFinalStats() {
     doubles_["ref_energy"] = counters_["num_ref_cmds"] * config_.ref_energy_inc;
     doubles_["refb_energy"] =
         counters_["num_refb_cmds"] * config_.refb_energy_inc;
-    for (const auto& name : double_names_) {
-        print_pairs_.emplace_back(name, fmt::format("{}", doubles_[name]));
+    for (const auto& it : doubles_) {
+        print_pairs_.emplace_back(it.first, fmt::format("{}", it.second));
     }
 
     // vector counters
-    for (const auto& name : vec_counter_names_) {
-        const auto& vec = vec_counters_[name];
-        for (size_t i = 0; i < vec.size(); i++) {
-            std::string trailing = "." + std::to_string(i);
-            std::string print_name = name + trailing;
-            print_pairs_.emplace_back(print_name, std::to_string(vec[i]));
+    for (const auto& it : vec_counters_) {
+        for (size_t i = 0; i < it.second.size(); i++) {
+            std::string print_name = it.first + "." + std::to_string(i);
+            print_pairs_.emplace_back(print_name, std::to_string(it.second[i]));
         }
     }
 
@@ -477,22 +477,21 @@ void SimpleStats::UpdateFinalStats() {
         vec_doubles_["sref_energy"][i] = sref_energy;
         background_energy += act_stb + pre_stb + sref_energy;
     }
-    for (const auto& name : vec_double_names_) {
-        const auto& vec = vec_doubles_[name];
-        for (size_t i = 0; i < vec.size(); i++) {
-            std::string trailing = "." + std::to_string(i);
-            std::string print_name = name + trailing;
-            print_pairs_.emplace_back(print_name, fmt::format("{}", vec[i]));
+    for (const auto& it : vec_doubles_) {
+        for (size_t i = 0; i < it.second.size(); i++) {
+            std::string name = it.first + "." + std::to_string(i);
+            print_pairs_.emplace_back(name, fmt::format("{}", it.second[i]));
         }
     }
 
     // histograms
     UpdateHistoBins();
-    for (const auto& name : histo_names_) {
-        const auto& headers = histo_headers_[name];
-        const auto& bins = histo_bins_[name];
+    for (const auto& name_bins : histo_bins_) {
+        const auto& headers = histo_headers_[name_bins.first];
+        const auto& bins = name_bins.second;
         for (size_t i = 0; i < bins.size(); i++) {
-            print_pairs_.emplace_back(headers[i], std::to_string(bins[i]));
+            auto epoch_count = bins[i];
+            print_pairs_.emplace_back(headers[i], std::to_string(epoch_count));
         }
     }
 
@@ -511,8 +510,8 @@ void SimpleStats::UpdateFinalStats() {
     calculated_["average_read_latency"] = GetHistoAvg("read_latency");
     calculated_["average_interarrival"] = GetHistoAvg("interarrival_latency");
 
-    for (const auto& name : calculated_names_) {
-        print_pairs_.emplace_back(name, fmt::format("{}", calculated_[name]));
+    for (const auto& it : calculated_) {
+        print_pairs_.emplace_back(it.first, fmt::format("{}", it.second));
     }
     return;
 }
