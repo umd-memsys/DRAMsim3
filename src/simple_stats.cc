@@ -1,5 +1,6 @@
 #include "simple_stats.h"
 #include "fmt/format.h"
+#include "json.hpp"
 
 namespace dramsim3 {
 
@@ -169,6 +170,44 @@ void SimpleStats::PrintFinalStats(uint64_t clk, std::ostream& txt_output,
             }
         }
     }
+
+    nlohmann::json j;
+    for (const auto& name : counter_names_) {
+        j[name] = counters_[name];
+    }
+    for (const auto& name : vec_counter_names_) {
+        nlohmann::json j_list;
+        for (size_t i = 0; i < vec_counters_[name].size(); i++) {
+            j_list[std::to_string(i)] = vec_counters_[name][i];
+        }
+        j[name] = j_list;
+    }
+
+    for (const auto& name : double_names_) {
+        j[name] = doubles_[name];
+    }
+
+    for (const auto& name : vec_double_names_) {
+        nlohmann::json j_list;
+        for (size_t i = 0; i < vec_doubles_[name].size(); i++) {
+            j_list[std::to_string(i)] = vec_doubles_[name][i];
+        }
+        j[name] = j_list;
+    }
+
+    for (const auto& name : calculated_names_) {
+        j[name] = calculated_[name];
+    }
+
+    for (const auto& name : histo_names_) {
+        const auto& counts = histo_counts_[name];
+        nlohmann::json j_list;
+        for (auto it = counts.begin(); it != counts.end(); it++) {
+            j_list[std::to_string(it->first)] = it->second;
+        }
+        j[name] = j_list;
+    }
+    std::cout << j.dump(4) << std::endl;;
 }
 
 double SimpleStats::RankBackgroundEnergy(const int rank) const {

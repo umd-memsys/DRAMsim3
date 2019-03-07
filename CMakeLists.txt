@@ -22,6 +22,9 @@ target_compile_definitions(format INTERFACE FMT_HEADER_ONLY=1)
 add_library(args INTERFACE)
 target_include_directories(args INTERFACE ext/headers)
 
+add_library(json INTERFACE)
+target_include_directories(json INTERFACE ext/headers)
+
 # Main DRAMSim Lib
 add_library(dramsim3 SHARED
     src/bankstate.cc
