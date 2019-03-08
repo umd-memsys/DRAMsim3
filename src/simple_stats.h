@@ -2,11 +2,13 @@
 #define __SIMPLE_STATS_
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "configuration.h"
+#include "json.hpp"
 
 namespace dramsim3 {
 
@@ -40,10 +42,10 @@ class SimpleStats {
     void PrintFinalStats(uint64_t clk, std::ostream& txt_output,
                          std::ostream& csv_output, std::ostream& hist_output);
 
-    // Return rank background energy for thermal calculation
-    double RankBackgroundEnergy(const int rank) const;
-
    private:
+    using VecStat = std::unordered_map<std::string, std::vector<uint64_t> >;
+    using HistoCount = std::unordered_map<int, uint64_t>;
+    using Json = nlohmann::json;
     void InitStat(std::string name, std::string stat_type,
                   std::string description);
     void InitVecStat(std::string name, std::string stat_type,
@@ -54,8 +56,8 @@ class SimpleStats {
 
     void UpdateCounters();
     void UpdateHistoBins();
-    double GetHistoAvg(const std::string name) const;
-    double GetHistoEpochAvg(const std::string name) const;
+    void UpdatePrints(bool epoch);
+    double GetHistoAvg(const HistoCount& histo_counts) const;
     std::string GetTextHeader(bool is_final) const;
     void UpdateEpochStats();
     void UpdateFinalStats();
@@ -66,15 +68,13 @@ class SimpleStats {
     // map names to descriptions
     std::unordered_map<std::string, std::string> header_descs_;
 
-    std::vector<std::pair<std::string, std::string> > print_pairs_;
-
     // counter stats, indexed by their name
     std::unordered_map<std::string, uint64_t> counters_;
     std::unordered_map<std::string, uint64_t> epoch_counters_;
 
     // vectored counter stats, first indexed by name then by index
-    std::unordered_map<std::string, std::vector<uint64_t> > vec_counters_;
-    std::unordered_map<std::string, std::vector<uint64_t> > epoch_vec_counters_;
+    VecStat vec_counters_;
+    VecStat epoch_vec_counters_;
 
     // NOTE: doubles_ vec_doubles_ and calculated_ are basically one time
     // placeholders after each epoch they store the value for that epoch
@@ -91,12 +91,15 @@ class SimpleStats {
 
     std::unordered_map<std::string, std::pair<int, int> > histo_bounds_;
     std::unordered_map<std::string, int> bin_widths_;
-    std::unordered_map<std::string, std::unordered_map<int, uint64_t> >
-        histo_counts_;
-    std::unordered_map<std::string, std::unordered_map<int, uint64_t> >
-        epoch_histo_counts_;
-    std::unordered_map<std::string, std::vector<uint64_t> > histo_bins_;
-    std::unordered_map<std::string, std::vector<uint64_t> > epoch_histo_bins_;
+    std::unordered_map<std::string, HistoCount> histo_counts_;
+    std::unordered_map<std::string, HistoCount> epoch_histo_counts_;
+    VecStat histo_bins_;
+    VecStat epoch_histo_bins_;
+
+    // outputs
+    Json j_data_;
+    std::vector<std::pair<std::string, std::string> > print_pairs_;
+    std::ofstream j_out_;
 };
 
 }  // namespace dramsim3
