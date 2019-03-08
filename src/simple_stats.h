@@ -14,16 +14,16 @@ class SimpleStats {
    public:
     SimpleStats(const Config& config, int channel_id);
     // incrementing counter
-    void Increment(const std::string name) { counters_[name] += 1; }
+    void Increment(const std::string name) { epoch_counters_[name] += 1; }
 
     // incrementing for vec counter
     void IncrementVec(const std::string name, int pos) {
-        vec_counters_[name][pos] += 1;
+        epoch_vec_counters_[name][pos] += 1;
     }
 
     // increment vec counter by number
     void IncrementVecBy(const std::string name, int pos, int num) {
-        vec_counters_[name][pos] += num;
+        epoch_vec_counters_[name][pos] += num;
     }
 
     // add historgram value
@@ -52,14 +52,7 @@ class SimpleStats {
     void InitHistoStat(std::string name, std::string description, int start_val,
                        int end_val, int num_bins);
 
-    uint64_t CounterEpoch(const std::string name) {
-        return counters_[name] - last_counters_[name];
-    }
-
-    uint64_t VecCounterEpoch(const std::string name, const int i) {
-        return vec_counters_[name][i] - last_vec_counters_[name][i];
-    }
-
+    void UpdateCounters();
     void UpdateHistoBins();
     double GetHistoAvg(const std::string name) const;
     double GetHistoEpochAvg(const std::string name) const;
@@ -77,11 +70,11 @@ class SimpleStats {
 
     // counter stats, indexed by their name
     std::unordered_map<std::string, uint64_t> counters_;
-    std::unordered_map<std::string, uint64_t> last_counters_;
+    std::unordered_map<std::string, uint64_t> epoch_counters_;
 
     // vectored counter stats, first indexed by name then by index
     std::unordered_map<std::string, std::vector<uint64_t> > vec_counters_;
-    std::unordered_map<std::string, std::vector<uint64_t> > last_vec_counters_;
+    std::unordered_map<std::string, std::vector<uint64_t> > epoch_vec_counters_;
 
     // NOTE: doubles_ vec_doubles_ and calculated_ are basically one time
     // placeholders after each epoch they store the value for that epoch

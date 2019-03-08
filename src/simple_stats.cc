@@ -221,7 +221,7 @@ void SimpleStats::InitStat(std::string name, std::string stat_type,
     header_descs_.emplace(name, description);
     if (stat_type == "counter") {
         counters_.emplace(name, 0);
-        last_counters_.emplace(name, 0);
+        epoch_counters_.emplace(name, 0);
     } else if (stat_type == "double") {
         doubles_.emplace(name, 0.0);
     } else if (stat_type == "calculated") {
@@ -240,7 +240,7 @@ void SimpleStats::InitVecStat(std::string name, std::string stat_type,
     }
     if (stat_type == "vec_counter") {
         vec_counters_.emplace(name, std::vector<uint64_t>(vec_len, 0));
-        last_vec_counters_.emplace(name, std::vector<uint64_t>(vec_len, 0));
+        epoch_vec_counters_.emplace(name, std::vector<uint64_t>(vec_len, 0));
     } else if (stat_type == "vec_double") {
         vec_doubles_.emplace(name, std::vector<double>(vec_len, 0));
     }
@@ -275,6 +275,17 @@ void SimpleStats::InitHistoStat(std::string name, std::string description,
     // +2 for front and end
     histo_bins_.emplace(name, std::vector<uint64_t>(num_bins + 2, 0));
     epoch_histo_bins_.emplace(name, std::vector<uint64_t>(num_bins + 2, 0));
+}
+
+void SimpleStats::UpdateCounters() {
+    for (const auto& it : epoch_counters_) {
+        counters_[it.first] += it.second;
+    }
+    for (const auto& vec : epoch_vec_counters_) {
+        for (size_t i = 0; i < vec.second.size(); i++) {
+            vec_counters_[vec.first][i] += vec.second[i];
+        }
+    }
 }
 
 void SimpleStats::UpdateHistoBins() {
@@ -341,44 +352,42 @@ double SimpleStats::GetHistoEpochAvg(const std::string name) const {
 
 void SimpleStats::UpdateEpochStats() {
     // push counter values as is
-    for (const auto& it : counters_) {
-        print_pairs_.emplace_back(it.first,
-                                  std::to_string(CounterEpoch(it.first)));
+    UpdateCounters();
+    for (const auto& it : epoch_counters_) {
+        print_pairs_.emplace_back(it.first, std::to_string(it.second));
     }
 
     // update computed stats
     doubles_["act_energy"] =
-        CounterEpoch("num_act_cmds") * config_.act_energy_inc;
+        epoch_counters_["num_act_cmds"] * config_.act_energy_inc;
     doubles_["read_energy"] =
-        CounterEpoch("num_read_cmds") * config_.read_energy_inc;
+        epoch_counters_["num_read_cmds"] * config_.read_energy_inc;
     doubles_["write_energy"] =
-        CounterEpoch("num_write_cmds") * config_.write_energy_inc;
+        epoch_counters_["num_write_cmds"] * config_.write_energy_inc;
     doubles_["ref_energy"] =
-        CounterEpoch("num_ref_cmds") * config_.ref_energy_inc;
+        epoch_counters_["num_ref_cmds"] * config_.ref_energy_inc;
     doubles_["refb_energy"] =
-        CounterEpoch("num_refb_cmds") * config_.refb_energy_inc;
+        epoch_counters_["num_refb_cmds"] * config_.refb_energy_inc;
     for (const auto& it : doubles_) {
         print_pairs_.emplace_back(it.first, fmt::format("{}", it.second));
     }
 
-    // vector counters
-    for (const auto& it : vec_counters_) {
-        for (size_t i = 0; i < it.second.size(); i++) {
-            std::string print_name = it.first + "." + std::to_string(i);
-            print_pairs_.emplace_back(
-                print_name, std::to_string(VecCounterEpoch(it.first, i)));
+    for (const auto& vec : epoch_vec_counters_) {
+        for (size_t i = 0; i < vec.second.size(); i++) {
+            std::string name = vec.first + "." + std::to_string(i);
+            print_pairs_.emplace_back(name, std::to_string(vec.second[i]));
         }
     }
 
     // vector doubles, update first, then push
     double background_energy = 0.0;
     for (int i = 0; i < config_.ranks; i++) {
-        double act_stb = VecCounterEpoch("rank_active_cycles", i) *
+        double act_stb = epoch_vec_counters_["rank_active_cycles"][i] *
                          config_.act_stb_energy_inc;
-        double pre_stb = VecCounterEpoch("all_bank_idle_cycles", i) *
+        double pre_stb = epoch_vec_counters_["all_bank_idle_cycles"][i] *
                          config_.pre_stb_energy_inc;
         double sref_energy =
-            VecCounterEpoch("sref_cycles", i) * config_.sref_energy_inc;
+            epoch_vec_counters_["sref_cycles"][i] * config_.sref_energy_inc;
         vec_doubles_["act_stb_energy"][i] = act_stb;
         vec_doubles_["pre_stb_energy"][i] = pre_stb;
         vec_doubles_["sref_energy"][i] = sref_energy;
@@ -397,15 +406,14 @@ void SimpleStats::UpdateEpochStats() {
         const auto& headers = histo_headers_[name_bins.first];
         const auto& bins = name_bins.second;
         for (size_t i = 0; i < bins.size(); i++) {
-            auto epoch_count = bins[i];
-            print_pairs_.emplace_back(headers[i], std::to_string(epoch_count));
+            print_pairs_.emplace_back(headers[i], std::to_string(bins[i]));
         }
     }
 
     // calculated stats
     uint64_t total_reqs =
-        CounterEpoch("num_reads_done") + CounterEpoch("num_writes_done");
-    double total_time = CounterEpoch("num_cycles") * config_.tCK;
+        epoch_counters_["num_reads_done"] + epoch_counters_["num_writes_done"];
+    double total_time = epoch_counters_["num_cycles"] * config_.tCK;
     double avg_bw = total_reqs * config_.request_size_bytes / total_time;
     calculated_["average_bandwidth"] = avg_bw;
 
@@ -413,7 +421,7 @@ void SimpleStats::UpdateEpochStats() {
                           doubles_["write_energy"] + doubles_["ref_energy"] +
                           doubles_["refb_energy"] + background_energy;
     calculated_["total_energy"] = total_energy;
-    calculated_["average_power"] = total_energy / CounterEpoch("num_cycles");
+    calculated_["average_power"] = total_energy / epoch_counters_["num_cycles"];
     calculated_["average_read_latency"] = GetHistoEpochAvg("read_latency");
     calculated_["average_interarrival"] =
         GetHistoEpochAvg("interarrival_latency");
@@ -422,13 +430,11 @@ void SimpleStats::UpdateEpochStats() {
         print_pairs_.emplace_back(it.first, fmt::format("{}", it.second));
     }
 
-    // finally update last epoch values
-    for (const auto& it : counters_) {
-        last_counters_[it.first] = it.second;
+    for (auto& it : epoch_counters_) {
+        it.second = 0;
     }
-    last_counters_["num_epochs"] = 0;  // NOTE: this is an exception
-    for (const auto& it : vec_counters_) {
-        last_vec_counters_[it.first] = it.second;
+    for (auto& vec : epoch_vec_counters_) {
+        std::fill(vec.second.begin(), vec.second.end(), 0);
     }
     for (auto& it : epoch_histo_counts_) {
         it.second.clear();
@@ -437,6 +443,7 @@ void SimpleStats::UpdateEpochStats() {
 }
 
 void SimpleStats::UpdateFinalStats() {
+    UpdateCounters();
     // push counter values as is
     for (const auto& it : counters_) {
         print_pairs_.emplace_back(it.first, std::to_string(it.second));
@@ -490,8 +497,7 @@ void SimpleStats::UpdateFinalStats() {
         const auto& headers = histo_headers_[name_bins.first];
         const auto& bins = name_bins.second;
         for (size_t i = 0; i < bins.size(); i++) {
-            auto epoch_count = bins[i];
-            print_pairs_.emplace_back(headers[i], std::to_string(epoch_count));
+            print_pairs_.emplace_back(headers[i], std::to_string(bins[i]));
         }
     }
 
