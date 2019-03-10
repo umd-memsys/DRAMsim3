@@ -545,7 +545,7 @@ void HMCMemorySystem::DRAMClockTick() {
     clk_++;
     if (clk_ % config_.epoch_period == 0) {
         for (auto &&vault : vaults_) {
-            vault->PrintEpochStats(epoch_csv_file_);
+            vault->PrintEpochStats();
         }
     }
     return;
@@ -680,8 +680,7 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
 
 void HMCMemorySystem::PrintStats() {
     for (auto &&vault : vaults_) {
-        vault->PrintFinalStats(stats_txt_file_, stats_csv_file_,
-                               histo_csv_file_);
+        vault->PrintFinalStats();
     }
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);

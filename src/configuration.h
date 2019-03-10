@@ -1,6 +1,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include <fstream>
 #include <string>
 #include "common.h"
 
@@ -133,11 +134,14 @@ class Config {
     bool aggressive_precharging_enabled;
     bool enable_hbm_dual_cmd;
 
-    std::string output_prefix;
 
     int epoch_period;
     int output_level;
     std::string output_dir;
+    std::string output_prefix;
+    std::string json_stats_name;
+    std::string json_epoch_name;
+    std::string txt_stats_name;
 
     // Computed parameters
     int request_size_bytes;

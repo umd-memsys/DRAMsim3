@@ -299,9 +299,9 @@ Command Controller::TransToCommand(const Transaction &trans) {
 
 int Controller::QueueUsage() const { return cmd_queue_.QueueUsage(); }
 
-void Controller::PrintEpochStats(std::ostream &epoch_csv) {
-    simple_stats_.Increment("num_epochs");
-    simple_stats_.PrintEpochStats(clk_, epoch_csv);
+void Controller::PrintEpochStats() {
+    simple_stats_.Increment("epoch_num");
+    simple_stats_.PrintEpochStats();
 #ifdef THERMAL
     for (int r = 0; r < config_.ranks; r++) {
         double bg_energy = simple_stats_.RankBackgroundEnergy(r);
@@ -311,10 +311,8 @@ void Controller::PrintEpochStats(std::ostream &epoch_csv) {
     return;
 }
 
-void Controller::PrintFinalStats(std::ostream &stats_txt,
-                                 std::ostream &stats_csv,
-                                 std::ostream &histo_csv) {
-    simple_stats_.PrintFinalStats(clk_, stats_txt, stats_csv, histo_csv);
+void Controller::PrintFinalStats() {
+    simple_stats_.PrintFinalStats();
 
 #ifdef THERMAL
     for (int r = 0; r < config_.ranks; r++) {

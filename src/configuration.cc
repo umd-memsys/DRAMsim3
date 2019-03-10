@@ -160,6 +160,9 @@ void Config::InitOtherParams() {
     }
     output_prefix =
         output_dir + reader.Get("other", "output_prefix", "dramsim3");
+    json_stats_name = output_prefix + ".json";
+    json_epoch_name = output_prefix + "epoch.json";
+    txt_stats_name = output_prefix + ".txt";
     return;
 }
 

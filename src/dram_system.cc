@@ -22,37 +22,22 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
       clk_(0) {
     total_channels_ += config_.channels;
 
-    std::string stats_txt_name = config_.output_prefix + ".txt";
-    std::string stats_csv_name = config_.output_prefix + ".csv";
-    std::string epoch_csv_name = config_.output_prefix + "epoch.csv";
-    std::string histo_csv_name = config_.output_prefix + "hist.csv";
-
-    if (config_.output_level >= 0) {
-        stats_txt_file_.open(stats_txt_name);
-        stats_csv_file_.open(stats_csv_name);
-    }
-
-    if (config_.output_level >= 1) {
-        epoch_csv_file_.open(epoch_csv_name);
-    }
-
-    if (config_.output_level >= 2) {
-        histo_csv_file_.open(histo_csv_name);
-    }
-
-#ifdef GENERATE_TRACE
+    std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::out);
+    epoch_out << "[";
+    epoch_out.close();
+#ifdef ADDRESS_TRACE
     std::string addr_trace_name("dramsim3addr.trace");
     address_trace_.open(addr_trace_name);
 #endif
 }
 
 BaseDRAMSystem::~BaseDRAMSystem() {
-    stats_txt_file_.close();
-    stats_csv_file_.close();
-    epoch_csv_file_.close();
-#ifdef GENERATE_TRACE
-    address_trace_.close();
-#endif
+    std::ofstream epoch_out(config_.json_epoch_name, std::ios_base::in |
+                                                         std::ios_base::out |
+                                                         std::ios_base::ate);
+    epoch_out.seekp(-2, std::ios_base::cur);
+    epoch_out.write("]", 1);
+    epoch_out.close();
 }
 
 int BaseDRAMSystem::GetChannel(uint64_t hex_addr) const {
@@ -127,8 +112,11 @@ void JedecDRAMSystem::ClockTick() {
     clk_++;
 
     if (clk_ % config_.epoch_period == 0) {
-        for (auto &&ctrl : ctrls_) {
-            ctrl->PrintEpochStats(epoch_csv_file_);
+        for (size_t i = 0; i < ctrls_.size(); i++) {
+            ctrls_[i]->PrintEpochStats();
+            std::ofstream epoch_out(config_.json_epoch_name,
+                                    std::ofstream::app);
+            epoch_out << "," << std::endl;
         }
 #ifdef THERMAL
         thermal_calc_.PrintTransPT(clk_);
@@ -138,9 +126,18 @@ void JedecDRAMSystem::ClockTick() {
 }
 
 void JedecDRAMSystem::PrintStats() {
-    for (auto &&ctrl : ctrls_) {
-        ctrl->PrintFinalStats(stats_txt_file_, stats_csv_file_, histo_csv_file_);
+    std::ofstream json_out(config_.json_stats_name, std::ofstream::out);
+    json_out << "[";
+    json_out.close();
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->PrintFinalStats();
+        if (i != ctrls_.size() - 1) {
+            std::ofstream chan_out(config_.json_stats_name, std::ofstream::app);
+            chan_out << "," << std::endl;
+        }
     }
+    json_out.open(config_.json_stats_name, std::ofstream::app);
+    json_out << "]";
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);
 #endif  // THERMAL

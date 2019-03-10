@@ -46,13 +46,13 @@ class BaseDRAMSystem {
 
 
     // Output files
-    std::ofstream stats_txt_file_;
-    std::ofstream stats_csv_file_;
-    std::ofstream epoch_csv_file_;
-    std::ofstream histo_csv_file_;
-#ifdef GENERATE_TRACE
+    // std::ofstream stats_txt_file_;
+    // std::ofstream stats_csv_file_;
+    // std::ofstream epoch_csv_file_;
+    // std::ofstream histo_csv_file_;
+#ifdef ADDRESS_TRACE
     std::ofstream address_trace_;
-#endif  // GENERATE_TRACE
+#endif  // ADDRESS_TRACE
 };
 
 // hmmm not sure this is the best naming...

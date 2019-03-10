@@ -18,7 +18,7 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
     : config_(config), channel_id_(channel_id) {
     // counter stats
     InitStat("num_cycles", "counter", "Number of DRAM cycles");
-    InitStat("num_epochs", "counter", "Number of epochs");
+    InitStat("epoch_num", "counter", "Number of epochs");
     InitStat("num_reads_done", "counter", "Number of read requests issued");
     InitStat("num_writes_done", "counter", "Number of read requests issued");
     InitStat("num_write_buf_hits", "counter", "Number of write buffer hits");
@@ -72,8 +72,6 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
              "Average read request latency (cycles)");
     InitStat("average_interarrival", "calculated",
              "Average request interarrival latency (cycles)");
-
-    j_out_.open(config.output_prefix + std::to_string(channel_id) + ".json");
 }
 
 void SimpleStats::AddValue(const std::string name, const int value) {
@@ -85,104 +83,60 @@ void SimpleStats::AddValue(const std::string name, const int value) {
     }
 }
 
-void SimpleStats::PrintCSVHeader(std::ostream& csv_output) const {
-    // a little hacky but should work as long as iterating channel 0 first
-    if (channel_id_ != 0) {
-        return;
-    }
-    csv_output << "channel,";
-    for (const auto& it : print_pairs_) {
-        csv_output << it.first << ",";
-    }
-    csv_output << std::endl;
-}
-
 std::string SimpleStats::GetTextHeader(bool is_final) const {
     std::string header =
         "###########################################\n## Statistics of "
         "Channel " +
         std::to_string(channel_id_);
     if (!is_final) {
-        header += " of epoch " + std::to_string(counters_.at("num_epochs"));
+        header += " of epoch " + std::to_string(counters_.at("epoch_num"));
     }
     header += "\n###########################################\n";
     return header;
 }
 
-void SimpleStats::PrintCSVRow(std::ostream& csv_output) const {
-    csv_output << channel_id_ << ",";
-    for (const auto& it : print_pairs_) {
-        csv_output << it.second << ",";
-    }
-    csv_output << std::endl;
-}
-
-void SimpleStats::PrintEpochStats(uint64_t clk, std::ostream& csv_output) {
+void SimpleStats::PrintEpochStats() {
     UpdateEpochStats();
-    if (config_.output_level >= 0) {
+    if (config_.output_level >= 1) {
+        std::ofstream j_out(config_.json_epoch_name, std::ofstream::app);
+        j_out << j_data_;
+    }
+    if (config_.output_level >= 2) {
         std::cout << GetTextHeader(false);
         for (const auto& it : print_pairs_) {
             PrintStatText(std::cout, it.first, it.second,
                           header_descs_[it.first]);
         }
     }
-    if (config_.output_level >= 1) {
-        if (counters_["num_epochs"] == 1) {
-            PrintCSVHeader(csv_output);
-        }
-        PrintCSVRow(csv_output);
-    }
     print_pairs_.clear();
 }
 
-void SimpleStats::PrintFinalStats(uint64_t clk, std::ostream& txt_output,
-                                  std::ostream& csv_output,
-                                  std::ostream& hist_output) {
+void SimpleStats::PrintFinalStats() {
     UpdateFinalStats();
+
+    if (config_.output_level >= 1) {
+        std::ofstream stats_txt_file_;
+        stats_txt_file_.open(config_.txt_stats_name, std::ofstream::app);
+        stats_txt_file_ << GetTextHeader(true);
+        for (const auto& it : print_pairs_) {
+            PrintStatText(stats_txt_file_, it.first, it.second,
+                          header_descs_[it.first]);
+        }
+        stats_txt_file_.close();
+    }
+
     if (config_.output_level >= 0) {
+        std::ofstream j_out(config_.json_stats_name, std::ofstream::app);
+        j_out << j_data_;
+    }
+
+    if (config_.output_level >= 1) {
         std::cout << GetTextHeader(true);
         for (const auto& it : print_pairs_) {
             PrintStatText(std::cout, it.first, it.second,
                           header_descs_[it.first]);
         }
     }
-
-    if (config_.output_level >= 1) {
-        txt_output << GetTextHeader(true);
-        for (const auto& it : print_pairs_) {
-            PrintStatText(txt_output, it.first, it.second,
-                          header_descs_[it.first]);
-        }
-        PrintCSVHeader(csv_output);
-        PrintCSVRow(csv_output);
-    }
-
-    // print detailed histogram breakdown
-    if (config_.output_level >= 2) {
-        // header
-        if (channel_id_ == 0) {
-            hist_output << "channel, name, value, count" << std::endl;
-        }
-        // will be out of order but you already need some lib to process it
-        for (const auto& name_hist : histo_counts_) {
-            for (auto val_cnt : name_hist.second) {
-                hist_output << channel_id_ << "," << name_hist.first << ","
-                            << val_cnt.first << "," << val_cnt.second
-                            << std::endl;
-            }
-        }
-    }
-
-    j_out_ << j_data_;
-
-    // for (const auto& name_hist : histo_counts_) {
-    //     nlohmann::json j_list;
-    //     for (const auto& it : name_hist.second) {
-    //         j_list[std::to_string(it.first)] = it.second;
-    //     }
-    //     j[name_hist.first] = j_list;
-    // }
-    // std::cout << j.dump(4) << std::endl;;
 }
 
 void SimpleStats::InitStat(std::string name, std::string stat_type,
@@ -308,39 +262,42 @@ double SimpleStats::GetHistoAvg(const HistoCount& hist_counts) const {
 }
 
 void SimpleStats::UpdatePrints(bool epoch) {
-    std::unordered_map<std::string, uint64_t>::iterator c_it, c_end;
-    c_it = epoch ? epoch_counters_.begin() : counters_.begin();
-    c_end = epoch ? epoch_counters_.end() : counters_.end();
-    while (c_it != c_end) {
-        print_pairs_.emplace_back(c_it->first, std::to_string(c_it->second));
-        j_data_[c_it->first] = c_it->second;
-        c_it++;
-    }
+    j_data_["channel"] = channel_id_;
 
-    VecStat::iterator v_it, v_end, h_it, h_end;
-    v_it = epoch ? epoch_vec_counters_.begin() : vec_counters_.begin();
-    v_end = epoch ? epoch_vec_counters_.end() : vec_counters_.end();
-    while (v_it != v_end) {
+    std::unordered_map<std::string, uint64_t>& ref_counters =
+        epoch ? epoch_counters_ : counters_;
+    for (const auto& it : ref_counters) {
+        print_pairs_.emplace_back(it.first, std::to_string(it.second));
+        j_data_[it.first] = it.second;
+    }
+    j_data_["epoch_num"] = counters_["epoch_num"];
+
+    VecStat& ref_vcounter = epoch ? epoch_vec_counters_ : vec_counters_;
+    for (const auto& it : ref_vcounter) {
         Json j_list;
-        for (size_t i = 0; i < v_it->second.size(); i++) {
-            std::string name = v_it->first + "." + std::to_string(i);
-            print_pairs_.emplace_back(name, std::to_string(v_it->second[i]));
-            j_list[std::to_string(i)] = v_it->second[i];
+        for (size_t i = 0; i < it.second.size(); i++) {
+            std::string name = it.first + "." + std::to_string(i);
+            print_pairs_.emplace_back(name, std::to_string(it.second[i]));
+            j_list[std::to_string(i)] = it.second[i];
         }
-        j_data_[v_it->first] = j_list;
-        v_it++;
+        j_data_[it.first] = j_list;
+    }
+    VecStat& ref_hbins = epoch ? epoch_histo_bins_ : histo_bins_;
+    for (const auto& it : ref_hbins) {
+        const auto& names = histo_headers_[it.first];
+        for (size_t i = 0; i < it.second.size(); i++) {
+            print_pairs_.emplace_back(names[i], std::to_string(it.second[i]));
+        }
     }
 
-    h_it = epoch ? epoch_histo_bins_.begin() : histo_bins_.begin();
-    h_end = epoch ? epoch_histo_bins_.end() : histo_bins_.end();
-    while (h_it != h_end) {
-        const auto& names = histo_headers_[h_it->first];
-        for (size_t i = 0; i < h_it->second.size(); i++) {
-            print_pairs_.emplace_back(names[i],
-                                      std::to_string(h_it->second[i]));
+    for (const auto& name_hist : histo_counts_) {
+        Json j_list;
+        for (const auto& it : name_hist.second) {
+            j_list[std::to_string(it.first)] = it.second;
         }
-        h_it++;
+        j_data_[name_hist.first] = j_list;
     }
+
     for (const auto& it : doubles_) {
         print_pairs_.emplace_back(it.first, fmt::format("{}", it.second));
         j_data_[it.first] = it.second;

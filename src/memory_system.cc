@@ -16,7 +16,10 @@ MemorySystem::MemorySystem(const std::string &config_file,
     }
 }
 
-MemorySystem::~MemorySystem() { delete(config_); delete(dram_system_); }
+MemorySystem::~MemorySystem() {
+    delete (dram_system_);
+    delete (config_);
+}
 
 void MemorySystem::ClockTick() { dram_system_->ClockTick(); }
 

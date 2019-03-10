@@ -31,16 +31,11 @@ class SimpleStats {
     // add historgram value
     void AddValue(const std::string name, const int value);
 
-    // Print CSV stuff: same format for epoch and final outputs
-    void PrintCSVHeader(std::ostream& csv_output) const;
-    void PrintCSVRow(std::ostream& csv_output) const;
-
     // Epoch update
-    void PrintEpochStats(uint64_t clk, std::ostream& csv_output);
+    void PrintEpochStats();
 
     // Final statas output
-    void PrintFinalStats(uint64_t clk, std::ostream& txt_output,
-                         std::ostream& csv_output, std::ostream& hist_output);
+    void PrintFinalStats();
 
    private:
     using VecStat = std::unordered_map<std::string, std::vector<uint64_t> >;
@@ -99,7 +94,6 @@ class SimpleStats {
     // outputs
     Json j_data_;
     std::vector<std::pair<std::string, std::string> > print_pairs_;
-    std::ofstream j_out_;
 };
 
 }  // namespace dramsim3
