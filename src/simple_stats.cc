@@ -280,15 +280,21 @@ void SimpleStats::UpdatePrints(bool epoch) {
         const auto& names = histo_headers_[it.first];
         for (size_t i = 0; i < it.second.size(); i++) {
             print_pairs_.emplace_back(names[i], std::to_string(it.second[i]));
+            j_data_[names[i]] = it.second[i];
         }
     }
 
-    for (const auto& name_hist : histo_counts_) {
-        Json j_list;
-        for (const auto& it : name_hist.second) {
-            j_list[std::to_string(it.first)] = it.second;
+    // if we dump complete histogram data each epoch the output file will be
+    // huge therefore we only put aggregated histo in each epoch but
+    // complete data at the end
+    if (!epoch) {
+        for (const auto& name_hist : histo_counts_) {
+            Json j_list;
+            for (const auto& it : name_hist.second) {
+                j_list[std::to_string(it.first)] = it.second;
+            }
+            j_data_[name_hist.first] = j_list;
         }
-        j_data_[name_hist.first] = j_list;
     }
 
     for (const auto& it : doubles_) {
