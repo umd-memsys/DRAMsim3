@@ -59,7 +59,7 @@ void BaseDRAMSystem::PrintEpochStats() {
 
 void BaseDRAMSystem::PrintStats() {
     std::ofstream json_out(config_.json_stats_name, std::ofstream::out);
-    json_out << "[";
+    json_out << "{";
     json_out.close();
     for (size_t i = 0; i < ctrls_.size(); i++) {
         ctrls_[i]->PrintFinalStats();
@@ -69,7 +69,7 @@ void BaseDRAMSystem::PrintStats() {
         }
     }
     json_out.open(config_.json_stats_name, std::ofstream::app);
-    json_out << "]";
+    json_out << "}";
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);
 #endif  // THERMAL

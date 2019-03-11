@@ -52,6 +52,21 @@ project root directory.
 
 ```
 
-The output can be directed to another directory by `-o` option or can be configured in the config file. 
+The output can be directed to another directory by `-o` option
+or can be configured in the config file. 
 You can control the verbosity in the config file as well.
 
+### Plotting (in dev)
+
+`scripts/plot_stats.py` can visualize some of the output (requires `matplotlib`):
+
+```bash
+# generate histograms from overall output
+python3 scripts/plot_stats dramsim.json
+
+# or
+# generate time series for a variety stats from epoch outputs
+python3 scripts/plot_stats dramsim_epoch.json
+```
+
+Currently stats from all channels are squashed together for cleaner plotting.
