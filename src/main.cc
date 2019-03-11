@@ -5,7 +5,12 @@
 using namespace dramsim3;
 
 int main(int argc, const char **argv) {
-    args::ArgumentParser parser("DRAM Simulator.", "");
+    args::ArgumentParser parser(
+        "DRAM Simulator.",
+        "Examples: \n."
+        "./build/dramsim3main configs/DDR4_8Gb_x8_3200.ini -c 100 -t "
+        "sample_trace.txt\n"
+        "./build/dramsim3main configs/DDR4_8Gb_x8_3200.ini -s random -c 100");
     args::HelpFlag help(parser, "help", "Display the help menu", {'h', "help"});
     args::ValueFlag<uint64_t> num_cycles_arg(parser, "num_cycles",
                                              "Number of cycles to simulate",
@@ -13,9 +18,9 @@ int main(int argc, const char **argv) {
     args::ValueFlag<std::string> output_dir_arg(
         parser, "output_dir", "Output directory for stats files",
         {'o', "output-dir"}, ".");
-    args::ValueFlag<std::string> pattern_arg(
-        parser, "pattern_type", "pattern generator - random, stream",
-        {'p', "pattern"}, "");
+    args::ValueFlag<std::string> stream_arg(
+        parser, "stream_type", "address stream generator - (random), stream",
+        {'s', "stream"}, "");
     args::ValueFlag<std::string> trace_file_arg(
         parser, "trace",
         "Trace file, setting this option will ignore -s option",
@@ -43,13 +48,13 @@ int main(int argc, const char **argv) {
     uint64_t cycles = args::get(num_cycles_arg);
     std::string output_dir = args::get(output_dir_arg);
     std::string trace_file = args::get(trace_file_arg);
-    std::string pattern_type = args::get(pattern_arg);
+    std::string stream_type = args::get(stream_arg);
 
     CPU *cpu;
     if (!trace_file.empty()) {
         cpu = new TraceBasedCPU(config_file, output_dir, trace_file);
     } else {
-        if (pattern_type == "stream" || pattern_type == "s") {
+        if (stream_type == "stream" || stream_type == "s") {
             cpu = new StreamCPU(config_file, output_dir);
         } else {
             cpu = new RandomCPU(config_file, output_dir);
