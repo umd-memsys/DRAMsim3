@@ -1,5 +1,7 @@
-#include "simple_stats.h"
+#include <iostream>
+
 #include "fmt/format.h"
+#include "simple_stats.h"
 
 namespace dramsim3 {
 
@@ -114,17 +116,6 @@ void SimpleStats::PrintEpochStats() {
 void SimpleStats::PrintFinalStats() {
     UpdateFinalStats();
 
-    if (config_.output_level >= 1) {
-        std::ofstream stats_txt_file_;
-        stats_txt_file_.open(config_.txt_stats_name, std::ofstream::app);
-        stats_txt_file_ << GetTextHeader(true);
-        for (const auto& it : print_pairs_) {
-            PrintStatText(stats_txt_file_, it.first, it.second,
-                          header_descs_[it.first]);
-        }
-        stats_txt_file_.close();
-    }
-
     if (config_.output_level >= 0) {
         std::ofstream j_out(config_.json_stats_name, std::ofstream::app);
         j_out << j_data_;
@@ -137,6 +128,8 @@ void SimpleStats::PrintFinalStats() {
                           header_descs_[it.first]);
         }
     }
+
+    print_pairs_.clear();
 }
 
 void SimpleStats::InitStat(std::string name, std::string stat_type,

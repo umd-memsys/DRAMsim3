@@ -121,11 +121,9 @@ class HMCMemorySystem : public BaseDRAMSystem {
     bool AddTransaction(uint64_t hex_addr, bool is_write) override;
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
-    void PrintStats() override;
 
    private:
     uint64_t ref_tick_, logic_clk_;
-    std::vector<Controller*> vaults_;
     std::function<void(uint64_t)> vault_callback_;
 
     void SetClockRatio();

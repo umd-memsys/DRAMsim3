@@ -1,7 +1,6 @@
 #ifndef __SIMPLE_STATS_
 #define __SIMPLE_STATS_
 
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <unordered_map>

@@ -45,6 +45,36 @@ int BaseDRAMSystem::GetChannel(uint64_t hex_addr) const {
     return ModuloWidth(hex_addr, config_.ch_width, config_.ch_pos);
 }
 
+void BaseDRAMSystem::PrintEpochStats() {
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->PrintEpochStats();
+        std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::app);
+        epoch_out << "," << std::endl;
+    }
+#ifdef THERMAL
+    thermal_calc_.PrintTransPT(clk_);
+#endif  // THERMAL
+    return;
+}
+
+void BaseDRAMSystem::PrintStats() {
+    std::ofstream json_out(config_.json_stats_name, std::ofstream::out);
+    json_out << "[";
+    json_out.close();
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->PrintFinalStats();
+        if (i != ctrls_.size() - 1) {
+            std::ofstream chan_out(config_.json_stats_name, std::ofstream::app);
+            chan_out << "," << std::endl;
+        }
+    }
+    json_out.open(config_.json_stats_name, std::ofstream::app);
+    json_out << "]";
+#ifdef THERMAL
+    thermal_calc_.PrintFinalPT(clk_);
+#endif  // THERMAL
+}
+
 void BaseDRAMSystem::RegisterCallbacks(
     std::function<void(uint64_t)> read_callback,
     std::function<void(uint64_t)> write_callback) {
@@ -112,35 +142,9 @@ void JedecDRAMSystem::ClockTick() {
     clk_++;
 
     if (clk_ % config_.epoch_period == 0) {
-        for (size_t i = 0; i < ctrls_.size(); i++) {
-            ctrls_[i]->PrintEpochStats();
-            std::ofstream epoch_out(config_.json_epoch_name,
-                                    std::ofstream::app);
-            epoch_out << "," << std::endl;
-        }
-#ifdef THERMAL
-        thermal_calc_.PrintTransPT(clk_);
-#endif  // THERMAL
+        PrintEpochStats();
     }
     return;
-}
-
-void JedecDRAMSystem::PrintStats() {
-    std::ofstream json_out(config_.json_stats_name, std::ofstream::out);
-    json_out << "[";
-    json_out.close();
-    for (size_t i = 0; i < ctrls_.size(); i++) {
-        ctrls_[i]->PrintFinalStats();
-        if (i != ctrls_.size() - 1) {
-            std::ofstream chan_out(config_.json_stats_name, std::ofstream::app);
-            chan_out << "," << std::endl;
-        }
-    }
-    json_out.open(config_.json_stats_name, std::ofstream::app);
-    json_out << "]";
-#ifdef THERMAL
-    thermal_calc_.PrintFinalPT(clk_);
-#endif  // THERMAL
 }
 
 IdealDRAMSystem::IdealDRAMSystem(Config &config, const std::string &output_dir,
