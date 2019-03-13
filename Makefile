@@ -5,9 +5,10 @@ CXX=g++
 
 FMT_LIB_DIR=ext/fmt/include
 INI_LIB_DIR=ext/headers
+JSON_LIB_DIR=ext/headers
 ARGS_LIB_DIR=ext/headers
 
-INC=-Isrc/ -I$(FMT_LIB_DIR) -I$(INI_LIB_DIR) -I$(ARGS_LIB_DIR)
+INC=-Isrc/ -I$(FMT_LIB_DIR) -I$(INI_LIB_DIR) -I$(ARGS_LIB_DIR) -I$(JSON_LIB_DIR)
 CXXFLAGS=-Wall -O3 -fPIC -std=c++11 $(INC) -DFMT_HEADER_ONLY=1
 
 LIB_NAME=libdramsim3.so

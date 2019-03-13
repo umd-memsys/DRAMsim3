@@ -128,7 +128,6 @@ class Config {
     bool unified_queue;
     int trans_queue_size;
     int write_buf_size;
-    int delay_queue_cycles;
     bool enable_self_refresh;
     int sref_threshold;
     bool aggressive_precharging_enabled;

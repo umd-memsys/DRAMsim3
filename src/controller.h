@@ -32,7 +32,6 @@ class Controller {
                std::function<void(uint64_t)> read_callback,
                std::function<void(uint64_t)> write_callback);
 #endif  // THERMAL
-    ~Controller();
     void ClockTick();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
     bool AddTransaction(Transaction trans);

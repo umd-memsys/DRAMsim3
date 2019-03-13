@@ -63,6 +63,7 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
 
     // Histogram stats
     InitHistoStat("read_latency", "Read request latency (cycles)", 0, 200, 10);
+    InitHistoStat("write_latency", "Write cmd latency (cycles)", 0, 200, 10);
     InitHistoStat("interarrival_latency",
                   "Request interarrival latency (cycles)", 0, 100, 10);
 

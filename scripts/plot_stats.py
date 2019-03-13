@@ -62,6 +62,16 @@ def extract_histo_data(data, label):
 def plot_histogram(json_data, label, unit="", output=None):
     histo_data = extract_histo_data(json_data, label)
     histo_data = sorted(histo_data)
+    total_cnt = len(histo_data)
+    existing_nums = set()
+    unique_vals = 0
+    for i in range(int(0.90 * total_cnt)):
+        if histo_data[i] in existing_nums:
+            continue
+        else:
+            existing_nums.add(histo_data[i])
+            unique_vals += 1
+    print("90-Percentile unique {} values: {}".format(label, unique_vals))
     x_min = min(histo_data)
     x_max = max(histo_data)
     x_99 = int(0.99 * len(histo_data))
@@ -118,6 +128,7 @@ if __name__ == "__main__":
             plot_epochs(j_data, label, unit, args.output_dir)
     else:
         data_units = {"read_latency": "cycles",
+                      "write_latency": "cycles",
                       "interarrival_latency": "cycles"}
         for label, unit in data_units.items():
             plot_histogram(j_data, label, unit, args.output_dir)
