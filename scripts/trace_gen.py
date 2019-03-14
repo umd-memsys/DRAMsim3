@@ -3,7 +3,6 @@
 import argparse
 import os
 import random
-import uuid
 
 
 class Generator():
@@ -11,15 +10,14 @@ class Generator():
     Format agnostic address stream generator
     """
 
-    def __init__(self, stream_type, interarrival, ratio):
+    def __init__(self, stream_type, interarrival, ratio, gb):
         # convert to 0 ~ 1 for easier random generation
         self._interval = interarrival
         self._ratio = ratio / (ratio + 1.0)
 
         self._gen = None
 
-        # 4GB range ought to be enough...
-        self._range = 2 ** 32
+        self._range = gb * (2 ** 30)
         self._last_clk = 0
         self._last_rd_addr = random.randrange(self._range)
         self._last_wr_addr = random.randrange(self._range)
@@ -28,7 +26,7 @@ class Generator():
         elif stream_type == 'stream':
             self._gen = self._stream_gen
         else:
-            pass
+            self._gen = self._mix_gen
 
     def _get_op(self):
         if random.random() > self._ratio:
@@ -49,6 +47,12 @@ class Generator():
         else:
             self._last_wr_addr += 64
             return (op, self._last_wr_addr)
+
+    def _mix_gen(self):
+        if random.random() > 0.5:
+            return self._rand_gen()
+        else:
+            return self._stream_gen()
 
     def gen(self):
         op, addr = self._gen()
@@ -73,15 +77,16 @@ def get_string(op, addr, clk, trace_format):
     }
     actual_op = op_map[op][trace_format]
     if 'dramsim' in trace_format:
-        return '{} {} {}'.format(hex(addr), actual_op, clk)
+        return '{} {} {}\n'.format(hex(addr), actual_op, clk)
     elif 'ramulator' == trace_format:
-        return '{} {}'.format(hex(addr), actual_op)
+        return '{} {}\n'.format(hex(addr), actual_op)
     elif 'drsim' == trace_format:
-        return '{} {} {} 64B'.format(hex(addr), actual_op, clk)
+        return '{} {} {} 64B\n'.format(hex(addr), actual_op, clk)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Trace Generator for Various DRAM Simulators")
+        description="Trace Generator for Various DRAM Simulators",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--stream-type', default='random',
                         help='Address stream type, (r)andom, (s)tream, (m)ix')
     parser.add_argument('-i', '--interarrival',
@@ -96,6 +101,8 @@ if __name__ == '__main__':
                         help='Read to write(1) ratio')
     parser.add_argument('-n', '--num-reqs', type=int, default=100,
                         help='Total number of requests.')
+    parser.add_argument('-g', '--gb', type=int, default=4,
+                        help='GBs of address space')
 
     args = parser.parse_args()
 
@@ -105,15 +112,19 @@ if __name__ == '__main__':
         except (OSError, ValueError) as e:
             print('Cannot use output path:' + args.output_dir)
             print(e)
+            eixt(1)
+    print("Output directory: ", args.output_dir)
 
     stream_types = {'r': 'random', 'random': 'random',
                     's': 'stream', 'stream': 'stream',
                     'm': 'mix', 'mix': 'mix'}
     stream_type = stream_types.get(args.stream_type, 'random')
+    print("Address stream type: ", stream_type)
 
     formats = ['dramsim2', 'dramsim3', 'ramulator', 'drsim']
     if args.format != 'all':
         formats = [args.format]
+    print("Trace format(s):", formats)
 
     files = {}
     for f in formats:
@@ -121,6 +132,7 @@ if __name__ == '__main__':
             f, stream_type, args.interarrival, args.num_reqs, int(args.ratio))
         if f == 'dramsim2':
             file_name = 'mase_' + file_name
+        print("Write to file: ", file_name)
         files[f] = os.path.join(args.output_dir, file_name)
 
     # open files
@@ -128,9 +140,9 @@ if __name__ == '__main__':
         fp = open(name, 'w')
         files[f] = fp
 
-    g = Generator(stream_type, args.interarrival, args.ratio)
+    g = Generator(stream_type, args.interarrival, args.ratio, args.gb)
     for i in range(args.num_reqs):
         op, addr, clk = g.gen()
         for f in formats:
             line = get_string(op, addr, clk, f)
-            files[f].write(line + '\n')
+            files[f].write(line)
