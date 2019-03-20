@@ -59,10 +59,10 @@ class Controller {
     std::vector<Transaction> unified_queue_;
     std::vector<Transaction> read_queue_;
     std::vector<Transaction> write_buffer_;
-    std::unordered_set<uint64_t> in_write_buf_;
 
-    // transactions that are issued to command queue, use map for convenience
-    std::multimap<uint64_t, Transaction> pending_queue_;
+    // transactions that are not completed, use map for convenience
+    std::multimap<uint64_t, Transaction> pending_rd_q_;
+    std::multimap<uint64_t, Transaction> pending_wr_q_;
 
     // completed transactions
     std::vector<Transaction> return_queue_;
