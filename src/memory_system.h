@@ -37,6 +37,10 @@ class MemorySystem {
     BaseDRAMSystem *dram_system_;
 };
 
+MemorySystem* GetMemorySystem(const std::string &config_file, const std::string &output_dir,
+                 std::function<void(uint64_t)> read_callback,
+                 std::function<void(uint64_t)> write_callback);
+
 }  // namespace dramsim3
 
 #endif

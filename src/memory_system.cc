@@ -48,6 +48,11 @@ bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 
 void MemorySystem::PrintStats() const { dram_system_->PrintStats(); }
 
+MemorySystem* GetMemorySystem(const std::string &config_file, const std::string &output_dir,
+                 std::function<void(uint64_t)> read_callback,
+                 std::function<void(uint64_t)> write_callback) {
+    return new MemorySystem(config_file, output_dir, read_callback, write_callback);
+}
 }  // namespace dramsim3
 
 // This function can be used by autoconf AC_CHECK_LIB since

@@ -66,7 +66,7 @@ int main(int argc, const char **argv) {
     }
     cpu->PrintStats();
 
-    delete (cpu);
+    delete cpu;
 
     return 0;
 }
