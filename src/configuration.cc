@@ -30,6 +30,17 @@ Config::Config(std::string config_file, std::string out_dir)
     delete (reader_);
 }
 
+Address Config::AddressMapping(uint64_t hex_addr) const {
+    hex_addr >>= shift_bits;
+    int channel = (hex_addr >> ch_pos) & ch_mask;
+    int rank = (hex_addr >> ra_pos) & ra_mask;
+    int bg = (hex_addr >> bg_pos) & bg_mask;
+    int ba = (hex_addr >> ba_pos) & ba_mask;
+    int ro = (hex_addr >> ro_pos) & ro_mask;
+    int co = (hex_addr >> co_pos) & co_mask;
+    return Address(channel, rank, bg, ba, ro, co);
+}
+
 void Config::CalculateSize() {
     // calculate rank and re-calculate channel_size
     devices_per_rank = bus_width / device_width;
@@ -103,9 +114,9 @@ void Config::InitDRAMParams() {
     block_size = GetInteger("hmc", "block_size", 32);
     xbar_queue_depth = GetInteger("hmc", "xbar_queue_depth", 16);
     if (IsHMC()) {
-        // the BL for HMC is determined by max block_size, which is a multiple of
-        // 32B, each "device" transfer 32b per half cycle
-        // therefore BL is 8 for 32B block size
+        // the BL for HMC is determined by max block_size, which is a multiple
+        // of 32B, each "device" transfer 32b per half cycle therefore BL is 8
+        // for 32B block size
         BL = block_size * 8 / device_width;
     }
     // set burst cycle according to protocol
@@ -369,21 +380,9 @@ void Config::SetAddressMapping() {
             std::cerr << "Unrecognized field: " << token << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
-#ifdef DEBUG_OUTPUT
-        std::cout << "Address mapping:" << std::endl;
-        std::cout << token << " pos:" << pos << " width:" << field_widths[token]
-                  << std::endl;
-#endif
         field_pos[token] = pos;
         pos += field_widths[token];
     }
-
-    ch_width = field_widths.at("ch");
-    ra_width = field_widths.at("ra");
-    bg_width = field_widths.at("bg");
-    ba_width = field_widths.at("ba");
-    ro_width = field_widths.at("ro");
-    co_width = field_widths.at("co");
 
     ch_pos = field_pos.at("ch");
     ra_pos = field_pos.at("ra");
@@ -391,6 +390,13 @@ void Config::SetAddressMapping() {
     ba_pos = field_pos.at("ba");
     ro_pos = field_pos.at("ro");
     co_pos = field_pos.at("co");
+
+    ch_mask = (1 << field_widths.at("ch")) - 1;
+    ra_mask = (1 << field_widths.at("ra")) - 1;
+    bg_mask = (1 << field_widths.at("bg")) - 1;
+    ba_mask = (1 << field_widths.at("ba")) - 1;
+    ro_mask = (1 << field_widths.at("ro")) - 1;
+    co_mask = (1 << field_widths.at("co")) - 1;
 }
 
 }  // namespace dramsim3

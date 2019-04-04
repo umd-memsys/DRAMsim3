@@ -33,7 +33,7 @@ enum class RefreshPolicy {
 class Config {
    public:
     Config(std::string config_file, std::string out_dir);
-
+    Address AddressMapping(uint64_t hex_addr) const;
     // DRAM physical structure
     DRAMProtocol protocol;
     int channel_size;
@@ -51,8 +51,8 @@ class Config {
 
     // Address mapping numbers
     int shift_bits;
-    int ch_width, ra_width, bg_width, ba_width, ro_width, co_width;
     int ch_pos, ra_pos, bg_pos, ba_pos, ro_pos, co_pos;
+    uint64_t ch_mask, ra_mask, bg_mask, ba_mask, ro_mask, co_mask;
 
     // Generic DRAM timing parameters
     double tCK;

@@ -42,7 +42,7 @@ BaseDRAMSystem::~BaseDRAMSystem() {
 
 int BaseDRAMSystem::GetChannel(uint64_t hex_addr) const {
     hex_addr >>= config_.shift_bits;
-    return ModuloWidth(hex_addr, config_.ch_width, config_.ch_pos);
+    return (hex_addr >> config_.ch_pos) & config_.ch_mask;
 }
 
 void BaseDRAMSystem::PrintEpochStats() {

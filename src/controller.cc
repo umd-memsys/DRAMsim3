@@ -271,7 +271,7 @@ void Controller::IssueCommand(const Command &cmd) {
 }
 
 Command Controller::TransToCommand(const Transaction &trans) {
-    auto addr = AddressMapping(trans.addr);
+    auto addr = config_.AddressMapping(trans.addr);
     CommandType cmd_type;
     if (row_buf_policy_ == RowBufPolicy::OPEN_PAGE) {
         cmd_type = trans.is_write ? CommandType::WRITE : CommandType::READ;
@@ -308,16 +308,6 @@ void Controller::PrintFinalStats() {
     return;
 }
 
-Address Controller::AddressMapping(uint64_t hex_addr) {
-    hex_addr >>= config_.shift_bits;
-    int channel = ModuloWidth(hex_addr, config_.ch_width, config_.ch_pos);
-    int rank = ModuloWidth(hex_addr, config_.ra_width, config_.ra_pos);
-    int bg = ModuloWidth(hex_addr, config_.bg_width, config_.bg_pos);
-    int ba = ModuloWidth(hex_addr, config_.ba_width, config_.ba_pos);
-    int ro = ModuloWidth(hex_addr, config_.ro_width, config_.ro_pos);
-    int co = ModuloWidth(hex_addr, config_.co_width, config_.co_pos);
-    return Address(channel, rank, bg, ba, ro, co);
-}
 
 void Controller::UpdateCommandStats(const Command &cmd) {
     switch (cmd.cmd_type) {

@@ -77,7 +77,6 @@ class Controller {
     // used to calculate inter-arrival latency
     uint64_t last_trans_clk_;
 
-    Address AddressMapping(uint64_t hex_addr);
     // transaction queueing
     int write_draining_;
     void ScheduleTransaction();
