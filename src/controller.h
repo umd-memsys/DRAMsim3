@@ -39,6 +39,7 @@ class Controller {
     // Stats output
     void PrintEpochStats();
     void PrintFinalStats();
+    void ResetStats() { simple_stats_.Reset(); }
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
 

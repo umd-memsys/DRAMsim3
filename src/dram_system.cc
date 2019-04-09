@@ -75,6 +75,12 @@ void BaseDRAMSystem::PrintStats() {
 #endif  // THERMAL
 }
 
+void BaseDRAMSystem::ResetStats() {
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->ResetStats();
+    }
+}
+
 void BaseDRAMSystem::RegisterCallbacks(
     std::function<void(uint64_t)> read_callback,
     std::function<void(uint64_t)> write_callback) {

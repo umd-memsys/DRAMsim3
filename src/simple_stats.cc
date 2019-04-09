@@ -134,6 +134,36 @@ void SimpleStats::PrintFinalStats() {
     print_pairs_.clear();
 }
 
+void SimpleStats::Reset() {
+    for (auto& it : counters_) {
+        it.second = 0;
+    }
+    for (auto& it : epoch_counters_) {
+        it.second = 0;
+    }
+    for (auto& vec : vec_counters_) {
+        std::fill(vec.second.begin(), vec.second.end(), 0);
+    }
+    for (auto& vec : epoch_vec_counters_) {
+        std::fill(vec.second.begin(), vec.second.end(), 0);
+    }
+    for (auto& it : doubles_) {
+        it.second = 0.0;
+    }
+    for (auto& vec : vec_doubles_) {
+        std::fill(vec.second.begin(), vec.second.end(), 0.0);
+    }
+    for (auto& it : calculated_) {
+        it.second = 0.0;
+    }
+    for (auto& it : histo_counts_) {
+        it.second.clear();
+    }
+    for (auto& it : epoch_histo_counts_) {
+        it.second.clear();
+    }
+}
+
 void SimpleStats::InitStat(std::string name, std::string stat_type,
                            std::string description) {
     header_descs_.emplace(name, description);

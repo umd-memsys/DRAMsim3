@@ -36,6 +36,9 @@ class SimpleStats {
     // Final statas output
     void PrintFinalStats();
 
+    // Reset (usually after one phase of simulation)
+    void Reset();
+
    private:
     using VecStat = std::unordered_map<std::string, std::vector<uint64_t> >;
     using HistoCount = std::unordered_map<int, uint64_t>;

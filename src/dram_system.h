@@ -26,6 +26,7 @@ class BaseDRAMSystem {
                            std::function<void(uint64_t)> write_callback);
     void PrintEpochStats();
     void PrintStats();
+    void ResetStats();
 
     virtual bool WillAcceptTransaction(uint64_t hex_addr,
                                        bool is_write) const = 0;

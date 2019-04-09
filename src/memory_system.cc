@@ -48,6 +48,8 @@ bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 
 void MemorySystem::PrintStats() const { dram_system_->PrintStats(); }
 
+void MemorySystem::ResetStats() { dram_system_->ResetStats(); }
+
 MemorySystem* GetMemorySystem(const std::string &config_file, const std::string &output_dir,
                  std::function<void(uint64_t)> read_callback,
                  std::function<void(uint64_t)> write_callback) {
