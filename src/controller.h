@@ -32,15 +32,14 @@ class Controller {
                std::function<void(uint64_t)> read_callback,
                std::function<void(uint64_t)> write_callback);
 #endif  // THERMAL
-    ~Controller();
     void ClockTick();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
     bool AddTransaction(Transaction trans);
     int QueueUsage() const;
     // Stats output
-    void PrintEpochStats(std::ostream &epoch_csv);
-    void PrintFinalStats(std::ostream &stats_txt, std::ostream &stats_csv,
-                         std::ostream &histo_csv);
+    void PrintEpochStats();
+    void PrintFinalStats();
+    void ResetStats() { simple_stats_.Reset(); }
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
 
@@ -61,10 +60,10 @@ class Controller {
     std::vector<Transaction> unified_queue_;
     std::vector<Transaction> read_queue_;
     std::vector<Transaction> write_buffer_;
-    std::unordered_set<uint64_t> in_write_buf_;
 
-    // transactions that are issued to command queue, use map for convenience
-    std::multimap<uint64_t, Transaction> pending_queue_;
+    // transactions that are not completed, use map for convenience
+    std::multimap<uint64_t, Transaction> pending_rd_q_;
+    std::multimap<uint64_t, Transaction> pending_wr_q_;
 
     // completed transactions
     std::vector<Transaction> return_queue_;
@@ -79,7 +78,6 @@ class Controller {
     // used to calculate inter-arrival latency
     uint64_t last_trans_clk_;
 
-    Address AddressMapping(uint64_t hex_addr);
     // transaction queueing
     int write_draining_;
     void ScheduleTransaction();

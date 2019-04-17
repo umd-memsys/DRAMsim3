@@ -1,6 +1,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include <fstream>
 #include <string>
 #include "common.h"
 
@@ -32,7 +33,7 @@ enum class RefreshPolicy {
 class Config {
    public:
     Config(std::string config_file, std::string out_dir);
-
+    Address AddressMapping(uint64_t hex_addr) const;
     // DRAM physical structure
     DRAMProtocol protocol;
     int channel_size;
@@ -50,8 +51,8 @@ class Config {
 
     // Address mapping numbers
     int shift_bits;
-    int ch_width, ra_width, bg_width, ba_width, ro_width, co_width;
     int ch_pos, ra_pos, bg_pos, ba_pos, ro_pos, co_pos;
+    uint64_t ch_mask, ra_mask, bg_mask, ba_mask, ro_mask, co_mask;
 
     // Generic DRAM timing parameters
     double tCK;
@@ -127,17 +128,19 @@ class Config {
     bool unified_queue;
     int trans_queue_size;
     int write_buf_size;
-    int delay_queue_cycles;
     bool enable_self_refresh;
     int sref_threshold;
     bool aggressive_precharging_enabled;
     bool enable_hbm_dual_cmd;
 
-    std::string output_prefix;
 
     int epoch_period;
     int output_level;
     std::string output_dir;
+    std::string output_prefix;
+    std::string json_stats_name;
+    std::string json_epoch_name;
+    std::string txt_stats_name;
 
     // Computed parameters
     int request_size_bytes;

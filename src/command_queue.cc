@@ -188,7 +188,7 @@ Command CommandQueue::GetFirstReadyInQueue(CMDQueue& queue) const {
 void CommandQueue::EraseRWCommand(const Command& cmd) {
     auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
-        if (cmd.hex_addr == cmd_it->hex_addr) {
+        if (cmd.hex_addr == cmd_it->hex_addr && cmd.cmd_type == cmd_it->cmd_type) {
             queue.erase(cmd_it);
             return;
         }

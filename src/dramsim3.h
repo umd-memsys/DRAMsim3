@@ -21,11 +21,15 @@ class MemorySystem {
     int GetBurstLength() const;
     int GetQueueSize() const;
     void PrintStats() const;
+    void ResetStats();
 
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
     bool AddTransaction(uint64_t hex_addr, bool is_write);
 };
 
+MemorySystem* GetMemorySystem(const std::string &config_file, const std::string &output_dir,
+                 std::function<void(uint64_t)> read_callback,
+                 std::function<void(uint64_t)> write_callback);
 }  // namespace dramsim3
 
 #endif

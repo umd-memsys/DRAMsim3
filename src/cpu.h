@@ -17,10 +17,10 @@ class CPU {
               std::bind(&CPU::ReadCallBack, this, std::placeholders::_1),
               std::bind(&CPU::WriteCallBack, this, std::placeholders::_1)),
           clk_(0) {}
-    virtual ~CPU() { memory_system_.PrintStats(); }
     virtual void ClockTick() = 0;
     void ReadCallBack(uint64_t addr) { return; }
     void WriteCallBack(uint64_t addr) { return; }
+    void PrintStats() { memory_system_.PrintStats(); }
 
    protected:
     MemorySystem memory_system_;

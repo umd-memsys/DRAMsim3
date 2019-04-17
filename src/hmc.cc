@@ -262,13 +262,13 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
 
     vault_callback_ =
         std::bind(&HMCMemorySystem::VaultCallback, this, std::placeholders::_1);
-    vaults_.reserve(config_.channels);
+    ctrls_.reserve(config_.channels);
     for (int i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
-        vaults_.push_back(new Controller(i, config_, timing_, thermal_calc_,
+        ctrls_.push_back(new Controller(i, config_, timing_, thermal_calc_,
                                          vault_callback_, vault_callback_));
 #else
-        vaults_.push_back(new Controller(i, config_, timing_, vault_callback_,
+        ctrls_.push_back(new Controller(i, config_, timing_, vault_callback_,
                                          vault_callback_));
 #endif  // THERMAL
     }
@@ -303,7 +303,7 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
 }
 
 HMCMemorySystem::~HMCMemorySystem() {
-    for (auto &&vault_ptr : vaults_) {
+    for (auto &&vault_ptr : ctrls_) {
         delete (vault_ptr);
     }
 }
@@ -503,7 +503,7 @@ void HMCMemorySystem::LogicClockTickPost() {
             quad_resp_queues_[i].size() < queue_depth_) {
             HMCRequest *req = quad_req_queues_[i].front();
             if (req->exit_time <= logic_clk_) {
-                if (vaults_[req->vault]->WillAcceptTransaction(
+                if (ctrls_[req->vault]->WillAcceptTransaction(
                         req->mem_operand, req->is_write)) {
                     InsertReqToDRAM(req);
                     delete (req);
@@ -542,14 +542,12 @@ void HMCMemorySystem::DRAMClockTick() {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif  // _OPENMP
-    for (size_t i = 0; i < vaults_.size(); i++) {
-        vaults_[i]->ClockTick();
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->ClockTick();
     }
     clk_++;
     if (clk_ % config_.epoch_period == 0) {
-        for (auto &&vault : vaults_) {
-            vault->PrintEpochStats(epoch_csv_file_);
-        }
+        PrintEpochStats();
     }
     return;
 }
@@ -661,7 +659,7 @@ std::vector<int> HMCMemorySystem::BuildAgeQueue(std::vector<int> &age_counter) {
 
 void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
     Transaction trans(req->mem_operand, req->is_write);
-    vaults_[req->vault]->AddTransaction(trans);
+    ctrls_[req->vault]->AddTransaction(trans);
     return;
 }
 
@@ -673,7 +671,7 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // response queues
 
 #ifdef _OPENMP
-    mtx.lock();
+    mtx_.lock();
 #endif  // _OPENMP
     auto it = resp_lookup_table_.find(req_id);
     HMCResponse *resp = it->second;
@@ -683,20 +681,11 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     quad_resp_queues_[resp->quad].push_back(resp);
     quad_age_counter_[resp->quad] = 1;
 #ifdef _OPENMP
-    mtx.unlock();
+    mtx_.unlock();
 #endif  // _OPENMP
     return;
 }
 
-void HMCMemorySystem::PrintStats() {
-    for (auto &&vault : vaults_) {
-        vault->PrintFinalStats(stats_txt_file_, stats_csv_file_,
-                               histo_csv_file_);
-    }
-#ifdef THERMAL
-    thermal_calc_.PrintFinalPT(clk_);
-#endif  // THERMAL
-}
 
 // the following 2 functions for domain crossing...
 uint64_t gcd(uint64_t x, uint64_t y) {

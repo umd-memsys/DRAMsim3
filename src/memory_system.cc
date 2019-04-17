@@ -16,7 +16,10 @@ MemorySystem::MemorySystem(const std::string &config_file,
     }
 }
 
-MemorySystem::~MemorySystem() { delete(config_); delete(dram_system_); }
+MemorySystem::~MemorySystem() {
+    delete (dram_system_);
+    delete (config_);
+}
 
 void MemorySystem::ClockTick() { dram_system_->ClockTick(); }
 
@@ -45,6 +48,13 @@ bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 
 void MemorySystem::PrintStats() const { dram_system_->PrintStats(); }
 
+void MemorySystem::ResetStats() { dram_system_->ResetStats(); }
+
+MemorySystem* GetMemorySystem(const std::string &config_file, const std::string &output_dir,
+                 std::function<void(uint64_t)> read_callback,
+                 std::function<void(uint64_t)> write_callback) {
+    return new MemorySystem(config_file, output_dir, read_callback, write_callback);
+}
 }  // namespace dramsim3
 
 // This function can be used by autoconf AC_CHECK_LIB since

@@ -107,7 +107,15 @@ struct Command {
 struct Transaction {
     Transaction() {}
     Transaction(uint64_t addr, bool is_write)
-        : addr(addr), is_write(is_write){};
+        : addr(addr),
+          added_cycle(0),
+          complete_cycle(0),
+          is_write(is_write) {}
+    Transaction(const Transaction& tran)
+        : addr(tran.addr),
+          added_cycle(tran.added_cycle),
+          complete_cycle(tran.complete_cycle),
+          is_write(tran.is_write) {}
     uint64_t addr;
     uint64_t added_cycle;
     uint64_t complete_cycle;

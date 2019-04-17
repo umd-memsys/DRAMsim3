@@ -14,8 +14,7 @@ Timing::Timing(const Config& config)
     int read_to_read_s = std::max(config.burst_cycle, config.tCCD_S);
     int read_to_read_o = config.burst_cycle + config.tRTRS;
     int read_to_write = config.RL + config.burst_cycle - config.WL +
-                        config.tRPRE +
-                        config.tRTRS;  // refer page 94 of DDR4 spec
+                        config.tRTRS;
     int read_to_write_o = config.read_delay + config.burst_cycle +
                           config.tRTRS - config.write_delay;
     int read_to_precharge = config.AL + config.tRTP;
@@ -28,7 +27,7 @@ Timing::Timing(const Config& config)
                           config.tRTRS - config.read_delay;
     int write_to_write_l = std::max(config.burst_cycle, config.tCCD_L);
     int write_to_write_s = std::max(config.burst_cycle, config.tCCD_S);
-    int write_to_write_o = config.burst_cycle + config.tWPRE;
+    int write_to_write_o = config.burst_cycle;
     int write_to_precharge = config.WL + config.burst_cycle + config.tWR;
 
     int precharge_to_activate = config.tRP;
