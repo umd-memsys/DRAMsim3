@@ -48,11 +48,10 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
 #endif  // CMD_TRACE
 }
 
-void Controller::ClockTick() {
-    // Return completed read transactions back to the CPU
+void Controller::ReturnDoneTrans(uint64_t clk) {
     auto it = return_queue_.begin();
     while (it != return_queue_.end()) {
-        if (clk_ >= it->complete_cycle) {
+        if (clk >= it->complete_cycle) {
             if (it->is_write) {
                 simple_stats_.Increment("num_writes_done");
                 write_callback_(it->addr);
@@ -66,6 +65,26 @@ void Controller::ClockTick() {
             ++it;
         }
     }
+}
+
+void Controller::ClockTick() {
+    // Return completed read transactions back to the CPU
+    // auto it = return_queue_.begin();
+    // while (it != return_queue_.end()) {
+    //     if (clk_ >= it->complete_cycle) {
+    //         if (it->is_write) {
+    //             simple_stats_.Increment("num_writes_done");
+    //             write_callback_(it->addr);
+    //         } else {
+    //             simple_stats_.Increment("num_reads_done");
+    //             simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
+    //             read_callback_(it->addr);
+    //         }
+    //         it = return_queue_.erase(it);
+    //     } else {
+    //         ++it;
+    //     }
+    // }
 
     // update refresh counter
     refresh_.ClockTick();

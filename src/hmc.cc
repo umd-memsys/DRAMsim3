@@ -539,6 +539,9 @@ void HMCMemorySystem::LogicClockTickPost() {
 }
 
 void HMCMemorySystem::DRAMClockTick() {
+    // for (size_t i = 0; i < ctrls_.size(); i++) {
+    //     ctrls_[i]->ReturnDoneTrans(clk_);
+    // }
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif  // _OPENMP

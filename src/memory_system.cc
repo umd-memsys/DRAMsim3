@@ -23,7 +23,7 @@ MemorySystem::~MemorySystem() {
 
 void MemorySystem::ClockTick() { dram_system_->ClockTick(); }
 
-double MemorySystem::GetTCK() const { return config_->tCK; }
+double MemorySystem::GetTCK() const { return config_->tCK * config_->mega_tick; }
 
 int MemorySystem::GetBusBits() const { return config_->bus_width; }
 

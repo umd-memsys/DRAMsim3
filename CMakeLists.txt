@@ -101,12 +101,16 @@ set_target_properties(dramsim3main PROPERTIES
 add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ext/headers)
 
-add_executable(dramsim3test EXCLUDE_FROM_ALL tests/test_config.cc)
+add_executable(dramsim3test EXCLUDE_FROM_ALL
+    tests/test_config.cc
+    tests/test_dramsys.cc
+    tests/test_hmcsys.cc # IDK somehow this can literally crush your computer
+)
 target_link_libraries(dramsim3test Catch dramsim3)
 target_include_directories(dramsim3test PRIVATE src/)
 
 # We have to use this custome command because there's a bug in cmake
-# that if you do `make test` it doesn't your updated test files
+# that if you do `make test` it doesn't build your updated test files
 # so we're stucking with `make dramsim3test` for now
 add_custom_command(
     TARGET dramsim3test POST_BUILD

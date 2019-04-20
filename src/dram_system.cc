@@ -143,13 +143,19 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
+
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->ReturnDoneTrans(clk_);
+    }
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif  // _OPENMP
     for (size_t i = 0; i < ctrls_.size(); i++) {
-        ctrls_[i]->ClockTick();
+        for (int j = 0; j < config_.mega_tick; j++) {
+            ctrls_[i]->ClockTick();
+        }
     }
-    clk_++;
+    clk_ += config_.mega_tick;
 
     if (clk_ % config_.epoch_period == 0) {
         PrintEpochStats();

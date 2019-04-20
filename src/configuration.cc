@@ -240,6 +240,11 @@ void Config::InitSystemParams() {
     sref_threshold = GetInteger("system", "sref_threshold", 1000);
     aggressive_precharging_enabled =
         reader.GetBoolean("system", "aggressive_precharging_enabled", false);
+
+    mega_tick = GetInteger("system", "mega_tick", 1);
+    if (mega_tick > 1) {
+        std::cout << "Mega Tick! " << std::endl;
+    }
     return;
 }
 
