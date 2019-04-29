@@ -99,6 +99,11 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
         AbruptExit(__FILE__, __LINE__);
     }
 
+#ifdef _OPENMP
+    int max_threads = std::min(config_.channels, omp_get_max_threads());
+    omp_set_num_threads(max_threads);
+    std::cerr << "Max threads for OMP is " << max_threads << std::endl;
+#endif  // _OPENMP
     ctrls_.reserve(config_.channels);
     for (auto i = 0; i < config_.channels; i++) {
 #ifdef THERMAL

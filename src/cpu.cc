@@ -7,13 +7,17 @@ void RandomCPU::ClockTick() {
     // this is useful to exploit the parallelism of a DRAM protocol
     // and is also immune to address mapping and scheduling policies
     memory_system_.ClockTick();
-    if (get_next_) {
-        last_addr_ = gen();
-        last_write_ = (gen() % 3 == 0);
-    }
-    get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_);
-    if (get_next_) {
-        memory_system_.AddTransaction(last_addr_, last_write_);
+    for (int i = 0; i < mega_tick_; i++) {
+        if (get_next_) {
+            last_addr_ = gen();
+            last_write_ = (gen() % 3 == 0);
+        }
+        get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_);
+        if (get_next_) {
+            memory_system_.AddTransaction(last_addr_, last_write_);
+        } else {
+            break;
+        }
     }
     clk_++;
     return;
