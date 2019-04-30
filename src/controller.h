@@ -40,7 +40,7 @@ class Controller {
     void PrintEpochStats();
     void PrintFinalStats();
     void ResetStats() { simple_stats_.Reset(); }
-    void ReturnDoneTrans(uint64_t clock);
+    std::pair<uint64_t, int> ReturnDoneTrans(uint64_t clock);
 
     std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;

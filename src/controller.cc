@@ -48,43 +48,27 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
 #endif  // CMD_TRACE
 }
 
-void Controller::ReturnDoneTrans(uint64_t clk) {
+std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
     auto it = return_queue_.begin();
     while (it != return_queue_.end()) {
         if (clk >= it->complete_cycle) {
             if (it->is_write) {
                 simple_stats_.Increment("num_writes_done");
-                write_callback_(it->addr);
             } else {
                 simple_stats_.Increment("num_reads_done");
                 simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
-                read_callback_(it->addr);
             }
+            auto pair = std::make_pair(it->addr, it->is_write);
             it = return_queue_.erase(it);
+            return pair;
         } else {
             ++it;
         }
     }
+    return std::make_pair(-1, -1);
 }
 
 void Controller::ClockTick() {
-    // Return completed read transactions back to the CPU
-    // auto it = return_queue_.begin();
-    // while (it != return_queue_.end()) {
-    //     if (clk_ >= it->complete_cycle) {
-    //         if (it->is_write) {
-    //             simple_stats_.Increment("num_writes_done");
-    //             write_callback_(it->addr);
-    //         } else {
-    //             simple_stats_.Increment("num_reads_done");
-    //             simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
-    //             read_callback_(it->addr);
-    //         }
-    //         it = return_queue_.erase(it);
-    //     } else {
-    //         ++it;
-    //     }
-    // }
 
     // update refresh counter
     refresh_.ClockTick();

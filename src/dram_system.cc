@@ -148,9 +148,17 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
-
+    uint64_t look_ahead_cycles = clk_ + config_.mega_tick / 2;
     for (size_t i = 0; i < ctrls_.size(); i++) {
-        ctrls_[i]->ReturnDoneTrans(clk_);
+        // look ahead and return earlier
+        for (uint64_t j = clk_; j <= look_ahead_cycles; j++) {
+            auto pair = ctrls_[i]->ReturnDoneTrans(j);
+            if (pair.second == 1) {
+                write_callback_(pair.first);
+            } else if (pair.second == 0) {
+                read_callback_(pair.first);
+            }
+        }
     }
 #ifdef _OPENMP
 #pragma omp parallel for
