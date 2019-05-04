@@ -46,6 +46,8 @@ class BaseDRAMSystem {
     uint64_t last_req_clk_;
     Config &config_;
     Timing timing_;
+    uint64_t parallel_cycles_;
+    uint64_t serial_cycles_;
 
 #ifdef THERMAL
     ThermalCalculator thermal_calc_;

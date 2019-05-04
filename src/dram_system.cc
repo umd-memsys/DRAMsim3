@@ -70,6 +70,11 @@ void BaseDRAMSystem::PrintStats() {
     }
     json_out.open(config_.json_stats_name, std::ofstream::app);
     json_out << "}";
+
+#ifdef _OPENMP
+    std::cout << "parallel_cycles = " << parallel_cycles_ << std::endl;
+    std::cout << "serial_cycles = " << serial_cycles_ << std::endl;
+#endif  // _OPENMP
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);
 #endif  // THERMAL
@@ -144,6 +149,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
         Transaction trans = Transaction(hex_addr, is_write);
         ctrls_[channel]->AddTransaction(trans);
     }
+    last_req_clk_ = clk_;
     return ok;
 }
 
@@ -163,7 +169,15 @@ void JedecDRAMSystem::ClockTick() {
         }
     }
 #ifdef _OPENMP
-#pragma omp parallel for
+    bool run_parallel = true;
+    // seems arbitrary, needs more experiment, but let's start with this
+    if (clk_ - last_req_clk_ > 500) {
+        run_parallel = false;
+        serial_cycles_ += config_.mega_tick;
+    } else {
+        parallel_cycles_ += config_.mega_tick;
+    }
+#pragma omp parallel for if (run_parallel)
 #endif  // _OPENMP
     for (size_t i = 0; i < ctrls_.size(); i++) {
         for (int j = 0; j < config_.mega_tick; j++) {
