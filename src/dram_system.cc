@@ -154,7 +154,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
-    uint64_t look_ahead_cycles = clk_ + config_.mega_tick / 2;
+    uint64_t look_ahead_cycles = clk_ + config_.mega_tick - 1;
     for (size_t i = 0; i < ctrls_.size(); i++) {
         // look ahead and return earlier
         while (true) {
