@@ -31,7 +31,7 @@ def plot_epochs(json_data, label, unit="", output=None):
     """
     plot the time series of a specified stat serie (e.g. bw, power, etc)
     """
-    cycles_per_epoch = json_data[0]["num_cycles"]
+    cycles_per_epoch = json_data[0]['num_cycles']
     y_data = extract_epoch_data(json_data, label)
     x_ticks = [i * cycles_per_epoch for i in range(len(y_data))]
 
@@ -40,10 +40,10 @@ def plot_epochs(json_data, label, unit="", output=None):
     plt.title(label)
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
     plt.xlabel('Cycles')
-    plt.ylabel("{} ({})".format(label, unit))
+    plt.ylabel('{} ({})'.format(label, unit))
     plt.ylim(bottom=0, top=1.1*max(y_data))
     if output:
-        plt.savefig(output+"/epochs_{}.pdf".format(label))
+        plt.savefig(output+'_epochs_{}.pdf'.format(label))
         plt.clf()
     else:
         plt.show()
@@ -59,7 +59,7 @@ def extract_histo_data(data, label):
     return array
 
 
-def plot_histogram(json_data, label, unit="", output=None):
+def plot_histogram(json_data, label, unit='', output=None):
     histo_data = extract_histo_data(json_data, label)
     histo_data = sorted(histo_data)
     total_cnt = len(histo_data)
@@ -71,64 +71,70 @@ def plot_histogram(json_data, label, unit="", output=None):
         else:
             existing_nums.add(histo_data[i])
             unique_vals += 1
-    print("90-Percentile unique {} values: {}".format(label, unique_vals))
+    print('90-Percentile unique {} values: {}'.format(label, unique_vals))
     x_min = min(histo_data)
     x_max = max(histo_data)
     x_99 = int(0.99 * len(histo_data))
     mark_99 = histo_data[x_99]
     avg = np.average(histo_data)
     histo_data = histo_data[0:x_99]
-    plt.hist(histo_data, bins="auto", density=True)
+    
+    # doane seems to provide better esitmates for bins
+    plt.hist(histo_data, bins='doane', density=True)
+
     line_avg = plt.axvline(x=avg, linestyle='--', c='g',
                            label='Average:{0:.1f}'.format(avg))
     line_99 = plt.axvline(x=mark_99, linestyle='-.', c='r',
                           label='99 Percentile:{0:.1f}'.format(mark_99))
     plt.title(label)
-    plt.xlabel(label + " [max: " + str(x_max) + "](" + unit + ")")
-    plt.ylabel("Density")
+    plt.xlabel(label + ' [max: ' + str(x_max) + '](' + unit + ')')
+    plt.ylabel('Density')
     plt.legend(handles=[line_avg, line_99])
     if output:
-        plt.savefig(output+"/histo_{}.pdf".format(label))
+        plt.savefig(output+'_histo_{}.pdf'.format(label))
         plt.clf()
     else:
         plt.show()
     return
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Plot time serie graphs from "
-                                     "stats outputs, type -h for more options")
-    parser.add_argument("json", help="stats json file")
-    parser.add_argument("-o", "--output-dir",
-                        help="output directory", default=".")
-    parser.add_argument("-d", "--data",
-                        help="plot something very specific in epoch stats, "
-                        "use the name in JSON")
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Plot time serie graphs from '
+                                     'stats outputs, type -h for more options')
+    parser.add_argument('json', help='stats json file')
+    parser.add_argument('-d', '--dir', help='output dir', default='.')
+    parser.add_argument('-o', '--output',
+                        help='output name (withouth extension name)',
+                        default='dramsim')
+    parser.add_argument('-k', '--key',
+                        help='plot a specific key name in epoch stats, '
+                        'use the name in JSON')
     args = parser.parse_args()
 
-    with open(args.json, "r") as j_file:
+    with open(args.json, 'r') as j_file:
         is_epoch = False
         try:
             j_data = json.load(j_file)
         except:
-            print("cannot load file " + args.json)
+            print('cannot load file ' + args.json)
             exit(1)
         if isinstance(j_data, list):
             is_epoch = True
         else:
             is_epoch = False
 
+    prefix = os.path.join(args.dir, args.output)
     if is_epoch:
-        data_units = {"average_bandwidth": "GB/s",
-                      "average_power": "mW",
-                      "average_read_latency": "cycles"}
+        data_units = {'average_bandwidth': 'GB/s',
+                      'average_power': 'mW',
+                      'average_read_latency': 'cycles'}
         if args.data:
-            data_units[args.data] = ""
+            data_units[args.data] = ''
         for label, unit in data_units.items():
-            plot_epochs(j_data, label, unit, args.output_dir)
+            plot_epochs(j_data, label, unit, prefix)
     else:
-        data_units = {"read_latency": "cycles",
-                      "write_latency": "cycles",
-                      "interarrival_latency": "cycles"}
+        data_units = {'read_latency': 'cycles',
+                      'write_latency': 'cycles',
+                      'interarrival_latency': 'cycles'}
         for label, unit in data_units.items():
-            plot_histogram(j_data, label, unit, args.output_dir)
+            plot_histogram(j_data, label, unit, prefix)
