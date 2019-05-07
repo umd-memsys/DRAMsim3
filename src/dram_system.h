@@ -1,6 +1,7 @@
 #ifndef __DRAM_SYSTEM_H
 #define __DRAM_SYSTEM_H
 
+#include <chrono>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -48,6 +49,7 @@ class BaseDRAMSystem {
     Timing timing_;
     uint64_t parallel_cycles_;
     uint64_t serial_cycles_;
+    std::chrono::duration<double> total_time_;
 
 #ifdef THERMAL
     ThermalCalculator thermal_calc_;

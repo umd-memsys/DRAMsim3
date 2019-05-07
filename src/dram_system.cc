@@ -71,6 +71,7 @@ void BaseDRAMSystem::PrintStats() {
     json_out.open(config_.json_stats_name, std::ofstream::app);
     json_out << "}";
 
+    std::cout << "host_seconds = " << total_time_.count() << std::endl;
 #ifdef _OPENMP
     std::cout << "parallel_cycles = " << parallel_cycles_ << std::endl;
     std::cout << "serial_cycles = " << serial_cycles_ << std::endl;
@@ -154,6 +155,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
+    auto start = std::chrono::system_clock::now();
     uint64_t look_ahead_cycles = clk_ + config_.mega_tick - 1;
     for (size_t i = 0; i < ctrls_.size(); i++) {
         // look ahead and return earlier
@@ -189,6 +191,8 @@ void JedecDRAMSystem::ClockTick() {
     if (clk_ % config_.epoch_period == 0) {
         PrintEpochStats();
     }
+    auto end = std::chrono::system_clock::now();
+    total_time_ += end - start;
     return;
 }
 
