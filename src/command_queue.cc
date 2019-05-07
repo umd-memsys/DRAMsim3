@@ -114,6 +114,16 @@ bool CommandQueue::WillAcceptCommand(int rank, int bankgroup, int bank) const {
     return queues_[q_idx].size() < queue_size_;
 }
 
+bool CommandQueue::QueueEmpty() const {
+    for (const auto q : queues_) {
+        if (!q.empty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 bool CommandQueue::AddCommand(Command cmd) {
     auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
     if (queue.size() < queue_size_) {

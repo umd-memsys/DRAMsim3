@@ -23,6 +23,7 @@ class CommandQueue {
     void ClockTick() { clk_ += 1; };
     bool WillAcceptCommand(int rank, int bankgroup, int bank) const;
     bool AddCommand(Command cmd);
+    bool QueueEmpty() const;
     int QueueUsage() const;
     std::vector<bool> rank_q_empty;
 

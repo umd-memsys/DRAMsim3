@@ -205,9 +205,8 @@ void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
     if (write_draining_ == 0 && !is_unified_queue_) {
         // we basically have a upper and lower threshold for write buffer
-        if (write_buffer_.size() >= write_buffer_.capacity() ||
-            (read_queue_.empty() &&
-             (int)write_buffer_.size() >= config_.write_buf_size)) {
+        if ((write_buffer_.size() >= write_buffer_.capacity()) ||
+            (!write_buffer_.empty() && cmd_queue_.QueueEmpty())) {
             write_draining_ = write_buffer_.size();
         }
     }

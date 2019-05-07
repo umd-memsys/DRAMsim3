@@ -32,6 +32,7 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
 }
 
 BaseDRAMSystem::~BaseDRAMSystem() {
+    // TODO some CPU simulators don't call destructors so cannot rely on this.
     std::ofstream epoch_out(config_.json_epoch_name, std::ios_base::in |
                                                          std::ios_base::out |
                                                          std::ios_base::ate);
