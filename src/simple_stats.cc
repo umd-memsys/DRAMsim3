@@ -283,7 +283,9 @@ double SimpleStats::GetHistoAvg(const HistoCount& hist_counts) const {
         accu_sum += i->first * i->second;
         count += i->second;
     }
-    return static_cast<double>(accu_sum) / static_cast<double>(count);
+    return count == 0
+               ? 0.0
+               : static_cast<double>(accu_sum) / static_cast<double>(count);
 }
 
 void SimpleStats::UpdatePrints(bool epoch) {
