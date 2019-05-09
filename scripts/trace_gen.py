@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -60,18 +60,20 @@ class Generator():
         return (op, addr, self._last_clk)
 
 
-def get_string(op, addr, clk, trace_format):
+def get_string(op, addr, clk, trace_format, interarrival):
     op_map = {
         'r': {
             'dramsim2': 'READ',
             'dramsim3': 'READ',
             'ramulator': 'R',
+            'usimm': 'R',
             'drsim': 'READ'
         },
         'w': {
             'dramsim2': 'WRITE',
             'dramsim3': 'WRITE',
             'ramulator': 'W',
+            'usimm': 'W',
             'drsim': 'WRITE'
         }
     }
@@ -80,6 +82,13 @@ def get_string(op, addr, clk, trace_format):
         return '{} {} {}\n'.format(hex(addr), actual_op, clk)
     elif 'ramulator' == trace_format:
         return '{} {}\n'.format(hex(addr), actual_op)
+    elif 'usimm' == trace_format:
+        # USIMM assumes a 3.2GHz CPU by default, we hard code it here...
+        # also use clk for pc for convinience
+        if actual_op == 'R':
+            return '{} {} {} 0x0\n'.format(interarrival, actual_op, hex(addr))
+        else:
+            return '{} {} {}\n'.format(interarrival, actual_op, hex(addr))
     elif 'drsim' == trace_format:
         return '{} {} {} 64B\n'.format(hex(addr), actual_op, clk)
 
@@ -94,7 +103,7 @@ if __name__ == '__main__':
                         type=int, default=10)
     parser.add_argument('-f', '--format', default='all',
                         help='Trace format, dramsim2, dramsim3,'
-                        'ramulator, drsim, or all')
+                        'ramulator, usimm, drsim, or all')
     parser.add_argument("-o", "--output-dir",
                         help="output directory", default=".")
     parser.add_argument('-r', '--ratio', type=float, default=2,
@@ -112,7 +121,7 @@ if __name__ == '__main__':
         except (OSError, ValueError) as e:
             print('Cannot use output path:' + args.output_dir)
             print(e)
-            eixt(1)
+            exit(1)
     print("Output directory: ", args.output_dir)
 
     stream_types = {'r': 'random', 'random': 'random',
@@ -121,7 +130,7 @@ if __name__ == '__main__':
     stream_type = stream_types.get(args.stream_type, 'random')
     print("Address stream type: ", stream_type)
 
-    formats = ['dramsim2', 'dramsim3', 'ramulator', 'drsim']
+    formats = ['dramsim2', 'dramsim3', 'ramulator', 'usimm', 'drsim']
     if args.format != 'all':
         formats = [args.format]
     print("Trace format(s):", formats)
@@ -144,5 +153,5 @@ if __name__ == '__main__':
     for i in range(args.num_reqs):
         op, addr, clk = g.gen()
         for f in formats:
-            line = get_string(op, addr, clk, f)
+            line = get_string(op, addr, clk, f, args.interarrival)
             files[f].write(line)
