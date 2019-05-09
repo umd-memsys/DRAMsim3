@@ -31,6 +31,7 @@ def plot_epochs(json_data, label, unit="", output=None):
     """
     plot the time series of a specified stat serie (e.g. bw, power, etc)
     """
+    print('ploting {}'.format(label))
     cycles_per_epoch = json_data[0]['num_cycles']
     y_data = extract_epoch_data(json_data, label)
     x_ticks = [i * cycles_per_epoch for i in range(len(y_data))]
@@ -128,8 +129,8 @@ if __name__ == '__main__':
         data_units = {'average_bandwidth': 'GB/s',
                       'average_power': 'mW',
                       'average_read_latency': 'cycles'}
-        if args.data:
-            data_units[args.data] = ''
+        if args.key:
+            data_units[args.key] = ''
         for label, unit in data_units.items():
             plot_epochs(j_data, label, unit, prefix)
     else:
