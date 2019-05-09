@@ -25,7 +25,7 @@ class BaseDRAMSystem {
     BaseDRAMSystem(Config &config, const std::string &output_dir,
                    std::function<void(uint64_t)> read_callback,
                    std::function<void(uint64_t)> write_callback);
-    virtual ~BaseDRAMSystem();
+    virtual ~BaseDRAMSystem() {}
     void RegisterCallbacks(std::function<void(uint64_t)> read_callback,
                            std::function<void(uint64_t)> write_callback);
     void PrintEpochStats();

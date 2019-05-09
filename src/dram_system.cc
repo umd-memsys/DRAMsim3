@@ -22,24 +22,12 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
       clk_(0) {
     total_channels_ += config_.channels;
 
-    std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::out);
-    epoch_out << "[";
-    epoch_out.close();
 #ifdef ADDRESS_TRACE
     std::string addr_trace_name("dramsim3addr.trace");
     address_trace_.open(addr_trace_name);
 #endif
 }
 
-BaseDRAMSystem::~BaseDRAMSystem() {
-    // TODO some CPU simulators don't call destructors so cannot rely on this.
-    std::ofstream epoch_out(config_.json_epoch_name, std::ios_base::in |
-                                                         std::ios_base::out |
-                                                         std::ios_base::ate);
-    epoch_out.seekp(-2, std::ios_base::cur);
-    epoch_out.write("]", 1);
-    epoch_out.close();
-}
 
 int BaseDRAMSystem::GetChannel(uint64_t hex_addr) const {
     hex_addr >>= config_.shift_bits;
@@ -47,6 +35,11 @@ int BaseDRAMSystem::GetChannel(uint64_t hex_addr) const {
 }
 
 void BaseDRAMSystem::PrintEpochStats() {
+    // first epoch, print bracket
+    if (clk_ - config_.epoch_period == 0) {
+        std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::out);
+        epoch_out << "[";
+    }
     for (size_t i = 0; i < ctrls_.size(); i++) {
         ctrls_[i]->PrintEpochStats();
         std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::app);
@@ -59,8 +52,18 @@ void BaseDRAMSystem::PrintEpochStats() {
 }
 
 void BaseDRAMSystem::PrintStats() {
+    // Finish epoch output, remove last comma and append ]
+    std::ofstream epoch_out(config_.json_epoch_name, std::ios_base::in |
+                                                         std::ios_base::out |
+                                                         std::ios_base::ate);
+    epoch_out.seekp(-2, std::ios_base::cur);
+    epoch_out.write("]", 1);
+    epoch_out.close();
+
     std::ofstream json_out(config_.json_stats_name, std::ofstream::out);
     json_out << "{";
+
+    // close it now so that each channel can handle it
     json_out.close();
     for (size_t i = 0; i < ctrls_.size(); i++) {
         ctrls_[i]->PrintFinalStats();
@@ -170,15 +173,7 @@ void JedecDRAMSystem::ClockTick() {
         }
     }
 #ifdef _OPENMP
-    bool run_parallel = true;
-    // seems arbitrary, needs more experiment, but let's start with this
-    if (clk_ - last_req_clk_ > 500) {
-        run_parallel = false;
-        serial_cycles_ += config_.mega_tick;
-    } else {
-        parallel_cycles_ += config_.mega_tick;
-    }
-#pragma omp parallel for if (run_parallel)
+#pragma omp parallel for schedule(static)
 #endif  // _OPENMP
     for (size_t i = 0; i < ctrls_.size(); i++) {
         for (int j = 0; j < config_.mega_tick; j++) {
