@@ -124,7 +124,9 @@ void SimpleStats::PrintFinalStats() {
     }
 
     if (config_.output_level >= 1) {
-        std::ofstream txt_out(config_.txt_stats_name, std::ofstream::app);
+        // HACK: overwrite existing file if this is first channel
+        auto perm = channel_id_ == 0 ? std::ofstream::out : std::ofstream::app;
+        std::ofstream txt_out(config_.txt_stats_name, perm);
         txt_out << GetTextHeader(true);
         for (const auto& it : print_pairs_) {
             PrintStatText(txt_out, it.first, it.second,

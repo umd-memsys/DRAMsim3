@@ -67,12 +67,6 @@ if (THERMAL)
     target_compile_options(thermalreplay PRIVATE -DTHERMAL -D_LONGINT -DAdd_ ${OpenMP_C_FLAGS})
 endif (THERMAL)
 
-find_package(OpenMP)
-if (OPENMP_FOUND AND USE_OPENMP)  # only use OpenMP explicitly
-    target_compile_options(dramsim3 PRIVATE ${OpenMP_CXX_FLAGS})
-    target_link_libraries(dramsim3 INTERFACE ${OpenMP_CXX_FLAGS})
-endif (OPENMP_FOUND AND USE_OPENMP)
-
 if (CMD_TRACE)
     target_compile_options(dramsim3 PRIVATE -DCMD_TRACE)
 endif (CMD_TRACE)

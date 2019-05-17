@@ -74,10 +74,6 @@ void BaseDRAMSystem::PrintStats() {
     json_out.open(config_.json_stats_name, std::ofstream::app);
     json_out << "}";
 
-#ifdef _OPENMP
-    std::cout << "parallel_cycles = " << parallel_cycles_ << std::endl;
-    std::cout << "serial_cycles = " << serial_cycles_ << std::endl;
-#endif  // _OPENMP
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);
 #endif  // THERMAL
@@ -107,11 +103,6 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
         AbruptExit(__FILE__, __LINE__);
     }
 
-#ifdef _OPENMP
-    int max_threads = std::min(config_.channels, omp_get_max_threads());
-    omp_set_num_threads(max_threads);
-    std::cerr << "Max threads for OMP is " << max_threads << std::endl;
-#endif  // _OPENMP
     ctrls_.reserve(config_.channels);
     for (auto i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
@@ -169,9 +160,6 @@ void JedecDRAMSystem::ClockTick() {
             }
         }
     }
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static)
-#endif  // _OPENMP
     for (size_t i = 0; i < ctrls_.size(); i++) {
         for (int j = 0; j < config_.mega_tick; j++) {
             ctrls_[i]->ClockTick();

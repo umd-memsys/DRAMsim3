@@ -526,9 +526,6 @@ void HMCMemorySystem::DRAMClockTick() {
             }
         }
     }
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static)
-#endif  // _OPENMP
     for (size_t i = 0; i < ctrls_.size(); i++) {
         for (int j = 0; j < config_.mega_tick; j++) {
             ctrls_[i]->ClockTick();

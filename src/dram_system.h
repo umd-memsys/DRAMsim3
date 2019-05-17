@@ -10,10 +10,6 @@
 #include "controller.h"
 #include "timing.h"
 
-#ifdef _OPENMP
-#include "omp.h"
-#endif  // _OPENMP
-
 #ifdef THERMAL
 #include "thermal.h"
 #endif  // THERMAL
