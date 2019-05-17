@@ -28,7 +28,6 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
 #endif
 }
 
-
 int BaseDRAMSystem::GetChannel(uint64_t hex_addr) const {
     hex_addr >>= config_.shift_bits;
     return (hex_addr >> config_.ch_pos) & config_.ch_mask;
@@ -116,11 +115,9 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
     ctrls_.reserve(config_.channels);
     for (auto i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
-        ctrls_.push_back(new Controller(i, config_, timing_, thermal_calc_,
-                                        read_callback_, write_callback_));
+        ctrls_.push_back(new Controller(i, config_, timing_, thermal_calc_));
 #else
-        ctrls_.push_back(new Controller(i, config_, timing_, read_callback_,
-                                        write_callback_));
+        ctrls_.push_back(new Controller(i, config_, timing_));
 #endif  // THERMAL
     }
 }
@@ -158,7 +155,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
-    uint64_t look_ahead_cycles = clk_ + config_.mega_tick - 1;
+    uint64_t look_ahead_cycles = clk_ + config_.mega_tick / 2;
     for (size_t i = 0; i < ctrls_.size(); i++) {
         // look ahead and return earlier
         while (true) {

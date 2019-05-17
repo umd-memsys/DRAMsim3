@@ -7,17 +7,11 @@ namespace dramsim3 {
 
 #ifdef THERMAL
 Controller::Controller(int channel, const Config &config, const Timing &timing,
-                       ThermalCalculator &thermal_calc,
-                       std::function<void(uint64_t)> read_callback,
-                       std::function<void(uint64_t)> write_callback)
+                       ThermalCalculator &thermal_calc)
 #else
-Controller::Controller(int channel, const Config &config, const Timing &timing,
-                       std::function<void(uint64_t)> read_callback,
-                       std::function<void(uint64_t)> write_callback)
+Controller::Controller(int channel, const Config &config, const Timing &timing)
 #endif  // THERMAL
-    : read_callback_(read_callback),
-      write_callback_(write_callback),
-      channel_id_(channel),
+    : channel_id_(channel),
       clk_(0),
       config_(config),
       simple_stats_(config_, channel_id_),
@@ -69,7 +63,6 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
 }
 
 void Controller::ClockTick() {
-
     // update refresh counter
     refresh_.ClockTick();
 
@@ -309,7 +302,6 @@ void Controller::PrintFinalStats() {
 #endif  // THERMAL
     return;
 }
-
 
 void Controller::UpdateCommandStats(const Command &cmd) {
     switch (cmd.cmd_type) {

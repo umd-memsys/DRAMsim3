@@ -110,8 +110,8 @@ void Config::InitDRAMParams() {
     // HMC specific parameters
     num_links = GetInteger("hmc", "num_links", 4);
     link_width = GetInteger("hmc", "link_width", 16);
-    link_speed = GetInteger("hmc", "link_speed", 30);
-    block_size = GetInteger("hmc", "block_size", 32);
+    link_speed = GetInteger("hmc", "link_speed", 15000);  //MHz
+    block_size = GetInteger("hmc", "block_size", 64);
     xbar_queue_depth = GetInteger("hmc", "xbar_queue_depth", 16);
     if (IsHMC()) {
         // the BL for HMC is determined by max block_size, which is a multiple

@@ -1,7 +1,6 @@
 #ifndef __CONTROLLER_H
 #define __CONTROLLER_H
 
-#include <functional>
 #include <fstream>
 #include <map>
 #include <unordered_set>
@@ -24,13 +23,9 @@ class Controller {
    public:
 #ifdef THERMAL
     Controller(int channel, const Config &config, const Timing &timing,
-               ThermalCalculator &thermalcalc,
-               std::function<void(uint64_t)> read_callback,
-               std::function<void(uint64_t)> write_callback);
+               ThermalCalculator &thermalcalc);
 #else
-    Controller(int channel, const Config &config, const Timing &timing,
-               std::function<void(uint64_t)> read_callback,
-               std::function<void(uint64_t)> write_callback);
+    Controller(int channel, const Config &config, const Timing &timing);
 #endif  // THERMAL
     void ClockTick();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
@@ -42,7 +37,6 @@ class Controller {
     void ResetStats() { simple_stats_.Reset(); }
     std::pair<uint64_t, int> ReturnDoneTrans(uint64_t clock);
 
-    std::function<void(uint64_t)> read_callback_, write_callback_;
     int channel_id_;
 
    private:

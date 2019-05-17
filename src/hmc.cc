@@ -2,9 +2,6 @@
 
 namespace dramsim3 {
 
-uint64_t gcd(uint64_t x, uint64_t y);
-uint64_t lcm(uint64_t x, uint64_t y);
-
 HMCRequest::HMCRequest(HMCReqType req_type, uint64_t hex_addr, int vault)
     : type(req_type), mem_operand(hex_addr), vault(vault) {
     is_write = type >= HMCReqType::WR0 && type <= HMCReqType::P_WR256;
@@ -247,8 +244,9 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
     : BaseDRAMSystem(config, output_dir, read_callback, write_callback),
-      ref_tick_(0),
       logic_clk_(0),
+      logic_ps_(0),
+      dram_ps_(0),
       next_link_(0) {
     // sanity check, this constructor should only be intialized using HMC
     if (!config_.IsHMC()) {
@@ -260,16 +258,12 @@ HMCMemorySystem::HMCMemorySystem(Config &config, const std::string &output_dir,
     // setting up clock
     SetClockRatio();
 
-    vault_callback_ =
-        std::bind(&HMCMemorySystem::VaultCallback, this, std::placeholders::_1);
     ctrls_.reserve(config_.channels);
     for (int i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
-        ctrls_.push_back(new Controller(i, config_, timing_, thermal_calc_,
-                                         vault_callback_, vault_callback_));
+        ctrls_.push_back(new Controller(i, config_, timing_, thermal_calc_));
 #else
-        ctrls_.push_back(new Controller(i, config_, timing_, vault_callback_,
-                                         vault_callback_));
+        ctrls_.push_back(new Controller(i, config_, timing_));
 #endif  // THERMAL
     }
     // initialize vaults and crossbar
@@ -309,38 +303,18 @@ HMCMemorySystem::~HMCMemorySystem() {
 }
 
 void HMCMemorySystem::SetClockRatio() {
-    int dram_speed = 1250;
-    int link_speed = config_.link_speed;
-
-    // 128 bits per flit, this is to calculate logic speed
-    // e.g. if it takes 8 link cycles to transfer a flit
-    // the logic has to be running in similar speed so that
-    // the logic or the link don't have to wait for each other
-    int cycles_per_flit =
-        128 / config_.link_width;  // Unit interval per flit: 8, 16, or 32
-    int logic_speed_needed = link_speed / cycles_per_flit;
-
-    // In the ClockTick() we will use DRAM's 1250MHz as basic clock ticks
-    // because logic clock speed should vary to reflect link speed or link width
-    // so when hooked up to a cpu simulator, which may require a clock freq,
-    // give it the DRAM's constant 1250MHz would be a better solution
-    // we know HMC's ref clock is 125MHz, so by doing the following
-    // we can get the clock tick ratio of DRAM and logic, e.g. when logic is
-    // 2500MHz then each DRAM clock tick will run 2 logic ticks
-    dram_clk_ticks_ = logic_speed_needed / 125;
-    logic_clk_ticks_ = dram_speed / 125;
-
-    if (dram_clk_ticks_ < 10) {
-        dram_clk_ticks_ = 10;  // better not slower than DRAM...
+    // There are 3 clock domains here, Link (super fast), logic (fast), DRAM
+    // (slow) We assume the logic process 1 flit per logic cycle and since the
+    // link takes several cycles to process 1 flit, we can deduce logic speed
+    // according to link speed
+    ps_per_dram_ = 800;  // 800 ps
+    int link_cycles_per_flit = 128 / config_.link_width;
+    int logic_speed = config_.link_speed / link_cycles_per_flit;  // MHz
+    ps_per_logic_ =
+        static_cast<uint64_t>(1000000 / static_cast<double>(logic_speed));
+    if (ps_per_logic_ > ps_per_dram_) {
+        ps_per_logic_ = ps_per_dram_;
     }
-
-    clk_tick_product_ = dram_clk_ticks_ * logic_clk_ticks_;
-
-#ifdef DEBUG_OUTPUT
-    std::cout << "HMC Logic clock speed " << dram_clk_ticks_ << std::endl;
-    std::cout << "HMC DRAM clock speed " << logic_clk_ticks_ << std::endl;
-#endif  // DEBUG_OUTPUT
-
     return;
 }
 
@@ -487,7 +461,6 @@ void HMCMemorySystem::LogicClockTickPre() {
                 }
                 delete (resp);
                 link_resp_queues_[i].erase(link_resp_queues_[i].begin());
-                // stats_.hmc_reqs_done++;
             }
         }
     }
@@ -503,8 +476,8 @@ void HMCMemorySystem::LogicClockTickPost() {
             quad_resp_queues_[i].size() < queue_depth_) {
             HMCRequest *req = quad_req_queues_[i].front();
             if (req->exit_time <= logic_clk_) {
-                if (ctrls_[req->vault]->WillAcceptTransaction(
-                        req->mem_operand, req->is_write)) {
+                if (ctrls_[req->vault]->WillAcceptTransaction(req->mem_operand,
+                                                              req->is_write)) {
                     InsertReqToDRAM(req);
                     delete (req);
                     quad_req_queues_[i].erase(quad_req_queues_[i].begin());
@@ -539,16 +512,30 @@ void HMCMemorySystem::LogicClockTickPost() {
 }
 
 void HMCMemorySystem::DRAMClockTick() {
-    // for (size_t i = 0; i < ctrls_.size(); i++) {
-    //     ctrls_[i]->ReturnDoneTrans(clk_);
-    // }
+    uint64_t look_ahead_cycles = clk_ + config_.mega_tick / 2;
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        // look ahead and return earlier
+        while (true) {
+            auto pair = ctrls_[i]->ReturnDoneTrans(look_ahead_cycles);
+            if (pair.second == 1) {  // write
+                VaultCallback(pair.first);
+            } else if (pair.second == 0) {  // read
+                VaultCallback(pair.first);
+            } else {
+                break;
+            }
+        }
+    }
 #ifdef _OPENMP
-#pragma omp parallel for
+#pragma omp parallel for schedule(static)
 #endif  // _OPENMP
     for (size_t i = 0; i < ctrls_.size(); i++) {
-        ctrls_[i]->ClockTick();
+        for (int j = 0; j < config_.mega_tick; j++) {
+            ctrls_[i]->ClockTick();
+        }
     }
-    clk_++;
+    clk_ += config_.mega_tick;
+
     if (clk_ % config_.epoch_period == 0) {
         PrintEpochStats();
     }
@@ -556,28 +543,22 @@ void HMCMemorySystem::DRAMClockTick() {
 }
 
 void HMCMemorySystem::ClockTick() {
-    bool dram_ran = false;
-    // because we're using DRAM clock as base, so the faster logic clock
-    // may run several cycles in one DRAM cycle, and some things should
-    // happen before a DRAM Clock and some after...
-    for (int i = 0; i < dram_clk_ticks_; i++) {
-        if (ref_tick_ % logic_clk_ticks_ == 0) {
-            LogicClockTickPre();
-            if (ref_tick_ % clk_tick_product_ == 0) {
-                DRAMClockTick();
-                dram_ran = true;
-            }
-            LogicClockTickPost();
-            logic_clk_++;
-        }
-        ref_tick_++;
-    }
-
-    // in cases DRAM and logic both run at this cycle
-    // don't repeat
-    if (!dram_ran) {
+    if (dram_ps_ == logic_ps_) {
+        LogicClockTickPre();
+        DRAMClockTick();
+        LogicClockTickPost();
+        logic_ps_ += ps_per_logic_;
+        logic_clk_ += 1;
+    } else {
         DRAMClockTick();
     }
+    while (logic_ps_ < dram_ps_ + ps_per_dram_) {
+        LogicClockTickPre();
+        LogicClockTickPost();
+        logic_ps_ += ps_per_logic_;
+        logic_clk_ += 1;
+    }
+    dram_ps_ += ps_per_dram_;
     return;
 }
 
@@ -666,16 +647,12 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
     return;
 }
 
-// TODO this is not thread safe
 void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // we will use hex addr as the req_id and use a multimap to lookup the
     // requests the vaults cannot directly talk to the CPU so this callback will
     // be passed to the vaults and is responsible to put the responses back to
     // response queues
 
-#ifdef _OPENMP
-    mtx_.lock();
-#endif  // _OPENMP
     auto it = resp_lookup_table_.find(req_id);
     HMCResponse *resp = it->second;
     // all data from dram received, put packet in xbar and return
@@ -683,24 +660,7 @@ void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // put it in xbar
     quad_resp_queues_[resp->quad].push_back(resp);
     quad_age_counter_[resp->quad] = 1;
-#ifdef _OPENMP
-    mtx_.unlock();
-#endif  // _OPENMP
     return;
 }
-
-
-// the following 2 functions for domain crossing...
-uint64_t gcd(uint64_t x, uint64_t y) {
-    if (x < y) std::swap(x, y);
-    while (y > 0) {
-        uint64_t f = x % y;
-        x = y;
-        y = f;
-    }
-    return x;
-}
-
-uint64_t lcm(uint64_t x, uint64_t y) { return (x * y) / gcd(x, y); }
 
 }  // namespace dramsim3

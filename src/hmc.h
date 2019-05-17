@@ -5,10 +5,6 @@
 #include <map>
 #include <vector>
 
-#ifdef _OPENMP
-#include <mutex>
-#endif
-
 #include "dram_system.h"
 
 namespace dramsim3 {
@@ -127,8 +123,7 @@ class HMCMemorySystem : public BaseDRAMSystem {
     bool InsertHMCReq(HMCRequest* req);
 
    private:
-    uint64_t ref_tick_, logic_clk_;
-    std::function<void(uint64_t)> vault_callback_;
+    uint64_t logic_clk_, ps_per_dram_, ps_per_logic_, logic_ps_, dram_ps_;
 
     void SetClockRatio();
     void InsertReqToDRAM(HMCRequest* req);
@@ -140,13 +135,6 @@ class HMCMemorySystem : public BaseDRAMSystem {
     int next_link_;
     int links_;
     size_t queue_depth_;
-    int dram_clk_ticks_;
-    int logic_clk_ticks_;
-    int clk_tick_product_;
-
-#ifdef _OPENMP
-    std::mutex mtx_;
-#endif  // _OPENMP
 
     // had to use a multimap because the controller callback return hex addr
     // instead of unique id
