@@ -124,9 +124,10 @@ void SimpleStats::PrintFinalStats() {
     }
 
     if (config_.output_level >= 1) {
-        std::cout << GetTextHeader(true);
+        std::ofstream txt_out(config_.txt_stats_name, std::ofstream::app);
+        txt_out << GetTextHeader(true);
         for (const auto& it : print_pairs_) {
-            PrintStatText(std::cout, it.first, it.second,
+            PrintStatText(txt_out, it.first, it.second,
                           header_descs_[it.first]);
         }
     }
