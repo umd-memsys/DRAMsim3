@@ -159,8 +159,6 @@ class Config {
 
     int ideal_memory_latency;
 
-    int mega_tick;
-
 #ifdef THERMAL
     std::string loc_mapping;
     int num_row_refresh;       // number of rows to be refreshed for one time

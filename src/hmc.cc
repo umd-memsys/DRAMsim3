@@ -305,8 +305,8 @@ HMCMemorySystem::~HMCMemorySystem() {
 void HMCMemorySystem::SetClockRatio() {
     // There are 3 clock domains here, Link (super fast), logic (fast), DRAM
     // (slow) We assume the logic process 1 flit per logic cycle and since the
-    // link takes several cycles to process 1 flit, we can deduce logic speed
-    // according to link speed
+    // link takes several cycles to process 1 flit (128b), we can deduce logic
+    // speed according to link speed
     ps_per_dram_ = 800;  // 800 ps
     int link_cycles_per_flit = 128 / config_.link_width;
     int logic_speed = config_.link_speed / link_cycles_per_flit;  // MHz
@@ -441,35 +441,7 @@ bool HMCMemorySystem::InsertHMCReq(HMCRequest *req) {
     }
 }
 
-void HMCMemorySystem::LogicClockTickPre() {
-    // I just need to note this somewhere:
-    // the links of HMC are full duplex, e.g. in full width links,
-    // each link has 16 input lanes AND 16 output lanes
-    // therefore it makes no sense to have just 1 layer of xbar
-    // for both requests and responses.
-    // so 2 layers just sounds about right
-
-    // return responses to CPU
-    for (int i = 0; i < links_; i++) {
-        if (!link_resp_queues_[i].empty()) {
-            HMCResponse *resp = link_resp_queues_[i].front();
-            if (resp->exit_time <= logic_clk_) {
-                if (resp->type == HMCRespType::RD_RS) {
-                    read_callback_(resp->resp_id);
-                } else {
-                    write_callback_(resp->resp_id);
-                }
-                delete (resp);
-                link_resp_queues_[i].erase(link_resp_queues_[i].begin());
-            }
-        }
-    }
-    return;
-}
-
-void HMCMemorySystem::LogicClockTickPost() {
-    // This MUST happen after DRAMClockTick
-
+void HMCMemorySystem::DrainRequests() {
     // drain quad request queue to vaults
     for (int i = 0; i < 4; i++) {
         if (!quad_req_queues_[i].empty() &&
@@ -486,81 +458,13 @@ void HMCMemorySystem::LogicClockTickPost() {
         }
     }
 
-    // step xbar
-    // the decremented values here basically represents the internal BW of
-    // a xbar, to match the external link, transfering 2 flits are
-    // usually be needed
-    for (auto &&i : link_busy_) {
-        if (i > 0) {
-            i -= 2;
-        }
-    }
-
+    // drain xbar
     for (auto &&i : quad_busy_) {
         if (i > 0) {
             i -= 2;
         }
     }
 
-    // xbar arbitrate using age/FIFO arbitration
-    // What is set/updated here:
-    // - link_busy_, quad_busy_ indicators
-    // - link req, resp queues, quad req, resp queues
-    // - age counter
-    XbarArbitrate();
-    return;
-}
-
-void HMCMemorySystem::DRAMClockTick() {
-    uint64_t look_ahead_cycles = clk_ + config_.mega_tick / 2;
-    for (size_t i = 0; i < ctrls_.size(); i++) {
-        // look ahead and return earlier
-        while (true) {
-            auto pair = ctrls_[i]->ReturnDoneTrans(look_ahead_cycles);
-            if (pair.second == 1) {  // write
-                VaultCallback(pair.first);
-            } else if (pair.second == 0) {  // read
-                VaultCallback(pair.first);
-            } else {
-                break;
-            }
-        }
-    }
-    for (size_t i = 0; i < ctrls_.size(); i++) {
-        for (int j = 0; j < config_.mega_tick; j++) {
-            ctrls_[i]->ClockTick();
-        }
-    }
-    clk_ += config_.mega_tick;
-
-    if (clk_ % config_.epoch_period == 0) {
-        PrintEpochStats();
-    }
-    return;
-}
-
-void HMCMemorySystem::ClockTick() {
-    if (dram_ps_ == logic_ps_) {
-        LogicClockTickPre();
-        DRAMClockTick();
-        LogicClockTickPost();
-        logic_ps_ += ps_per_logic_;
-        logic_clk_ += 1;
-    } else {
-        DRAMClockTick();
-    }
-    while (logic_ps_ < dram_ps_ + ps_per_dram_) {
-        LogicClockTickPre();
-        LogicClockTickPost();
-        logic_ps_ += ps_per_logic_;
-        logic_clk_ += 1;
-    }
-    dram_ps_ += ps_per_dram_;
-    return;
-}
-
-void HMCMemorySystem::XbarArbitrate() {
-    // arbitrage based on age / FIFO
     // drain requests from link to quad buffers
     std::vector<int> age_queue = BuildAgeQueue(link_age_counter_);
     while (!age_queue.empty()) {
@@ -585,9 +489,34 @@ void HMCMemorySystem::XbarArbitrate() {
         age_queue.erase(age_queue.begin());
     }
     age_queue.clear();
+}
+
+void HMCMemorySystem::DrainResponses() {
+    // Link resp to CPU
+    for (int i = 0; i < links_; i++) {
+        if (!link_resp_queues_[i].empty()) {
+            HMCResponse *resp = link_resp_queues_[i].front();
+            if (resp->exit_time <= logic_clk_) {
+                if (resp->type == HMCRespType::RD_RS) {
+                    read_callback_(resp->resp_id);
+                } else {
+                    write_callback_(resp->resp_id);
+                }
+                delete (resp);
+                link_resp_queues_[i].erase(link_resp_queues_[i].begin());
+            }
+        }
+    }
+
+    // drain xbar
+    for (auto &&i : link_busy_) {
+        if (i > 0) {
+            i -= 2;
+        }
+    }
 
     // drain responses from quad to link buffers
-    age_queue = BuildAgeQueue(quad_age_counter_);
+    auto age_queue = BuildAgeQueue(quad_age_counter_);
     while (!age_queue.empty()) {
         int src_quad = age_queue.front();
         int dest_link = quad_resp_queues_[src_quad].front()->link;
@@ -610,6 +539,51 @@ void HMCMemorySystem::XbarArbitrate() {
         age_queue.erase(age_queue.begin());
     }
     age_queue.clear();
+}
+
+void HMCMemorySystem::DRAMClockTick() {
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        // look ahead and return earlier
+        while (true) {
+            auto pair = ctrls_[i]->ReturnDoneTrans(clk_);
+            if (pair.second == 1) {  // write
+                VaultCallback(pair.first);
+            } else if (pair.second == 0) {  // read
+                VaultCallback(pair.first);
+            } else {
+                break;
+            }
+        }
+    }
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->ClockTick();
+    }
+    clk_++;
+
+    if (clk_ % config_.epoch_period == 0) {
+        PrintEpochStats();
+    }
+    return;
+}
+
+void HMCMemorySystem::ClockTick() {
+    if (dram_ps_ == logic_ps_) {
+        DrainResponses();
+        DRAMClockTick();
+        DrainRequests();
+        logic_ps_ += ps_per_logic_;
+        logic_clk_ += 1;
+    } else {
+        DRAMClockTick();
+    }
+    while (logic_ps_ < dram_ps_ + ps_per_dram_) {
+        DrainResponses();
+        DrainRequests();
+        logic_ps_ += ps_per_logic_;
+        logic_clk_ += 1;
+    }
+    dram_ps_ += ps_per_dram_;
+    return;
 }
 
 std::vector<int> HMCMemorySystem::BuildAgeQueue(std::vector<int> &age_counter) {

@@ -146,11 +146,10 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 }
 
 void JedecDRAMSystem::ClockTick() {
-    uint64_t look_ahead_cycles = clk_ + config_.mega_tick / 2;
     for (size_t i = 0; i < ctrls_.size(); i++) {
         // look ahead and return earlier
         while (true) {
-            auto pair = ctrls_[i]->ReturnDoneTrans(look_ahead_cycles);
+            auto pair = ctrls_[i]->ReturnDoneTrans(clk_);
             if (pair.second == 1) {
                 write_callback_(pair.first);
             } else if (pair.second == 0) {
@@ -161,11 +160,9 @@ void JedecDRAMSystem::ClockTick() {
         }
     }
     for (size_t i = 0; i < ctrls_.size(); i++) {
-        for (int j = 0; j < config_.mega_tick; j++) {
-            ctrls_[i]->ClockTick();
-        }
+        ctrls_[i]->ClockTick();
     }
-    clk_ += config_.mega_tick;
+    clk_++;
 
     if (clk_ % config_.epoch_period == 0) {
         PrintEpochStats();

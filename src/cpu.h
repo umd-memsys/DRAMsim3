@@ -16,8 +16,7 @@ class CPU {
               config_file, output_dir,
               std::bind(&CPU::ReadCallBack, this, std::placeholders::_1),
               std::bind(&CPU::WriteCallBack, this, std::placeholders::_1)),
-          clk_(0),
-          mega_tick_(memory_system_.GetMegaTick()) {}
+          clk_(0) {}
     virtual void ClockTick() = 0;
     void ReadCallBack(uint64_t addr) { return; }
     void WriteCallBack(uint64_t addr) { return; }
@@ -26,7 +25,6 @@ class CPU {
    protected:
     MemorySystem memory_system_;
     uint64_t clk_;
-    int mega_tick_;
 };
 
 class RandomCPU : public CPU {

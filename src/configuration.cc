@@ -241,10 +241,6 @@ void Config::InitSystemParams() {
     aggressive_precharging_enabled =
         reader.GetBoolean("system", "aggressive_precharging_enabled", false);
 
-    mega_tick = GetInteger("system", "mega_tick", 1);
-    if (mega_tick > 1) {
-        std::cout << "Mega Tick! " << std::endl;
-    }
     return;
 }
 
