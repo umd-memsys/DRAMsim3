@@ -127,6 +127,12 @@ bool CommandQueue::QueueEmpty() const {
 bool CommandQueue::AddCommand(Command cmd) {
     auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
     if (queue.size() < queue_size_) {
+        cmd.queued = clk_;
+        if (channel_state_.IsRefreshWaiting()) {
+            if (channel_state_.PendingRefCommand().Rank() == cmd.Rank()) {
+                cmd.lat_cls = "ref";
+            }
+        }
         queue.push_back(cmd);
         rank_q_empty[cmd.Rank()] = false;
         return true;
@@ -189,6 +195,31 @@ Command CommandQueue::GetFirstReadyInQueue(CMDQueue& queue) const {
             if (HasRWDependency(cmd_it, queue)) {
                 continue;
             }
+        }
+        if (cmd_it->lat_cls.empty()) {
+            if (cmd.cmd_type == CommandType::ACTIVATE) {
+                // need activate, not row hit
+                cmd_it->lat_cls = "idle";
+            } else if (cmd.cmd_type == CommandType::PRECHARGE) {
+                cmd_it->lat_cls = "row_miss";
+            } else if (cmd.IsReadWrite()) {
+                if (clk_ - cmd_it->queued < config_.burst_cycle) {
+                    cmd_it->lat_cls = "row_hit";
+                } else {
+                    cmd_it->lat_cls = "row_hit_wait";
+                }
+            }
+        } else {
+            if (cmd_it->lat_cls == "row_miss") {
+                if (cmd.IsReadWrite()) {
+                    if (clk_ - cmd_it->queued > 2*(config_.tRAS + config_.tRP)) {
+                        cmd_it->lat_cls = "congest";
+                    }
+                }
+            }
+        }
+        if (cmd.IsReadWrite()) {
+            cmd.lat_cls = cmd_it->lat_cls;
         }
         return cmd;
     }

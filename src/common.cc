@@ -19,16 +19,16 @@ std::ostream& operator<<(std::ostream& os, const Command& cmd) {
         "self_refresh_enter",
         "self_refresh_exit",
         "WRONG"};
-    os << fmt::format("{:<20} {:>3} {:>3} {:>3} {:>3} {:>#8x} {:>#8x}",
+    os << fmt::format("{:<20} {:>3} {:>3} {:>3} {:>3} {:>#8x} {:>#8x} {:>#x}",
                       command_string[static_cast<int>(cmd.cmd_type)],
                       cmd.Channel(), cmd.Rank(), cmd.Bankgroup(), cmd.Bank(),
-                      cmd.Row(), cmd.Column());
+                      cmd.Row(), cmd.Column(), cmd.hex_addr) << " " << cmd.lat_cls;
     return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const Transaction& trans) {
     const std::string trans_type = trans.is_write ? "WRITE" : "READ";
-    os << fmt::format("{:<30} {:>8}", trans.addr, trans_type);
+    os << fmt::format("{:<#x} {:>8}", trans.addr, trans_type);
     return os;
 }
 

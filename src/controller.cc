@@ -49,6 +49,9 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
             if (it->is_write) {
                 simple_stats_.Increment("num_writes_done");
             } else {
+#ifdef CMD_TRACE
+                cmd_trace_ << clk_ << " " << *it << " returned" << std::endl;
+#endif
                 simple_stats_.Increment("num_reads_done");
                 simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
             }
@@ -159,6 +162,9 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
 }
 
 bool Controller::AddTransaction(Transaction trans) {
+#ifdef CMD_TRACE
+    cmd_trace_ << clk_ << " " << trans << " added" << std::endl;
+#endif
     trans.added_cycle = clk_;
     simple_stats_.AddValue("interarrival_latency", clk_ - last_trans_clk_);
     last_trans_clk_ = clk_;
@@ -228,7 +234,10 @@ void Controller::ScheduleTransaction() {
 
 void Controller::IssueCommand(const Command &cmd) {
 #ifdef CMD_TRACE
-    cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd << std::endl;
+    if (cmd.IsReadWrite() || cmd.IsRefresh()) {
+        cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd
+                   << " complete" << std::endl;
+    }
 #endif  // CMD_TRACE
 #ifdef THERMAL
     // add channel in, only needed by thermal module

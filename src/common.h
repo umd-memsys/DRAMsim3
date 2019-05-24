@@ -66,7 +66,7 @@ enum class CommandType {
 };
 
 struct Command {
-    Command() : cmd_type(CommandType::SIZE), hex_addr(0) {}
+    Command() : cmd_type(CommandType::SIZE), hex_addr(0), lat_cls("") {}
     Command(CommandType cmd_type, const Address& addr, uint64_t hex_addr)
         : cmd_type(cmd_type), addr(addr), hex_addr(hex_addr) {}
     // Command(const Command& cmd) {}
@@ -93,6 +93,8 @@ struct Command {
     CommandType cmd_type;
     Address addr;
     uint64_t hex_addr;
+    uint64_t queued;
+    std::string lat_cls;
 
     int Channel() const { return addr.channel; }
     int Rank() const { return addr.rank; }
