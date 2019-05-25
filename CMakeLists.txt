@@ -71,6 +71,11 @@ if (CMD_TRACE)
     target_compile_options(dramsim3 PRIVATE -DCMD_TRACE)
 endif (CMD_TRACE)
 
+if (ADDR_TRACE)
+    target_compile_options(dramsim3 PRIVATE -DADDR_TRACE)
+endif (ADDR_TRACE)
+
+
 target_include_directories(dramsim3 INTERFACE src)
 target_compile_options(dramsim3 PRIVATE -Wall)
 target_link_libraries(dramsim3 PRIVATE inih format)

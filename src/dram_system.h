@@ -52,9 +52,9 @@ class BaseDRAMSystem {
     uint64_t clk_;
     std::vector<Controller*> ctrls_;
 
-#ifdef ADDRESS_TRACE
+#ifdef ADDR_TRACE
     std::ofstream address_trace_;
-#endif  // ADDRESS_TRACE
+#endif  // ADDR_TRACE
 };
 
 // hmmm not sure this is the best naming...

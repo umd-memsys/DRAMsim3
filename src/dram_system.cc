@@ -22,8 +22,8 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
       clk_(0) {
     total_channels_ += config_.channels;
 
-#ifdef ADDRESS_TRACE
-    std::string addr_trace_name("dramsim3addr.trace");
+#ifdef ADDR_TRACE
+    std::string addr_trace_name = config_.output_prefix + "addr.trace";
     address_trace_.open(addr_trace_name);
 #endif
 }
@@ -127,10 +127,9 @@ bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr,
 
 bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 // Record trace - Record address trace for debugging or other purposes
-#ifdef ADDRESS_TRACE
-    address_trace_ << left << setw(18) << clk_ << " " << setw(6) << std::hex
-                   << (is_write ? "WRITE " : "READ ") << hex_addr << std::dec
-                   << std::endl;
+#ifdef ADDR_TRACE
+    address_trace_ << std::hex << hex_addr << std::dec << " "
+                   << (is_write ? "WRITE " : "READ ") << clk_ << std::endl;
 #endif
 
     int channel = GetChannel(hex_addr);
