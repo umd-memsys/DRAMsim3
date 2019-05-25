@@ -49,9 +49,6 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
             if (it->is_write) {
                 simple_stats_.Increment("num_writes_done");
             } else {
-#ifdef CMD_TRACE
-                cmd_trace_ << clk_ << " " << *it << " returned" << std::endl;
-#endif
                 simple_stats_.Increment("num_reads_done");
                 simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
             }
@@ -234,7 +231,7 @@ void Controller::ScheduleTransaction() {
 
 void Controller::IssueCommand(const Command &cmd) {
 #ifdef CMD_TRACE
-    if (cmd.IsReadWrite() || cmd.IsRefresh()) {
+    if (cmd.IsReadWrite()) {
         cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd
                    << " complete" << std::endl;
     }
