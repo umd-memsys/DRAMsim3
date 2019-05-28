@@ -68,8 +68,16 @@ Command CommandQueue::FinishRefresh() {
     auto cmd = channel_state_.GetReadyCommand(ref, clk_);
 
     if (cmd.IsRefresh()) {
+        // mark all cmds in queue 'ref'
+        for (auto it = ref_q_indices_.begin(); it != ref_q_indices_.end(); it++) {
+            for (auto cmd_it = queues_[*it].begin(); cmd_it != queues_[*it].end(); cmd_it++) {
+                cmd_it->lat_cls = "ref";
+            }
+        }
         ref_q_indices_.clear();
         is_in_ref_ = false;
+        last_ref_cycle_ = clk_;
+        last_ref_rank_ = cmd.Rank();
     }
     return cmd;
 }
@@ -128,8 +136,9 @@ bool CommandQueue::AddCommand(Command cmd) {
     auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
     if (queue.size() < queue_size_) {
         cmd.queued = clk_;
-        if (channel_state_.IsRefreshWaiting()) {
-            if (channel_state_.PendingRefCommand().Rank() == cmd.Rank()) {
+        // it's hard to draw the line here
+        if (clk_ - last_ref_cycle_ < (config_.tRAS + config_.tRP)) {
+            if (cmd.Rank() == last_ref_rank_) {
                 cmd.lat_cls = "ref";
             }
         }
@@ -209,7 +218,9 @@ Command CommandQueue::GetFirstReadyInQueue(CMDQueue& queue) const {
                     cmd_it->lat_cls = "row_hit_wait";
                 }
             }
-        } else {
+        }
+        /*
+        else {
             if (cmd_it->lat_cls == "row_miss") {
                 if (cmd.IsReadWrite()) {
                     if (clk_ - cmd_it->queued > 2*(config_.tRAS + config_.tRP)) {
@@ -218,6 +229,7 @@ Command CommandQueue::GetFirstReadyInQueue(CMDQueue& queue) const {
                 }
             }
         }
+        */
         if (cmd.IsReadWrite()) {
             cmd.lat_cls = cmd_it->lat_cls;
         }

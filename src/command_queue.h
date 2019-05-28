@@ -55,6 +55,9 @@ class CommandQueue {
     size_t queue_size_;
     int queue_idx_;
     uint64_t clk_;
+
+    uint64_t last_ref_cycle_;
+    int last_ref_rank_;
 };
 
 }  // namespace dramsim3
