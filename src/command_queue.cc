@@ -137,7 +137,7 @@ bool CommandQueue::AddCommand(Command cmd) {
     if (queue.size() < queue_size_) {
         cmd.queued = clk_;
         // it's hard to draw the line here
-        if (clk_ - last_ref_cycle_ < (config_.tRAS + config_.tRP)) {
+        if (clk_ - last_ref_cycle_ < (config_.tRFC)) {
             if (cmd.Rank() == last_ref_rank_) {
                 cmd.lat_cls = "ref";
             }
