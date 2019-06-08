@@ -93,6 +93,7 @@ struct Command {
     CommandType cmd_type;
     Address addr;
     uint64_t hex_addr;
+    uint64_t added;
     uint64_t queued;
     std::string lat_cls;
 

@@ -142,6 +142,7 @@ bool CommandQueue::AddCommand(Command cmd) {
                 cmd.lat_cls = "ref";
             }
         }
+        cmd.added = clk_;
         queue.push_back(cmd);
         rank_q_empty[cmd.Rank()] = false;
         return true;
@@ -219,19 +220,9 @@ Command CommandQueue::GetFirstReadyInQueue(CMDQueue& queue) const {
                 }
             }
         }
-        /*
-        else {
-            if (cmd_it->lat_cls == "row_miss") {
-                if (cmd.IsReadWrite()) {
-                    if (clk_ - cmd_it->queued > 2*(config_.tRAS + config_.tRP)) {
-                        cmd_it->lat_cls = "congest";
-                    }
-                }
-            }
-        }
-        */
         if (cmd.IsReadWrite()) {
             cmd.lat_cls = cmd_it->lat_cls;
+            cmd.added = cmd_it->added;
         }
         return cmd;
     }

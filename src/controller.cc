@@ -159,9 +159,6 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
 }
 
 bool Controller::AddTransaction(Transaction trans) {
-#ifdef CMD_TRACE
-    cmd_trace_ << clk_ << " " << trans << " added" << std::endl;
-#endif
     trans.added_cycle = clk_;
     simple_stats_.AddValue("interarrival_latency", clk_ - last_trans_clk_);
     last_trans_clk_ = clk_;
@@ -232,8 +229,7 @@ void Controller::ScheduleTransaction() {
 void Controller::IssueCommand(const Command &cmd) {
 #ifdef CMD_TRACE
     if (cmd.IsReadWrite()) {
-        cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd
-                   << " complete" << std::endl;
+        cmd_trace_ << cmd.added << " " << clk_ << " " << cmd << std::endl;
     }
 #endif  // CMD_TRACE
 #ifdef THERMAL
