@@ -213,11 +213,12 @@ Command CommandQueue::GetFirstReadyInQueue(CMDQueue& queue) const {
             } else if (cmd.cmd_type == CommandType::PRECHARGE) {
                 cmd_it->lat_cls = "row_miss";
             } else if (cmd.IsReadWrite()) {
-                if (clk_ - cmd_it->queued < config_.burst_cycle) {
-                    cmd_it->lat_cls = "row_hit";
-                } else {
-                    cmd_it->lat_cls = "row_hit_wait";
-                }
+                // if (clk_ - cmd_it->queued < config_.burst_cycle) {
+                cmd_it->lat_cls = "row_hit";
+                // }
+                // else {
+                //     cmd_it->lat_cls = "row_hit_wait";
+                // }
             }
         }
         if (cmd.IsReadWrite()) {
