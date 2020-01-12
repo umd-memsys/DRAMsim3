@@ -62,7 +62,7 @@ Timing::Timing(const Config& config)
     // int powerdown_exit = config.tXP;
 
     if (config.bankgroups == 1) {
-        // for GDDR5 bankgroup can be disabled, in that case
+        // for a bankgroup can be disabled, in that case
         // the value of tXXX_S should be used instead of tXXX_L
         // (because now the device is running at a lower freq)
         // we overwrite the following values so that we don't have

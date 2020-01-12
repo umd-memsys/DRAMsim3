@@ -65,7 +65,7 @@ void Config::CalculateSize() {
 DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
     std::map<std::string, DRAMProtocol> protocol_pairs = {
         {"DDR3", DRAMProtocol::DDR3},     {"DDR4", DRAMProtocol::DDR4},
-        {"GDDR5", DRAMProtocol::GDDR5},   {"GDDR5X", DRAMProtocol::GDDR5X},
+        {"GDDR5", DRAMProtocol::GDDR5},   {"GDDR5X", DRAMProtocol::GDDR5X},  {"GDDR6", DRAMProtocol::GDDR6},
         {"LPDDR", DRAMProtocol::LPDDR},   {"LPDDR3", DRAMProtocol::LPDDR3},
         {"LPDDR4", DRAMProtocol::LPDDR4}, {"HBM", DRAMProtocol::HBM},
         {"HBM2", DRAMProtocol::HBM2},     {"HMC", DRAMProtocol::HMC}};
@@ -92,7 +92,7 @@ void Config::InitDRAMParams() {
     banks_per_group = GetInteger("dram_structure", "banks_per_group", 2);
     bool bankgroup_enable =
         reader.GetBoolean("dram_structure", "bankgroup_enable", true);
-    // GDDR5 can chose to enable/disable bankgroups
+    // GDDR5/6 can chose to enable/disable bankgroups
     if (!bankgroup_enable) {  // aggregating all banks to one group
         banks_per_group *= bankgroups;
         bankgroups = 1;
@@ -120,7 +120,7 @@ void Config::InitDRAMParams() {
         BL = block_size * 8 / device_width;
     }
     // set burst cycle according to protocol
-    // We use burst_cycle for timing and use BL for capaticyt calculation
+    // We use burst_cycle for timing and use BL for capacity calculation
     // BL = 0 simulate perfect BW
     if (protocol == DRAMProtocol::GDDR5) {
         burst_cycle = (BL == 0) ? 0 : BL / 4;
@@ -128,11 +128,14 @@ void Config::InitDRAMParams() {
     } else if (protocol == DRAMProtocol::GDDR5X) {
         burst_cycle = (BL == 0) ? 0 : BL / 8;
         BL = (BL == 0) ? 8 : BL;
+    } else if (protocol == DRAMProtocol::GDDR6){
+        burst_cycle = (BL == 0) ? 0 : BL / 16;
+        BL = (BL == 0 ) ? 8 : BL;
     } else {
         burst_cycle = (BL == 0) ? 0 : BL / 2;
         BL = (BL == 0) ? (IsHBM() ? 4 : 8) : BL;
     }
-    // every protocol has a different defination of "column",
+    // every protocol has a different definition of "column",
     // in DDR3/4, each column is exactly device_width bits,
     // but in GDDR5, a column is device_width * BL bits
     // and for HBM each column is device_width * 2 (prefetch)
@@ -323,10 +326,10 @@ void Config::InitTimingParams() {
     tRPRE = GetInteger("timing", "tRPRE", 1);
     tWPRE = GetInteger("timing", "tWPRE", 1);
 
-    // LPDDR4 and GDDR5
+    // LPDDR4 and GDDR5/6
     tPPD = GetInteger("timing", "tPPD", 0);
 
-    // GDDR5
+    // GDDR5/6
     t32AW = GetInteger("timing", "t32AW", 330);
     tRCDRD = GetInteger("timing", "tRCDRD", 24);
     tRCDWR = GetInteger("timing", "tRCDWR", 20);

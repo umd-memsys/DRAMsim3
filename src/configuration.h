@@ -14,6 +14,7 @@ enum class DRAMProtocol {
     DDR4,
     GDDR5,
     GDDR5X,
+    GDDR6,
     LPDDR,
     LPDDR3,
     LPDDR4,
@@ -56,7 +57,7 @@ class Config {
 
     // Generic DRAM timing parameters
     double tCK;
-    int burst_cycle;  // seperate BL with timing since fot GDDRx it's not BL/2
+    int burst_cycle;  // seperate BL with timing since for GDDRx it's not BL/2
     int AL;
     int CL;
     int CWL;
@@ -147,7 +148,8 @@ class Config {
 
     bool IsGDDR() const {
         return (protocol == DRAMProtocol::GDDR5 ||
-                protocol == DRAMProtocol::GDDR5X);
+                protocol == DRAMProtocol::GDDR5X ||
+                protocol == DRAMProtocol::GDDR6);
     }
     bool IsHBM() const {
         return (protocol == DRAMProtocol::HBM ||
