@@ -2,19 +2,14 @@
 
 # About DRAMSim3
 
-	DRAMSim3 models the timing paramaters and memory controller behavior for several DRAM protocols such as DDR3, 
-    DDR4, LPDDR3, LPDDR4, GDDR5, GDDR6, HBM, HMC, STT-MRAM. It is implemented in C++ as an objected oriented model 
-    that includes a parameterized DRAM bank model, DRAM controllers, command queues and system-level interfaces to 
-    interact with a CPU simulator (GEM5, ZSim) or trace workloads. It is designed to be accurate, portable and parallel.
+DRAMSim3 models the timing paramaters and memory controller behavior for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, GDDR6, HBM, HMC, STT-MRAM. It is implemented in C++ as an objected oriented model that includes a parameterized DRAM bank model, DRAM controllers, command queues and system-level interfaces to interact with a CPU simulator (GEM5, ZSim) or trace workloads. It is designed to be accurate, portable and parallel.
+    
+For more information on new features, along with hierarchical design, please read:
 
-    For more information on new features, along with hierarchical design, please read:
-    Shang Li, Zhiyuan Yang, Dhiraj Reddy, Ankur Srivastava, and Bruce Jacob. 2019.
-    DRAMsim3: A Cycle-accurate, thermal capable memory system simulator. IEEE
-    Computer Architecture Letters (2019).
-    (I didn't fink public link for that one)
+[1] S. Li, Z. Yang, D. Reddy, A. Srivastava and B. Jacob, "DRAMsim3: a Cycle-accurate, Thermal-Capable DRAM Simulator," in IEEE Computer Architecture Letters. [Link](https://ieeexplore.ieee.org/document/8999595)
 
-    [\[2\] Li et al. *Rethinking Cycle Accurate DRAM Simulation* ACM MEMSYS'19.]
-    (https://user.eng.umd.edu/~blj/papers/memsys2019-rethinking.pdf) 
+[2] Li et al. *Rethinking Cycle Accurate DRAM Simulation* ACM MEMSYS'19.]
+(https://user.eng.umd.edu/~blj/papers/memsys2019-rethinking.pdf) 
 
 
 ## Building and running the simulator
