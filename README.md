@@ -80,6 +80,8 @@ Currently stats from all channels are squashed together for cleaner plotting.
 ## Simulator Design
 
 ### Code Structure
+
+```
 ├── configs                 # Configs of various protocols that describe timing constraints and power consumption.
 ├── ext                     # 
 ├── scripts                 # Tools and utilities
@@ -108,6 +110,7 @@ Currently stats from all channels are squashed together for cleaner plotting.
     memory_system.cc: A wrapper of dram_system and hmc.
     refresh.cc: Raises refresh request based on per-rank refresh or per-bank refresh.
     timing.cc: Initiate timing constraints.
+```
 
 ## Experiments
 
