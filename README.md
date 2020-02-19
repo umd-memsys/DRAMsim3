@@ -80,6 +80,9 @@ Currently stats from all channels are squashed together for cleaner plotting.
 
 **Gem5** integration: works with a forked Gem5 version, see https://github.com/umd-memsys/gem5 at `dramsim3` branch for reference.
 
+**SST** integration: see http://git.ece.umd.edu/shangli/sst-elements/tree/dramsim3 for reference. We will try to merge to official SST repo.
+
+**ZSim** integration: see http://git.ece.umd.edu/shangli/zsim/tree/master for reference.
 
 ## Simulator Design
 
