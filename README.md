@@ -4,12 +4,11 @@
 
 DRAMSim3 models the timing paramaters and memory controller behavior for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, GDDR6, HBM, HMC, STT-MRAM. It is implemented in C++ as an objected oriented model that includes a parameterized DRAM bank model, DRAM controllers, command queues and system-level interfaces to interact with a CPU simulator (GEM5, ZSim) or trace workloads. It is designed to be accurate, portable and parallel.
     
-For more information on new features, along with hierarchical design, please read:
+If you use this simulator in your work, please consider cite:
 
 [1] S. Li, Z. Yang, D. Reddy, A. Srivastava and B. Jacob, "DRAMsim3: a Cycle-accurate, Thermal-Capable DRAM Simulator," in IEEE Computer Architecture Letters. [Link](https://ieeexplore.ieee.org/document/8999595)
 
-[2] Li et al. *Rethinking Cycle Accurate DRAM Simulation* ACM MEMSYS'19.]
-(https://user.eng.umd.edu/~blj/papers/memsys2019-rethinking.pdf) 
+See [Related Work](#related-work) for more work done with this simulator.
 
 
 ## Building and running the simulator
@@ -100,11 +99,10 @@ Currently stats from all channels are squashed together for cleaner plotting.
     controller.cc: Maintains the per-channel controller, which manages a queue of pending memory transactions and issues corresponding DRAM commands, 
                    follows FR-FCFS policy.
     cpu.cc: Implements 3 types of simple CPU: 
-            1. Random, can handle random CPU requests at full speed, the entire parallelism of DRAM protocol can be exploited without limits from 
-            address mapping and scheduling pocilies. 
+            1. Random, can handle random CPU requests at full speed, the entire parallelism of DRAM protocol can be exploited without limits from address mapping and scheduling pocilies. 
             2. Stream, provides a streaming prototype that is able to provide enough buffer hits.
             3. Trace-based, consumes traces of workloads, feed the fetched transactions into the memory system.
-    dram_system.cc:  Initiates JEDEC or ideal DRAM system, registers the supplied callback function to let the front end driver know that the request is               finished. 
+    dram_system.cc:  Initiates JEDEC or ideal DRAM system, registers the supplied callback function to let the front end driver know that the request is finished. 
     hmc.cc: Implements HMC system and interface, HMC requests are translates to DRAM requests here and a crossbar interconnect between the high-speed links and the memory controllers is modeled.
     main.cc: Handles the main program loop that reads in simulation arguments, DRAM configurations and tick cycle forward.
     memory_system.cc: A wrapper of dram_system and hmc.
@@ -134,3 +132,19 @@ Run
 To generage Verilog workbench.
 Our workbench format is compatible with ModelSim Verilog simulator,
 other Verilog simulators may require a slightly different format.
+
+
+## Related Work
+
+[1] Li, S., Yang, Z., Reddy D., Srivastava, A. and Jacob, B., (2020) DRAMsim3: a Cycle-accurate, Thermal-Capable DRAM Simulator, IEEE Computer Architecture Letters.
+
+[2] Jagasivamani, M., Walden, C., Singh, D., Kang, L., Li, S., Asnaashari, M., ... & Yeung, D. (2019). Analyzing the Monolithic Integration of a ReRAM-Based Main Memory Into a CPU's Die. IEEE Micro, 39(6), 64-72.
+
+[3] Li, S., Reddy, D., & Jacob, B. (2018, October). A performance & power comparison of modern high-speed DRAM architectures. In Proceedings of the International Symposium on Memory Systems (pp. 341-353).
+
+[4] Li, S., Verdejo, R. S., Radojković, P., & Jacob, B. (2019, September). Rethinking cycle accurate DRAM simulation. In Proceedings of the International Symposium on Memory Systems (pp. 184-191).
+
+[5] Li, S., & Jacob, B. (2019, September). Statistical DRAM modeling. In Proceedings of the International Symposium on Memory Systems (pp. 521-530).
+
+[6] Li, S. (2019). Scalable and Accurate Memory System Simulation (Doctoral dissertation).
+
