@@ -76,6 +76,11 @@ python3 scripts/plot_stats dramsim3epoch.json
 
 Currently stats from all channels are squashed together for cleaner plotting.
 
+### Integration with other simulators
+
+**Gem5** integration: works with a forked Gem5 version, see https://github.com/umd-memsys/gem5 at `dramsim3` branch for reference.
+
+
 ## Simulator Design
 
 ### Code Structure
