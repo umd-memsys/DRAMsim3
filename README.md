@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.com/shavvn/DRAMSim3.svg?token=pCfCJ4yBqyhn3rfWbJVF&branch=master)](https://travis-ci.com/shavvn/DRAMSim3)
+[![Build Status](https://travis-ci.com/umd-memsys/DRAMsim3.svg?token=pCfCJ4yBqyhn3rfWbJVF&branch=master)](https://travis-ci.com/umd-memsys/DRAMsim3)
 
-# About DRAMSim3
+# About DRAMsim3
 
-DRAMSim3 models the timing paramaters and memory controller behavior for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, GDDR6, HBM, HMC, STT-MRAM. It is implemented in C++ as an objected oriented model that includes a parameterized DRAM bank model, DRAM controllers, command queues and system-level interfaces to interact with a CPU simulator (GEM5, ZSim) or trace workloads. It is designed to be accurate, portable and parallel.
+DRAMsim3 models the timing paramaters and memory controller behavior for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, GDDR6, HBM, HMC, STT-MRAM. It is implemented in C++ as an objected oriented model that includes a parameterized DRAM bank model, DRAM controllers, command queues and system-level interfaces to interact with a CPU simulator (GEM5, ZSim) or trace workloads. It is designed to be accurate, portable and parallel.
     
 If you use this simulator in your work, please consider cite:
 
@@ -92,7 +92,7 @@ Currently stats from all channels are squashed together for cleaner plotting.
 ├── configs                 # Configs of various protocols that describe timing constraints and power consumption.
 ├── ext                     # 
 ├── scripts                 # Tools and utilities
-├── src                     # DRAMSim3 source files
+├── src                     # DRAMsim3 source files
 ├── tests                   # Tests of each model, includes a short example trace
 ├── CMakeLists.txt
 ├── Makefile
