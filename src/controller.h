@@ -76,6 +76,7 @@ class Controller {
 
     // transaction queueing
     int write_draining_;
+    bool force_reads_;
     void ScheduleTransaction();
     void IssueCommand(const Command &tmp_cmd);
     Command TransToCommand(const Transaction &trans);

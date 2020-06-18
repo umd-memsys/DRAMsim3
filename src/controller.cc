@@ -26,7 +26,8 @@ Controller::Controller(int channel, const Config &config, const Timing &timing)
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
       last_trans_clk_(0),
-      write_draining_(0) {
+      write_draining_(0),
+      force_reads_(false) {
     if (is_unified_queue_) {
         unified_queue_.reserve(config_.trans_queue_size);
     } else {
@@ -177,11 +178,11 @@ bool Controller::AddTransaction(Transaction trans) {
         return true;
     } else {  // read
         // if in write buffer, use the write buffer value
-        if (pending_wr_q_.count(trans.addr) > 0) {
-            trans.complete_cycle = clk_ + 1;
-            return_queue_.push_back(trans);
-            return true;
-        }
+        //if (pending_wr_q_.count(trans.addr) > 0) {
+        //    trans.complete_cycle = clk_ + 1;
+        //    return_queue_.push_back(trans);
+        //    return true;
+        //}
         pending_rd_q_.insert(std::make_pair(trans.addr, trans));
         if (pending_rd_q_.count(trans.addr) == 1) {
             if (is_unified_queue_) {
@@ -196,7 +197,7 @@ bool Controller::AddTransaction(Transaction trans) {
 
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
-    if (write_draining_ == 0 && !is_unified_queue_) {
+    if (write_draining_ == 0 && !is_unified_queue_ && !force_reads_) {
         // we basically have a upper and lower threshold for write buffer
         if ((write_buffer_.size() >= write_buffer_.capacity()) ||
             (write_buffer_.size() > 8 && cmd_queue_.QueueEmpty())) {
@@ -215,7 +216,8 @@ void Controller::ScheduleTransaction() {
                 // Enforce R->W dependency
                 if (pending_rd_q_.count(it->addr) > 0) {
                     write_draining_ = 0;
-                    break;
+                    force_reads_ = true;
+                    return;
                 }
                 write_draining_ -= 1;
             }
@@ -224,6 +226,7 @@ void Controller::ScheduleTransaction() {
             break;
         }
     }
+    force_reads_ = false;
 }
 
 void Controller::IssueCommand(const Command &cmd) {
