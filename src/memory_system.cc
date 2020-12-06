@@ -46,7 +46,9 @@ bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     return dram_system_->AddTransaction(hex_addr, is_write);
 }
 
-void MemorySystem::PrintStats() const { dram_system_->PrintStats(); }
+void MemorySystem::PrintStats(int tag) const { dram_system_->PrintStats(tag); }
+
+void MemorySystem::PrintEpochStats(int tag) const { dram_system_->PrintEpochStats(tag); }
 
 void MemorySystem::ResetStats() { dram_system_->ResetStats(); }
 

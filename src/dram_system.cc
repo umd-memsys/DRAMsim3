@@ -50,7 +50,26 @@ void BaseDRAMSystem::PrintEpochStats() {
     return;
 }
 
-void BaseDRAMSystem::PrintStats() {
+void BaseDRAMSystem::PrintEpochStats(int tag) {
+    static bool init = true;
+    // first epoch, print bracket
+    if (init) {
+        std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::out);
+        epoch_out << "[";
+        init = false;
+    }
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->PrintEpochStats(tag);
+        std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::app);
+        epoch_out << "," << std::endl;
+    }
+#ifdef THERMAL
+    thermal_calc_.PrintTransPT(clk_);
+#endif  // THERMAL
+    return;
+}
+
+void BaseDRAMSystem::PrintStats(int tag) {
     // Finish epoch output, remove last comma and append ]
     std::ofstream epoch_out(config_.json_epoch_name, std::ios_base::in |
                                                          std::ios_base::out |
@@ -163,9 +182,9 @@ void JedecDRAMSystem::ClockTick() {
     }
     clk_++;
 
-    if (clk_ % config_.epoch_period == 0) {
-        PrintEpochStats();
-    }
+//    if (clk_ % config_.epoch_period == 0) {
+//        PrintEpochStats();
+//    }
     return;
 }
 

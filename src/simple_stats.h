@@ -17,6 +17,8 @@ class SimpleStats {
     // incrementing counter
     void Increment(const std::string name) { epoch_counters_[name] += 1; }
 
+    void SetTag(int tag) {epoch_counters_["tag"] = tag;}
+
     // incrementing for vec counter
     void IncrementVec(const std::string name, int pos) {
         epoch_vec_counters_[name][pos] += 1;

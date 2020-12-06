@@ -19,6 +19,7 @@ void PrintStatText(std::ostream& where, std::string name, T value,
 SimpleStats::SimpleStats(const Config& config, int channel_id)
     : config_(config), channel_id_(channel_id) {
     // counter stats
+    InitStat("tag", "counter", "Associated Stat Tag");
     InitStat("num_cycles", "counter", "Number of DRAM cycles");
     InitStat("epoch_num", "counter", "Number of epochs");
     InitStat("num_reads_done", "counter", "Number of read requests issued");

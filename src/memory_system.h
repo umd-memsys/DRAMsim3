@@ -24,7 +24,8 @@ class MemorySystem {
     int GetBusBits() const;
     int GetBurstLength() const;
     int GetQueueSize() const;
-    void PrintStats() const;
+    void PrintEpochStats(int tag) const;
+    void PrintStats(int tag) const;
     void ResetStats();
 
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
