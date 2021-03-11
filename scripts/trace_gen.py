@@ -5,6 +5,35 @@ import os
 import random
 
 
+def hbm2_alt_bank_iter():
+    ba = {'width' : 4,
+          'offset' :14}
+    ro = {'width' :15,
+          'offset':18}
+    ch = {'width' :3,
+          'offset':11}
+
+    bank = 0
+    rows  = list(range(32768))
+    banks = [0, 4,  8, 12,
+             1, 5,  9, 13,
+             2, 6, 10, 14,
+             3, 7, 11, 15]
+
+    random.shuffle(rows)
+    row_i  = 0
+    bank_i = 0
+    while True:
+        # pick a random row
+        row = rows[row_i]
+        bank = banks[bank_i]
+        # for channel in range(8):
+        #     yield (row << ro['offset'] | bank << ba['offset'] | channel << ch['offset'])
+        yield (row << ro['offset'] | bank << ba['offset'])
+
+        bank_i = (bank_i + 1) % len(banks)
+        row_i  = (row_i + 1)  % len(rows)
+
 class Generator():
     """
     Format agnostic address stream generator
@@ -25,6 +54,9 @@ class Generator():
             self._gen = self._rand_gen
         elif stream_type == 'stream':
             self._gen = self._stream_gen
+        elif stream_type == 'hbm2_alt_bank':
+            self._hbm2_alt_bank_iter = hbm2_alt_bank_iter()
+            self._gen = self._hbm2_alt_bank
         else:
             self._gen = self._mix_gen
 
@@ -53,6 +85,11 @@ class Generator():
             return self._rand_gen()
         else:
             return self._stream_gen()
+
+    def _hbm2_alt_bank(self):
+        op = self._get_op()
+        addr = next(self._hbm2_alt_bank_iter)
+        return (op, addr)
 
     def gen(self):
         op, addr = self._gen()
@@ -126,7 +163,8 @@ if __name__ == '__main__':
 
     stream_types = {'r': 'random', 'random': 'random',
                     's': 'stream', 'stream': 'stream',
-                    'm': 'mix', 'mix': 'mix'}
+                    'm': 'mix', 'mix': 'mix',
+                    'hbm2' : 'hbm2_alt_bank' }
     stream_type = stream_types.get(args.stream_type, 'random')
     print("Address stream type: ", stream_type)
 
