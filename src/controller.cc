@@ -27,7 +27,11 @@ Controller::Controller(int channel, const Config &config, const Timing &timing)
                           : RowBufPolicy::OPEN_PAGE),
       last_trans_clk_(0),
       write_draining_(0),
-      force_reads_(false) {
+      force_reads_(false)
+#ifdef BLOOD_GRAPH
+      ,blood_graph_(channel, config)
+#endif
+{
     if (is_unified_queue_) {
         unified_queue_.reserve(config_.trans_queue_size);
     } else {
@@ -41,6 +45,11 @@ Controller::Controller(int channel, const Config &config, const Timing &timing)
     std::cout << "Command Trace write to " << trace_file_name << std::endl;
     cmd_trace_.open(trace_file_name, std::ofstream::out);
 #endif  // CMD_TRACE
+
+#ifdef BLOOD_GRAPH
+    blood_graph_.cmd_queue_ = &cmd_queue_;
+    blood_graph_.channel_state_ = &channel_state_;
+#endif
 }
 
 std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
@@ -78,8 +87,16 @@ void Controller::ClockTick() {
         cmd = cmd_queue_.GetCommandToIssue();
     }
 
+#ifdef BLOOD_GRAPH
+    blood_graph_.IsInRefresh(cmd_queue_.IsInRefresh()); 
+#endif
+
     if (cmd.IsValid()) {
         IssueCommand(cmd);
+
+#ifdef BLOOD_GRAPH
+        blood_graph_.IssueCommand(cmd);
+#endif
         cmd_issued = true;
 
         if (config_.enable_hbm_dual_cmd) {
@@ -87,6 +104,9 @@ void Controller::ClockTick() {
             if (second_cmd.IsValid()) {
                 if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
                     IssueCommand(second_cmd);
+#ifdef BLOOD_GRAPH
+                    blood_graph_.IssueCommand(second_cmd);
+#endif
                     simple_stats_.Increment("hbm_dual_cmds");
                 }
             }
@@ -142,6 +162,9 @@ void Controller::ClockTick() {
         }
     }
 
+#ifdef BLOOD_GRAPH
+    blood_graph_.ClockTick();
+#endif
     ScheduleTransaction();
     clk_++;
     cmd_queue_.ClockTick();

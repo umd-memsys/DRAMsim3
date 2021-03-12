@@ -124,6 +124,10 @@ bool CommandQueue::QueueEmpty() const {
 }
 
 
+bool CommandQueue::QueueEmpty(int q_idx) const {
+    return queues_[q_idx].empty();
+}
+
 bool CommandQueue::AddCommand(Command cmd) {
     auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
     if (queue.size() < queue_size_) {

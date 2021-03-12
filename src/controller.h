@@ -15,6 +15,10 @@
 #include "thermal.h"
 #endif  // THERMAL
 
+#ifdef BLOOD_GRAPH
+#include "blood_graph.h"
+#endif
+
 namespace dramsim3 {
 
 enum class RowBufPolicy { OPEN_PAGE, CLOSE_PAGE, SIZE };
@@ -71,6 +75,9 @@ class Controller {
     std::ofstream cmd_trace_;
 #endif  // CMD_TRACE
 
+#ifdef BLOOD_GRAPH
+    BloodGraph blood_graph_;
+#endif
     // used to calculate inter-arrival latency
     uint64_t last_trans_clk_;
 

@@ -24,8 +24,14 @@ class CommandQueue {
     bool WillAcceptCommand(int rank, int bankgroup, int bank) const;
     bool AddCommand(Command cmd);
     bool QueueEmpty() const;
+
+    bool QueueEmpty(int q_idx) const;
+    int GetQueueIndex(int rank, int bankgroup, int bank) const;
     int QueueUsage() const;
     std::vector<bool> rank_q_empty;
+
+    bool IsInRefresh() { return is_in_ref_; };
+    CMDQueue& GetQueue(int rank, int bankgroup, int bank);
 
    private:
     bool ArbitratePrecharge(const CMDIterator& cmd_it,
@@ -33,8 +39,6 @@ class CommandQueue {
     bool HasRWDependency(const CMDIterator& cmd_it,
                          const CMDQueue& queue) const;
     Command GetFirstReadyInQueue(CMDQueue& queue) const;
-    int GetQueueIndex(int rank, int bankgroup, int bank) const;
-    CMDQueue& GetQueue(int rank, int bankgroup, int bank);
     CMDQueue& GetNextQueue();
     void GetRefQIndices(const Command& ref);
     void EraseRWCommand(const Command& cmd);
