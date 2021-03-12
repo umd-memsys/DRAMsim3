@@ -50,6 +50,25 @@ void BaseDRAMSystem::PrintEpochStats() {
     return;
 }
 
+void BaseDRAMSystem::PrintTagStats(uint32_t tag) {
+    static bool init = true;
+    // first epoch, print bracket
+    if (init) {
+        std::ofstream tag_out(config_.json_tag_name, std::ofstream::out);
+        tag_out << "[";
+        init = false;
+    }
+    for (size_t i = 0; i < ctrls_.size(); i++) {
+        ctrls_[i]->PrintTagStats(tag);
+        std::ofstream tag_out(config_.json_tag_name, std::ofstream::app);
+        tag_out << "," << std::endl;
+    }
+#ifdef THERMAL
+    thermal_calc_.PrintTransPT(clk_);
+#endif  // THERMAL
+    return;
+}
+
 void BaseDRAMSystem::PrintStats() {
     // Finish epoch output, remove last comma and append ]
     std::ofstream epoch_out(config_.json_epoch_name, std::ios_base::in |
@@ -64,6 +83,14 @@ void BaseDRAMSystem::PrintStats() {
 
     // close it now so that each channel can handle it
     json_out.close();
+    // Finish tag output, remove last comma and append ]
+    std::ofstream tag_out(config_.json_tag_name, std::ios_base::in |
+                                                         std::ios_base::out |
+                                                         std::ios_base::ate);
+    tag_out.seekp(-2, std::ios_base::cur);
+    tag_out.write("]", 1);
+    tag_out.close();
+
     for (size_t i = 0; i < ctrls_.size(); i++) {
         ctrls_[i]->PrintFinalStats();
         if (i != ctrls_.size() - 1) {

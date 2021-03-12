@@ -24,6 +24,10 @@ class MemorySystem {
     int GetBusBits() const;
     int GetBurstLength() const;
     int GetQueueSize() const;
+    //This is called in ClockTick
+    void PrintEpochStats() const;
+    //This gets called from the manycore
+    void PrintTagStats(uint32_t tag) const;
     void PrintStats() const;
     void ResetStats();
 

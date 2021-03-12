@@ -141,6 +141,7 @@ class Config {
     std::string output_prefix;
     std::string json_stats_name;
     std::string json_epoch_name;
+    std::string json_tag_name;
     std::string txt_stats_name;
 
     // Computed parameters

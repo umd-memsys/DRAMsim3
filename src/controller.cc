@@ -317,6 +317,18 @@ void Controller::PrintEpochStats() {
     return;
 }
 
+void Controller::PrintTagStats(uint32_t tag) {
+    simple_stats_.SetTag(static_cast<uint64_t>(tag));
+    simple_stats_.PrintTagStats();
+#ifdef THERMAL
+    for (int r = 0; r < config_.ranks; r++) {
+        double bg_energy = simple_stats_.RankBackgroundEnergy(r);
+        thermal_calc_.UpdateBackgroundEnergy(channel_id_, r, bg_energy);
+    }
+#endif  // THERMAL
+    return;
+}
+
 void Controller::PrintFinalStats() {
     simple_stats_.PrintFinalStats();
 
