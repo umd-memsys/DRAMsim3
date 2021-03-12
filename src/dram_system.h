@@ -25,8 +25,8 @@ class BaseDRAMSystem {
     void RegisterCallbacks(std::function<void(uint64_t)> read_callback,
                            std::function<void(uint64_t)> write_callback);
     void PrintEpochStats();
-    void PrintEpochStats(int tag);
-    void PrintStats(int tag);
+    void PrintTagStats(uint32_t tag);
+    void PrintStats();
     void ResetStats();
 
     virtual bool WillAcceptTransaction(uint64_t hex_addr,

@@ -50,18 +50,18 @@ void BaseDRAMSystem::PrintEpochStats() {
     return;
 }
 
-void BaseDRAMSystem::PrintEpochStats(int tag) {
+void BaseDRAMSystem::PrintTagStats(uint32_t tag) {
     static bool init = true;
     // first epoch, print bracket
     if (init) {
-        std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::out);
-        epoch_out << "[";
+        std::ofstream tag_out(config_.json_tag_name, std::ofstream::out);
+        tag_out << "[";
         init = false;
     }
     for (size_t i = 0; i < ctrls_.size(); i++) {
-        ctrls_[i]->PrintEpochStats(tag);
-        std::ofstream epoch_out(config_.json_epoch_name, std::ofstream::app);
-        epoch_out << "," << std::endl;
+        ctrls_[i]->PrintTagStats(tag);
+        std::ofstream tag_out(config_.json_tag_name, std::ofstream::app);
+        tag_out << "," << std::endl;
     }
 #ifdef THERMAL
     thermal_calc_.PrintTransPT(clk_);
@@ -69,7 +69,7 @@ void BaseDRAMSystem::PrintEpochStats(int tag) {
     return;
 }
 
-void BaseDRAMSystem::PrintStats(int tag) {
+void BaseDRAMSystem::PrintStats() {
     // Finish epoch output, remove last comma and append ]
     std::ofstream epoch_out(config_.json_epoch_name, std::ios_base::in |
                                                          std::ios_base::out |
@@ -83,6 +83,14 @@ void BaseDRAMSystem::PrintStats(int tag) {
 
     // close it now so that each channel can handle it
     json_out.close();
+    // Finish tag output, remove last comma and append ]
+    std::ofstream tag_out(config_.json_tag_name, std::ios_base::in |
+                                                         std::ios_base::out |
+                                                         std::ios_base::ate);
+    tag_out.seekp(-2, std::ios_base::cur);
+    tag_out.write("]", 1);
+    tag_out.close();
+
     for (size_t i = 0; i < ctrls_.size(); i++) {
         ctrls_[i]->PrintFinalStats();
         if (i != ctrls_.size() - 1) {
@@ -182,9 +190,9 @@ void JedecDRAMSystem::ClockTick() {
     }
     clk_++;
 
-//    if (clk_ % config_.epoch_period == 0) {
-//        PrintEpochStats();
-//    }
+    if (clk_ % config_.epoch_period == 0) {
+        PrintEpochStats();
+    }
     return;
 }
 

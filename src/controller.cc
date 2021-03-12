@@ -294,9 +294,9 @@ void Controller::PrintEpochStats() {
     return;
 }
 
-void Controller::PrintEpochStats(int tag) {
-    simple_stats_.SetTag(tag);
-    simple_stats_.PrintEpochStats();
+void Controller::PrintTagStats(uint32_t tag) {
+    simple_stats_.SetTag(static_cast<uint64_t>(tag));
+    simple_stats_.PrintTagStats();
 #ifdef THERMAL
     for (int r = 0; r < config_.ranks; r++) {
         double bg_energy = simple_stats_.RankBackgroundEnergy(r);

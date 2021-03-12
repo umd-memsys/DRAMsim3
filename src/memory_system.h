@@ -24,8 +24,11 @@ class MemorySystem {
     int GetBusBits() const;
     int GetBurstLength() const;
     int GetQueueSize() const;
-    void PrintEpochStats(int tag) const;
-    void PrintStats(int tag) const;
+    //This is called in ClockTick
+    void PrintEpochStats() const;
+    //This gets called from the manycore
+    void PrintTagStats(uint32_t tag) const;
+    void PrintStats() const;
     void ResetStats();
 
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
