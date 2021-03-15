@@ -83,7 +83,7 @@ class Controller {
     uint64_t last_trans_clk_;
 
     // transaction queueing
-    int write_draining_;
+    bool write_draining_;
     bool force_reads_;
     void ScheduleTransaction();
     void IssueCommand(const Command &tmp_cmd);
