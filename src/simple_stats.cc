@@ -98,6 +98,12 @@ std::string SimpleStats::GetTextHeader(bool is_final) const {
     return header;
 }
 
+double SimpleStats::RankBackgroundEnergy(const int rank) const{
+    return vec_doubles_.at("act_stb_energy")[rank] +
+           vec_doubles_.at("pre_stb_energy")[rank] +
+           vec_doubles_.at("sref_energy")[rank];
+}
+
 void SimpleStats::PrintEpochStats() {
     UpdateEpochStats();
     if (config_.output_level >= 1) {
