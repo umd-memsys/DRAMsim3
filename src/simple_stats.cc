@@ -22,7 +22,7 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
     InitStat("num_cycles", "counter", "Number of DRAM cycles");
     InitStat("epoch_num", "counter", "Number of epochs");
     InitStat("num_reads_done", "counter", "Number of read requests issued");
-    InitStat("num_writes_done", "counter", "Number of read requests issued");
+    InitStat("num_writes_done", "counter", "Number of write requests issued");
     InitStat("num_write_buf_hits", "counter", "Number of write buffer hits");
     InitStat("num_read_row_hits", "counter", "Number of read row buffer hits");
     InitStat("num_write_row_hits", "counter",
