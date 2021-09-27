@@ -1,0 +1,15 @@
+name: Build Testing
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: mkdir build && cd build && cmake .. && make -j4 && ./dramsim3main -h
