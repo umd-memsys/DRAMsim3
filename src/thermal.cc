@@ -598,7 +598,7 @@ void ThermalCalculator::PrintFinalPT(uint64_t clk) {
                 int case_id = i * config_.ranks + j;
                 double bg_energy =
                     background_energy_[i][j] / (dimX * dimY * numP);
-                for (int k = 0; k < dimX * dimY * numP; i++) {
+                for (int k = 0; k < dimX * dimY * numP; k++) {
                     accu_Pmap[case_id][i] += bg_energy / 1000 / num_devices;
                 }
             }
