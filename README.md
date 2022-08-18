@@ -50,7 +50,7 @@ By default, it also creates `libdramsim3.so` shared library in the project root 
 ./build/dramsim3main configs/DDR4_8Gb_x8_3200.ini --stream random -c 100000 
 
 # Running a trace file
-./build/dramsim3main configs/DDR4_8Gb_x8_3200.ini -c 100000 -t sample_trace.txt
+./build/dramsim3main configs/DDR4_8Gb_x8_3200.ini -c 100000 -t tests/example.trace
 
 # Running with gem5
 --mem-type=dramsim3 --dramsim3-ini=configs/DDR4_4Gb_x4_2133.ini
@@ -67,11 +67,11 @@ You can control the verbosity in the config file as well.
 
 ```bash
 # generate histograms from overall output
-python3 scripts/plot_stats dramsim3.json
+python3 scripts/plot_stats.py dramsim3.json
 
 # or
 # generate time series for a variety stats from epoch outputs
-python3 scripts/plot_stats dramsim3epoch.json
+python3 scripts/plot_stats.py dramsim3epoch.json
 ```
 
 Currently stats from all channels are squashed together for cleaner plotting.
@@ -134,7 +134,7 @@ Currently DDR3, DDR4, and LPDDR configs are supported by this script.
 Run
 
 ```bash
-./script/validataion.py DDR4.ini cmd.trace
+./script/validataion.py config/DDR4_8Gb_x8_3200.ini cmd.trace
 ```
 
 To generage Verilog workbench.

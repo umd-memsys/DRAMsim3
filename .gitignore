@@ -13,6 +13,9 @@ release
 *.pyc
 *.vh
 .vs/
+*.json
+*.txt
+*.pdf
 
 # Compiled Object files
 *.slo
