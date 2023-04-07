@@ -37,6 +37,7 @@ class RandomCPU : public CPU {
     bool last_write_ = false;
     std::mt19937_64 gen;
     bool get_next_ = true;
+    bool last_mrs_ = false;
 };
 
 class StreamCPU : public CPU {

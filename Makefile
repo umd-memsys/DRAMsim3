@@ -2,7 +2,8 @@
 
 CC=gcc
 CXX=g++
-
+MY_DEBUG=0
+EN_CMD_TRACE=0
 FMT_LIB_DIR=ext/fmt/include
 INI_LIB_DIR=ext/headers
 JSON_LIB_DIR=ext/headers
@@ -10,7 +11,12 @@ ARGS_LIB_DIR=ext/headers
 
 INC=-Isrc/ -I$(FMT_LIB_DIR) -I$(INI_LIB_DIR) -I$(ARGS_LIB_DIR) -I$(JSON_LIB_DIR)
 CXXFLAGS=-Wall -O3 -fPIC -std=c++11 $(INC) -DFMT_HEADER_ONLY=1
-
+ifeq (${MY_DEBUG},1)
+CXXFLAGS+=-DMY_DEBUG
+endif
+ifeq (${EN_CMD_TRACE},1)
+CXXFLAGS+=-DCMD_TRACE
+endif
 LIB_NAME=libdramsim3.so
 EXE_NAME=dramsim3main.out
 

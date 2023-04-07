@@ -1,4 +1,7 @@
 #include "memory_system.h"
+#include <iostream>
+#include <iomanip> 
+#include <locale>
 
 namespace dramsim3 {
 MemorySystem::MemorySystem(const std::string &config_file,
@@ -6,6 +9,10 @@ MemorySystem::MemorySystem(const std::string &config_file,
                            std::function<void(uint64_t)> read_callback,
                            std::function<void(uint64_t)> write_callback)
     : config_(new Config(config_file, output_dir)) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif
     // TODO: ideal memory type?
     if (config_->IsHMC()) {
         dram_system_ = new HMCMemorySystem(*config_, output_dir, read_callback,
@@ -42,8 +49,17 @@ bool MemorySystem::WillAcceptTransaction(uint64_t hex_addr,
     return dram_system_->WillAcceptTransaction(hex_addr, is_write);
 }
 
+bool MemorySystem::WillAcceptTransaction(uint64_t hex_addr,
+                                         bool is_write, bool is_mrs) const {
+    return dram_system_->WillAcceptTransaction(hex_addr, is_write, is_mrs);
+}
+
 bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
-    return dram_system_->AddTransaction(hex_addr, is_write);
+    return dram_system_->AddTransaction(hex_addr, is_write, false);
+}
+
+bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) {
+    return dram_system_->AddTransaction(hex_addr, is_write, is_MRS);
 }
 
 void MemorySystem::PrintStats() const { dram_system_->PrintStats(); }

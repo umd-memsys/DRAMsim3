@@ -1,10 +1,17 @@
 #include <iostream>
+#include <iomanip> 
+#include <locale>
 #include "./../ext/headers/args.hxx"
 #include "cpu.h"
+
 
 using namespace dramsim3;
 
 int main(int argc, const char **argv) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<" main "<<std::endl;
+    #endif
     args::ArgumentParser parser(
         "DRAM Simulator.",
         "Examples: \n."

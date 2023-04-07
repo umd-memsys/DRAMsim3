@@ -91,6 +91,9 @@ class Config {
     int tWPRE;
     int read_delay;
     int write_delay;
+    // MRS Timing Parameter
+    int tMRD; // Delay of MRS-to-MRS 
+    int tMOD; // Delay of MRS-to-NonMRS
 
     // LPDDR4 and GDDR5
     int tPPD;

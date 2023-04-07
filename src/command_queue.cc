@@ -13,6 +13,10 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
       queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
       queue_idx_(0),
       clk_(0) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif        
     if (config_.queue_structure == "PER_BANK") {
         queue_structure_ = QueueStructure::PER_BANK;
         num_queues_ = config_.banks * config_.ranks;
@@ -31,23 +35,47 @@ CommandQueue::CommandQueue(int channel_id, const Config& config,
         cmd_queue.reserve(config_.cmd_queue_size);
         queues_.push_back(cmd_queue);
     }
+
+    // Initialize MRS Command Queue (Que size is equal to normal Command Queue)
+    auto mrs_queue = std::vector<Command>();
+    mrs_queue.reserve(config_.cmd_queue_size);
+    mrs_queue_ = mrs_queue;
 }
 
 Command CommandQueue::GetCommandToIssue() {
-    for (int i = 0; i < num_queues_; i++) {
-        auto& queue = GetNextQueue();
-        // if we're refresing, skip the command queues that are involved
-        if (is_in_ref_) {
-            if (ref_q_indices_.find(queue_idx_) != ref_q_indices_.end()) {
-                continue;
+    if(mrs_queue_.size() > 0) {
+        // MRP Command also can be issued when not refreshing
+        if(!is_in_ref_) {
+            auto cmd = GetFirstReadyInQueue(mrs_queue_);
+            if(cmd.IsValid()) {
+                #ifdef MY_DEBUG
+                std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
+                       "["<<std::setw(10)<<clk_<<"] "<<            
+                       "Pop MRS Command ("<<cmd.IsMRSCMD()<<
+                       ")"<<std::endl;
+                #endif      
+                if(cmd.IsMRSCMD()) {
+                    EraseMRSCommand(cmd);
+                }             
+                return cmd;
             }
         }
-        auto cmd = GetFirstReadyInQueue(queue);
-        if (cmd.IsValid()) {
-            if (cmd.IsReadWrite()) {
-                EraseRWCommand(cmd);
+    } else {
+        for (int i = 0; i < num_queues_; i++) {
+            auto& queue = GetNextQueue();
+            // if we're refresing, skip the command queues that are involved
+            if (is_in_ref_) {
+                if (ref_q_indices_.find(queue_idx_) != ref_q_indices_.end()) {
+                    continue;
+                }
             }
-            return cmd;
+            auto cmd = GetFirstReadyInQueue(queue);
+            if (cmd.IsValid()) {
+                if (cmd.IsReadWrite()) {
+                    EraseRWCommand(cmd);
+                }
+                return cmd;
+            }
         }
     }
     return Command();
@@ -114,6 +142,10 @@ bool CommandQueue::WillAcceptCommand(int rank, int bankgroup, int bank) const {
     return queues_[q_idx].size() < queue_size_;
 }
 
+bool CommandQueue::WillAcceptMRSCommand() const {
+    return mrs_queue_.size() < queue_size_;
+}
+
 bool CommandQueue::QueueEmpty() const {
     for (const auto q : queues_) {
         if (!q.empty()) {
@@ -125,13 +157,35 @@ bool CommandQueue::QueueEmpty() const {
 
 
 bool CommandQueue::AddCommand(Command cmd) {
-    auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
-    if (queue.size() < queue_size_) {
-        queue.push_back(cmd);
-        rank_q_empty[cmd.Rank()] = false;
-        return true;
-    } else {
-        return false;
+    if(cmd.IsMRSCMD()) {
+        #ifdef MY_DEBUG
+        std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
+                "["<<std::setw(10)<<clk_<<"] "<<            
+                "Enque MRS Command ("<<cmd.IsMRSCMD()<<
+                ")"<<std::endl;
+        #endif  
+        if(mrs_queue_.size() < queue_size_) {
+            mrs_queue_.push_back(cmd);
+            rank_q_empty[cmd.Rank()] = false;
+            // Bug? 
+            // After rank_q_empty[] becomes False, 
+            // there is no code that changes the value of rank_q_empty to True. 
+            // It requires to check            
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    else {
+        auto& queue = GetQueue(cmd.Rank(), cmd.Bankgroup(), cmd.Bank());
+        if (queue.size() < queue_size_) {
+            queue.push_back(cmd);
+            rank_q_empty[cmd.Rank()] = false;
+            return true;
+        } else {
+            return false;
+        }
     }
 }
 
@@ -179,9 +233,10 @@ Command CommandQueue::GetFirstReadyInQueue(CMDQueue& queue) const {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         Command cmd = channel_state_.GetReadyCommand(*cmd_it, clk_);
         if (!cmd.IsValid()) {
-            continue;
+            if(cmd_it->IsMRSCMD()) break;
+            else continue;
         }
-        if (cmd.cmd_type == CommandType::PRECHARGE) {
+        if (cmd.cmd_type == CommandType::PRECHARGE && !cmd_it->IsMRSCMD()) {
             if (!ArbitratePrecharge(cmd_it, queue)) {
                 continue;
             }
@@ -200,6 +255,17 @@ void CommandQueue::EraseRWCommand(const Command& cmd) {
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         if (cmd.hex_addr == cmd_it->hex_addr && cmd.cmd_type == cmd_it->cmd_type) {
             queue.erase(cmd_it);
+            return;
+        }
+    }
+    std::cerr << "cannot find cmd!" << std::endl;
+    exit(1);
+}
+
+void CommandQueue::EraseMRSCommand(const Command& cmd) {
+    for (auto cmd_it = mrs_queue_.begin(); cmd_it != mrs_queue_.end(); cmd_it++) {
+        if (cmd.hex_addr == cmd_it->hex_addr && cmd.cmd_type == cmd_it->cmd_type) {
+            mrs_queue_.erase(cmd_it);
             return;
         }
     }

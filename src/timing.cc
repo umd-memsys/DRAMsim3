@@ -10,6 +10,10 @@ Timing::Timing(const Config& config)
       other_bankgroups_same_rank(static_cast<int>(CommandType::SIZE)),
       other_ranks(static_cast<int>(CommandType::SIZE)),
       same_rank(static_cast<int>(CommandType::SIZE)) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif              
     int read_to_read_l = std::max(config.burst_cycle, config.tCCD_L);
     int read_to_read_s = std::max(config.burst_cycle, config.tCCD_S);
     int read_to_read_o = config.burst_cycle + config.tRTRS;
@@ -40,6 +44,11 @@ Timing::Timing(const Config& config)
     int activate_to_activate_s = config.tRRD_S;
     int activate_to_precharge = config.tRAS;
     int activate_to_read, activate_to_write;
+
+    // Timing Parameter of MRS Command
+    int mrs_to_mrs = config.tMRD;
+    int mrs_to_non_mrs = config.tMOD;
+
     if (config.IsGDDR() || config.IsHBM()) {
         activate_to_read = config.tRCDRD;
         activate_to_write = config.tRCDWR;
@@ -133,7 +142,8 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, readp_to_act},
             {CommandType::REFRESH, read_to_activate},
             {CommandType::REFRESH_BANK, read_to_activate},
-            {CommandType::SREF_ENTER, read_to_activate}};
+            {CommandType::SREF_ENTER, read_to_activate},
+            {CommandType::MRS, read_to_activate}};
     other_banks_same_bankgroup[static_cast<int>(CommandType::READ_PRECHARGE)] =
         std::vector<std::pair<CommandType, int> >{
             {CommandType::READ, read_to_read_l},
@@ -159,7 +169,8 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, write_to_activate},
             {CommandType::REFRESH, write_to_activate},
             {CommandType::REFRESH_BANK, write_to_activate},
-            {CommandType::SREF_ENTER, write_to_activate}};
+            {CommandType::SREF_ENTER, write_to_activate},
+            {CommandType::MRS, write_to_activate}};
     other_banks_same_bankgroup[static_cast<int>(CommandType::WRITE_PRECHARGE)] =
         std::vector<std::pair<CommandType, int> >{
             {CommandType::READ, write_to_read_l},
@@ -206,7 +217,8 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, precharge_to_activate},
             {CommandType::REFRESH, precharge_to_activate},
             {CommandType::REFRESH_BANK, precharge_to_activate},
-            {CommandType::SREF_ENTER, precharge_to_activate}};
+            {CommandType::SREF_ENTER, precharge_to_activate},
+            {CommandType::MRS, precharge_to_activate}};
 
     // for those who need tPPD
     if (config.IsGDDR() || config.protocol == DRAMProtocol::LPDDR4) {
@@ -227,7 +239,8 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, refresh_to_activate_bank},
             {CommandType::REFRESH, refresh_to_activate_bank},
             {CommandType::REFRESH_BANK, refresh_to_activate_bank},
-            {CommandType::SREF_ENTER, refresh_to_activate_bank}};
+            {CommandType::SREF_ENTER, refresh_to_activate_bank},
+            {CommandType::MRS, refresh_to_activate_bank}};
 
     other_banks_same_bankgroup[static_cast<int>(CommandType::REFRESH_BANK)] =
         std::vector<std::pair<CommandType, int> >{
@@ -247,7 +260,8 @@ Timing::Timing(const Config& config)
         std::vector<std::pair<CommandType, int> >{
             {CommandType::ACTIVATE, refresh_to_activate},
             {CommandType::REFRESH, refresh_to_activate},
-            {CommandType::SREF_ENTER, refresh_to_activate}};
+            {CommandType::SREF_ENTER, refresh_to_activate},
+            {CommandType::MRS, refresh_to_activate}};
 
     // command SREF_ENTER
     // TODO: add power down commands
@@ -261,7 +275,16 @@ Timing::Timing(const Config& config)
             {CommandType::ACTIVATE, self_refresh_exit},
             {CommandType::REFRESH, self_refresh_exit},
             {CommandType::REFRESH_BANK, self_refresh_exit},
-            {CommandType::SREF_ENTER, self_refresh_exit}};
+            {CommandType::SREF_ENTER, self_refresh_exit},
+            {CommandType::MRS, self_refresh_exit}};
+
+    // MRS Command
+    same_rank[static_cast<int>(CommandType::MRS)] =
+        std::vector<std::pair<CommandType, int> >{
+            {CommandType::ACTIVATE, mrs_to_non_mrs},
+            {CommandType::REFRESH, mrs_to_non_mrs},
+            {CommandType::SREF_ENTER, mrs_to_non_mrs},
+            {CommandType::MRS, mrs_to_mrs}};            
 }
 
 }  // namespace dramsim3

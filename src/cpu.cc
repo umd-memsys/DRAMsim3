@@ -10,10 +10,12 @@ void RandomCPU::ClockTick() {
     if (get_next_) {
         last_addr_ = gen();
         last_write_ = (gen() % 3 == 0);
+        last_mrs_ = last_write_ && (gen() % 20 == 0);
     }
-    get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_);
+    // get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_);
+    get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_,last_mrs_);
     if (get_next_) {
-        memory_system_.AddTransaction(last_addr_, last_write_);
+        memory_system_.AddTransaction(last_addr_, last_write_,last_mrs_);
     }
     clk_++;
     return;
@@ -81,7 +83,8 @@ void TraceBasedCPU::ClockTick() {
             get_next_ = memory_system_.WillAcceptTransaction(trans_.addr,
                                                              trans_.is_write);
             if (get_next_) {
-                memory_system_.AddTransaction(trans_.addr, trans_.is_write);
+                // memory_system_.AddTransaction(trans_.addr, trans_.is_write);
+                memory_system_.AddTransaction(trans_.addr, trans_.is_write, trans_.is_MRS);
             }
         }
     }

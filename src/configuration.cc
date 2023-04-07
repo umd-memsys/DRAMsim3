@@ -334,6 +334,10 @@ void Config::InitTimingParams() {
     tRCDRD = GetInteger("timing", "tRCDRD", 24);
     tRCDWR = GetInteger("timing", "tRCDWR", 20);
 
+    // MRS AC Parameter
+    tMRD = GetInteger("timing", "tMRD", 10); // DDR4-3200 
+    tMOD = GetInteger("timing", "tMOD", 24); // DDR4-3200
+
     ideal_memory_latency = GetInteger("timing", "ideal_memory_latency", 10);
 
     // calculated timing

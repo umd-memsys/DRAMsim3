@@ -340,7 +340,24 @@ bool HMCMemorySystem::WillAcceptTransaction(uint64_t hex_addr,
     return insertable;
 }
 
-bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
+bool HMCMemorySystem::WillAcceptTransaction(uint64_t hex_addr,
+                                            bool is_write, bool is_MRS) const {
+    // We DO NOT USE HMC Model, So Not implement MRS Command of HMC Model                                                 
+    bool insertable = false;
+    /*
+    for (auto link_queue = link_req_queues_.begin();
+         link_queue != link_req_queues_.end(); link_queue++) {
+        if ((*link_queue).size() < queue_depth_) {
+            insertable = true;
+            break;
+        }
+    }
+    */
+    return insertable;
+}
+
+bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) {
+    // WE DO NOT USE HMC MODEL 
     // to be compatible with other protocol we have this interface
     // when using this intreface the size of each transaction will be block_size
     HMCReqType req_type;

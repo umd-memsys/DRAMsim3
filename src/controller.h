@@ -29,6 +29,7 @@ class Controller {
 #endif  // THERMAL
     void ClockTick();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) const;
     bool AddTransaction(Transaction trans);
     int QueueUsage() const;
     // Stats output
@@ -56,6 +57,7 @@ class Controller {
     std::vector<Transaction> unified_queue_;
     std::vector<Transaction> read_queue_;
     std::vector<Transaction> write_buffer_;
+    std::vector<Transaction> mrs_buffer_;
 
     // transactions that are not completed, use map for convenience
     std::multimap<uint64_t, Transaction> pending_rd_q_;

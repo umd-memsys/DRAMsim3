@@ -27,12 +27,20 @@ Controller::Controller(int channel, const Config &config, const Timing &timing)
                           : RowBufPolicy::OPEN_PAGE),
       last_trans_clk_(0),
       write_draining_(0) {
+      #ifdef MY_DEBUG
+      std::cout<<"== "<<__func__<<" == ";
+      std::cout<<"constructor ("<<channel_id_<<")"<<std::endl;
+      #endif
+
     if (is_unified_queue_) {
         unified_queue_.reserve(config_.trans_queue_size);
     } else {
         read_queue_.reserve(config_.trans_queue_size);
         write_buffer_.reserve(config_.trans_queue_size);
     }
+
+    // Initialize MRS Dedicated Transaction Buffer 
+    mrs_buffer_.reserve(config_.trans_queue_size);
 
 #ifdef CMD_TRACE
     std::string trace_file_name = config_.output_prefix + "ch_" +
@@ -46,7 +54,16 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
     auto it = return_queue_.begin();
     while (it != return_queue_.end()) {
         if (clk >= it->complete_cycle) {
-            if (it->is_write) {
+            if (it->is_MRS) {
+                #ifdef MY_DEBUG
+                std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
+                        "["<<std::setw(10)<<clk_<<"] "<<            
+                        "MRS Transaction Done"<<std::endl;
+                #endif                  
+                // @TODO Add stat Info
+                simple_stats_.Increment("num_mrs_done");
+            }
+            else if (it->is_write) {
                 simple_stats_.Increment("num_writes_done");
             } else {
                 simple_stats_.Increment("num_reads_done");
@@ -82,6 +99,7 @@ void Controller::ClockTick() {
         cmd_issued = true;
 
         if (config_.enable_hbm_dual_cmd) {
+            // It require to check ..
             auto second_cmd = cmd_queue_.GetCommandToIssue();
             if (second_cmd.IsValid()) {
                 if (second_cmd.IsReadWrite() != cmd.IsReadWrite()) {
@@ -91,7 +109,7 @@ void Controller::ClockTick() {
             }
         }
     }
-
+    // The power consumption of MRS commands is not considered.
     // power updates pt 1
     for (int i = 0; i < config_.ranks; i++) {
         if (channel_state_.IsRankSelfRefreshing(i)) {
@@ -158,12 +176,39 @@ bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write) const {
     }
 }
 
+bool Controller::WillAcceptTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) const {
+    if(is_MRS) {
+        return mrs_buffer_.size() < mrs_buffer_.capacity();
+    }
+    else if (is_unified_queue_) {
+        return unified_queue_.size() < unified_queue_.capacity();
+    } else if (!is_write) {
+        return read_queue_.size() < read_queue_.capacity();
+    } else {
+        return write_buffer_.size() < write_buffer_.capacity();
+    }
+}
+
 bool Controller::AddTransaction(Transaction trans) {
     trans.added_cycle = clk_;
     simple_stats_.AddValue("interarrival_latency", clk_ - last_trans_clk_);
     last_trans_clk_ = clk_;
 
-    if (trans.is_write) {
+    if (trans.is_MRS) {
+        // Although the last MRS command has the same address as one of the previous MRS commands, 
+        // the MRS command must be issued
+        #ifdef MY_DEBUG
+        std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
+                   "["<<std::setw(10)<<clk_<<"] "<<
+                   "Add Transaction (MRS Command)"<<std::endl;
+        trans.display();
+        #endif            
+        mrs_buffer_.push_back(trans);
+        trans.complete_cycle = clk_ + 1;
+        return_queue_.push_back(trans);
+        return true;
+    }
+    else if (trans.is_write) {
         if (pending_wr_q_.count(trans.addr) == 0) {  // can not merge writes
             pending_wr_q_.insert(std::make_pair(trans.addr, trans));
             if (is_unified_queue_) {
@@ -204,24 +249,45 @@ void Controller::ScheduleTransaction() {
         }
     }
 
-    std::vector<Transaction> &queue =
-        is_unified_queue_ ? unified_queue_
-                          : write_draining_ > 0 ? write_buffer_ : read_queue_;
+    bool pop_MRS_Trsaction = mrs_buffer_.size() > 0;
+    std::vector<Transaction> &queue = 
+        pop_MRS_Trsaction    ? mrs_buffer_    :
+        is_unified_queue_    ? unified_queue_ : 
+        write_draining_ > 0  ? write_buffer_  : read_queue_;
+
     for (auto it = queue.begin(); it != queue.end(); it++) {
-        auto cmd = TransToCommand(*it);
-        if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
-                                         cmd.Bank())) {
-            if (!is_unified_queue_ && cmd.IsWrite()) {
-                // Enforce R->W dependency
-                if (pending_rd_q_.count(it->addr) > 0) {
-                    write_draining_ = 0;
-                    break;
-                }
-                write_draining_ -= 1;
+        auto cmd = TransToCommand(*it);        
+        if(pop_MRS_Trsaction) {
+            #ifdef MY_DEBUG
+            std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
+                   "["<<std::setw(10)<<clk_<<"] "<<            
+                   "Pop MRS Transaction ("<<cmd.IsMRSCMD()<<
+                   ")"<<std::endl;
+            // (*it).display();
+            #endif    
+            if(cmd_queue_.WillAcceptMRSCommand()) {
+                cmd_queue_.AddCommand(cmd);
+                queue.erase(it);
             }
-            cmd_queue_.AddCommand(cmd);
-            queue.erase(it);
+            // Since there is only one command queue for MRS, 
+            // the MRS buffer behaves as FIFO.
             break;
+        }
+        else {
+            if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
+                                             cmd.Bank())) {
+                if (!is_unified_queue_ && cmd.IsWrite()) {
+                    // Enforce R->W dependency
+                    if (pending_rd_q_.count(it->addr) > 0) {
+                        write_draining_ = 0;
+                        break;
+                    }
+                    write_draining_ -= 1;
+                }
+                cmd_queue_.AddCommand(cmd);
+                queue.erase(it);
+                break;
+            }
         }
     }
 }
@@ -259,6 +325,11 @@ void Controller::IssueCommand(const Command &cmd) {
         auto wr_lat = clk_ - it->second.added_cycle + config_.write_delay;
         simple_stats_.AddValue("write_latency", wr_lat);
         pending_wr_q_.erase(it);
+    } else if (cmd.IsMRSCMD()) {
+        // Each MRS Command must be issued so that the MRS command does not merge 
+        // with the previous MRS Command. There is no a pending queue for the MRS command.
+
+        // @TODO Add State..Value?
     }
     // must update stats before states (for row hits)
     UpdateCommandStats(cmd);
@@ -274,6 +345,8 @@ Command Controller::TransToCommand(const Transaction &trans) {
         cmd_type = trans.is_write ? CommandType::WRITE_PRECHARGE
                                   : CommandType::READ_PRECHARGE;
     }
+
+    cmd_type = trans.is_MRS ? CommandType::MRS : cmd_type;
     return Command(cmd_type, addr, trans.addr);
 }
 
@@ -339,6 +412,9 @@ void Controller::UpdateCommandStats(const Command &cmd) {
         case CommandType::SREF_EXIT:
             simple_stats_.Increment("num_srefx_cmds");
             break;
+        case CommandType::MRS:
+            simple_stats_.Increment("num_mrs_cmds");
+            break;            
         default:
             AbruptExit(__FILE__, __LINE__);
     }

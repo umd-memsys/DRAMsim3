@@ -18,11 +18,16 @@ void PrintStatText(std::ostream& where, std::string name, T value,
 
 SimpleStats::SimpleStats(const Config& config, int channel_id)
     : config_(config), channel_id_(channel_id) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif        
     // counter stats
     InitStat("num_cycles", "counter", "Number of DRAM cycles");
     InitStat("epoch_num", "counter", "Number of epochs");
     InitStat("num_reads_done", "counter", "Number of read requests issued");
     InitStat("num_writes_done", "counter", "Number of read requests issued");
+    InitStat("num_mrs_done", "counter", "Number of MRS requests issued");
     InitStat("num_write_buf_hits", "counter", "Number of write buffer hits");
     InitStat("num_read_row_hits", "counter", "Number of read row buffer hits");
     InitStat("num_write_row_hits", "counter",
@@ -36,6 +41,7 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
     InitStat("num_refb_cmds", "counter", "Number of REFb commands");
     InitStat("num_srefe_cmds", "counter", "Number of SREFE commands");
     InitStat("num_srefx_cmds", "counter", "Number of SREFX commands");
+    InitStat("num_mrs_cmds", "counter", "Number of MRS commands");
     InitStat("hbm_dual_cmds", "counter", "Number of cycles dual cmds issued");
 
     // double stats
