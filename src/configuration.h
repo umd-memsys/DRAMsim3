@@ -39,6 +39,7 @@ class Config {
     DRAMProtocol protocol;
     int channel_size;
     int channels;
+    int dimms;
     int ranks;
     int banks;
     int bankgroups;
@@ -161,6 +162,12 @@ class Config {
     bool IsHMC() const { return (protocol == DRAMProtocol::HMC); }
     // yzy: add another function
     bool IsDDR4() const { return (protocol == DRAMProtocol::DDR4); }
+
+    // LRDIMM 
+    bool is_LRDIMM;
+    int ranks_per_dimm;
+    int dqs_per_db;
+    int dbs_per_dimm;
 
     int ideal_memory_latency;
 

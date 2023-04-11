@@ -22,7 +22,9 @@ EXE_NAME=dramsim3main.out
 
 SRCS = src/bankstate.cc src/channel_state.cc src/command_queue.cc src/common.cc \
 		src/configuration.cc src/controller.cc src/dram_system.cc src/hmc.cc \
-		src/memory_system.cc src/refresh.cc src/simple_stats.cc src/timing.cc
+		src/memory_system.cc src/refresh.cc src/simple_stats.cc src/timing.cc \
+		src/bob.cc
+
 
 EXE_SRCS = src/cpu.cc src/main.cc
 

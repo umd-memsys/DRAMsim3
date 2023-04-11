@@ -18,6 +18,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing)
       channel_state_(config, timing),
       cmd_queue_(channel_id_, config, channel_state_, simple_stats_),
       refresh_(config, channel_state_),
+      BufferOnBoard_(config,simple_stats_),
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
 #endif  // THERMAL
@@ -82,6 +83,7 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
 void Controller::ClockTick() {
     // update refresh counter
     refresh_.ClockTick();
+    if(config_.is_LRDIMM) BufferOnBoard_.updateBoB();
 
     bool cmd_issued = false;
     Command cmd;
@@ -97,6 +99,7 @@ void Controller::ClockTick() {
     if (cmd.IsValid()) {
         IssueCommand(cmd);
         cmd_issued = true;
+        if(config_.is_LRDIMM) BufferOnBoard_.recDDRcmd(cmd);
 
         if (config_.enable_hbm_dual_cmd) {
             // It require to check ..
@@ -258,14 +261,13 @@ void Controller::ScheduleTransaction() {
     for (auto it = queue.begin(); it != queue.end(); it++) {
         auto cmd = TransToCommand(*it);        
         if(pop_MRS_Trsaction) {
-            #ifdef MY_DEBUG
-            std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
-                   "["<<std::setw(10)<<clk_<<"] "<<            
-                   "Pop MRS Transaction ("<<cmd.IsMRSCMD()<<
-                   ")"<<std::endl;
-            // (*it).display();
-            #endif    
             if(cmd_queue_.WillAcceptMRSCommand()) {
+                #ifdef MY_DEBUG
+                std::cout<<"["<<std::setw(10)<<std::dec<<clk_<<"] ";
+                std::cout<<"== "<<__func__<<" == ";
+                std::cout<<" Pop Transaction [";
+                std::cout<<cmd<<"]"<<std::endl; 
+                #endif                    
                 cmd_queue_.AddCommand(cmd);
                 queue.erase(it);
             }
@@ -285,6 +287,12 @@ void Controller::ScheduleTransaction() {
                     write_draining_ -= 1;
                 }
                 cmd_queue_.AddCommand(cmd);
+                #ifdef MY_DEBUG
+                std::cout<<"["<<std::setw(10)<<std::dec<<clk_<<"] ";
+                std::cout<<"== "<<__func__<<" == ";
+                std::cout<<" Pop Transaction [";
+                std::cout<<cmd<<"]"<<std::endl; 
+                #endif                    
                 queue.erase(it);
                 break;
             }

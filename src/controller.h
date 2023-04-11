@@ -10,6 +10,7 @@
 #include "common.h"
 #include "refresh.h"
 #include "simple_stats.h"
+#include "bob.h"
 
 #ifdef THERMAL
 #include "thermal.h"
@@ -47,6 +48,7 @@ class Controller {
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;
+    BufferOnBoard BufferOnBoard_;
 
 #ifdef THERMAL
     ThermalCalculator &thermal_calc_;
