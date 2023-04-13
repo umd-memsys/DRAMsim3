@@ -52,6 +52,7 @@ void RCD::recDDRcmd(const Command& cmd) {
     }
     else if(cmd.IsMRSCMD()) {
         // We Use Only 13 bits of Row Address 
+        // @TODO: Require Veification 
         int da = cmd.Row() & 0x1FFF;
         if((da >> 8) ==  0x4) { // Setting F0RC4x
             f0rc4x = da & 0xFF;

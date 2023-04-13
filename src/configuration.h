@@ -168,6 +168,8 @@ class Config {
     int ranks_per_dimm;
     int dqs_per_db;
     int dbs_per_dimm;
+    int tPDM_RD;
+    int tPDM_WR;
 
     int ideal_memory_latency;
 

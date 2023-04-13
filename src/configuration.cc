@@ -2,7 +2,7 @@
 #include <assert.h>
 
 #include <vector>
-
+#include <cmath>
 #ifdef THERMAL
 #include <math.h>
 #endif  // THERMAL
@@ -391,6 +391,9 @@ void Config::InitTimingParams() {
     tMRD = GetInteger("timing", "tMRD", 10); // DDR4-3200 
     tMOD = GetInteger("timing", "tMOD", 24); // DDR4-3200
 
+    tPDM_RD = GetInteger("timing", "tPDM_RD", static_cast<int>(ceil((1.37 + tCK/4)/tCK))); // 1.37 + tCK/4 
+    tPDM_WR = GetInteger("timing", "tPDM_WR", static_cast<int>(ceil((1.37 + tCK/4)/tCK))); // 1.37 + tCK/4 
+    
     ideal_memory_latency = GetInteger("timing", "ideal_memory_latency", 10);
 
     // calculated timing

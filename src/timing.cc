@@ -19,11 +19,16 @@ Timing::Timing(const Config& config)
     int read_to_read_o = config.burst_cycle + config.tRTRS;
     int read_to_write = config.RL + config.burst_cycle - config.WL +
                         config.tRTRS;
+    if(config.is_LRDIMM) read_to_write += (config.tRPRE + config.tPDM_RD);                
+                        
     int read_to_write_o = config.read_delay + config.burst_cycle +
                           config.tRTRS - config.write_delay;
+    if(config.is_LRDIMM) read_to_write_o += (config.tRPRE + config.tPDM_RD);   
+
     int read_to_precharge = config.AL + config.tRTP;
     int readp_to_act =
-        config.AL + config.burst_cycle + config.tRTP + config.tRP;
+        config.AL + config.burst_cycle + config.tRTP + config.tRP; // @TODO: check required
+                                                                   // Maybe.. remove burst_cycle?
 
     int write_to_read_l = config.write_delay + config.tWTR_L;
     int write_to_read_s = config.write_delay + config.tWTR_S;
