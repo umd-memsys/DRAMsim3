@@ -18,6 +18,7 @@ Controller::Controller(int channel, const Config &config, const Timing &timing)
       channel_state_(config, timing),
       cmd_queue_(channel_id_, config, channel_state_, simple_stats_),
       refresh_(config, channel_state_),
+      is_rw_dep_(false),
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
 #endif  // THERMAL
@@ -196,13 +197,14 @@ bool Controller::AddTransaction(Transaction trans) {
 
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
-    if (write_draining_ == 0 && !is_unified_queue_) {
+    if (is_rw_dep_ == false && write_draining_ == 0 && !is_unified_queue_) {
         // we basically have a upper and lower threshold for write buffer
         if ((write_buffer_.size() >= write_buffer_.capacity()) ||
             (write_buffer_.size() > 8 && cmd_queue_.QueueEmpty())) {
             write_draining_ = write_buffer_.size();
         }
     }
+    is_rw_dep_ = false;
 
     std::vector<Transaction> &queue =
         is_unified_queue_ ? unified_queue_
@@ -215,6 +217,7 @@ void Controller::ScheduleTransaction() {
                 // Enforce R->W dependency
                 if (pending_rd_q_.count(it->addr) > 0) {
                     write_draining_ = 0;
+                    is_rw_dep_ = true;
                     break;
                 }
                 write_draining_ -= 1;

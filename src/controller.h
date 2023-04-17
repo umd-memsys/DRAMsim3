@@ -46,6 +46,7 @@ class Controller {
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;
+    bool is_rw_dep_;
 
 #ifdef THERMAL
     ThermalCalculator &thermal_calc_;
