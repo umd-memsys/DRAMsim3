@@ -204,6 +204,7 @@ void Controller::ScheduleTransaction() {
             write_draining_ = write_buffer_.size();
         }
     }
+    is_rw_dep_ = false;
 
     std::vector<Transaction> &queue =
         is_unified_queue_ ? unified_queue_
@@ -221,7 +222,6 @@ void Controller::ScheduleTransaction() {
                 }
                 write_draining_ -= 1;
             }
-            is_rw_dep_ = false;
             cmd_queue_.AddCommand(cmd);
             queue.erase(it);
             break;
