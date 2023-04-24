@@ -109,8 +109,17 @@ void DB::updateDB() {
 }
 
 void DB::recBCOMcmd(const BCOMCmd& cmd) {
-
+    //TBD
 }
+
+void DB::recWRData(std::vector<uint16_t> &payload) {
+    //TBD
+}
+
+void DB::recRDData(std::vector<uint16_t> &payload) {
+    //TBD
+}
+
 LRDIMM::LRDIMM(uint32_t dimm_idx, const Config& config, 
                SimpleStats& simple_stats) 
     : dimm_idx_(dimm_idx),
@@ -118,7 +127,10 @@ LRDIMM::LRDIMM(uint32_t dimm_idx, const Config& config,
       simple_stats_(simple_stats),
       rcd_(dimm_idx,config_,simple_stats_),
       clk_(0) {       
-
+    
+      // Access Granularity = bus_width * BL
+      // Payload Size = Access Granularity / 64 bit    
+      payload_size = config_.bus_width * config_.BL / sizeof(uint64_t) / 8;
       for(int i=0;i<config_.dbs_per_dimm;i++) {
           dbs_.push_back(DB(dimm_idx,i,config_,simple_stats_));
       }      
@@ -130,23 +142,149 @@ void LRDIMM::recDDRcmd(const Command& cmd) {
     }    
     if(cmd.IsReadWrite() || cmd.IsMRSCMD()) {
         rcd_.recDDRcmd(cmd);
+        if(cmd.IsRead()) rd_addr_pipe.push_back(cmd.hex_addr);
     }
     else return;
 }
 
+void LRDIMM::enqueWRData(uint64_t hex_addr, std::vector<uint64_t> &payload) {
+    payload_q.push_back(make_pair(hex_addr,payload));
+}
+
+void LRDIMM::wrDataMem(uint64_t hex_addr, std::vector<uint64_t> &payload) {
+    if(data_memory.find(hex_addr) != data_memory.end()) {
+        auto pre_payload = data_memory[hex_addr];
+        assert(pre_payload.size() == payload.size());
+        for(uint32_t i=0;i<pre_payload.size();i++) 
+            pre_payload[i] = payload[i];
+    }
+    else {
+        std::vector<uint64_t> new_payload;
+        for(uint32_t i=0;i<payload.size();i++) new_payload.push_back(payload[i]);
+        data_memory.insert(std::make_pair(hex_addr,new_payload));
+    }
+}
+
+
+std::vector<uint64_t> LRDIMM::rdDataMem(u_int64_t hex_addr) {
+    if(data_memory.find(hex_addr) != data_memory.end()) {
+        return data_memory[hex_addr];
+    }
+    else {
+        // Read unwritten address
+        std::cerr<<"(WARNING) ACCESS UNWRITTEN MEMORY"<<std::endl;
+        std::vector<uint64_t> unwritten_memory;
+        for(uint32_t i=0;i<payload_size;i++) unwritten_memory.push_back(0xFFFFFFFFFFFFFFFF);        
+        return unwritten_memory;
+    }
+}
+
+bool LRDIMM::isRDResp() { 
+    if(rd_resp_timing_.size()!=0) 
+        if(rd_resp_timing_[0]==0) return true;
+
+    return false;
+}
+
+rd_resp_t LRDIMM::getRDResp() { 
+    if(isRDResp()) {
+        assert(rd_cmd_pipe.size() > 0);
+        auto it = rd_cmd_pipe.front();
+        rd_cmd_pipe.erase(rd_cmd_pipe.begin());
+        rd_resp_timing_.erase(rd_resp_timing_.begin());
+        return it;
+    }
+
+    return make_pair(Command(),null_payload);
+}
+
 void LRDIMM::updateLRDIMM() {
     ClockTick();
+
+    //update RD Resp Timing
+    for(u_int32_t i=0;i<rd_resp_timing_.size();i++)
+        rd_resp_timing_[i]--;
+
+    //update WR Data Timing and Flow Data Path from Host to DB/DRAM
+    for(u_int32_t i=0;i<wr_data_timing_.size();i++)
+        wr_data_timing_[i]--;
+
+    if(!wr_data_timing_.empty()) 
+        if(wr_data_timing_[0]==0) {                        
+            //pop the oldest data from the payload queue, split it, and insert it into each DB.
+            auto it = payload_q.front();  
+            //Write Data Memory                        
+            wrDataMem(it.first,it.second);
+
+            //Insert partial data into each DB
+            std::vector<uint16_t> payload_4b;
+            for(u_int32_t i=0;i<it.second.size();i++) {
+                for(u_int32_t j=0;j<4;j++)
+                    payload_4b.push_back(static_cast<uint16_t>(0xFFFF & (it.second[i]>>j*16)));
+            }
+            uint32_t each_db_payload_size = payload_size/config_.dbs_per_dimm/sizeof(uint16_t);
+            uint32_t offset = 0;
+            for(int i=0;i<config_.dbs_per_dimm;i++) {
+                std::vector<uint16_t> a;
+                for(u_int32_t j=0;j<each_db_payload_size;j++) a.push_back(payload_4b[(offset+j)]);                
+                dbs_[i].recWRData(a);            
+                offset+=each_db_payload_size;
+            }
+            // Delete the payload at the payload queue and also delete its timing value at the write timing queue
+            payload_q.erase(payload_q.begin());  
+            wr_data_timing_.erase(wr_data_timing_.begin());            
+        }
+
+    //update WR Data Timing and Flow Data Path from Host to DB/DRAM
+    for(u_int32_t i=0;i<rd_data_timing_.size();i++)
+        rd_data_timing_[i]--;
+
+    if(!rd_data_timing_.empty()) 
+        if(rd_data_timing_[0]==0) {            
+            auto it = rd_addr_pipe.front();
+            auto rd_data = rdDataMem(it);
+            //Insert partial data into each DB
+            std::vector<uint16_t> payload_4b;
+            for(u_int32_t i=0;i<rd_data.size();i++) {
+                for(u_int32_t j=0;j<4;j++)
+                    payload_4b.push_back(static_cast<uint16_t>(0xFFFF & (rd_data[i]>>j*16)));
+            }
+            uint32_t each_db_payload_size = payload_size/config_.dbs_per_dimm/sizeof(uint16_t);
+            uint32_t offset = 0;
+            for(int i=0;i<config_.dbs_per_dimm;i++) {
+                std::vector<uint16_t> a;
+                for(u_int32_t j=0;j<each_db_payload_size;j++) a.push_back(payload_4b[(offset+j)]);                
+                dbs_[i].recRDData(a);            
+                offset+=each_db_payload_size;
+            }
+            // Data from DB to MC
+            rd_resp_timing_.push_back(config_.tPDM_RD);                  
+            auto addr = config_.AddressMapping(it);
+            rd_cmd_pipe.push_back(std::make_pair(Command(CommandType::READ, addr, it),rd_data));
+            // Delete the address at the address queue and also delete its timing value at the write timing queue
+            rd_addr_pipe.erase(rd_addr_pipe.begin());
+            rd_data_timing_.erase(rd_data_timing_.begin());
+        }
     auto bcom_cmd = rcd_.updateRCD();
     if(bcom_cmd.IsValid()) {
-        #ifdef MY_DEBUG
-        std::cout<<"["<<std::setw(10)<<std::dec<<clk_<<"] ";
-        std::cout<<"== "<<__func__<<" == ";
-        std::cout<<"RCD Issue BCOM Commmand to DB"<<std::endl;
-        #endif            
+        if(bcom_cmd.IsWrite()) {                  
+            // DB receives Data after wr latency
+            int wr_latency = config_.WL + config_.AL + 
+                                config_.burst_cycle - config_.tPDM_WR - 5;
+            wr_data_timing_.push_back(wr_latency);
+        }
+        else if(bcom_cmd.IsRead()) {                    
+            int rd_latency = config_.RL + config_.AL + 
+                                static_cast<int>(ceil((double)config_.tRPRE/2)) +
+                                config_.burst_cycle - 5;
+            rd_data_timing_.push_back(rd_latency);
+        }
     }
     for(int i=0;i<config_.dbs_per_dimm;i++) {
         dbs_[i].updateDB();
-        if(bcom_cmd.IsValid()) dbs_[i].recBCOMcmd(bcom_cmd);
+        if(bcom_cmd.IsValid()) {
+            dbs_[i].recBCOMcmd(bcom_cmd);
+        } 
     }
 }
 
@@ -169,6 +307,24 @@ BufferOnBoard::BufferOnBoard(const Config& config,
     }
 }
 
+rd_resp_t BufferOnBoard::getRDResp() { 
+
+    for(int i=0;i<config_.dimms;i++) {
+        if(dimms_[i].isRDResp()) {
+            #ifdef MY_DEBUG
+            std::cout<<"["<<std::setw(10)<<std::dec<<clk_<<"] ";
+            std::cout<<"== "<<__func__<<" == ";
+            std::cout<<" RD Data Resp Done "<<i<<
+                       "-th DIMM "<<std::endl;               
+                       //<<std::endl;
+            #endif                  
+            return dimms_[i].getRDResp();
+        }
+    }
+
+    return dimms_[0].getRDResp(); // return null cmd & data
+}
+
 void BufferOnBoard::recDDRcmd(const Command& cmd) {
     if(!cmd.IsValid()) {
         return;
@@ -176,7 +332,7 @@ void BufferOnBoard::recDDRcmd(const Command& cmd) {
 
     /*
     Currently, DIMM is selected by Rank address 
-    DIMM IDX = Rank Address / Ranks per Rank 
+    DIMM IDX = Rank Address / Ranks per DIMM 
     */
     int dimm_idx = cmd.Rank() / config_.ranks_per_dimm;
     assert(dimm_idx>=0 && dimm_idx <config_.dimms);   
@@ -191,6 +347,10 @@ void BufferOnBoard::recDDRcmd(const Command& cmd) {
                //<<std::endl;
     #endif         
     dimms_[dimm_idx].recDDRcmd(cmd);
+}
+
+void BufferOnBoard::enqueWRData(int rank, uint64_t hex_addr, std::vector<uint64_t> &payload) {
+    dimms_[rank / config_.ranks_per_dimm].enqueWRData(hex_addr, payload);
 }
 
 void BufferOnBoard::updateBoB() {

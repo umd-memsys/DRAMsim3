@@ -70,6 +70,7 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
                 simple_stats_.Increment("num_reads_done");
                 simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
             }
+            if(config_.is_LRDIMM) assert(it->payload.size()!=0);            
             auto pair = std::make_pair(it->addr, it->is_write);
             it = return_queue_.erase(it);
             return pair;
@@ -83,7 +84,23 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
 void Controller::ClockTick() {
     // update refresh counter
     refresh_.ClockTick();
-    if(config_.is_LRDIMM) BufferOnBoard_.updateBoB();
+    if(config_.is_LRDIMM) { 
+        BufferOnBoard_.updateBoB();
+        auto resp = BufferOnBoard_.getRDResp();
+        if(resp.first.IsValid()) {
+            assert(resp.first.IsRead());
+            bool isResp = false;
+            for(uint32_t i=0;i<return_queue_.size();i++) {
+                if(return_queue_[i].addr == resp.first.hex_addr) {
+                    isResp = true;
+                    return_queue_[i].payload.resize(resp.second.size());
+                    for(uint32_t j=0;j<resp.second.size();j++)
+                        return_queue_[i].payload[j] = resp.second[j];
+                }  
+            }
+            assert(isResp);
+        }
+    }
 
     bool cmd_issued = false;
     Command cmd;
@@ -220,6 +237,11 @@ bool Controller::AddTransaction(Transaction trans) {
                 write_buffer_.push_back(trans);
             }
         }
+        else {
+            // update the pending write data
+            auto it = pending_wr_q_.find(trans.addr);
+            it->second.updatePayload(trans.payload);
+        }
         trans.complete_cycle = clk_ + 1;
         return_queue_.push_back(trans);
         return true;
@@ -227,6 +249,9 @@ bool Controller::AddTransaction(Transaction trans) {
         // if in write buffer, use the write buffer value
         if (pending_wr_q_.count(trans.addr) > 0) {
             trans.complete_cycle = clk_ + 1;
+            auto pending_wr = pending_wr_q_.find(trans.addr);
+            assert(pending_wr_q_.count(trans.addr) == 1);
+            trans.updatePayload(pending_wr->second.payload); // Update Payload
             return_queue_.push_back(trans);
             return true;
         }
@@ -319,6 +344,7 @@ void Controller::IssueCommand(const Command &cmd) {
         while (num_reads > 0) {
             auto it = pending_rd_q_.find(cmd.hex_addr);
             it->second.complete_cycle = clk_ + config_.read_delay;
+            if(config_.is_LRDIMM) it->second.complete_cycle+=(config_.tPDM_RD+config_.tRPRE);
             return_queue_.push_back(it->second);
             pending_rd_q_.erase(it);
             num_reads -= 1;
@@ -330,6 +356,7 @@ void Controller::IssueCommand(const Command &cmd) {
             std::cerr << cmd.hex_addr << " not in write queue!" << std::endl;
             exit(1);
         }
+        if(config_.is_LRDIMM) BufferOnBoard_.enqueWRData(cmd.Rank(), cmd.hex_addr, it->second.payload);
         auto wr_lat = clk_ - it->second.added_cycle + config_.write_delay;
         simple_stats_.AddValue("write_latency", wr_lat);
         pending_wr_q_.erase(it);

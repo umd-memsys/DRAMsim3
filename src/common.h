@@ -141,23 +141,50 @@ struct Transaction {
           is_MRS(is_mrs) {
             assert(!(!is_write && is_mrs)); // MRS Command is Write-Type 
           }          
+    Transaction(uint64_t addr, bool is_write, bool is_mrs, std::vector<u_int64_t> &payload_)
+        : addr(addr),
+          added_cycle(0),
+          complete_cycle(0),
+          is_write(is_write),
+          is_MRS(is_mrs) {
+            assert(!(!is_write && is_mrs)); // MRS Command is Write-Type 
+            // payload Value Copy 
+            assert(payload.size() == 0); // If size of payload must be zero when generating object, assert
+            for(uint32_t i=0;i<payload_.size();i++) payload.push_back(payload_[i]);
+          }                
     Transaction(const Transaction& tran)
         : addr(tran.addr),
           added_cycle(tran.added_cycle),
           complete_cycle(tran.complete_cycle),
           is_write(tran.is_write),
-          is_MRS(tran.is_MRS) {}
+          is_MRS(tran.is_MRS) {
+            // payload Value Copy 
+            for(uint32_t i=0;i<tran.payload.size();i++) {
+                if(payload.size() < tran.payload.size()) payload.push_back(tran.payload[i]);
+                else payload[i] = tran.payload[i];
+            }
+          }
     uint64_t addr;
     uint64_t added_cycle;
     uint64_t complete_cycle;
+    std::vector<uint64_t> payload;
     bool is_write;
     bool is_MRS; // Temporaily add an MRS Flag @TODO it must be removed later
+    void updatePayload(std::vector<u_int64_t> &payload_) {
+        for(uint32_t i=0;i<payload_.size();i++) {
+            if(payload.size() < payload_.size()) payload.push_back(payload_[i]);
+            else payload[i] = payload_[i];
+        }        
+    }
     void display() {
         std::cout<<"Transaction:Addr["<<std::setw(10)<<std::hex<<"0x"<<addr<<
                    "]:added_cycle["<<std::setw(10)<<std::dec<<added_cycle<<
                    "]:is_write["<<std::setw(4)<<std::boolalpha<<is_write<<
                    "]:is_MRS["<<std::setw(4)<<std::boolalpha<<is_MRS<<
                    "]"<<std::endl;
+                    std::cout<<"-> D:";
+                    for(auto value : payload) std::cout<<"["<<std::setw(16)<<std::hex<<value<<"]";
+                    std::cout<<std::endl;                   
     }
     friend std::ostream& operator<<(std::ostream& os, const Transaction& trans);
     friend std::istream& operator>>(std::istream& is, Transaction& trans);

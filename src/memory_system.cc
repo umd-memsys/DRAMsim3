@@ -62,6 +62,10 @@ bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS)
     return dram_system_->AddTransaction(hex_addr, is_write, is_MRS);
 }
 
+bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) {
+    return dram_system_->AddTransaction(hex_addr, is_write, is_MRS, payload);
+}
+
 void MemorySystem::PrintStats() const { dram_system_->PrintStats(); }
 
 void MemorySystem::ResetStats() { dram_system_->ResetStats(); }

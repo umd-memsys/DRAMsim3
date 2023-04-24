@@ -117,6 +117,7 @@ class HMCMemorySystem : public BaseDRAMSystem {
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const override;
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) const override;
     bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) override;
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) override;
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
 

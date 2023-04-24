@@ -356,6 +356,10 @@ bool HMCMemorySystem::WillAcceptTransaction(uint64_t hex_addr,
     return insertable;
 }
 
+bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) {
+    // WE DO NOT USE HMC MODEL 
+    return false;
+}
 bool HMCMemorySystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) {
     // WE DO NOT USE HMC MODEL 
     // to be compatible with other protocol we have this interface
