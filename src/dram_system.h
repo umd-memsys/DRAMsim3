@@ -36,6 +36,7 @@ class BaseDRAMSystem {
     virtual bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) = 0;
     virtual void ClockTick() = 0;
     int GetChannel(uint64_t hex_addr) const;
+    virtual std::vector<uint64_t> GetRespData(uint64_t hex_addr) = 0;
 
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
     static int total_channels_;
@@ -72,6 +73,7 @@ class JedecDRAMSystem : public BaseDRAMSystem {
     bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) override;
     bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) override;
     void ClockTick() override;
+    std::vector<uint64_t> GetRespData(uint64_t hex_addr) override;
 };
 
 // Model a memorysystem with an infinite bandwidth and a fixed latency (possibly
@@ -95,6 +97,7 @@ class IdealDRAMSystem : public BaseDRAMSystem {
     bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) override;
     bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) override;
     void ClockTick() override;
+    std::vector<uint64_t> GetRespData(uint64_t hex_addr) override;
 
    private:
     int latency_;

@@ -151,7 +151,7 @@ void LRDIMM::enqueWRData(uint64_t hex_addr, std::vector<uint64_t> &payload) {
     payload_q.push_back(make_pair(hex_addr,payload));
 }
 
-void LRDIMM::wrDataMem(uint64_t hex_addr, std::vector<uint64_t> &payload) {
+void LRDIMM::wrDataMem(uint64_t hex_addr, std::vector<uint64_t> &payload) {  
     if(data_memory.find(hex_addr) != data_memory.end()) {
         auto pre_payload = data_memory[hex_addr];
         assert(pre_payload.size() == payload.size());
@@ -167,7 +167,7 @@ void LRDIMM::wrDataMem(uint64_t hex_addr, std::vector<uint64_t> &payload) {
 
 
 std::vector<uint64_t> LRDIMM::rdDataMem(u_int64_t hex_addr) {
-    if(data_memory.find(hex_addr) != data_memory.end()) {
+    if(data_memory.find(hex_addr) != data_memory.end()) { 
         return data_memory[hex_addr];
     }
     else {
@@ -299,7 +299,6 @@ BufferOnBoard::BufferOnBoard(const Config& config,
     #endif           
 
     if(config_.is_LRDIMM) {
-        std::cout<<"USE LRDIMM !!"<<std::endl;
         dimms_.reserve(config_.dimms);
         for(int i=0;i<config_.dimms;i++) {
             dimms_.push_back(LRDIMM(i,config_,simple_stats_));

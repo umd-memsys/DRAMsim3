@@ -38,6 +38,7 @@ class Controller {
     void PrintFinalStats();
     void ResetStats() { simple_stats_.Reset(); }
     std::pair<uint64_t, int> ReturnDoneTrans(uint64_t clock);
+    std::vector<uint64_t> GetRespData();
 
     int channel_id_;
 
@@ -49,6 +50,7 @@ class Controller {
     CommandQueue cmd_queue_;
     Refresh refresh_;
     BufferOnBoard BufferOnBoard_;
+
 
 #ifdef THERMAL
     ThermalCalculator &thermal_calc_;
@@ -70,6 +72,9 @@ class Controller {
 
     // row buffer policy
     RowBufPolicy row_buf_policy_;
+
+    //RD Resp Data Buffer 
+    std::vector<std::vector<uint64_t>> resp_data_;
 
 #ifdef CMD_TRACE
     std::ofstream cmd_trace_;

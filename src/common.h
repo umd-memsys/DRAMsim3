@@ -126,13 +126,13 @@ struct Command {
     @TODO: It requires a method to receive MRS commands via transaction.
 */
 struct Transaction {
-    Transaction() {}
+    Transaction() {is_valid=false;}
     Transaction(uint64_t addr, bool is_write)
         : addr(addr),
           added_cycle(0),
           complete_cycle(0),
           is_write(is_write),
-          is_MRS(false) {}
+          is_MRS(false) {is_valid=true;}
     Transaction(uint64_t addr, bool is_write, bool is_mrs)
         : addr(addr),
           added_cycle(0),
@@ -140,6 +140,7 @@ struct Transaction {
           is_write(is_write),
           is_MRS(is_mrs) {
             assert(!(!is_write && is_mrs)); // MRS Command is Write-Type 
+            is_valid=true;
           }          
     Transaction(uint64_t addr, bool is_write, bool is_mrs, std::vector<u_int64_t> &payload_)
         : addr(addr),
@@ -151,6 +152,7 @@ struct Transaction {
             // payload Value Copy 
             assert(payload.size() == 0); // If size of payload must be zero when generating object, assert
             for(uint32_t i=0;i<payload_.size();i++) payload.push_back(payload_[i]);
+            is_valid=true;
           }                
     Transaction(const Transaction& tran)
         : addr(tran.addr),
@@ -163,6 +165,7 @@ struct Transaction {
                 if(payload.size() < tran.payload.size()) payload.push_back(tran.payload[i]);
                 else payload[i] = tran.payload[i];
             }
+            is_valid=true;
           }
     uint64_t addr;
     uint64_t added_cycle;
@@ -170,6 +173,7 @@ struct Transaction {
     std::vector<uint64_t> payload;
     bool is_write;
     bool is_MRS; // Temporaily add an MRS Flag @TODO it must be removed later
+    bool is_valid;
     void updatePayload(std::vector<u_int64_t> &payload_) {
         for(uint32_t i=0;i<payload_.size();i++) {
             if(payload.size() < payload_.size()) payload.push_back(payload_[i]);

@@ -639,6 +639,12 @@ void HMCMemorySystem::InsertReqToDRAM(HMCRequest *req) {
     return;
 }
 
+
+std::vector<uint64_t> HMCMemorySystem::GetRespData(uint64_t hex_addr) {
+    std::vector<uint64_t> a;
+    return a;
+}
+
 void HMCMemorySystem::VaultCallback(uint64_t req_id) {
     // we will use hex addr as the req_id and use a multimap to lookup the
     // requests the vaults cannot directly talk to the CPU so this callback will

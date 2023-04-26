@@ -202,6 +202,11 @@ void JedecDRAMSystem::ClockTick() {
     return;
 }
 
+std::vector<uint64_t> JedecDRAMSystem::GetRespData(uint64_t hex_addr) {
+    int channel = GetChannel(hex_addr);
+    return ctrls_[channel]->GetRespData();
+}
+
 IdealDRAMSystem::IdealDRAMSystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
@@ -244,6 +249,13 @@ void IdealDRAMSystem::ClockTick() {
 
     clk_++;
     return;
+}
+
+std::vector<uint64_t> IdealDRAMSystem::GetRespData(uint64_t hex_addr) {
+    int channel = GetChannel(hex_addr);
+    //TBD
+    std::vector<uint64_t> payload;
+    return payload;
 }
 
 }  // namespace dramsim3

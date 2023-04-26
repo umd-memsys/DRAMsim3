@@ -120,7 +120,7 @@ class HMCMemorySystem : public BaseDRAMSystem {
     bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) override;
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
-
+    std::vector<uint64_t> GetRespData(uint64_t hex_addr) override;
    private:
     uint64_t logic_clk_, ps_per_dram_, ps_per_logic_, logic_ps_, dram_ps_;
 

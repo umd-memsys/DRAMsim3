@@ -70,7 +70,10 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
                 simple_stats_.Increment("num_reads_done");
                 simple_stats_.AddValue("read_latency", clk_ - it->added_cycle);
             }
-            if(config_.is_LRDIMM) assert(it->payload.size()!=0);            
+            if(config_.is_LRDIMM) {
+                assert(it->payload.size()!=0);    
+                if(!it->is_write) resp_data_.push_back(it->payload);
+            }
             auto pair = std::make_pair(it->addr, it->is_write);
             it = return_queue_.erase(it);
             return pair;
@@ -79,6 +82,13 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
         }
     }
     return std::make_pair(-1, -1);
+}
+
+std::vector<uint64_t> Controller::GetRespData() {
+    if(resp_data_.size() == 0) assert(false);
+    auto it = resp_data_.front();
+    resp_data_.erase(resp_data_.begin());
+    return it;
 }
 
 void Controller::ClockTick() {
@@ -221,7 +231,6 @@ bool Controller::AddTransaction(Transaction trans) {
         std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
                    "["<<std::setw(10)<<clk_<<"] "<<
                    "Add Transaction (MRS Command)"<<std::endl;
-        trans.display();
         #endif            
         mrs_buffer_.push_back(trans);
         trans.complete_cycle = clk_ + 1;
@@ -454,5 +463,6 @@ void Controller::UpdateCommandStats(const Command &cmd) {
             AbruptExit(__FILE__, __LINE__);
     }
 }
+
 
 }  // namespace dramsim3

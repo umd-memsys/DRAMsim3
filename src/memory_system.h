@@ -32,6 +32,8 @@ class MemorySystem {
     bool AddTransaction(uint64_t hex_addr, bool is_write);
     bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS);
     bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload);
+    std::vector<uint64_t> GetRespData(uint64_t hex_addr);
+    bool isLRDIMM();
 
    private:
     // These have to be pointers because Gem5 will try to push this object

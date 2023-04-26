@@ -70,11 +70,19 @@ void MemorySystem::PrintStats() const { dram_system_->PrintStats(); }
 
 void MemorySystem::ResetStats() { dram_system_->ResetStats(); }
 
+bool MemorySystem::isLRDIMM() {
+    return config_->is_LRDIMM;
+}
 MemorySystem* GetMemorySystem(const std::string &config_file, const std::string &output_dir,
                  std::function<void(uint64_t)> read_callback,
                  std::function<void(uint64_t)> write_callback) {
     return new MemorySystem(config_file, output_dir, read_callback, write_callback);
 }
+
+std::vector<uint64_t> MemorySystem::GetRespData(uint64_t hex_addr) {
+     return dram_system_->GetRespData(hex_addr); 
+}
+
 }  // namespace dramsim3
 
 // This function can be used by autoconf AC_CHECK_LIB since
