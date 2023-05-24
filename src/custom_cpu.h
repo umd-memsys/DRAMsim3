@@ -49,6 +49,9 @@ class CUSTOM_CPU {
     void StoreWRTrans(uint64_t hex_addr, std::vector<uint64_t> &payload);
     bool CheckRD(uint64_t hex_addr, std::vector<uint64_t> &payload);
     void printResult();
+    std::vector<uint64_t> DataReshape(std::vector<uint64_t> &payload);
+
+
 
     std::vector<uint64_t> access_history;
     std::vector<Transaction> trans_vec;

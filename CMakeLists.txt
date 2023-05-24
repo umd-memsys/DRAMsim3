@@ -40,6 +40,7 @@ add_library(dramsim3 SHARED
     src/timing.cc
     src/memory_system.cc
     src/bob.cc
+    src/custom_cpu.cc
 )
 
 if (THERMAL)

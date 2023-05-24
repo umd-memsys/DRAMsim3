@@ -34,7 +34,9 @@ enum class RefreshPolicy {
 class Config {
    public:
     Config(std::string config_file, std::string out_dir);
-    Address AddressMapping(uint64_t hex_addr) const;
+    Address AddressMapping(uint64_t hex_addr) const;            
+    uint64_t  MergedAddress(uint64_t channel, uint64_t rank, uint64_t bg, uint64_t ba, uint64_t ro, uint64_t co) const;           
+            
     // DRAM physical structure
     DRAMProtocol protocol;
     int channel_size;
