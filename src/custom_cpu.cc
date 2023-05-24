@@ -187,7 +187,6 @@ std::vector<uint64_t> CUSTOM_CPU::DataReshape(std::vector<uint64_t> &payload){
         {0, 3}, {1, 1}, {2, 0}, {3, 2}, {4, 7}, {5, 5}, {6, 6}, {7, 4}
     };
 
-
     std::vector<uint64_t> payload_Reshape;
     payload_Reshape.resize(8);
 
@@ -196,12 +195,7 @@ std::vector<uint64_t> CUSTOM_CPU::DataReshape(std::vector<uint64_t> &payload){
     int vector_index;
     uint64_t combinedValue = 0;
 
-
-
-    for(auto& a : payload) {
-        
-        
-  
+    for(auto& a : payload) {  
          for(int x = 0; x < 8; x++) {
             if(count == 0){
                 if(DqMapping_U1.find(x) != DqMapping_U1.end()) vector_index = DqMapping_U1.find(x) -> second;
@@ -218,26 +212,17 @@ std::vector<uint64_t> CUSTOM_CPU::DataReshape(std::vector<uint64_t> &payload){
             else {
                 if(DqMapping_U10.find(x) != DqMapping_U10.end()) vector_index = DqMapping_U10.find(x) -> second;
             }
-               
-
-                RemappingValues[vector_index] = (a >> (8*x)) & 0xFF;
-                
-            
+            RemappingValues[vector_index] = (a >> (8*x)) & 0xFF;                            
          }
         
-
-        for (int i = 7; i >= 0; i--) {
-            
+        for (int i = 7; i >= 0; i--) {            
             combinedValue |= static_cast<int64_t>(RemappingValues[i]) << (8*i);
-        }
-        
+        }        
         payload_Reshape[count] = combinedValue;
         count++;
-
     }
     
     return payload_Reshape;
-
 }
 
 

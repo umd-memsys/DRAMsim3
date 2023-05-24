@@ -1,4 +1,7 @@
 #include "cpu.h"
+#include <vector>
+#include <cstdlib> 
+#include <ctime>   
 
 namespace dramsim3 {
 
