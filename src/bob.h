@@ -81,7 +81,8 @@ class LRDIMM {
         rd_resp_t getRDResp();                                                               // Host Get Read Resp with Data        
         bool isRDResp();                                                                     // is Resp Data              
         std::vector<uint64_t> rdDataMem(u_int64_t hex_addr);                                 // Read Data into data memory
-
+        uint64_t data_reshape_wr(int rank_idx, uint64_t db_idx, uint64_t wr_data);
+        uint64_t data_reshape_rd(int rank_idx, uint64_t db_idx, uint64_t rd_data);
     private:
         uint32_t dimm_idx_;
 
@@ -104,6 +105,42 @@ class LRDIMM {
         std::vector<u_int64_t> rd_addr_pipe;       
         std::vector<rd_resp_t> rd_cmd_pipe;
         std::vector<uint64_t> null_payload;
+
+        static constexpr uint64_t wr_dq_map_per_db[2][8][8] = {
+        {{4,6,5,7,3,1,2,0},  // DB0 for Rank0, 2 ( 4, 6, 5, 7, 3, 1, 2, 0)
+         {5,7,4,6,1,3,0,2},  // DB1 for Rank0, 2 (13,15,12,14, 9,11, 8,10)  
+         {4,7,5,6,2,0,3,1},  // DB2 for Rank0, 2 (20,23,21,22,18,16,19,17)
+         {4,6,5,7,2,0,3,1},  // DB3 for Rank0, 2 (28,30,29,31,26,24,27,25)
+         {5,7,4,6,1,3,0,2},  // DB4 for Rank0, 2 (37,39,36,38,33,35,32,34)
+         {5,7,4,6,3,1,2,0},  // DB5 for Rank0, 2 (45,47,44,46,43,41,42,40)
+         {7,5,6,4,1,3,0,2},  // DB6 for Rank0, 2 (55,53,54,52,49,51,48,50)
+         {7,5,6,4,0,3,1,2}}, // DB7 for Rank0, 2 (63,61,62,60,56,59,57,58)
+        {{6,4,7,5,1,3,0,2},  // DB0 for Rank1, 3 ( 6, 4, 7, 5, 1, 3, 0, 2)
+         {7,5,6,4,3,1,2,0},  // DB1 for Rank1, 3 (15,13,14,12,11, 9,10, 8) 
+         {7,4,6,5,0,2,1,3},  // DB2 for Rank1, 3 (23,20,22,21,16,18,17,19)
+         {6,4,7,5,0,2,1,3},  // DB3 for Rank1, 3 (30,28,31,29,24,26,25,27)
+         {7,5,6,4,3,1,2,0},  // DB4 for Rank1, 3 (39,37,38,36,35,33,34,32)
+         {7,5,6,4,1,3,0,2},  // DB5 for Rank1, 3 (47,45,46,44,41,43,40,42)
+         {5,7,4,6,3,1,2,0},  // DB6 for Rank1, 3 (53,55,52,54,51,49,50,48)
+         {5,7,4,6,3,0,2,1}}};// DB7 for Rank1, 3 (61,63,60,62,59,56,58,57)
+
+        static constexpr uint64_t rd_dq_map_per_db[2][8][8] = {
+        {{4,6,5,7,3,1,2,0},  // DB0 for Rank0, 2 
+         {6,4,7,5,2,0,3,1},  // DB1 for Rank0, 2   
+         {6,4,5,7,1,3,0,2},  // DB2 for Rank0, 2 
+         {4,6,5,7,1,3,0,2},  // DB3 for Rank0, 2 
+         {6,4,7,5,2,0,3,1},  // DB4 for Rank0, 2 
+         {6,4,7,5,3,1,2,0},  // DB5 for Rank0, 2 
+         {7,5,6,4,2,0,3,1},  // DB6 for Rank0, 2 
+         {7,5,6,4,2,0,1,3}}, // DB7 for Rank0, 2 
+        {{5,7,4,6,2,0,3,1},  // DB0 for Rank1, 3 
+         {7,5,6,4,3,1,2,0},  // DB1 for Rank1, 3  
+         {7,5,4,6,0,2,1,3},  // DB2 for Rank1, 3 
+         {5,7,4,6,0,2,1,3},  // DB3 for Rank1, 3 
+         {7,5,6,4,3,1,2,0},  // DB4 for Rank1, 3 
+         {7,5,6,4,2,0,3,1},  // DB5 for Rank1, 3 
+         {6,4,7,5,3,1,2,0},  // DB6 for Rank1, 3 
+         {6,4,7,5,3,1,0,2}}};// DB7 for Rank1, 3          
 };
 
 

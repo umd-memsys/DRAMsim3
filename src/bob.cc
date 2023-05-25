@@ -3,6 +3,9 @@
 
 namespace dramsim3 {
 
+constexpr uint64_t LRDIMM::wr_dq_map_per_db[2][8][8];
+constexpr uint64_t LRDIMM::rd_dq_map_per_db[2][8][8];
+
 RCD::RCD(uint32_t dimm_idx, const Config& config, 
          SimpleStats& simple_stats) 
     : dimm_idx_(dimm_idx),
@@ -152,15 +155,17 @@ void LRDIMM::enqueWRData(uint64_t hex_addr, std::vector<uint64_t> &payload) {
 }
 
 void LRDIMM::wrDataMem(uint64_t hex_addr, std::vector<uint64_t> &payload) {  
+    // Currently, data payload size is fixed to 8 (hardcode)
+    auto addr = config_.AddressMapping(hex_addr);
     if(data_memory.find(hex_addr) != data_memory.end()) {
         auto pre_payload = data_memory[hex_addr];
         assert(pre_payload.size() == payload.size());
         for(uint32_t i=0;i<pre_payload.size();i++) 
-            pre_payload[i] = payload[i];
+            pre_payload[i] = data_reshape_wr(addr.rank, i, payload[i]);
     }
     else {
         std::vector<uint64_t> new_payload;
-        for(uint32_t i=0;i<payload.size();i++) new_payload.push_back(payload[i]);
+        for(uint32_t i=0;i<payload.size();i++) new_payload.push_back(data_reshape_wr(addr.rank, i, payload[i]));
         data_memory.insert(std::make_pair(hex_addr,new_payload));
     }
 }
@@ -168,7 +173,11 @@ void LRDIMM::wrDataMem(uint64_t hex_addr, std::vector<uint64_t> &payload) {
 
 std::vector<uint64_t> LRDIMM::rdDataMem(u_int64_t hex_addr) {
     if(data_memory.find(hex_addr) != data_memory.end()) { 
-        return data_memory[hex_addr];
+        auto addr = config_.AddressMapping(hex_addr);
+        std::vector<uint64_t> new_payload;
+        auto written_payload = data_memory[hex_addr];
+        for(uint32_t i=0;i<written_payload.size();i++) new_payload.push_back(data_reshape_rd(addr.rank, i, written_payload[i]));
+        return new_payload;
     }
     else {
         // Read unwritten address
@@ -177,6 +186,34 @@ std::vector<uint64_t> LRDIMM::rdDataMem(u_int64_t hex_addr) {
         for(uint32_t i=0;i<payload_size;i++) unwritten_memory.push_back(0xFFFFFFFFFFFFFFFF);        
         return unwritten_memory;
     }
+}
+
+uint64_t LRDIMM::data_reshape_wr(int rank_idx, uint64_t db_idx, uint64_t wr_data) {
+    // Currently, data payload size is fixed to 8 (hardcode)
+    assert(db_idx<8);
+    uint64_t reshaped_data = 0;
+    uint64_t one_byte      = 0;
+    for(uint32_t burst_idx=0;burst_idx<(uint32_t)config_.BL;burst_idx++) {
+        one_byte = (wr_data >> (8*burst_idx)) & 0xFF; 
+        for(uint32_t bit_idx=0;bit_idx<8;bit_idx++) 
+            reshaped_data|= (((one_byte >> wr_dq_map_per_db[rank_idx%2][db_idx][7-bit_idx]) & 
+                            0x1)) << (8*burst_idx+bit_idx);
+    }    
+    return reshaped_data;
+}
+
+uint64_t LRDIMM::data_reshape_rd(int rank_idx, uint64_t db_idx, uint64_t wr_data) {
+    // Currently, data payload size is fixed to 8 (hardcode)
+    assert(db_idx<8);
+    uint64_t reshaped_data = 0;
+    uint64_t one_byte      = 0;    
+    for(uint32_t burst_idx=0;burst_idx<(uint32_t)config_.BL;burst_idx++) {
+        one_byte = (wr_data >> (8*burst_idx)) & 0xFF; 
+        for(uint32_t bit_idx=0;bit_idx<8;bit_idx++) 
+            reshaped_data|= (((one_byte >> rd_dq_map_per_db[rank_idx%2][db_idx][7-bit_idx]) & 
+                            0x1)) << (8*burst_idx+bit_idx);
+    }
+    return reshaped_data;
 }
 
 bool LRDIMM::isRDResp() { 
