@@ -11,7 +11,7 @@
 
 namespace dramsim3 {
 
-class CUSTOM_CPU {
+class CUSTOM_CPU { 
    public:
     CUSTOM_CPU(const std::string& config_file, const std::string& output_dir,
                const std::string& gen_type)
@@ -49,15 +49,16 @@ class CUSTOM_CPU {
     void StoreWRTrans(uint64_t hex_addr, std::vector<uint64_t> &payload);
     bool CheckRD(uint64_t hex_addr, std::vector<uint64_t> &payload);
     void printResult();
-    std::vector<uint64_t> DataReshape(std::vector<uint64_t> &payload);
 
-
+    //DQ mapping function
+    std::vector<uint64_t> wr_DQMapping(std::vector<uint64_t> &payload, uint64_t rank_address);
+    std::vector<uint64_t> rd_DQMapping(std::vector<uint64_t> &payload, uint64_t rank_address);
 
     std::vector<uint64_t> access_history;
     std::vector<Transaction> trans_vec;
    private:
     // To check error
-    std::unordered_map<uint64_t,std::vector<uint64_t>> wr_req;
+    std::unordered_map<uint64_t,std::vector<uint64_t>> wr_req;         
 
    protected:
     MemorySystem memory_system_;
@@ -77,6 +78,7 @@ class CUSTOM_CPU {
     uint64_t rd_resp_cnt;
     uint64_t rd_pass_cnt;
     uint64_t rd_fail_cnt;
+ 
 };
 
 

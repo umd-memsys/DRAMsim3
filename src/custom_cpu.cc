@@ -3,6 +3,7 @@
 #include <cstdlib> 
 #include <ctime>   
 
+
 // #define _PRINT_TRANS
 #define NUM_TRANSACTION 1024
 namespace dramsim3 {
@@ -169,61 +170,51 @@ bool CUSTOM_CPU::CheckRD(uint64_t hex_addr, std::vector<uint64_t> &payload) {
 }
 
 
-std::vector<uint64_t> CUSTOM_CPU::DataReshape(std::vector<uint64_t> &payload){
+std::vector<uint64_t> wr_DQMapping(std::vector<uint64_t> &payload, uint64_t rank_address){
 
-    std::unordered_map<int, int> DqMapping_U1 = {
-        {0, 1}, {1, 3}, {2, 2}, {3, 0}, {4, 5}, {5, 7}, {6, 6}, {7, 4}
-    };
-    std::unordered_map<int, int> DqMapping_U2_U3 = {
-        {0, 3}, {1, 1}, {2, 0}, {3, 2}, {4, 7}, {5, 5}, {6, 4}, {7, 6}
-    };
-    std::unordered_map<int, int> DqMapping_U4_U8 = {
-        {0, 1}, {1, 3}, {2, 0}, {3, 2}, {4, 5}, {5, 7}, {6, 6}, {7, 4}
-    };
-    std::unordered_map<int, int> DqMapping_U7_U9 = {
-        {0, 1}, {1, 3}, {2, 0}, {3, 2}, {4, 7}, {5, 5}, {6, 4}, {7, 6}
-    };
-    std::unordered_map<int, int> DqMapping_U10 = {
-        {0, 3}, {1, 1}, {2, 0}, {3, 2}, {4, 7}, {5, 5}, {6, 6}, {7, 4}
-    };
+    uint8_t DataRemapping;
+    uint64_t ResultData;
+    uint8_t Burst_num = 0;
+    uint8_t OneByte = 0; //64bit -> 8bit    
+    std::vector<uint64_t> MergedData;
+    MergedData.resize(8);
+    for(auto &a : payload){
+        ResultData = 0;
+        for(int DB_num = 0; DB_num < 8; DB_num++){
+                DataRemapping = 0;
+                OneByte = (a >> (8*DB_num)) & 0xFF; 
 
-    std::vector<uint64_t> payload_Reshape;
-    payload_Reshape.resize(8);
-
-    uint8_t RemappingValues[8] = {0};
-    int count = 0;
-    int vector_index;
-    uint64_t combinedValue = 0;
-
-    for(auto& a : payload) {  
-         for(int x = 0; x < 8; x++) {
-            if(count == 0){
-                if(DqMapping_U1.find(x) != DqMapping_U1.end()) vector_index = DqMapping_U1.find(x) -> second;
+                    for(int i = 0; i <8; i++){
+                         DataRemapping |= (((OneByte >> wr_dq_map_per_db[rank_address%2][DB_num][7-i]) & 0x01) << i); //DB_num
+                    }
+                ResultData |= static_cast<int64_t>(DataRemapping) << (8*DB_num);
             }
-            else if(count == 1 || count == 2){
-                if(DqMapping_U2_U3.find(x) != DqMapping_U2_U3.end()) vector_index = DqMapping_U2_U3.find(x) -> second;
-            }
-            else if(count == 3 || count == 5){
-                if(DqMapping_U4_U8.find(x) != DqMapping_U4_U8.end()) vector_index = DqMapping_U4_U8.find(x) -> second;
-            }
-            else if(count == 4 || count == 6){
-                if(DqMapping_U7_U9.find(x) != DqMapping_U7_U9.end()) vector_index = DqMapping_U7_U9.find(x) -> second;
-            }
-            else {
-                if(DqMapping_U10.find(x) != DqMapping_U10.end()) vector_index = DqMapping_U10.find(x) -> second;
-            }
-            RemappingValues[vector_index] = (a >> (8*x)) & 0xFF;                            
-         }
-        
-        for (int i = 7; i >= 0; i--) {            
-            combinedValue |= static_cast<int64_t>(RemappingValues[i]) << (8*i);
-        }        
-        payload_Reshape[count] = combinedValue;
-        count++;
+    MergedData[Burst_num] = ResultData;
+    Burst_num++;
     }
-    
-    return payload_Reshape;
+    return MergedData;
 }
+
+std::vector<uint64_t> rd_DQMapping(std::vector<uint64_t> &payload, uint64_t rank_address){
+    uint8_t DataRemapping;
+    uint8_t Burst_num = 0;
+    uint8_t OneByte = 0; //64bit -> 8bit
+    std::vector<uint64_t> MergedData;
+    MergedData.resize(8);
+    for(auto &a : payload){
+        for(int DB_num = 0; DB_num < 8; DB_num++){
+                DataRemapping = 0;
+                OneByte = (a >> (8*DB_num)) & 0xFF;     //OneByte = 8bit
+                    for(int i = 0; i <8; i++){
+                         DataRemapping |= (((OneByte >> rd_dq_map_per_db[rank_address%2][DB_num][7-i]) & 0x01) << i);
+                    }
+                MergedData[DB_num] |= (static_cast<int64_t>(DataRemapping) << (8*Burst_num));
+            }
+    Burst_num++;
+    }
+    return MergedData;
+}
+
 
 
 void CUSTOM_CPU::printResult() {
