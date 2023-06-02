@@ -32,7 +32,7 @@ class CUSTOM_CPU {
 
             std::cout<<"================================"<<std::endl;
             std::cout<<"======= DRAMSim3 Start ========="<<std::endl;
-            std::cout<<"================================"<<std::endl;
+            std::cout<<"================================"<<std::endl;  
             std::cout<<std::endl;            
 
             std::cout<<"Configure File  :"<<config_file<<std::endl;

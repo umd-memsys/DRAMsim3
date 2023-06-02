@@ -187,7 +187,7 @@ std::vector<uint64_t> wr_DQMapping(std::vector<uint64_t> &payload, uint64_t rank
                     for(int i = 0; i <8; i++){
                          DataRemapping |= (((OneByte >> wr_dq_map_per_db[rank_address%2][DB_num][7-i]) & 0x01) << i); //DB_num
                     }
-                ResultData |= static_cast<int64_t>(DataRemapping) << (8*DB_num);
+                ResultData |= static_cast<int64_t>(DataRemapping) << (8*DB_num);  
             }
     MergedData[Burst_num] = ResultData;
     Burst_num++;
