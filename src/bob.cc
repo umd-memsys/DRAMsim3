@@ -3,8 +3,8 @@
 
 namespace dramsim3 {
 
-constexpr uint64_t LRDIMM::wr_dq_map_per_db[2][8][8];
-constexpr uint64_t LRDIMM::rd_dq_map_per_db[2][8][8];
+// constexpr uint64_t LRDIMM::wr_dq_map_per_db[2][8][8];
+// constexpr uint64_t LRDIMM::rd_dq_map_per_db[2][8][8];
 
 RCD::RCD(uint32_t dimm_idx, const Config& config, 
          SimpleStats& simple_stats) 
@@ -158,10 +158,9 @@ void LRDIMM::wrDataMem(uint64_t hex_addr, std::vector<uint64_t> &payload) {
     // Currently, data payload size is fixed to 8 (hardcode)
     auto addr = config_.AddressMapping(hex_addr);
     if(data_memory.find(hex_addr) != data_memory.end()) {
-        auto pre_payload = data_memory[hex_addr];
-        assert(pre_payload.size() == payload.size());
-        for(uint32_t i=0;i<pre_payload.size();i++) 
-            pre_payload[i] = data_reshape_wr(addr.rank, i, payload[i]);
+        assert(data_memory[hex_addr].size() == payload.size());
+        for(uint32_t i=0;i<data_memory[hex_addr].size();i++) 
+            data_memory[hex_addr][i] = data_reshape_wr(addr.rank, i, payload[i]);
     }
     else {
         std::vector<uint64_t> new_payload;
@@ -259,11 +258,11 @@ void LRDIMM::updateLRDIMM() {
                 for(u_int32_t j=0;j<4;j++)
                     payload_4b.push_back(static_cast<uint16_t>(0xFFFF & (it.second[i]>>j*16)));
             }
-            uint32_t each_db_payload_size = payload_size/config_.dbs_per_dimm/sizeof(uint16_t);
+            uint32_t each_db_payload_size = sizeof(uint64_t) * payload_size/config_.dbs_per_dimm/sizeof(uint16_t);
             uint32_t offset = 0;
             for(int i=0;i<config_.dbs_per_dimm;i++) {
                 std::vector<uint16_t> a;
-                for(u_int32_t j=0;j<each_db_payload_size;j++) a.push_back(payload_4b[(offset+j)]);                
+                for(u_int32_t j=0;j<each_db_payload_size;j++) a.push_back(payload_4b[(offset+j)]);    
                 dbs_[i].recWRData(a);            
                 offset+=each_db_payload_size;
             }

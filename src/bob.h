@@ -106,6 +106,7 @@ class LRDIMM {
         std::vector<rd_resp_t> rd_cmd_pipe;
         std::vector<uint64_t> null_payload;
 
+        /*
         static constexpr uint64_t wr_dq_map_per_db[2][8][8] = {
         {{4,6,5,7,3,1,2,0},  // DB0 for Rank0, 2 ( 4, 6, 5, 7, 3, 1, 2, 0)
          {5,7,4,6,1,3,0,2},  // DB1 for Rank0, 2 (13,15,12,14, 9,11, 8,10)  
@@ -141,6 +142,7 @@ class LRDIMM {
          {7,5,6,4,2,0,3,1},  // DB5 for Rank1, 3 
          {6,4,7,5,3,1,2,0},  // DB6 for Rank1, 3 
          {6,4,7,5,3,1,0,2}}};// DB7 for Rank1, 3          
+        */         
 };
 
 
