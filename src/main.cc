@@ -31,8 +31,11 @@ int main(int argc, const char **argv) {
         parser, "stream_type", "address stream generator - (random), stream",
         {'s', "stream"}, "");
     args::ValueFlag<std::string> custom_gen_arg(
-        parser, "generator_type", "transaction generato, random(RANDOM), stream (STREAM)",
+        parser, "generator_type", "transaction generator, random(RANDOM), stream (STREAM)",
         {'g', "generator"}, "");
+    args::ValueFlag<std::string> kernel_type_arg(
+        parser, "kernel_type", "NDP kernel typess - EWA, EWM,..",
+        {'k', "kernel"}, "");        
     args::ValueFlag<std::string> trace_file_arg(
         parser, "trace",
         "Trace file, setting this option will ignore -s option",
@@ -62,13 +65,71 @@ int main(int argc, const char **argv) {
     std::string trace_file = args::get(trace_file_arg);
     std::string stream_type = args::get(stream_arg);
     std::string generator_type = args::get(custom_gen_arg);
+    std::string kernel_type = args::get(kernel_type_arg);
 
     if(generator_type != "")  {  
         CUSTOM_CPU *cpu = new CUSTOM_CPU(config_file, output_dir, generator_type);
+        if(generator_type == "kernel" || generator_type =="KERNEL") {
+            /*                    
+                Generate memory requests for NDP kernel exeuction 
+                Simulation Steps
+                    Before Start Simulation 
+                        - Generatation Reference Data 
+                        - Generation NDP Instruction
+                        - Generation NDP Data
+                    Start Simulation 
+                        - Preloading NDP Data 
+                        - Preloading NDP Instruction
+                        - NDP Kernel Execution 
+                        - Read Result
+                    End Simulation
+                        - check the result
+            */
 
-        for (uint64_t clk = 0; clk < cycles; clk++) {
-            cpu->ClockTick();
+           std::cout<<"================================"<<std::endl;   
+           std::cout<<"Simulation Prepare ... "<<std::endl;
+           std::cout<<"================================"<<std::endl;
+           // Generatation NDP Configuration Request
+           cpu->genNDPConfig(kernel_type);
+
+           // Generatation Reference Data 
+           cpu->genRefData(kernel_type);
+
+           // Generation NDP Instruction 
+           cpu->genNDPInst(kernel_type);
+
+           // Generation NDP Data
+           cpu->genNDPData(kernel_type);
+
+           // Generation NDP Execution
+           cpu->genNDPExec(kernel_type);           
+
+           // Generate NDP Result Read Request
+           cpu->genNDPReadResult(kernel_type);           
+
+           std::cout<<"================================"<<std::endl;   
+           std::cout<<"Simulation Start ... "<<std::endl;
+           std::cout<<"================================"<<std::endl;
+           // Simulation Start
+           while(1) {
+               cpu->ClockTick();
+               if(cpu->simDone()) break;
+           } 
+           std::cout<<"================================"<<std::endl;
+           std::cout<<"Simulation Done ... "<<std::endl;   
+           std::cout<<"================================"<<std::endl;
+           // Check NDP Result with Reference Data
+           cpu->checkNDPResult(kernel_type);
+
         }
+        else {
+            // Generate memory requests randomly or sequentially
+            for (uint64_t clk = 0; clk < cycles; clk++) {
+                cpu->ClockTick();
+            }
+        }
+
+        // Check Result
         cpu->PrintStats();
 
         // delete CPU object

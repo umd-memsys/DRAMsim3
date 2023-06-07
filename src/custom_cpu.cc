@@ -8,6 +8,13 @@
 #define NUM_TRANSACTION 1024
 namespace dramsim3 {
 
+uint64_t CUSTOM_CPU::Address_IO::co_mask;
+uint64_t CUSTOM_CPU::Address_IO::ro_mask;
+uint64_t CUSTOM_CPU::Address_IO::ba_mask;
+uint64_t CUSTOM_CPU::Address_IO::bg_mask;
+uint64_t CUSTOM_CPU::Address_IO::ra_mask;
+uint64_t CUSTOM_CPU::Address_IO::ch_mask;
+
 void CUSTOM_CPU::ClockTick() {
     memory_system_.ClockTick();
 
@@ -36,15 +43,286 @@ void CUSTOM_CPU::ClockTick() {
                                                           trans.is_MRS, trans.payload);
             else             memory_system_.AddTransaction(trans.addr, trans.is_write, 
                                           trans.is_MRS);            
+
+            if(use_data && trans.is_write) StoreWRTrans(trans.addr,trans.payload);            
         }
     }
     clk_++;
     return;
 }
 
-Transaction CUSTOM_CPU::genTransaction() {
+void CUSTOM_CPU::genRefData(const std::string& kernal_type) {
+    std::cout<<"Generating Reference Data "<<std::endl;
+    uint32_t vector_length = 1024;//gen();
+    std::uniform_real_distribution<float> real_dist(0.0f, 100.0f);
+    if(kernal_type == "EWA") {        
+        std::cout<<"  Kernel Type: Element-Wise Add"<<std::endl;
+        std::cout<<"  Vector Length : "<<vector_length<<std::endl;
+        scalar_alpha = real_dist(gen);
+        vector_x.resize(vector_length);
+        vector_y.resize(vector_length);
+        vector_z.resize(vector_length);
+        for(uint32_t i=0;i<vector_length;i++) {
+            vector_x[i] = real_dist(gen);
+            vector_y[i] = real_dist(gen);
+            vector_z[i] = scalar_alpha*vector_x[i] + vector_y[i];
+        }
+    }
+    else if(kernal_type == "EWM") {
+        std::cout<<"  Kernel Type: Element-Wise Multiply"<<std::endl;
+        std::cout<<"  Vector Length : "<<vector_length<<std::endl;
+        scalar_alpha = real_dist(gen);
+        vector_x.resize(vector_length);
+        vector_y.resize(vector_length);
+        vector_z.resize(vector_length);
+        for(uint32_t i=0;i<vector_length;i++) {
+            vector_x[i] = real_dist(gen);
+            vector_y[i] = real_dist(gen);
+            vector_z[i] = scalar_alpha*vector_x[i] * vector_y[i];
+        }
+    }
+    else {
+        std::cerr<<"NOT SUPPORTED KERNEL TYPE"<<std::endl;
+        exit(1);
+    }
+}
 
-    if(gen_type_ == "RANDOM" || gen_type_ == "random") {
+void CUSTOM_CPU::genNDPInst(const std::string& kernal_type) {
+    std::cout<<"Generating NDP Instruction and Memory Transactions "<<std::endl;
+    // Generating NDP Instruction 
+    // Not Yet Defiend NDP Instruction, So use random number 
+    std::vector<uint32_t> ndp_inst_list;
+    if(kernal_type == "EWA") {        
+        for(uint32_t i=0;i<32;i++) 
+            ndp_inst_list.push_back(gen());
+            /*            
+            TBD
+            */
+    }
+    else if(kernal_type == "EWM") {
+        for(uint32_t i=0;i<16;i++) 
+            ndp_inst_list.push_back(gen());
+            /*            
+            TBD
+            */            
+    }
+    else {
+        std::cerr<<"NOT SUPPORTED KERNEL TYPE"<<std::endl;
+        exit(1);
+    }
+
+    // Convert NDP Instruction to Memory Transactions
+    // All NDP Instruction should be broasdcasted to all DB 
+    if(ndp_inst_list.size()%2!=0) ndp_inst_list.push_back(0);
+    uint64_t data_per_db;
+    assert(ndp_inst_list.size()%2==0);
+    assert(config_->dbs_per_dimm == 8); 
+
+    Address_IO addr_io = Address_IO(ROCO,address_table[0]["ADDR_NDP_INST_MEM"]);
+    for(uint32_t i=0;i<ndp_inst_list.size();i+=2) {        
+        std::vector<uint64_t> new_payload;        
+        data_per_db = (static_cast<int64_t>(ndp_inst_list[i+1]) << 32) | ndp_inst_list[i];
+        for(int j=0;j<config_->dbs_per_dimm;j++) new_payload.push_back(data_per_db);        
+        ndp_insts.push_back(Transaction(config_->MergedAddress(addr_io.addr),true,false,new_payload));
+        addr_io++;
+    }    
+
+    // Dummpy Write 
+    Address_IO dummpy_address = Address_IO(BKCO,Address(0,0,0,0,0x200,0));      
+    for(uint32_t i=0;i<1024;i++) {        
+        std::vector<uint64_t> new_payload;        
+        for(int j=0;j<config_->dbs_per_dimm;j++) new_payload.push_back(0);        
+        ndp_insts.push_back(Transaction(config_->MergedAddress(dummpy_address.addr),true,false,new_payload));
+        dummpy_address++;
+    }    
+
+}
+
+void CUSTOM_CPU::genNDPData(const std::string& kernal_type) {
+    std::cout<<"Generating NDP Data and Memory Transactions "<<std::endl;
+    if(kernal_type == "EWA" || kernal_type == "EWM") {      
+        //Convert Vector to Memory Transcations 
+        //Convert FP32 to FP16,Fixed,...
+        
+        assert(vector_x.size() == vector_y.size());    
+        Address_IO vec_x_io = Address_IO(BKCO,Address(0,0,0,0,0x101,0));  
+        Address_IO vec_y_io = Address_IO(BKCO,Address(0,1,0,0,0x102,0));
+
+
+        NDPData_FloatVecToTrans(vec_x_io,vector_x);
+        NDPData_FloatVecToTrans(vec_y_io,vector_y);
+
+        // Only Test of ReadResult Phase 
+        Address_IO vec_z_io = Address_IO(BKCO,address_table[0]["ADDR_NDP_DATA_MEM"]); 
+        NDPData_FloatVecToTrans(vec_z_io,vector_z); 
+        
+    }
+    else {
+        std::cerr<<"NOT SUPPORTED KERNEL TYPE"<<std::endl;
+        exit(1);
+    }
+}
+
+void CUSTOM_CPU::genNDPConfig(const std::string& kernal_type) {
+    std::cout<<"Generating NDP Configuration Request "<<std::endl;
+
+    std::vector<uint64_t> new_payload;        
+    for(int j=0;j<config_->dbs_per_dimm;j++) new_payload.push_back(0);        
+    ndp_config.push_back(Transaction(config_->MergedAddress(address_table[0]["ADDR_REGION_START_NDP_DRAM"]),true,false,new_payload));
+    ndp_config.push_back(Transaction(config_->MergedAddress(address_table[0]["ADDR_REGION_START_NDP"]),true,false,new_payload));
+    ndp_config.push_back(Transaction(config_->MergedAddress(address_table[0]["ADDR_NDP_CONFIG"]),true,false,new_payload));
+    ndp_config.push_back(Transaction(config_->MergedAddress(address_table[0]["ADDR_NDP_DB_CONFIG"]),true,false,new_payload));
+    ndp_config.push_back(Transaction(config_->MergedAddress(address_table[0]["ADDR_NDP_RCD_CONFIG"]),true,false,new_payload));
+    ndp_config.push_back(Transaction(config_->MergedAddress(address_table[0]["ADDR_NDP_INST_MEM"]),true,false,new_payload));
+    ndp_config.push_back(Transaction(config_->MergedAddress(address_table[0]["ADDR_NDP_DATA_MEM"]),true,false,new_payload));
+
+    if(kernal_type == "EWA" || kernal_type == "EWM") {      
+        // Some Configuration depending on kernel type         
+    }
+    else {
+        std::cerr<<"NOT SUPPORTED KERNEL TYPE"<<std::endl;
+        exit(1);
+    }
+}
+
+void CUSTOM_CPU::genNDPExec(const std::string& kernal_type) {
+    std::cout<<"Generating NDP Execution Request "<<std::endl;
+
+    if(kernal_type == "EWA" || kernal_type == "EWM") {      
+        // Currently, Read Operand Data..
+        Address_IO vec_x_io = Address_IO(BKCO,Address(0,0,0,0,0x101,0));  
+        Address_IO vec_y_io = Address_IO(BKCO,Address(0,1,0,0,0x102,0));        
+
+        for(uint32_t i=0;i<vector_x.size()/16;i++) {
+            ndp_exec.push_back(Transaction(config_->MergedAddress(vec_x_io.addr),false,false));
+            vec_x_io++;
+        }
+        for(uint32_t i=0;i<vector_y.size()/16;i++) {
+            ndp_exec.push_back(Transaction(config_->MergedAddress(vec_y_io.addr),false,false));
+            vec_y_io++;
+        }        
+        
+    }
+    else {
+        std::cerr<<"NOT SUPPORTED KERNEL TYPE"<<std::endl;
+        exit(1);
+    }
+}
+
+void CUSTOM_CPU::genNDPReadResult(const std::string& kernal_type) {
+    std::cout<<"Generating NDP Result Read Request "<<std::endl;
+
+    if(kernal_type == "EWA" || kernal_type == "EWM") {      
+        // Currently, Read Operand Data..
+        Address_IO vec_z_io = Address_IO(BKCO,address_table[0]["ADDR_NDP_DATA_MEM"]);
+
+        for(uint32_t i=0;i<vector_z.size()/16;i++) {
+            ndp_read_result.push_back(Transaction(config_->MergedAddress(vec_z_io.addr),false,false));
+            vec_z_io++;
+        }   
+                 
+    }
+    else {
+        std::cerr<<"NOT SUPPORTED KERNEL TYPE"<<std::endl;
+        exit(1);
+    }
+}
+
+void CUSTOM_CPU::checkNDPResult(const std::string& kernal_type) {
+    std::cout<<"Check NDP Result with Reference Data "<<std::endl;
+    
+    if(kernal_type == "EWA" || kernal_type == "EWM") {      
+        std::vector<float> f_resp_data = convertUint64ToFloat(resp_data);
+        for(uint64_t i=0;i<vector_z.size();i++)
+            if(vector_z[i] == f_resp_data[i]) ndp_pass_cnt++;
+            else                              ndp_fail_cnt++;
+                 
+    }
+    else {
+        std::cerr<<"NOT SUPPORTED KERNEL TYPE"<<std::endl;
+        exit(1);
+    }
+}
+
+
+Transaction CUSTOM_CPU::genTransaction() {
+    if(gen_type_ == "kernel" || gen_type_ == "KERNEL" ) {
+        if(!run_state_ndp_config) {
+            if(!ndp_config.empty()) {
+                auto tran = ndp_config[0];
+                ndp_config.erase(ndp_config.begin());
+                return tran;
+            }
+            else {
+                if(NoTransInSim()) {
+                    run_state_ndp_config = true;
+                    std::cout<<"Run Simulation: NDP Config -> Preloading Data"<<std::endl;
+                }
+                return Transaction();
+            }
+        }
+        else if(!run_state_ndp_preloading_data) {
+            if(!ndp_data.empty()) {
+                auto tran = ndp_data[0];
+                ndp_data.erase(ndp_data.begin());
+                return tran;
+            }
+            else {
+                if(NoTransInSim()) {
+                    run_state_ndp_preloading_data = true;
+                    std::cout<<"Run Simulation: Preloading Data -> Preloading Inst."<<std::endl;                 
+                }
+                return Transaction();
+            }
+        }
+        else if(!run_state_ndp_preloading_inst) {
+            if(!ndp_insts.empty()) {
+                auto tran = ndp_insts[0];
+                ndp_insts.erase(ndp_insts.begin());
+                return tran;
+            }            
+            else {
+                if(NoTransInSim()) {                
+                    run_state_ndp_preloading_inst = true;
+                    std::cout<<"Run Simulation: Preloading Inst. -> Kernel Exec"<<std::endl;                                      
+                }
+                return Transaction();            
+            }            
+        }
+        else if(!run_state_ndp_kernel_exec) {
+            if(!ndp_exec.empty()) {
+                auto tran = ndp_exec[0];
+                ndp_exec.erase(ndp_exec.begin());
+                return tran;
+            }            
+            else {
+                if(NoTransInSim()) {                
+                    run_state_ndp_kernel_exec = true;
+                    std::cout<<"Run Simulation: Kernel Exec -> Read Result"<<std::endl;                  
+                }
+                return Transaction();            
+            }       
+        }
+        else if(!run_state_ndp_read_result) { 
+            if(!ndp_read_result.empty()) {
+                auto tran = ndp_read_result[0];
+                ndp_read_result.erase(ndp_read_result.begin());
+                return tran;
+            }            
+            else {
+                if(NoTransInSim()) {                
+                    run_state_ndp_read_result = true;
+                    std::cout<<"Run Simulation: Read Result Done"<<std::endl;
+                }
+                return Transaction();            
+            }    
+        }
+        else {
+            sim_done = true;
+            return Transaction();
+        }
+    }
+    else if(gen_type_ == "RANDOM" || gen_type_ == "random") {
         if((gen()%2 == 0)) {
             if((gen()%2 == 0)) {
                 hex_addr = gen();
@@ -52,7 +330,7 @@ Transaction CUSTOM_CPU::genTransaction() {
                     std::vector<u_int64_t> payload;
                     payload.resize(8);
                     for(auto &a : payload) a = ((u_int64_t)(std::rand()) << 32) | (u_int64_t)(std::rand());
-                    StoreWRTrans(hex_addr,payload);
+                    // StoreWRTrans(hex_addr,payload);
                     return Transaction(hex_addr,true,false,payload);            
                 }
                 else {
@@ -79,7 +357,7 @@ Transaction CUSTOM_CPU::genTransaction() {
                 std::vector<u_int64_t> payload;
                 payload.resize(8);
                 for(auto &a : payload) a = addr;
-                StoreWRTrans(addr,payload);
+                // StoreWRTrans(addr,payload);
                 return Transaction(addr,true,false,payload);
             }
             else {
@@ -101,11 +379,16 @@ void CUSTOM_CPU::genTransactionVector() {
  //TBD
 }
 
+bool CUSTOM_CPU::simDone() {
+    return sim_done;
+}
+
+
 void CUSTOM_CPU::WriteCallBack(uint64_t addr) {
     wr_resp_cnt++;
     #ifdef _PRINT_TRANS
     std::cout<<"["<<std::setw(10)<<clk_<<"] == ";
-    std::cout<<"MC -> Host [RD] ["<<std::hex<<std::setw(8)<<addr<<"]"<<std::endl;
+    std::cout<<"MC -> Host [WR] ["<<std::hex<<std::setw(8)<<addr<<"]"<<std::endl;
     #endif
     return;    
 }
@@ -123,6 +406,9 @@ void CUSTOM_CPU::ReadCallBack(uint64_t addr) {
         #endif        
         if(CheckRD(addr,rd_data)) rd_pass_cnt++;
         else                      rd_fail_cnt++;        
+
+        if(run_state_ndp_kernel_exec && !run_state_ndp_read_result)
+            for(auto element : rd_data) resp_data.push_back(element);        
     }
     else {
         #ifdef _PRINT_TRANS
@@ -134,13 +420,16 @@ void CUSTOM_CPU::ReadCallBack(uint64_t addr) {
     return;
 }
 
+bool CUSTOM_CPU::NoTransInSim() {
+    return (rd_resp_cnt == rd_cnt) && (wr_resp_cnt == wr_cnt);
+}
+
 void CUSTOM_CPU::StoreWRTrans(uint64_t hex_addr, std::vector<uint64_t> &payload) {
     //To check the consistency of the read response data, Store WR Data with Hex Address
     if(wr_req.find(hex_addr) != wr_req.end()) {
-        auto pre_payload = wr_req[hex_addr];
-        assert(pre_payload.size() == payload.size());
-        for(uint32_t i=0;i<pre_payload.size();i++) 
-            pre_payload[i] = payload[i];            
+        assert(wr_req[hex_addr].size() == payload.size());            
+        for(uint32_t i=0;i<wr_req[hex_addr].size();i++) 
+            wr_req[hex_addr][i] = payload[i];                      
     }
     else {
         access_history.push_back(hex_addr);
@@ -157,14 +446,19 @@ bool CUSTOM_CPU::CheckRD(uint64_t hex_addr, std::vector<uint64_t> &payload) {
         for(uint32_t i=0;i<payload.size();i++) 
             if(wr_req[hex_addr][i] != payload[i]) error=true;
 
-        if(error) std::cerr<<"READ DATA FAIL"<<std::endl;
+        if(error) {
+            std::cerr<<"READ DATA FAIL (0x"<<std::hex<<hex_addr<<")"<<std::endl;                        
+            for(uint32_t i=0;i<payload.size();i++) {
+                std::cerr<<" Written Data: 0x"<<wr_req[hex_addr][i]<<" / Read Data: 0x"<<payload[i]<<std::endl;
+            }
+        }
         
         if(error) return false;
         else      return true;
     }
     else {
         // Read unwritten address
-        std::cerr<<"(WARNING) ACCESS UNWRITTEN MEMORY"<<std::endl;                        
+        std::cerr<<"(WARNING) "<<__func__<<" : ACCESS UNWRITTEN MEMORY (0x"<<std::hex<<hex_addr<<")"<<std::endl;                        
         return false;
     }
 }
@@ -216,6 +510,51 @@ std::vector<uint64_t> rd_DQMapping(std::vector<uint64_t> &payload, uint64_t rank
 }
 
 
+std::vector<uint64_t> CUSTOM_CPU::convertFloatToUint64(std::vector<float> &f_payload) {
+    std::vector<uint64_t> payload;
+    for(uint32_t i=0;i<f_payload.size();i++) {
+        uint64_t value_64b = static_cast<uint64_t>(FloattoUint32(f_payload[i]));
+        if(i%2==0) payload.push_back(value_64b);
+        else payload[i/2] = payload[i/2] | (value_64b << 32);
+    }
+    return payload;
+}
+
+std::vector<float> CUSTOM_CPU::convertUint64ToFloat(std::vector<uint64_t> &payload) {
+    std::vector<float> f_payload;
+    for(auto value : payload) {
+        float f0 = Uint32ToFloat(static_cast<uint32_t>(value & 0xFFFFFFFF));
+        float f1 = Uint32ToFloat(static_cast<uint32_t>((value >> 32 )& 0xFFFFFFFF));
+        f_payload.push_back(f0);
+        f_payload.push_back(f1);
+    }
+    return f_payload;
+}
+
+uint32_t CUSTOM_CPU::FloattoUint32(float float_value) {
+    return reinterpret_cast<uint&>(float_value);
+}
+
+float CUSTOM_CPU::Uint32ToFloat(uint32_t uint_value) {
+    return reinterpret_cast<float&>(uint_value);
+}
+
+void CUSTOM_CPU::NDPData_FloatVecToTrans(Address_IO addr_io,std::vector<float> f_vec) {
+    std::vector<uint64_t> payload_vec = convertFloatToUint64(f_vec);
+
+    while(payload_vec.size()%8 != 0) {
+        payload_vec.push_back(0);
+    }
+ 
+    assert(payload_vec.size()%8 == 0);
+    
+    for(uint32_t i=0;i<payload_vec.size()/8;i++) {
+        std::vector<uint64_t> payload;
+        for(uint32_t j=0;j<8;j++) payload.push_back(payload_vec[i*8+j]);
+        ndp_data.push_back(Transaction(config_->MergedAddress(addr_io.addr),true,false,payload));
+        addr_io++;
+    }    
+}
 
 void CUSTOM_CPU::printResult() {
     std::cout<<std::endl;
@@ -224,11 +563,13 @@ void CUSTOM_CPU::printResult() {
     std::cout<<"================================"<<std::endl;
     std::cout<<std::endl;
     std::cout<<"# of Write (to MC)    : "<<std::dec<<wr_cnt<<std::endl;
-    std::cout<<"# of Read (to MC)     : "<<std::dec<<wr_cnt<<std::endl;    
+    std::cout<<"# of Read (to MC)     : "<<std::dec<<rd_cnt<<std::endl;    
     std::cout<<"# of Write (from MC)  : "<<std::dec<<wr_resp_cnt<<std::endl;
     std::cout<<"# of Read (from MC)   : "<<std::dec<<rd_resp_cnt<<std::endl;
     std::cout<<"# of Pass Read (data) : "<<std::dec<<(rd_pass_cnt)<<std::endl;
     std::cout<<"# of Fail Read (data) : "<<std::dec<<(rd_fail_cnt)<<std::endl;
+    std::cout<<"# of Pass NDP Element : "<<std::dec<<(ndp_pass_cnt)<<std::endl;
+    std::cout<<"# of Fail NDP Element : "<<std::dec<<(ndp_fail_cnt)<<std::endl;    
 }
 
 }  // namespace dramsim3

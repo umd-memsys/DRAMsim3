@@ -73,6 +73,12 @@ void MemorySystem::ResetStats() { dram_system_->ResetStats(); }
 bool MemorySystem::isLRDIMM() {
     return config_->is_LRDIMM;
 }
+
+Config* MemorySystem::GetConfig() {
+    return config_;
+}
+
+
 MemorySystem* GetMemorySystem(const std::string &config_file, const std::string &output_dir,
                  std::function<void(uint64_t)> read_callback,
                  std::function<void(uint64_t)> write_callback) {

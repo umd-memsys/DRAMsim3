@@ -27,7 +27,7 @@ SRCS = src/bankstate.cc src/channel_state.cc src/command_queue.cc src/common.cc 
 		src/bob.cc
 
 
-EXE_SRCS = src/custom_cpu.cc src/cpu.cc src/main.cc
+EXE_SRCS = src/ndp_address_table.cc src/custom_cpu.cc src/cpu.cc src/main.cc
 
 OBJECTS = $(addsuffix .o, $(basename $(SRCS)))
 EXE_OBJS = $(addsuffix .o, $(basename $(EXE_SRCS)))
