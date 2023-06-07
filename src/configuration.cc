@@ -51,6 +51,17 @@ uint64_t Config::MergedAddress(uint64_t channel, uint64_t rank, uint64_t bg,
     return merged_addr;    
 }
 
+uint64_t Config::MergedAddress(Address addr) const {
+    uint64_t merged_addr = (addr.rank << ro_pos)      | 
+                           (addr.channel << ch_pos)   | 
+                           (addr.rank << ra_pos)      | 
+                           (addr.bank << ba_pos)      | 
+                           (addr.bankgroup << bg_pos) | 
+                           addr.column;
+
+    return merged_addr;    
+}
+
 void Config::CalculateSize() {
     // calculate rank and re-calculate channel_size
     devices_per_rank = bus_width / device_width;
