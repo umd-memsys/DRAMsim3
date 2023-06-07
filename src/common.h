@@ -33,6 +33,12 @@ struct Address {
     int bank;
     int row;
     int column;
+
+    void display() {
+        std::cout<<"Address: CH["<<std::hex<<channel<<"]RK["<<std::hex<<rank<<
+                    "]BG["<<std::hex<<bankgroup<<"]BK["<<std::hex<<bank<<
+                    "]BOW["<<std::hex<<row<<"]COL["<<std::hex<<column<<"]"<<std::endl;                   
+    }    
 };
 
 inline uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
