@@ -238,6 +238,13 @@ bool Controller::AddTransaction(Transaction trans) {
         return true;
     }
     else if (trans.is_write) {
+        #ifdef MY_DEBUG
+        std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
+                   "["<<std::setw(10)<<clk_<<"] "<<
+                   "Add Transaction (WR Command) ";
+        for(auto value : trans.payload) std::cout<<"["<<value<<"]";
+        std::cout<<std::endl;
+        #endif                 
         if (pending_wr_q_.count(trans.addr) == 0) {  // can not merge writes
             pending_wr_q_.insert(std::make_pair(trans.addr, trans));
             if (is_unified_queue_) {
@@ -255,6 +262,11 @@ bool Controller::AddTransaction(Transaction trans) {
         return_queue_.push_back(trans);
         return true;
     } else {  // read
+        #ifdef MY_DEBUG
+        std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
+                   "["<<std::setw(10)<<clk_<<"] "<<
+                   "Add Transaction (RD Command)"<<std::endl;
+        #endif     
         // if in write buffer, use the write buffer value
         if (pending_wr_q_.count(trans.addr) > 0) {
             trans.complete_cycle = clk_ + 1;

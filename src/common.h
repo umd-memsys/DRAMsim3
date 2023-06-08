@@ -41,6 +41,69 @@ struct Address {
     }    
 };
 
+typedef enum {ROCO, BKCO} addr_io_t; 
+struct Address_IO {
+    Address_IO()
+        : addr_io(ROCO), addr(Address()) {}
+    Address_IO(addr_io_t addr_io, Address addr)
+        : addr_io(addr_io),
+            addr(addr) {}
+    Address_IO(const Address_IO& addr_io)
+        : addr(addr_io.addr) {}
+
+    addr_io_t addr_io;
+    Address addr;
+
+    static Address mask_addr;
+
+    Address_IO& operator++() {
+        if(addr_io == ROCO) {
+            addr.column++;
+            if(addr.column==mask_addr.column) {
+                addr.column = 0;
+                addr.row++;
+            }
+        }
+        else if(addr_io == BKCO) {
+            addr.column++;
+            if(addr.column == mask_addr.column) {
+                addr.column = 0;
+                addr.bank++;
+                if(addr.bank == mask_addr.bank) {
+                addr.bank = 0;
+                addr.bankgroup++;
+                if(addr.bankgroup == mask_addr.bankgroup) {
+                    addr.bankgroup = 0;
+                    addr.rank++;
+                    if(addr.rank == mask_addr.rank) {
+                    addr.rank = 0;
+                    addr.row++;
+                    }
+                }
+                }
+            }
+        }
+        else {
+            std::cerr<<"NOT SUPPORTED ADDRESS INCREMENTAL ORDER"<<std::endl;
+            exit(1);
+        }
+        return *this;
+    }
+
+    Address_IO operator++(int) {
+        Address_IO temp = *this;
+        ++*this;
+        return temp;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Address_IO& io) {
+        os<<"CH["<<io.addr.channel<<"]RA["<<io.addr.rank<<"]BG["<<io.addr.bankgroup;
+        os<<"]BK["<<io.addr.bank<<"]RO["<<io.addr.row<<"]COL["<<io.addr.column<<"]";
+        return os;
+    }
+
+};
+
 inline uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
     addr >>= pos;
     auto store = addr;

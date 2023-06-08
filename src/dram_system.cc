@@ -252,7 +252,7 @@ void IdealDRAMSystem::ClockTick() {
 }
 
 std::vector<uint64_t> IdealDRAMSystem::GetRespData(uint64_t hex_addr) {
-    int channel = GetChannel(hex_addr);
+    // int channel = GetChannel(hex_addr);
     //TBD
     std::vector<uint64_t> payload;
     return payload;

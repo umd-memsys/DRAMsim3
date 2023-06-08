@@ -22,6 +22,7 @@ class CPU {
     void ReadCallBack(uint64_t addr) { return; }
     void WriteCallBack(uint64_t addr) { return; }
     void PrintStats() { memory_system_.PrintStats(); }
+    virtual ~CPU() = default;
 
     std::vector<uint64_t> access_history;
    protected:

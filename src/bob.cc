@@ -386,6 +386,13 @@ void BufferOnBoard::recDDRcmd(const Command& cmd) {
 
 void BufferOnBoard::enqueWRData(int rank, uint64_t hex_addr, std::vector<uint64_t> &payload) {
     dimms_[rank / config_.ranks_per_dimm].enqueWRData(hex_addr, payload);
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__FILE__<<":"<<__func__<<" == " <<
+                "["<<std::setw(10)<<clk_<<"] "<<
+                "[DIMM] Write Data ";
+    for(auto value : payload) std::cout<<"["<<std::hex<<value<<"]";
+    std::cout<<std::endl;
+    #endif                   
 }
 
 void BufferOnBoard::updateBoB() {

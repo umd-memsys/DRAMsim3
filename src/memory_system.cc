@@ -38,6 +38,18 @@ int MemorySystem::GetBurstLength() const { return config_->BL; }
 
 int MemorySystem::GetQueueSize() const { return config_->trans_queue_size; }
 
+int MemorySystem::GetRank(uint64_t hex_addr) const {
+    auto addr = config_->AddressMapping(hex_addr);
+    return addr.rank;
+}
+
+int MemorySystem::GetNumChannel() const {
+    std::cout<<__func__<<std::endl;
+    std::cout<<"Channel :"<<config_->channels<<std::endl;
+    return config_->channels;
+}
+
+
 void MemorySystem::RegisterCallbacks(
     std::function<void(uint64_t)> read_callback,
     std::function<void(uint64_t)> write_callback) {

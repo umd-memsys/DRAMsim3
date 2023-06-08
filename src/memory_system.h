@@ -26,6 +26,8 @@ class MemorySystem {
     int GetQueueSize() const;
     void PrintStats() const;
     void ResetStats();
+    int GetRank(uint64_t hex_addr) const;
+    int GetNumChannel() const;
 
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write, bool is_mrs) const;
