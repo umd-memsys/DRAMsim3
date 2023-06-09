@@ -9,6 +9,10 @@ Refresh::Refresh(const Config &config, ChannelState &channel_state)
       next_rank_(0),
       next_bg_(0),
       next_bank_(0) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif        
     if (refresh_policy_ == RefreshPolicy::RANK_LEVEL_SIMULTANEOUS) {
         refresh_interval_ = config_.tREFI;
     } else if (refresh_policy_ == RefreshPolicy::BANK_LEVEL_STAGGERED) {

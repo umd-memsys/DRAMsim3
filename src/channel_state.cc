@@ -8,8 +8,13 @@ ChannelState::ChannelState(const Config& config, const Timing& timing)
       rank_is_sref_(config.ranks, false),
       four_aw_(config_.ranks, std::vector<uint64_t>()),
       thirty_two_aw_(config_.ranks, std::vector<uint64_t>()) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif        
     bank_states_.reserve(config_.ranks);
-    for (auto i = 0; i < config_.ranks; i++) {
+
+    for (auto i = 0; i < config_.ranks; i++) {    
         auto rank_states = std::vector<std::vector<BankState>>();
         rank_states.reserve(config_.bankgroups);
         for (auto j = 0; j < config_.bankgroups; j++) {
@@ -175,6 +180,7 @@ void ChannelState::UpdateTiming(const Command& cmd, uint64_t clk) {
         case CommandType::REFRESH:
         case CommandType::SREF_ENTER:
         case CommandType::SREF_EXIT:
+        case CommandType::MRS:
             UpdateSameRankTiming(
                 cmd.addr, timing_.same_rank[static_cast<int>(cmd.cmd_type)],
                 clk);

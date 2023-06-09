@@ -2,23 +2,32 @@
 
 CC=gcc
 CXX=g++
-
+MY_DEBUG=0
+EN_CMD_TRACE=0
 FMT_LIB_DIR=ext/fmt/include
 INI_LIB_DIR=ext/headers
 JSON_LIB_DIR=ext/headers
 ARGS_LIB_DIR=ext/headers
 
 INC=-Isrc/ -I$(FMT_LIB_DIR) -I$(INI_LIB_DIR) -I$(ARGS_LIB_DIR) -I$(JSON_LIB_DIR)
-CXXFLAGS=-Wall -O3 -fPIC -std=c++11 $(INC) -DFMT_HEADER_ONLY=1
-
+#CXXFLAGS=-Wall -O3 -fPIC -std=c++11 $(INC) -DFMT_HEADER_ONLY=1
+CXXFLAGS=-Wall -g -fPIC -std=c++11 $(INC) -DFMT_HEADER_ONLY=1
+ifeq (${MY_DEBUG},1)
+CXXFLAGS+=-DMY_DEBUG
+endif
+ifeq (${EN_CMD_TRACE},1)
+CXXFLAGS+=-DCMD_TRACE
+endif
 LIB_NAME=libdramsim3.so
 EXE_NAME=dramsim3main.out
 
 SRCS = src/bankstate.cc src/channel_state.cc src/command_queue.cc src/common.cc \
 		src/configuration.cc src/controller.cc src/dram_system.cc src/hmc.cc \
-		src/memory_system.cc src/refresh.cc src/simple_stats.cc src/timing.cc
+		src/memory_system.cc src/refresh.cc src/simple_stats.cc src/timing.cc \
+		src/bob.cc
 
-EXE_SRCS = src/cpu.cc src/main.cc
+
+EXE_SRCS = src/ndp_address_table.cc src/custom_cpu.cc src/cpu.cc src/main.cc
 
 OBJECTS = $(addsuffix .o, $(basename $(SRCS)))
 EXE_OBJS = $(addsuffix .o, $(basename $(EXE_SRCS)))

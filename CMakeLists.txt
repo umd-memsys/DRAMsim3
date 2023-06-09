@@ -39,6 +39,8 @@ add_library(dramsim3 SHARED
     src/simple_stats.cc
     src/timing.cc
     src/memory_system.cc
+    src/bob.cc
+    src/custom_cpu.cc
 )
 
 if (THERMAL)
@@ -70,6 +72,10 @@ endif (THERMAL)
 if (CMD_TRACE)
     target_compile_options(dramsim3 PRIVATE -DCMD_TRACE)
 endif (CMD_TRACE)
+
+if (MY_DEBUG)
+    target_compile_options(dramsim3 PRIVATE -DMY_DEBUG)
+endif (MY_DEBUG)
 
 if (ADDR_TRACE)
     target_compile_options(dramsim3 PRIVATE -DADDR_TRACE)
