@@ -16,76 +16,6 @@ namespace dramsim3 {
 
 class CUSTOM_CPU { 
    public:
-    typedef enum {ROCO, BKCO} addr_io_t; 
-    struct Address_IO {
-        Address_IO()
-            : addr_io(ROCO), addr(Address()) {}
-        Address_IO(addr_io_t addr_io, Address addr)
-            : addr_io(addr_io),
-              addr(addr) {
-                // assert(addr_io == ROCO);
-              }
-        Address_IO(const Address_IO& addr_io)
-            : addr(addr_io.addr) {}
-
-        addr_io_t addr_io;
-        Address addr;
-        // int channel;
-        // int rank;
-        // int bankgroup;
-        // int bank;
-        // int row;
-        // int column;    
-
-        static uint64_t ch_mask, ra_mask, bg_mask, ba_mask, ro_mask, co_mask;        
-
-        Address_IO& operator++() {
-            if(addr_io == ROCO) {
-                addr.column++;
-                if(addr.column==static_cast<int>(co_mask)) {
-                  addr.column = 0;
-                  addr.row++;
-                }
-            }
-            else if(addr_io == BKCO) {
-                addr.column++;
-                if(addr.column == static_cast<int>(co_mask)) {
-                  addr.column = 0;
-                  addr.bank++;
-                  if(addr.bank == static_cast<int>(ba_mask)) {
-                    addr.bank = 0;
-                    addr.bankgroup++;
-                    if(addr.bankgroup == static_cast<int>(bg_mask)) {
-                      addr.bankgroup = 0;
-                      addr.rank++;
-                      if(addr.rank == static_cast<int>(ra_mask)) {
-                        addr.rank = 0;
-                        addr.row++;
-                      }
-                    }
-                  }
-                }
-            }
-            else {
-              std::cerr<<"NOT SUPPORTED ADDRESS INCREMENTAL ORDER"<<std::endl;
-              exit(1);
-            }
-            return *this;
-        }
-        Address_IO operator++(int) {
-            Address_IO temp = *this;
-            ++*this;
-            return temp;
-        }
-
-        friend std::ostream& operator<<(std::ostream& os, const Address_IO& io) {
-          os<<"CH["<<io.addr.channel<<"]RA["<<io.addr.rank<<"]BG["<<io.addr.bankgroup;
-          os<<"]BK["<<io.addr.bank<<"]RO["<<io.addr.row<<"]COL["<<io.addr.column<<"]";
-          return os;
-        }
-
-    };
-
     CUSTOM_CPU(const std::string& config_file, const std::string& output_dir,
                const std::string& gen_type)
         : memory_system_(
@@ -122,15 +52,7 @@ class CUSTOM_CPU {
     void StoreWRTrans(uint64_t hex_addr, std::vector<uint64_t> &payload); // Store Write Transaction to Compare Read Data
     bool CheckRD(uint64_t hex_addr, std::vector<uint64_t> &payload);      // Check RD Response Data
     void printResult();
-    void genRefData(const std::string& kernal_type);    // Generate Refererece Data for Tatget kernel Type
-    void genNDPInst(const std::string& kernal_type);    // Generate NDP Instruction for Tatget kernel Type
-    void genNDPData(const std::string& kernal_type);    // Generate NDP Data for Tatget kernel Type
-    void genNDPConfig(const std::string& kernal_type);  // Generate NDP Configuration Request
-    void genNDPExec(const std::string& kernal_type);    // Generate NDP Execution Memory Request
-    void genNDPReadResult(const std::string& kernal_type);    // Generate NDP Result Read Request
-    void checkNDPResult(const std::string& kernal_type);
-    bool simDone();
-    bool NoTransInSim();
+
     //DQ mapping function
     std::vector<uint64_t> wr_DQMapping(std::vector<uint64_t> &payload, uint64_t rank_address);
     std::vector<uint64_t> rd_DQMapping(std::vector<uint64_t> &payload, uint64_t rank_address);
@@ -196,8 +118,6 @@ class CUSTOM_CPU {
     bool get_next_ = true;
     bool use_data;
     Transaction trans;
-    std::string gen_type_; 
-    All_Ch_Addrss_Table address_table;
 
     // Use Memory Transaction Generation (Stream and Random)
     uint32_t trans_cnt;
