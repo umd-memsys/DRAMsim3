@@ -234,51 +234,6 @@ Transaction CUSTOM_CPU::genTransaction() {
     return Transaction();
 }
 
-void CUSTOM_CPU::genTransactionVector() {
- //TBD
-}
-
-bool CUSTOM_CPU::simDone() {
-    return sim_done;
-}
-
-
-void CUSTOM_CPU::WriteCallBack(uint64_t addr) {
-    wr_resp_cnt++;
-    #ifdef _PRINT_TRANS
-    std::cout<<"["<<std::setw(10)<<clk_<<"] == ";
-    std::cout<<"MC -> Host [WR] ["<<std::hex<<std::setw(8)<<addr<<"]"<<std::endl;
-    #endif
-    return;    
-}
-
-void CUSTOM_CPU::ReadCallBack(uint64_t addr) {
-    rd_resp_cnt++;
-    if(use_data) {
-        std::vector<uint64_t> rd_data = memory_system_.GetRespData(addr);
-        assert(rd_data.size()!=0);
-        #ifdef _PRINT_TRANS    
-            std::cout<<"["<<std::setw(10)<<clk_<<"] == ";
-            std::cout<<"MC -> Host [RD] ["<<std::hex<<std::setw(8)<<addr<<"] Data ";
-            for(auto value : rd_data) std::cout<<"["<<std::hex<<std::setw(8)<<value<<"]";
-            std::cout<<std::endl;
-        #endif        
-        if(CheckRD(addr,rd_data)) rd_pass_cnt++;
-        else                      rd_fail_cnt++;        
-
-        if(run_state_ndp_kernel_exec && !run_state_ndp_read_result)
-            for(auto element : rd_data) resp_data.push_back(element);        
-    }
-    else {
-        #ifdef _PRINT_TRANS
-        std::cout<<"["<<std::setw(10)<<clk_<<"] == ";
-        std::cout<<"MC -> Host [RD] ["<<std::hex<<std::setw(8)<<addr<<"]"<<std::endl;
-        #endif
-        return;            
-    }
-    return;
-}
-
 bool CUSTOM_CPU::NoTransInSim() {
     return (rd_resp_cnt == rd_cnt) && (wr_resp_cnt == wr_cnt);
 }
@@ -609,14 +564,6 @@ std::vector<float> CUSTOM_CPU::convertUint64ToFloat(std::vector<uint64_t> &paylo
     return f_payload;
 }
 
-uint32_t CUSTOM_CPU::FloattoUint32(float float_value) {
-    return reinterpret_cast<uint&>(float_value);
-}
-
-float CUSTOM_CPU::Uint32ToFloat(uint32_t uint_value) {
-    return reinterpret_cast<float&>(uint_value);
-}
-
 void CUSTOM_CPU::NDPData_FloatVecToTrans(Address_IO addr_io,std::vector<float> f_vec) {
     std::vector<uint64_t> payload_vec = convertFloatToUint64(f_vec);
 
@@ -632,22 +579,6 @@ void CUSTOM_CPU::NDPData_FloatVecToTrans(Address_IO addr_io,std::vector<float> f
         ndp_data.push_back(Transaction(config_->MergedAddress(addr_io.addr),true,false,payload));
         addr_io++;
     }    
-}
-
-void CUSTOM_CPU::printResult() {
-    std::cout<<std::endl;
-    std::cout<<"================================"<<std::endl;
-    std::cout<<"======= DRAMSim3 Result ========"<<std::endl;
-    std::cout<<"================================"<<std::endl;
-    std::cout<<std::endl;
-    std::cout<<"# of Write (to MC)    : "<<std::dec<<wr_cnt<<std::endl;
-    std::cout<<"# of Read (to MC)     : "<<std::dec<<rd_cnt<<std::endl;    
-    std::cout<<"# of Write (from MC)  : "<<std::dec<<wr_resp_cnt<<std::endl;
-    std::cout<<"# of Read (from MC)   : "<<std::dec<<rd_resp_cnt<<std::endl;
-    std::cout<<"# of Pass Read (data) : "<<std::dec<<(rd_pass_cnt)<<std::endl;
-    std::cout<<"# of Fail Read (data) : "<<std::dec<<(rd_fail_cnt)<<std::endl;
-    std::cout<<"# of Pass NDP Element : "<<std::dec<<(ndp_pass_cnt)<<std::endl;
-    std::cout<<"# of Fail NDP Element : "<<std::dec<<(ndp_fail_cnt)<<std::endl;    
 }
 
 }  // namespace dramsim3
