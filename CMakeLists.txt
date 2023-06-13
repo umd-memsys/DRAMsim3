@@ -41,6 +41,7 @@ add_library(dramsim3 SHARED
     src/memory_system.cc
     src/bob.cc
     src/custom_cpu.cc
+    src/ndp_address_table.cc
 )
 
 if (THERMAL)

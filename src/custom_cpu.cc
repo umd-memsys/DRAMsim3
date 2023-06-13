@@ -536,11 +536,17 @@ bool CUSTOM_CPU::simDone() {
 }
 
 uint32_t CUSTOM_CPU::FloattoUint32(float float_value) {
-    return reinterpret_cast<uint&>(float_value);
+    uint32_t converted_value;
+    memcpy(&converted_value, &float_value, sizeof(converted_value));
+    return converted_value;
+    // return reinterpret_cast<uint&>(float_value);
 }
 
 float CUSTOM_CPU::Uint32ToFloat(uint32_t uint_value) {
-    return reinterpret_cast<float&>(uint_value);
+    float converted_value;
+    memcpy(&converted_value, &uint_value, sizeof(converted_value));    
+    return converted_value;
+    // return reinterpret_cast<float&>(uint_value);
 }
 
 std::vector<uint64_t> CUSTOM_CPU::convertFloatToUint64(std::vector<float> &f_payload) {

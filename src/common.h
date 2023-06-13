@@ -97,7 +97,9 @@ struct Address_IO {
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Address_IO& io) {
-        os<<"CH["<<io.addr.channel<<"]RA["<<io.addr.rank<<"]BG["<<io.addr.bankgroup;
+        const std::string nameT[] = { "ROCO", "BKCO"};
+        os<<"IO["<<nameT[io.addr_io];
+        os<<"]CH["<<io.addr.channel<<"]RA["<<io.addr.rank<<"]BG["<<io.addr.bankgroup;
         os<<"]BK["<<io.addr.bank<<"]RO["<<io.addr.row<<"]COL["<<io.addr.column<<"]";
         return os;
     }
