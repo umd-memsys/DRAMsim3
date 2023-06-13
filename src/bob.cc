@@ -64,6 +64,7 @@ void RCD::recDDRcmd(const Command& cmd) {
         } else if((da >> 4) ==  0x106) { // Settting CW Data Control Word
             int cmd_type = da & 0xF;
             assert(cmd_type == 0x4); // Current Only Support WR Write Operation
+            if(cmd_type==0x4) {}; // remove warning Message
             int fs = (f0rc4x >> 5) & 0x7;
             int bcw_da = (f0rc4x & 0x1F) << 7 | f0rc6x;            
             bcom_cmds_.push_back(BCOMCmd(BCOMCmdType::BCOM_BCW_WR,bcw_da,fs));

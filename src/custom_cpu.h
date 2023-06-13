@@ -39,6 +39,8 @@ class CUSTOM_CPU {
           std::cout<<"# of Ranks      : "<<config_->ranks<<
                       " ( "<<config_->ranks_per_dimm<<" ranks per DIMM)"<<std::endl;
           std::cout<<"Total Cap.      : "<<config_->channel_size/1024<<" GB"<<std::endl;                      
+
+          address_table[0].print_table();
           }
 
     void initialize();
@@ -110,10 +112,11 @@ class CUSTOM_CPU {
 
    protected:
     MemorySystem memory_system_;
+    uint64_t clk_;
     std::string gen_type_; 
     All_Ch_Addrss_Table address_table;
     
-    uint64_t clk_;
+    
     std::mt19937_64 gen;    
     bool get_next_ = true;
     bool use_data;
