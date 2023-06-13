@@ -49,7 +49,7 @@ struct Address_IO {
         : addr_io(addr_io),
             addr(addr) {}
     Address_IO(const Address_IO& addr_io)
-        : addr(addr_io.addr) {}
+        : addr_io(addr_io.addr_io), addr(addr_io.addr) {}
 
     addr_io_t addr_io;
     Address addr;
