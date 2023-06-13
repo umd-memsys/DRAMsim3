@@ -112,20 +112,22 @@ class HMCMemorySystem : public BaseDRAMSystem {
     // we can unify them as one but then we'll have to convert all the
     // slow dram time units to faster logic units...
     void ClockTick() override;
-    void LogicClockTickPre();
-    void LogicClockTickPost();
-    void DRAMClockTick();
-    // had to have 3 insert interfaces cuz HMC is so different...
 
+    // had to have 3 insert interfaces cuz HMC is so different...
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const override;
-    bool AddTransaction(uint64_t hex_addr, bool is_write) override;
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) const override;
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) override;
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) override;
     bool InsertReqToLink(HMCRequest* req, int link);
     bool InsertHMCReq(HMCRequest* req);
-
+    std::vector<uint64_t> GetRespData(uint64_t hex_addr) override;
    private:
     uint64_t logic_clk_, ps_per_dram_, ps_per_logic_, logic_ps_, dram_ps_;
 
     void SetClockRatio();
+    void DRAMClockTick();
+    void DrainRequests();
+    void DrainResponses();
     void InsertReqToDRAM(HMCRequest* req);
     void VaultCallback(uint64_t req_id);
     std::vector<int> BuildAgeQueue(std::vector<int>& age_counter);
@@ -135,6 +137,9 @@ class HMCMemorySystem : public BaseDRAMSystem {
     int next_link_;
     int links_;
     size_t queue_depth_;
+
+    // number of flits xbar can process per logic cycle
+    const int xbar_bandwidth_ = 2;
 
     // had to use a multimap because the controller callback return hex addr
     // instead of unique id

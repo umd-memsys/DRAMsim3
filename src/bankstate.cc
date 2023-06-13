@@ -7,6 +7,10 @@ BankState::BankState()
       cmd_timing_(static_cast<int>(CommandType::SIZE)),
       open_row_(-1),
       row_hit_count_(0) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif        
     cmd_timing_[static_cast<int>(CommandType::READ)] = 0;
     cmd_timing_[static_cast<int>(CommandType::READ_PRECHARGE)] = 0;
     cmd_timing_[static_cast<int>(CommandType::WRITE)] = 0;
@@ -16,6 +20,7 @@ BankState::BankState()
     cmd_timing_[static_cast<int>(CommandType::REFRESH)] = 0;
     cmd_timing_[static_cast<int>(CommandType::SREF_ENTER)] = 0;
     cmd_timing_[static_cast<int>(CommandType::SREF_EXIT)] = 0;
+    cmd_timing_[static_cast<int>(CommandType::MRS)] = 0;
 }
 
 
@@ -33,6 +38,7 @@ Command BankState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
                 case CommandType::SREF_ENTER:
+                case CommandType::MRS:
                     required_type = cmd.cmd_type;
                     break;
                 default:
@@ -56,6 +62,7 @@ Command BankState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
                 case CommandType::SREF_ENTER:
+                case CommandType::MRS:
                     required_type = CommandType::PRECHARGE;
                     break;
                 default:
@@ -70,6 +77,7 @@ Command BankState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
                 case CommandType::READ_PRECHARGE:
                 case CommandType::WRITE:
                 case CommandType::WRITE_PRECHARGE:
+                case CommandType::MRS:
                     required_type = CommandType::SREF_EXIT;
                     break;
                 default:
@@ -113,6 +121,7 @@ void BankState::UpdateState(const Command& cmd) {
                 case CommandType::REFRESH_BANK:
                 case CommandType::SREF_ENTER:
                 case CommandType::SREF_EXIT:
+                case CommandType::MRS:                
                 default:
                     AbruptExit(__FILE__, __LINE__);
             }
@@ -121,6 +130,7 @@ void BankState::UpdateState(const Command& cmd) {
             switch (cmd.cmd_type) {
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
+                case CommandType::MRS:
                     break;
                 case CommandType::ACTIVATE:
                     state_ = State::OPEN;
@@ -154,6 +164,7 @@ void BankState::UpdateState(const Command& cmd) {
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
                 case CommandType::SREF_ENTER:
+                case CommandType::MRS:
                 default:
                     AbruptExit(__FILE__, __LINE__);
             }

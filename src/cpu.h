@@ -6,6 +6,7 @@
 #include <random>
 #include <string>
 #include "memory_system.h"
+#include <unordered_map>
 
 namespace dramsim3 {
 
@@ -16,17 +17,17 @@ class CPU {
               config_file, output_dir,
               std::bind(&CPU::ReadCallBack, this, std::placeholders::_1),
               std::bind(&CPU::WriteCallBack, this, std::placeholders::_1)),
-          clk_(0),
-          mega_tick_(memory_system_.GetMegaTick()) {}
+          clk_(0) {}
     virtual void ClockTick() = 0;
     void ReadCallBack(uint64_t addr) { return; }
     void WriteCallBack(uint64_t addr) { return; }
     void PrintStats() { memory_system_.PrintStats(); }
+    virtual ~CPU() = default;
 
+    std::vector<uint64_t> access_history;
    protected:
     MemorySystem memory_system_;
     uint64_t clk_;
-    int mega_tick_;
 };
 
 class RandomCPU : public CPU {
@@ -39,6 +40,8 @@ class RandomCPU : public CPU {
     bool last_write_ = false;
     std::mt19937_64 gen;
     bool get_next_ = true;
+    bool last_mrs_ = false;
+    // std::unordered_map<uint64_t,uint32_t> access_history;
 };
 
 class StreamCPU : public CPU {

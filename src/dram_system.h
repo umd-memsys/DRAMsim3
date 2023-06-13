@@ -10,10 +10,6 @@
 #include "controller.h"
 #include "timing.h"
 
-#ifdef _OPENMP
-#include "omp.h"
-#endif  // _OPENMP
-
 #ifdef THERMAL
 #include "thermal.h"
 #endif  // THERMAL
@@ -34,9 +30,13 @@ class BaseDRAMSystem {
 
     virtual bool WillAcceptTransaction(uint64_t hex_addr,
                                        bool is_write) const = 0;
-    virtual bool AddTransaction(uint64_t hex_addr, bool is_write) = 0;
+    virtual bool WillAcceptTransaction(uint64_t hex_addr,
+                                       bool is_write, bool is_MRS) const = 0;                                       
+    virtual bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) = 0;
+    virtual bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) = 0;
     virtual void ClockTick() = 0;
     int GetChannel(uint64_t hex_addr) const;
+    virtual std::vector<uint64_t> GetRespData(uint64_t hex_addr) = 0;
 
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
     static int total_channels_;
@@ -56,9 +56,9 @@ class BaseDRAMSystem {
     uint64_t clk_;
     std::vector<Controller*> ctrls_;
 
-#ifdef ADDRESS_TRACE
+#ifdef ADDR_TRACE
     std::ofstream address_trace_;
-#endif  // ADDRESS_TRACE
+#endif  // ADDR_TRACE
 };
 
 // hmmm not sure this is the best naming...
@@ -69,8 +69,11 @@ class JedecDRAMSystem : public BaseDRAMSystem {
                     std::function<void(uint64_t)> write_callback);
     ~JedecDRAMSystem();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const override;
-    bool AddTransaction(uint64_t hex_addr, bool is_write) override;
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) const override;
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) override;
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) override;
     void ClockTick() override;
+    std::vector<uint64_t> GetRespData(uint64_t hex_addr) override;
 };
 
 // Model a memorysystem with an infinite bandwidth and a fixed latency (possibly
@@ -86,8 +89,15 @@ class IdealDRAMSystem : public BaseDRAMSystem {
                                bool is_write) const override {
         return true;
     };
-    bool AddTransaction(uint64_t hex_addr, bool is_write) override;
+    bool WillAcceptTransaction(uint64_t hex_addr,
+                               bool is_write, bool is_MRS) const override {
+        return true;
+    };
+
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) override;
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) override;
     void ClockTick() override;
+    std::vector<uint64_t> GetRespData(uint64_t hex_addr) override;
 
    private:
     int latency_;

@@ -14,6 +14,7 @@ enum class DRAMProtocol {
     DDR4,
     GDDR5,
     GDDR5X,
+    GDDR6,
     LPDDR,
     LPDDR3,
     LPDDR4,
@@ -33,11 +34,15 @@ enum class RefreshPolicy {
 class Config {
    public:
     Config(std::string config_file, std::string out_dir);
-    Address AddressMapping(uint64_t hex_addr) const;
+    Address AddressMapping(uint64_t hex_addr) const;            
+    uint64_t  MergedAddress(uint64_t channel, uint64_t rank, uint64_t bg, uint64_t ba, uint64_t ro, uint64_t co) const;           
+    uint64_t  MergedAddress(Address addr) const;           
+            
     // DRAM physical structure
     DRAMProtocol protocol;
     int channel_size;
     int channels;
+    int dimms;
     int ranks;
     int banks;
     int bankgroups;
@@ -56,7 +61,7 @@ class Config {
 
     // Generic DRAM timing parameters
     double tCK;
-    int burst_cycle;  // seperate BL with timing since fot GDDRx it's not BL/2
+    int burst_cycle;  // seperate BL with timing since for GDDRx it's not BL/2
     int AL;
     int CL;
     int CWL;
@@ -90,6 +95,9 @@ class Config {
     int tWPRE;
     int read_delay;
     int write_delay;
+    // MRS Timing Parameter
+    int tMRD; // Delay of MRS-to-MRS 
+    int tMOD; // Delay of MRS-to-NonMRS
 
     // LPDDR4 and GDDR5
     int tPPD;
@@ -147,7 +155,8 @@ class Config {
 
     bool IsGDDR() const {
         return (protocol == DRAMProtocol::GDDR5 ||
-                protocol == DRAMProtocol::GDDR5X);
+                protocol == DRAMProtocol::GDDR5X ||
+                protocol == DRAMProtocol::GDDR6);
     }
     bool IsHBM() const {
         return (protocol == DRAMProtocol::HBM ||
@@ -157,9 +166,15 @@ class Config {
     // yzy: add another function
     bool IsDDR4() const { return (protocol == DRAMProtocol::DDR4); }
 
-    int ideal_memory_latency;
+    // LRDIMM 
+    bool is_LRDIMM;
+    int ranks_per_dimm;
+    int dqs_per_db;
+    int dbs_per_dimm;
+    int tPDM_RD;
+    int tPDM_WR;
 
-    int mega_tick;
+    int ideal_memory_latency;
 
 #ifdef THERMAL
     std::string loc_mapping;

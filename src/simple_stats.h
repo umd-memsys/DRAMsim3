@@ -30,6 +30,9 @@ class SimpleStats {
     // add historgram value
     void AddValue(const std::string name, const int value);
 
+    // return per rank background energy
+    double RankBackgroundEnergy(const int r) const;
+
     // Epoch update
     void PrintEpochStats();
 

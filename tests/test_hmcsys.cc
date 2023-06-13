@@ -27,8 +27,15 @@ TEST_CASE("HMC System Testing", "[dramsim3][hmc]") {
             }
         }
 
-        // int tRC = config.tRCDRD + config.CL + config.BL;
-        int tRC = 42;
-        REQUIRE(clk == tRC);
+        // For HMC things are complicated, e.g. for a 64B read request and x2 bandwidth xbar
+        // takes 1 cycle from CPU to Link
+        // takes 1 cycle from Link to Quad
+        // takes 1 cycle from Quad to DRAM
+        // takes xx cycles for DRAM to finish
+        // takes 1 cycle from DRAM to quad
+        // takes multiple cycles from quad to CPU
+        // (depending on packet size, and contention)
+        int idle_lat = 52;
+        REQUIRE(clk == idle_lat);
     }
 }

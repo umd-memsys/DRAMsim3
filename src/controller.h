@@ -10,6 +10,7 @@
 #include "common.h"
 #include "refresh.h"
 #include "simple_stats.h"
+#include "bob.h"
 
 #ifdef THERMAL
 #include "thermal.h"
@@ -29,6 +30,7 @@ class Controller {
 #endif  // THERMAL
     void ClockTick();
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) const;
     bool AddTransaction(Transaction trans);
     int QueueUsage() const;
     // Stats output
@@ -36,6 +38,7 @@ class Controller {
     void PrintFinalStats();
     void ResetStats() { simple_stats_.Reset(); }
     std::pair<uint64_t, int> ReturnDoneTrans(uint64_t clock);
+    std::vector<uint64_t> GetRespData();
 
     int channel_id_;
 
@@ -46,6 +49,8 @@ class Controller {
     ChannelState channel_state_;
     CommandQueue cmd_queue_;
     Refresh refresh_;
+    BufferOnBoard BufferOnBoard_;
+
 
 #ifdef THERMAL
     ThermalCalculator &thermal_calc_;
@@ -56,6 +61,7 @@ class Controller {
     std::vector<Transaction> unified_queue_;
     std::vector<Transaction> read_queue_;
     std::vector<Transaction> write_buffer_;
+    std::vector<Transaction> mrs_buffer_;
 
     // transactions that are not completed, use map for convenience
     std::multimap<uint64_t, Transaction> pending_rd_q_;
@@ -66,6 +72,9 @@ class Controller {
 
     // row buffer policy
     RowBufPolicy row_buf_policy_;
+
+    //RD Resp Data Buffer 
+    std::vector<std::vector<uint64_t>> resp_data_;
 
 #ifdef CMD_TRACE
     std::ofstream cmd_trace_;

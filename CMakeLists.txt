@@ -39,6 +39,9 @@ add_library(dramsim3 SHARED
     src/simple_stats.cc
     src/timing.cc
     src/memory_system.cc
+    src/bob.cc
+    src/custom_cpu.cc
+    src/ndp_address_table.cc
 )
 
 if (THERMAL)
@@ -67,15 +70,18 @@ if (THERMAL)
     target_compile_options(thermalreplay PRIVATE -DTHERMAL -D_LONGINT -DAdd_ ${OpenMP_C_FLAGS})
 endif (THERMAL)
 
-find_package(OpenMP)
-if (OPENMP_FOUND AND USE_OPENMP)  # only use OpenMP explicitly
-    target_compile_options(dramsim3 PRIVATE ${OpenMP_CXX_FLAGS})
-    target_link_libraries(dramsim3 INTERFACE ${OpenMP_CXX_FLAGS})
-endif (OPENMP_FOUND AND USE_OPENMP)
-
 if (CMD_TRACE)
     target_compile_options(dramsim3 PRIVATE -DCMD_TRACE)
 endif (CMD_TRACE)
+
+if (MY_DEBUG)
+    target_compile_options(dramsim3 PRIVATE -DMY_DEBUG)
+endif (MY_DEBUG)
+
+if (ADDR_TRACE)
+    target_compile_options(dramsim3 PRIVATE -DADDR_TRACE)
+endif (ADDR_TRACE)
+
 
 target_include_directories(dramsim3 INTERFACE src)
 target_compile_options(dramsim3 PRIVATE -Wall)

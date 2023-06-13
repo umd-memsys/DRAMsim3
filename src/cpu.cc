@@ -1,4 +1,7 @@
 #include "cpu.h"
+#include <vector>
+#include <cstdlib> 
+#include <ctime>   
 
 namespace dramsim3 {
 
@@ -7,17 +10,15 @@ void RandomCPU::ClockTick() {
     // this is useful to exploit the parallelism of a DRAM protocol
     // and is also immune to address mapping and scheduling policies
     memory_system_.ClockTick();
-    for (int i = 0; i < mega_tick_; i++) {
-        if (get_next_) {
-            last_addr_ = gen();
-            last_write_ = (gen() % 3 == 0);
-        }
-        get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_);
-        if (get_next_) {
-            memory_system_.AddTransaction(last_addr_, last_write_);
-        } else {
-            break;
-        }
+    if (get_next_) {
+        last_addr_ = gen();
+        last_write_ = (gen() % 3 == 0);
+        last_mrs_ = last_write_ && (gen() % 20 == 0);
+    }
+    // get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_);
+    get_next_ = memory_system_.WillAcceptTransaction(last_addr_, last_write_,last_mrs_);
+    if (get_next_) {
+        memory_system_.AddTransaction(last_addr_, last_write_,last_mrs_);
     }
     clk_++;
     return;
@@ -85,7 +86,8 @@ void TraceBasedCPU::ClockTick() {
             get_next_ = memory_system_.WillAcceptTransaction(trans_.addr,
                                                              trans_.is_write);
             if (get_next_) {
-                memory_system_.AddTransaction(trans_.addr, trans_.is_write);
+                // memory_system_.AddTransaction(trans_.addr, trans_.is_write);
+                memory_system_.AddTransaction(trans_.addr, trans_.is_write, trans_.is_MRS);
             }
         }
     }

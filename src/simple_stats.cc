@@ -18,11 +18,16 @@ void PrintStatText(std::ostream& where, std::string name, T value,
 
 SimpleStats::SimpleStats(const Config& config, int channel_id)
     : config_(config), channel_id_(channel_id) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif        
     // counter stats
     InitStat("num_cycles", "counter", "Number of DRAM cycles");
     InitStat("epoch_num", "counter", "Number of epochs");
     InitStat("num_reads_done", "counter", "Number of read requests issued");
-    InitStat("num_writes_done", "counter", "Number of read requests issued");
+    InitStat("num_writes_done", "counter", "Number of write requests issued");
+    InitStat("num_mrs_done", "counter", "Number of MRS requests issued");
     InitStat("num_write_buf_hits", "counter", "Number of write buffer hits");
     InitStat("num_read_row_hits", "counter", "Number of read row buffer hits");
     InitStat("num_write_row_hits", "counter",
@@ -36,7 +41,12 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
     InitStat("num_refb_cmds", "counter", "Number of REFb commands");
     InitStat("num_srefe_cmds", "counter", "Number of SREFE commands");
     InitStat("num_srefx_cmds", "counter", "Number of SREFX commands");
+    InitStat("num_mrs_cmds", "counter", "Number of MRS commands");
     InitStat("hbm_dual_cmds", "counter", "Number of cycles dual cmds issued");
+    // LRDIMM Stats
+    InitStat("num_bcom_rd", "counter", "Number of BCOM RD commands");
+    InitStat("num_bcom_wr", "counter", "Number of BCOM RD commands");
+    InitStat("num_bcom_bcw_wr", "counter", "Number of BCW WR commands");
 
     // double stats
     InitStat("act_energy", "double", "Activation energy");
@@ -52,6 +62,13 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
                 "rank", config_.ranks);
     InitVecStat("sref_cycles", "vec_counter", "Cyles of rank in SREF mode",
                 "rank", config_.ranks);
+    // LRDIMM stat                
+    InitVecStat("bcom_rd_cmd", "vec_counter", "number of rd cmd in each dimms",
+                "dimm", config_.dimms);                
+    InitVecStat("bcom_wr_cmd", "vec_counter", "number of wr cmd in each dimms",
+                "dimm", config_.dimms);                
+    InitVecStat("bcom_bcw_wr_cmd", "vec_counter", "number of bcw WR cmd in each dimms",
+                "dimm", config_.dimms);                                                
 
     // Vector of double stats
     InitVecStat("act_stb_energy", "vec_double", "Active standby energy", "rank",
@@ -98,6 +115,12 @@ std::string SimpleStats::GetTextHeader(bool is_final) const {
     return header;
 }
 
+double SimpleStats::RankBackgroundEnergy(const int rank) const{
+    return vec_doubles_.at("act_stb_energy")[rank] +
+           vec_doubles_.at("pre_stb_energy")[rank] +
+           vec_doubles_.at("sref_energy")[rank];
+}
+
 void SimpleStats::PrintEpochStats() {
     UpdateEpochStats();
     if (config_.output_level >= 1) {
@@ -124,7 +147,9 @@ void SimpleStats::PrintFinalStats() {
     }
 
     if (config_.output_level >= 1) {
-        std::ofstream txt_out(config_.txt_stats_name, std::ofstream::app);
+        // HACK: overwrite existing file if this is first channel
+        auto perm = channel_id_ == 0 ? std::ofstream::out : std::ofstream::app;
+        std::ofstream txt_out(config_.txt_stats_name, perm);
         txt_out << GetTextHeader(true);
         for (const auto& it : print_pairs_) {
             PrintStatText(txt_out, it.first, it.second,

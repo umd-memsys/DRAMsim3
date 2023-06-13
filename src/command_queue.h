@@ -22,6 +22,7 @@ class CommandQueue {
     Command FinishRefresh();
     void ClockTick() { clk_ += 1; };
     bool WillAcceptCommand(int rank, int bankgroup, int bank) const;
+    bool WillAcceptMRSCommand() const;
     bool AddCommand(Command cmd);
     bool QueueEmpty() const;
     int QueueUsage() const;
@@ -38,6 +39,7 @@ class CommandQueue {
     CMDQueue& GetNextQueue();
     void GetRefQIndices(const Command& ref);
     void EraseRWCommand(const Command& cmd);
+    void EraseMRSCommand(const Command& cmd);
     Command PrepRefCmd(const CMDIterator& it, const Command& ref) const;
 
     QueueStructure queue_structure_;
@@ -46,6 +48,8 @@ class CommandQueue {
     SimpleStats& simple_stats_;
 
     std::vector<CMDQueue> queues_;
+    CMDQueue mrs_queue_;                // MRS Command has high priority than other command
+                                        // So, Add Dedicated Queue for MRS Command
 
     // Refresh related data structures
     std::unordered_set<int> ref_q_indices_;
