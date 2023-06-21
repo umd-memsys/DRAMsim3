@@ -26,9 +26,18 @@ class MemorySystem {
     int GetQueueSize() const;
     void PrintStats() const;
     void ResetStats();
+    int GetRank(uint64_t hex_addr) const;
+    int GetNumChannel() const;
 
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
+    bool WillAcceptTransaction(uint64_t hex_addr, bool is_write, bool is_mrs) const;
     bool AddTransaction(uint64_t hex_addr, bool is_write);
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS);
+    bool AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload);
+    std::vector<uint64_t> GetRespData(uint64_t hex_addr);
+    bool isLRDIMM();
+
+    Config* GetConfig();
 
    private:
     // These have to be pointers because Gem5 will try to push this object

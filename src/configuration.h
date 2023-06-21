@@ -34,11 +34,15 @@ enum class RefreshPolicy {
 class Config {
    public:
     Config(std::string config_file, std::string out_dir);
-    Address AddressMapping(uint64_t hex_addr) const;
+    Address AddressMapping(uint64_t hex_addr) const;            
+    uint64_t  MergedAddress(uint64_t channel, uint64_t rank, uint64_t bg, uint64_t ba, uint64_t ro, uint64_t co) const;           
+    uint64_t  MergedAddress(Address addr) const;           
+            
     // DRAM physical structure
     DRAMProtocol protocol;
     int channel_size;
     int channels;
+    int dimms;
     int ranks;
     int banks;
     int bankgroups;
@@ -91,6 +95,9 @@ class Config {
     int tWPRE;
     int read_delay;
     int write_delay;
+    // MRS Timing Parameter
+    int tMRD; // Delay of MRS-to-MRS 
+    int tMOD; // Delay of MRS-to-NonMRS
 
     // LPDDR4 and GDDR5
     int tPPD;
@@ -158,6 +165,14 @@ class Config {
     bool IsHMC() const { return (protocol == DRAMProtocol::HMC); }
     // yzy: add another function
     bool IsDDR4() const { return (protocol == DRAMProtocol::DDR4); }
+
+    // LRDIMM 
+    bool is_LRDIMM;
+    int ranks_per_dimm;
+    int dqs_per_db;
+    int dbs_per_dimm;
+    int tPDM_RD;
+    int tPDM_WR;
 
     int ideal_memory_latency;
 

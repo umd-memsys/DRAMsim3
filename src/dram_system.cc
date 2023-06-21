@@ -20,6 +20,10 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
       thermal_calc_(config_),
 #endif  // THERMAL
       clk_(0) {
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif        
     total_channels_ += config_.channels;
 
 #ifdef ADDR_TRACE
@@ -102,7 +106,10 @@ JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
                   << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
-
+    #ifdef MY_DEBUG
+    std::cout<<"== "<<__func__<<" == ";
+    std::cout<<"constructor"<<std::endl;
+    #endif
     ctrls_.reserve(config_.channels);
     for (auto i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
@@ -122,10 +129,16 @@ JedecDRAMSystem::~JedecDRAMSystem() {
 bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr,
                                             bool is_write) const {
     int channel = GetChannel(hex_addr);
-    return ctrls_[channel]->WillAcceptTransaction(hex_addr, is_write);
+    return ctrls_[channel]->WillAcceptTransaction(hex_addr, is_write); 
 }
 
-bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
+bool JedecDRAMSystem::WillAcceptTransaction(uint64_t hex_addr,
+                                            bool is_write, bool is_MRS) const {
+    int channel = GetChannel(hex_addr);
+    return ctrls_[channel]->WillAcceptTransaction(hex_addr, is_write, is_MRS);
+}
+
+bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) {
 // Record trace - Record address trace for debugging or other purposes
 #ifdef ADDR_TRACE
     address_trace_ << std::hex << hex_addr << std::dec << " "
@@ -133,11 +146,31 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 #endif
 
     int channel = GetChannel(hex_addr);
-    bool ok = ctrls_[channel]->WillAcceptTransaction(hex_addr, is_write);
+    bool ok = ctrls_[channel]->WillAcceptTransaction(hex_addr, is_write, is_MRS);
 
     assert(ok);
     if (ok) {
-        Transaction trans = Transaction(hex_addr, is_write);
+        // Transaction trans = Transaction(hex_addr, is_write);
+        Transaction trans = Transaction(hex_addr, is_write, is_MRS);
+        ctrls_[channel]->AddTransaction(trans);
+    }
+    last_req_clk_ = clk_;
+    return ok;
+}
+
+bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) {
+// Record trace - Record address trace for debugging or other purposes
+#ifdef ADDR_TRACE
+    address_trace_ << std::hex << hex_addr << std::dec << " "
+                   << (is_write ? "WRITE " : "READ ") << clk_ << std::endl;
+#endif
+
+    int channel = GetChannel(hex_addr);
+    bool ok = ctrls_[channel]->WillAcceptTransaction(hex_addr, is_write, is_MRS);
+
+    assert(ok);
+    if (ok) {
+        Transaction trans = Transaction(hex_addr, is_write, is_MRS, payload);
         ctrls_[channel]->AddTransaction(trans);
     }
     last_req_clk_ = clk_;
@@ -169,6 +202,11 @@ void JedecDRAMSystem::ClockTick() {
     return;
 }
 
+std::vector<uint64_t> JedecDRAMSystem::GetRespData(uint64_t hex_addr) {
+    int channel = GetChannel(hex_addr);
+    return ctrls_[channel]->GetRespData();
+}
+
 IdealDRAMSystem::IdealDRAMSystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
@@ -177,8 +215,17 @@ IdealDRAMSystem::IdealDRAMSystem(Config &config, const std::string &output_dir,
 
 IdealDRAMSystem::~IdealDRAMSystem() {}
 
-bool IdealDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
-    auto trans = Transaction(hex_addr, is_write);
+bool IdealDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS) {
+    // auto trans = Transaction(hex_addr, is_write);
+    auto trans = Transaction(hex_addr, is_write, is_MRS);
+    trans.added_cycle = clk_;
+    infinite_buffer_q_.push_back(trans);
+    return true;
+}
+
+bool IdealDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write, bool is_MRS, std::vector<u_int64_t> &payload) {
+    // auto trans = Transaction(hex_addr, is_write);
+    auto trans = Transaction(hex_addr, is_write, is_MRS, payload);
     trans.added_cycle = clk_;
     infinite_buffer_q_.push_back(trans);
     return true;
@@ -202,6 +249,13 @@ void IdealDRAMSystem::ClockTick() {
 
     clk_++;
     return;
+}
+
+std::vector<uint64_t> IdealDRAMSystem::GetRespData(uint64_t hex_addr) {
+    // int channel = GetChannel(hex_addr);
+    //TBD
+    std::vector<uint64_t> payload;
+    return payload;
 }
 
 }  // namespace dramsim3

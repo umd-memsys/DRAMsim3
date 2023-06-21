@@ -1,7 +1,8 @@
 #include "configuration.h"
+#include <assert.h>
 
 #include <vector>
-
+#include <cmath>
 #ifdef THERMAL
 #include <math.h>
 #endif  // THERMAL
@@ -41,6 +42,26 @@ Address Config::AddressMapping(uint64_t hex_addr) const {
     return Address(channel, rank, bg, ba, ro, co);
 }
 
+
+uint64_t Config::MergedAddress(uint64_t channel, uint64_t rank, uint64_t bg, 
+                               uint64_t ba, uint64_t ro, uint64_t co) const {
+    uint64_t merged_addr = (ro << ro_pos) | (channel << ch_pos) | (rank << ra_pos) | 
+                           (ba << ba_pos) | (bg << bg_pos) | co;
+
+    return merged_addr;    
+}
+
+uint64_t Config::MergedAddress(Address addr) const {
+    uint64_t merged_addr = (addr.rank << ro_pos)      | 
+                           (addr.channel << ch_pos)   | 
+                           (addr.rank << ra_pos)      | 
+                           (addr.bank << ba_pos)      | 
+                           (addr.bankgroup << bg_pos) | 
+                           addr.column;
+
+    return merged_addr;    
+}
+
 void Config::CalculateSize() {
     // calculate rank and re-calculate channel_size
     devices_per_rank = bus_width / device_width;
@@ -59,6 +80,49 @@ void Config::CalculateSize() {
         ranks = channel_size / megs_per_rank;
         channel_size = ranks * megs_per_rank;
     }
+
+    if(is_LRDIMM) {
+        if(ranks_per_dimm > ranks) {
+            std::cout << "WARNING: Ranks is lower than Ranks per DIMM. Ranks ("
+                      << ranks
+                      << ") Ranks Per DIMM "
+                      << ranks_per_dimm << ") --> Changes Ranks (=Ranks per DIMM)"<<std::endl;                      
+            ranks = ranks_per_dimm;                      
+        }
+        else if(ranks % ranks_per_dimm != 0)  {
+            int total_ranks = ((ranks/ranks_per_dimm)+1) * ranks_per_dimm;
+            std::cout << "WARNING: Ranks is multiple of Ranks per DIMM. Ranks ("
+                      << ranks
+                      << ") Ranks Per DIMM "
+                      << ranks_per_dimm << ") --> Changes Ranks (multiple of ranks per DIMM)"<<std::endl;                                  
+            ranks = total_ranks;    
+            
+        }
+        dimms = ranks/ranks_per_dimm;         
+        channel_size = ranks * megs_per_rank;                      
+
+        assert(device_width == 4 or device_width == 8); // LRDIMM only support x8 or x4 DRAM
+        assert(bus_width == 64); // LRDIMM only support 64-bits bus
+        dbs_per_dimm = bus_width / dqs_per_db;
+        #ifdef MY_DEBUG
+        std::cout<<"== "<<__func__<<" == ";
+        std::cout<<" LRDIMM Configuration"<<std::endl;
+        std::cout<<"== "<<__func__<<" == "<<std::endl;
+        std::cout<<" -> LRDIMM ranks : "<<ranks<<std::endl;        
+        std::cout<<" -> LRDIMM ranks_per_dimm : "<<ranks_per_dimm<<std::endl;  
+        std::cout<<" -> LRDIMM dimms : "<<dimms<<std::endl;  
+        std::cout<<" -> DBs per DIMM : "<<dbs_per_dimm<<std::endl;  
+        #endif               
+    }
+    // std::cout<<"bus_width : "<<devices_per_rank<<std::endl;
+    // std::cout<<"device_width : "<<device_width<<std::endl;
+    // std::cout<<"devices_per_rank : "<<devices_per_rank<<std::endl;
+    // std::cout<<"page_size : "<<page_size<<std::endl;
+    // std::cout<<"megs_per_bank : "<<megs_per_bank<<std::endl;
+    // std::cout<<"megs_per_rank : "<<megs_per_rank<<std::endl;
+    // std::cout<<"channel_size : "<<channel_size<<std::endl;
+    // std::cout<<"ranks : "<<ranks<<std::endl;
+             
     return;
 }
 
@@ -244,6 +308,15 @@ void Config::InitSystemParams() {
     aggressive_precharging_enabled =
         reader.GetBoolean("system", "aggressive_precharging_enabled", false);
 
+    // LRDIMM
+    is_LRDIMM =
+        reader.GetBoolean("system", "is_LRDIMM", false); 
+    ranks_per_dimm = GetInteger("system", "ranks_per_dimm", 4);
+    dqs_per_db = GetInteger("system", "dqs_per_db", 8);
+    dimms = GetInteger("system", "dimms", 1);
+    dbs_per_dimm = GetInteger("system", "dbs_per_dimm", 8);
+    
+
     return;
 }
 
@@ -334,6 +407,13 @@ void Config::InitTimingParams() {
     tRCDRD = GetInteger("timing", "tRCDRD", 24);
     tRCDWR = GetInteger("timing", "tRCDWR", 20);
 
+    // MRS AC Parameter
+    tMRD = GetInteger("timing", "tMRD", 10); // DDR4-3200 
+    tMOD = GetInteger("timing", "tMOD", 24); // DDR4-3200
+
+    tPDM_RD = GetInteger("timing", "tPDM_RD", static_cast<int>(ceil((1.37 + tCK/4)/tCK))); // 1.37 + tCK/4 
+    tPDM_WR = GetInteger("timing", "tPDM_WR", static_cast<int>(ceil((1.37 + tCK/4)/tCK))); // 1.37 + tCK/4 
+    
     ideal_memory_latency = GetInteger("timing", "ideal_memory_latency", 10);
 
     // calculated timing
