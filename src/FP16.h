@@ -5,6 +5,9 @@
 
 typedef half_float::half fp16;
 
+namespace dramsim3 {
+
+
 struct FP16 {
     fp16 value;
 
@@ -15,9 +18,10 @@ struct FP16 {
     FP16 operator*(const FP16& other) const;
     FP16 operator/(const FP16& other) const;
 
-    float toFloat() const;
-
-    static FP16 fromFloat(float fp32);
 };
 
+}
+
+
 #endif  // FP16_H
+

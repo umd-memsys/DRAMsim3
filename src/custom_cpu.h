@@ -11,6 +11,9 @@
 #include "configuration.h"
 #include <iostream>
 #include "ndp_address_table.h"
+#include "half.hpp"
+
+typedef half_float::half fp16;
 
 namespace dramsim3 {
 
@@ -69,9 +72,11 @@ class CUSTOM_CPU {
     void checkNDPResult(const std::string& kernal_type);      // Check NDP Result with Reference Data
     bool simDone();                                           // Check Simulation for NDP is Done
 
-    // convert Data format (FP32 -> UINT64)
+    // convert Data format (FP32 -> FP16 -> UINT64)
     uint32_t FloattoUint32(float float_value);
     float Uint32ToFloat(uint32_t uint_value);
+    fp16 FloattoFP16(float float_value);
+    float FP16toFloat(fp16 fp16_value);
     std::vector<uint64_t> convertFloatToUint64(std::vector<float> &f_payload);
     std::vector<float> convertUint64ToFloat(std::vector<uint64_t> &payload);
 
@@ -94,7 +99,9 @@ class CUSTOM_CPU {
 
     // Reference Data Format (support BLAS-1 function) z=axpy 
     float scalar_alpha;
-    std::vector<float> vector_x,vector_y,vector_z;
+    fp16 fp16_scalar_alpha;
+    std::vector<float> vector_x,vector_y, vector_z;
+    std::vector<fp16> fp16_vector_x, fp16_vector_y, fp16_vector_z;
 
     // NDP RD Result 
     std::vector<uint64_t> resp_data;
@@ -115,7 +122,7 @@ class CUSTOM_CPU {
     uint64_t clk_;
     std::string gen_type_; 
     All_Ch_Addrss_Table address_table;
-    
+
     
     std::mt19937_64 gen;    
     bool get_next_ = true;

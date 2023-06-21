@@ -1,5 +1,8 @@
 #include "FP16.h"
 
+
+namespace dramsim3 {
+
 FP16::FP16(fp16 val) : value(val) {}
 
 FP16 FP16::operator+(const FP16& other) const {
@@ -22,12 +25,5 @@ FP16 FP16::operator/(const FP16& other) const {
     return FP16(div);
 }
 
-float FP16::toFloat() const {
-    float fp32 = value;
-    return fp32; 
-}
 
-FP16 FP16::fromFloat(float fp32) {
-    fp16 val0(fp32);
-    return val0;
 }

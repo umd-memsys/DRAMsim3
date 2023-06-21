@@ -72,6 +72,7 @@ void CUSTOM_CPU::ReadCallBack(uint64_t addr) {
     rd_resp_cnt++;
     if(use_data) {
         std::vector<uint64_t> rd_data = memory_system_.GetRespData(addr);
+
         assert(rd_data.size()!=0);
         #ifdef _PRINT_TRANS    
             std::cout<<"["<<std::setw(10)<<clk_<<"] == ";
@@ -83,7 +84,7 @@ void CUSTOM_CPU::ReadCallBack(uint64_t addr) {
         else                      rd_fail_cnt++;        
 
         if(run_state_ndp_kernel_exec && !run_state_ndp_read_result)
-            for(auto element : rd_data) resp_data.push_back(element);        
+            for(auto element : rd_data) resp_data.push_back(element);     
     }
     else {
         #ifdef _PRINT_TRANS
@@ -346,26 +347,47 @@ void CUSTOM_CPU::genRefData(const std::string& kernal_type) {
         std::cout<<"  Kernel Type: Element-Wise Add"<<std::endl;
         std::cout<<"  Vector Length : "<<vector_length<<std::endl;
         scalar_alpha = real_dist(gen);
+        fp16_scalar_alpha = FloattoFP16(scalar_alpha);
+
         vector_x.resize(vector_length);
         vector_y.resize(vector_length);
         vector_z.resize(vector_length);
+
+        fp16_vector_x.resize(vector_length);
+        fp16_vector_y.resize(vector_length);
+        fp16_vector_z.resize(vector_length);
+
         for(uint32_t i=0;i<vector_length;i++) {
             vector_x[i] = real_dist(gen);
             vector_y[i] = real_dist(gen);
             vector_z[i] = scalar_alpha*vector_x[i] + vector_y[i];
+
+            fp16_vector_x[i] = (FloattoFP16(vector_x[i]));
+            fp16_vector_y[i] = (FloattoFP16(vector_y[i]));
+            fp16_vector_z[i] = fp16_scalar_alpha*fp16_vector_x[i] + fp16_vector_y[i];
         }
     }
     else if(kernal_type == "EWM") {
         std::cout<<"  Kernel Type: Element-Wise Multiply"<<std::endl;
         std::cout<<"  Vector Length : "<<vector_length<<std::endl;
         scalar_alpha = real_dist(gen);
+        fp16_scalar_alpha = FloattoFP16(scalar_alpha);
+
         vector_x.resize(vector_length);
         vector_y.resize(vector_length);
         vector_z.resize(vector_length);
+        fp16_vector_x.resize(vector_length);
+        fp16_vector_y.resize(vector_length);
+        fp16_vector_z.resize(vector_length);
+
         for(uint32_t i=0;i<vector_length;i++) {
             vector_x[i] = real_dist(gen);
             vector_y[i] = real_dist(gen);
             vector_z[i] = scalar_alpha*vector_x[i] * vector_y[i];
+
+            fp16_vector_x[i] = (FloattoFP16(vector_x[i]));
+            fp16_vector_y[i] = (FloattoFP16(vector_y[i]));
+            fp16_vector_z[i] = fp16_scalar_alpha*fp16_vector_x[i] * fp16_vector_y[i];
         }
     }
     else {
@@ -549,12 +571,32 @@ float CUSTOM_CPU::Uint32ToFloat(uint32_t uint_value) {
     // return reinterpret_cast<float&>(uint_value);
 }
 
+//convert Data format FP32 -> FP16
+fp16 CUSTOM_CPU::FloattoFP16(float float_value){
+    fp16 converted_value(float_value);
+    return converted_value;
+}
+
+//convert Data format FP16 -> FP32
+float CUSTOM_CPU::FP16toFloat(fp16 fp16_value){
+    float converted_value = fp16_value; 
+    return converted_value;
+}
+
 std::vector<uint64_t> CUSTOM_CPU::convertFloatToUint64(std::vector<float> &f_payload) {
     std::vector<uint64_t> payload;
+  
     for(uint32_t i=0;i<f_payload.size();i++) {
-        uint64_t value_64b = static_cast<uint64_t>(FloattoUint32(f_payload[i]));
-        if(i%2==0) payload.push_back(value_64b);
-        else payload[i/2] = payload[i/2] | (value_64b << 32);
+
+        uint64_t value_64b = static_cast<uint64_t>(FloattoFP16(f_payload[i]));
+        if(i%4==0) payload.push_back(value_64b);
+        else 
+        {
+            if(i%4 == 1) payload[i/4] = payload[i/4] | (value_64b << 16);
+            else if(i%4 == 2) payload[i/4] = payload[i/4] | (value_64b << (16*2));
+            else payload[i/4] = payload[i/4] | (value_64b << (16*3));
+            
+        }
     }
     return payload;
 }
@@ -562,10 +604,15 @@ std::vector<uint64_t> CUSTOM_CPU::convertFloatToUint64(std::vector<float> &f_pay
 std::vector<float> CUSTOM_CPU::convertUint64ToFloat(std::vector<uint64_t> &payload) {
     std::vector<float> f_payload;
     for(auto value : payload) {
-        float f0 = Uint32ToFloat(static_cast<uint32_t>(value & 0xFFFFFFFF));
-        float f1 = Uint32ToFloat(static_cast<uint32_t>((value >> 32 )& 0xFFFFFFFF));
+
+        float f0 = FP16toFloat(static_cast<fp16>(value & 0xFF));
+        float f1 = FP16toFloat(static_cast<fp16>((value >> 16 )& 0xFF));
+        float f2 = FP16toFloat(static_cast<fp16>((value >> (16*2) )& 0xFF));
+        float f3 = FP16toFloat(static_cast<fp16>((value >> (16*3) )& 0xFF));
         f_payload.push_back(f0);
         f_payload.push_back(f1);
+        f_payload.push_back(f2);
+        f_payload.push_back(f3);
     }
     return f_payload;
 }
@@ -578,7 +625,6 @@ void CUSTOM_CPU::NDPData_FloatVecToTrans(Address_IO addr_io,std::vector<float> f
     }
  
     assert(payload_vec.size()%8 == 0);
-    
     for(uint32_t i=0;i<payload_vec.size()/8;i++) {
         std::vector<uint64_t> payload;
         for(uint32_t j=0;j<8;j++) payload.push_back(payload_vec[i*8+j]);
