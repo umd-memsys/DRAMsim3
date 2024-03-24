@@ -404,7 +404,7 @@ void SimpleStats::UpdateEpochStats() {
                           doubles_["write_energy"] + doubles_["ref_energy"] +
                           doubles_["refb_energy"] + background_energy;
     calculated_["total_energy"] = total_energy;
-    calculated_["average_power"] = total_energy / epoch_counters_["num_cycles"];
+    calculated_["average_power"] = total_energy / total_time;
     calculated_["average_read_latency"] =
         GetHistoAvg(epoch_histo_counts_.at("read_latency"));
     calculated_["average_interarrival"] =
@@ -465,7 +465,7 @@ void SimpleStats::UpdateFinalStats() {
                           doubles_["write_energy"] + doubles_["ref_energy"] +
                           doubles_["refb_energy"] + background_energy;
     calculated_["total_energy"] = total_energy;
-    calculated_["average_power"] = total_energy / counters_["num_cycles"];
+    calculated_["average_power"] = total_energy / total_time;
     // calculated_["average_read_latency"] = GetHistoAvg("read_latency");
     calculated_["average_read_latency"] =
         GetHistoAvg(histo_counts_.at("read_latency"));
